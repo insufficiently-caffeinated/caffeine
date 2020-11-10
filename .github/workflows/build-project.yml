@@ -12,10 +12,8 @@ jobs:
 
       - name: Configure
         run: |
-          pwd
-          ls
-          mkdir -p "build"
-          cmake -B "build" -GNinja
+          mkdir -p build
+          cmake -B build
 
       - name: Build
         run: cmake --build "build"
