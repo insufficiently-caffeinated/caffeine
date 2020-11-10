@@ -1,0 +1,9 @@
+---
+BasedOnStyle: LLVM
+
+AllowShortBlocksOnASingleLine: true
+AllowShortFunctionsOnASingleLine: Empty
+AlwaysBreakTemplateDeclarations: true
+ColumnLimit: 80
+NamespaceIndentation: Inner
+PointerAlignment: Left
