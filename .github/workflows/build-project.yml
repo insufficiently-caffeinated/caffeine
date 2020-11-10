@@ -14,13 +14,12 @@ jobs:
 
       - name: Configure
         run: |
-          mkdir -p "$GITHUB_WORKSPACE/build"
-          cmake -S "$GITHUB_WORKSPACE/caffeine" -B "$GITHUB_WORKSPACE/build" -GNinja
+          mkdir -p "build"
+          cmake -S "caffeine" -B "build" -GNinja
 
       - name: Build
-        run: cmake --build "$GITHUB_WORKSPACE/build"
+        run: cmake --build "build"
       
       - name: Test
         run: |
-          cd "$GITHUB_WORKSPACE/build"
-          ctest . --output-on-failure
+          ctest build --output-on-failure
