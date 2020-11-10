@@ -21,3 +21,4 @@ set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 include(setup-warnings)
 
 add_subdirectory(src)
+add_subdirectory(test)
