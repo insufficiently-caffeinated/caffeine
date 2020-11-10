@@ -1,0 +1,14 @@
+{
+  "name": "decaf",
+  "version-string": "0.0.0-dev",
+  "maintainers": [ "Team Insufficiently Caffeinated" ],
+  "description": "Experimental Symbolic Executor",
+  "license": "MIT",
+  "dependencies": [
+    "boost",
+    "llvm",
+    "fmt",
+    "z3",
+    "gtest"
+  ]
+}
