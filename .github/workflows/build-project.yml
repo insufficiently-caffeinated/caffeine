@@ -9,13 +9,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v1
-        with:
-          path: caffeine
 
       - name: Configure
         run: |
+          pwd
+          ls
           mkdir -p "build"
-          cmake -S "caffeine" -B "build" -GNinja
+          cmake -B "build" -GNinja
 
       - name: Build
         run: cmake --build "build"
