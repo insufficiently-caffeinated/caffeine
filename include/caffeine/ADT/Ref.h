@@ -48,7 +48,7 @@ public:
    *
    * This will increment the refcount of value.
    */
-  ref(T* value, const Deleter& deleter = Deleter())
+  explicit ref(T* value, const Deleter& deleter = Deleter())
       : Deleter(deleter), value(value) {
     increment();
   }

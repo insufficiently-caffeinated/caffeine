@@ -28,7 +28,7 @@ namespace detail {
   class double_deref_iterator;
 } // namespace detail
 
-enum class ICmpOp : uint8_t {
+enum class ICmpOpcode : uint8_t {
   EQ = 0x8,
   NE = 0x9,
   UGT = (0 << 2) | 0x0,
@@ -41,7 +41,7 @@ enum class ICmpOp : uint8_t {
   SLE = (1 << 2) | 0x3
 };
 
-enum class FCmpOp : uint8_t {
+enum class FCmpOpcode : uint8_t {
   OEQ = 000,
   OGT = 001,
   OGE = 002,
@@ -141,35 +141,35 @@ public:
     SIToFp = detail::opcode(31, 1),
 
     // Integer comparison operations
-    ICmpEq = detail::opcode(32, 2, (uint16_t)ICmpOp::EQ),
-    ICmpNe = detail::opcode(32, 2, (uint16_t)ICmpOp::NE),
-    ICmpUgt = detail::opcode(32, 2, (uint16_t)ICmpOp::UGT),
-    ICmpUge = detail::opcode(32, 2, (uint16_t)ICmpOp::UGE),
-    ICmpUlt = detail::opcode(32, 2, (uint16_t)ICmpOp::ULT),
-    ICmpUle = detail::opcode(32, 2, (uint16_t)ICmpOp::ULE),
-    ICmpSgt = detail::opcode(32, 2, (uint16_t)ICmpOp::SGT),
-    ICmpSge = detail::opcode(32, 2, (uint16_t)ICmpOp::SGE),
-    ICmpSlt = detail::opcode(32, 2, (uint16_t)ICmpOp::SLT),
-    ICmpSle = detail::opcode(32, 2, (uint16_t)ICmpOp::SLE),
+    ICmpEq = detail::opcode(32, 2, (uint16_t)ICmpOpcode::EQ),
+    ICmpNe = detail::opcode(32, 2, (uint16_t)ICmpOpcode::NE),
+    ICmpUgt = detail::opcode(32, 2, (uint16_t)ICmpOpcode::UGT),
+    ICmpUge = detail::opcode(32, 2, (uint16_t)ICmpOpcode::UGE),
+    ICmpUlt = detail::opcode(32, 2, (uint16_t)ICmpOpcode::ULT),
+    ICmpUle = detail::opcode(32, 2, (uint16_t)ICmpOpcode::ULE),
+    ICmpSgt = detail::opcode(32, 2, (uint16_t)ICmpOpcode::SGT),
+    ICmpSge = detail::opcode(32, 2, (uint16_t)ICmpOpcode::SGE),
+    ICmpSlt = detail::opcode(32, 2, (uint16_t)ICmpOpcode::SLT),
+    ICmpSle = detail::opcode(32, 2, (uint16_t)ICmpOpcode::SLE),
 
     // Floating-point comparison operations
     // See the corresponding predicates in llvm's CmpInst to understand
     // what each of these mean.
     // TODO: Should these be broken down?
-    FCmpOeq = detail::opcode(33, 2, (uint16_t)FCmpOp::OEQ),
-    FCmpOGt = detail::opcode(33, 2, (uint16_t)FCmpOp::OGT),
-    FCmpOge = detail::opcode(33, 2, (uint16_t)FCmpOp::OGE),
-    FCmpOlt = detail::opcode(33, 2, (uint16_t)FCmpOp::OLT),
-    FCmpOle = detail::opcode(33, 2, (uint16_t)FCmpOp::OLE),
-    FCmpOne = detail::opcode(33, 2, (uint16_t)FCmpOp::ONE),
-    FCmpOrd = detail::opcode(33, 2, (uint16_t)FCmpOp::ORD),
-    FCmpUno = detail::opcode(33, 2, (uint16_t)FCmpOp::UNO),
-    FCmpUeq = detail::opcode(33, 2, (uint16_t)FCmpOp::UEQ),
-    FCmpUgt = detail::opcode(33, 2, (uint16_t)FCmpOp::UGT),
-    FCmpUge = detail::opcode(33, 2, (uint16_t)FCmpOp::UGE),
-    FCmpUlt = detail::opcode(33, 2, (uint16_t)FCmpOp::ULT),
-    FCmpUle = detail::opcode(33, 2, (uint16_t)FCmpOp::ULE),
-    FCmpUne = detail::opcode(33, 2, (uint16_t)FCmpOp::UNE),
+    FCmpOeq = detail::opcode(33, 2, (uint16_t)FCmpOpcode::OEQ),
+    FCmpOGt = detail::opcode(33, 2, (uint16_t)FCmpOpcode::OGT),
+    FCmpOge = detail::opcode(33, 2, (uint16_t)FCmpOpcode::OGE),
+    FCmpOlt = detail::opcode(33, 2, (uint16_t)FCmpOpcode::OLT),
+    FCmpOle = detail::opcode(33, 2, (uint16_t)FCmpOpcode::OLE),
+    FCmpOne = detail::opcode(33, 2, (uint16_t)FCmpOpcode::ONE),
+    FCmpOrd = detail::opcode(33, 2, (uint16_t)FCmpOpcode::ORD),
+    FCmpUno = detail::opcode(33, 2, (uint16_t)FCmpOpcode::UNO),
+    FCmpUeq = detail::opcode(33, 2, (uint16_t)FCmpOpcode::UEQ),
+    FCmpUgt = detail::opcode(33, 2, (uint16_t)FCmpOpcode::UGT),
+    FCmpUge = detail::opcode(33, 2, (uint16_t)FCmpOpcode::UGE),
+    FCmpUlt = detail::opcode(33, 2, (uint16_t)FCmpOpcode::ULT),
+    FCmpUle = detail::opcode(33, 2, (uint16_t)FCmpOpcode::ULE),
+    FCmpUne = detail::opcode(33, 2, (uint16_t)FCmpOpcode::UNE),
 
     // Other instructions
     Select = detail::opcode(34, 3)
@@ -270,6 +270,14 @@ public:
   Operation& operator=(Operation&& op) noexcept;
 
   ~Operation();
+
+protected:
+  /**
+   * Data stored within the aux bits of the opcode. Interpretation of this
+   * depends from opcode to opcode so it is left for derived classes to expose
+   * however they want.
+   */
+  uint16_t aux_data() const;
 
 private:
   void invalidate() noexcept;
@@ -405,10 +413,10 @@ public:
  * Represented as
  * select %cond, %true_value, %false_value
  */
-class Select : public Operation {
+class SelectOp : public Operation {
 protected:
-  Select(Type t, const ref<Operation>& cond, const ref<Operation>& true_val,
-         const ref<Operation>& false_val);
+  SelectOp(Type t, const ref<Operation>& cond, const ref<Operation>& true_val,
+           const ref<Operation>& false_val);
 
 public:
   ref<Operation>& condition();
@@ -422,6 +430,59 @@ public:
   static ref<Operation> Create(const ref<Operation>& cond,
                                const ref<Operation>& true_value,
                                const ref<Operation>& false_value);
+
+  bool classof(const Operation* op);
+};
+
+/**
+ * Integer comparison operation.
+ */
+class ICmpOp : public BinaryOp {
+private:
+  ICmpOp(ICmpOpcode cmp, Type t, const ref<Operation>& lhs,
+         const ref<Operation>& rhs);
+
+public:
+  ICmpOpcode comparison() const;
+
+  /**
+   * Whether the comparison performed by this operation is a signed one.
+   *
+   * Note that EQ and NE are not considered to be signed or unsigned.
+   */
+  bool is_signed() const;
+
+  /**
+   * Whether the comparison performed by this operation is an unsigned one.
+   *
+   * Note that EQ and NE are not considered to be signed or unsigned.
+   */
+  bool is_unsigned() const;
+
+  static ref<Operation> CreateICmp(ICmpOpcode cmp, const ref<Operation>& lhs,
+                                   const ref<Operation>& rhs);
+
+  bool classof(const Operation* op);
+};
+
+/**
+ * Floating-point comparison operation.
+ */
+class FCmpOp : public BinaryOp {
+private:
+  FCmpOp(FCmpOpcode cmp, Type t, const ref<Operation>& lhs,
+         const ref<Operation>& rhs);
+
+public:
+  FCmpOpcode comparison() const;
+
+  // Whether this comparison is an ordered one
+  bool is_ordered() const;
+  // Whether this comparison is an unordered one
+  bool is_unordered() const;
+
+  static ref<Operation> CreateFCmp(FCmpOpcode cmp, const ref<Operation>& lhs,
+                                   const ref<Operation>& rhs);
 
   bool classof(const Operation* op);
 };

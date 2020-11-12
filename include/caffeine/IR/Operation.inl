@@ -169,6 +169,10 @@ Operation::operands() const {
       const_operand_iterator(operands_ + num_operands())};
 }
 
+inline uint16_t Operation::aux_data() const {
+  return (opcode() >> 2) & 0xF;
+}
+
 /***************************************************
  * ConstantInt                                     *
  ***************************************************/
@@ -217,26 +221,56 @@ inline const ref<Operation>& UnaryOp::operand() const {
 }
 
 /***************************************************
- * Select                                          *
+ * SelectOp                                        *
  ***************************************************/
-inline ref<Operation>& Select::condition() {
+inline ref<Operation>& SelectOp::condition() {
   return operands_[0];
 }
-inline ref<Operation>& Select::true_value() {
+inline ref<Operation>& SelectOp::true_value() {
   return operands_[1];
 }
-inline ref<Operation>& Select::false_value() {
+inline ref<Operation>& SelectOp::false_value() {
   return operands_[2];
 }
 
-inline const ref<Operation>& Select::condition() const {
+inline const ref<Operation>& SelectOp::condition() const {
   return operands_[0];
 }
-inline const ref<Operation>& Select::true_value() const {
+inline const ref<Operation>& SelectOp::true_value() const {
   return operands_[1];
 }
-inline const ref<Operation>& Select::false_value() const {
+inline const ref<Operation>& SelectOp::false_value() const {
   return operands_[2];
+}
+
+/***************************************************
+ * ICmpOp                                          *
+ ***************************************************/
+inline ICmpOpcode ICmpOp::comparison() const {
+  return static_cast<ICmpOpcode>(aux_data());
+}
+
+inline bool ICmpOp::is_signed() const {
+  auto aux = aux_data();
+  return aux < static_cast<uint16_t>(ICmpOpcode::EQ) && (aux & (1 << 2));
+}
+inline bool ICmpOp::is_unsigned() const {
+  auto aux = aux_data();
+  return aux < static_cast<uint16_t>(ICmpOpcode::EQ) && !(aux & (1 << 2));
+}
+
+/***************************************************
+ * FCmpOp                                          *
+ ***************************************************/
+inline FCmpOpcode FCmpOp::comparison() const {
+  return static_cast<FCmpOpcode>(aux_data());
+}
+
+inline bool FCmpOp::is_ordered() const {
+  return aux_data() & 010;
+}
+inline bool FCmpOp::is_unordered() const {
+  return !is_ordered();
 }
 
 /***************************************************
@@ -250,13 +284,19 @@ inline const ref<Operation>& Select::false_value() const {
 
 CAFFEINE_OP_DECL_CLASSOF(ConstantInt, ConstantInt);
 CAFFEINE_OP_DECL_CLASSOF(ConstantFloat, ConstantFloat);
-CAFFEINE_OP_DECL_CLASSOF(Select, Select);
+CAFFEINE_OP_DECL_CLASSOF(SelectOp, Select);
 
 inline bool BinaryOp::classof(const Operation* op) {
   return op->num_operands() == 2;
 }
 inline bool UnaryOp::classof(const Operation* op) {
   return op->num_operands() == 1;
+}
+inline bool ICmpOp::classof(const Operation* op) {
+  return ICmpEq <= op->opcode() && op->opcode() <= ICmpSle;
+}
+inline bool FCmpOp::classof(const Operation* op) {
+  return FCmpOeq <= op->opcode() && op->opcode() <= FCmpUno;
 }
 
 #undef CAFFEINE_OP_DECL_CLASSOF

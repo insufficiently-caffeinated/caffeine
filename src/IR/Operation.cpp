@@ -156,6 +156,35 @@ Operation::~Operation() {
   invalidate();
 }
 
+bool Operation::operator==(const Operation& op) const {
+  if (opcode_ != op.opcode_ || type_ != op.type_)
+    return false;
+
+  const size_t nops = num_operands();
+  if (nops != 0) {
+    for (size_t i = 0; i < nops; ++i) {
+      if (operands_[i] != op.operands_[i])
+        return false;
+    }
+  } else {
+    switch (opcode_) {
+    case ConstantInt:
+      return iconst_ == op.iconst_;
+    case ConstantFloat:
+      // TODO: It might be better to use semantic equality here?
+      //       Would have to figure out how to deal with NaNs in that case.
+      return fconst_.bitwiseIsEqual(op.fconst_);
+    default:
+      CAFFEINE_UNREACHABLE();
+    }
+  }
+
+  return true;
+}
+bool Operation::operator!=(const Operation& op) const {
+  return !(*this == op);
+}
+
 void Operation::invalidate() noexcept {
   if (is_constant()) {
     switch (opcode_) {
@@ -281,15 +310,16 @@ DECL_UNOP_CREATE(Not, ASSERT_INT);
 DECL_UNOP_CREATE(FNeg, ASSERT_FP);
 
 /***************************************************
- * Select                                          *
+ * SelectOp                                        *
  ***************************************************/
-Select::Select(Type t, const ref<Operation>& cond,
-               const ref<Operation>& true_val, const ref<Operation>& false_val)
+SelectOp::SelectOp(Type t, const ref<Operation>& cond,
+                 const ref<Operation>& true_val,
+                 const ref<Operation>& false_val)
     : Operation(Opcode::Select, t, cond, true_val, false_val) {}
 
-ref<Operation> Select::Create(const ref<Operation>& cond,
-                              const ref<Operation>& true_value,
-                              const ref<Operation>& false_value) {
+ref<Operation> SelectOp::Create(const ref<Operation>& cond,
+                                const ref<Operation>& true_value,
+                                const ref<Operation>& false_value) {
   CAFFEINE_ASSERT(cond, "cond was null");
   CAFFEINE_ASSERT(true_value, "true_value was null");
   CAFFEINE_ASSERT(false_value, "false_value was null");
@@ -299,7 +329,50 @@ ref<Operation> Select::Create(const ref<Operation>& cond,
   CAFFEINE_ASSERT(true_value->type() == false_value->type(),
                   "select values had different types");
 
-  return new Select(true_value->type(), cond, true_value, false_value);
+  return ref<Operation>(
+      new SelectOp(true_value->type(), cond, true_value, false_value));
+}
+
+/***************************************************
+ * ICmpOp                                          *
+ ***************************************************/
+ICmpOp::ICmpOp(ICmpOpcode cmp, Type t, const ref<Operation>& lhs,
+               const ref<Operation>& rhs)
+    : BinaryOp(static_cast<Opcode>(
+                   detail::opcode(32, 2, static_cast<uint16_t>(cmp))),
+               t, lhs, rhs) {}
+
+ref<Operation> ICmpOp::CreateICmp(ICmpOpcode cmp, const ref<Operation>& lhs,
+                                  const ref<Operation>& rhs) {
+  CAFFEINE_ASSERT(rhs, "rhs was null");
+  CAFFEINE_ASSERT(lhs, "lhs was null");
+  CAFFEINE_ASSERT(rhs->type() == lhs->type(),
+                  "cannot compare icmp operands with different types");
+  CAFFEINE_ASSERT(lhs->type().is_int(),
+                  "icmp can only be created with integer operands");
+
+  return ref<Operation>(new ICmpOp(cmp, lhs->type(), lhs, rhs));
+}
+
+/***************************************************
+ * FCmpOp                                          *
+ ***************************************************/
+FCmpOp::FCmpOp(FCmpOpcode cmp, Type t, const ref<Operation>& lhs,
+               const ref<Operation>& rhs)
+    : BinaryOp(static_cast<Opcode>(
+                   detail::opcode(33, 2, static_cast<uint16_t>(cmp))),
+               t, lhs, rhs) {}
+
+ref<Operation> FCmpOp::CreateFCmp(FCmpOpcode cmp, const ref<Operation>& lhs,
+                                  const ref<Operation>& rhs) {
+  CAFFEINE_ASSERT(rhs, "rhs was null");
+  CAFFEINE_ASSERT(lhs, "lhs was null");
+  CAFFEINE_ASSERT(rhs->type() == lhs->type(),
+                  "cannot compare icmp operands with different types");
+  CAFFEINE_ASSERT(lhs->type().is_fp(),
+                  "icmp can only be created with integer operands");
+
+  return ref<Operation>(new FCmpOp(cmp, lhs->type(), lhs, rhs));
 }
 
 } // namespace caffeine
