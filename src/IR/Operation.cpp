@@ -255,7 +255,7 @@ ref<Operation> BinaryOp::Create(Opcode op, const ref<Operation>& lhs,
 }
 
 #define ASSERT_INT(op) CAFFEINE_ASSERT((op)->type().is_int())
-#define ASSERT_FP(op) CAFFEINE_ASSERT((op)->type().is_fp())
+#define ASSERT_FP(op) CAFFEINE_ASSERT((op)->type().is_float())
 
 // There's a lot of these so template them out using a macro
 #define DECL_BINOP_CREATE(opcode, assert)                                      \
@@ -369,7 +369,7 @@ ref<Operation> FCmpOp::CreateFCmp(FCmpOpcode cmp, const ref<Operation>& lhs,
   CAFFEINE_ASSERT(lhs, "lhs was null");
   CAFFEINE_ASSERT(rhs->type() == lhs->type(),
                   "cannot compare icmp operands with different types");
-  CAFFEINE_ASSERT(lhs->type().is_fp(),
+  CAFFEINE_ASSERT(lhs->type().is_float(),
                   "icmp can only be created with integer operands");
 
   return ref<Operation>(new FCmpOp(cmp, lhs->type(), lhs, rhs));
