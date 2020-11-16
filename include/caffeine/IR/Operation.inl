@@ -172,6 +172,14 @@ Operation::operands() const {
 inline uint16_t Operation::aux_data() const {
   return (opcode() >> 2) & 0xF;
 }
+inline Type Operation::type() const {
+  return type_;
+}
+
+inline bool Operation::is_constant() const {
+  // Needs to be updated if constant opcode representation changes 
+  return (opcode_ >> 6) == 1;
+}
 
 /***************************************************
  * ConstantInt                                     *

@@ -29,3 +29,5 @@ target_include_directories(caffeine SYSTEM
   PUBLIC "${FMT_INCLUDE_DIRS}"
   PUBLIC "${Boost_INCLUDE_DIRS}"
 )
+
+target_link_libraries(caffeine PUBLIC LLVMCore "${Z3_LIBRARIES}" fmt::fmt)

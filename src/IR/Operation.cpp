@@ -297,9 +297,15 @@ DECL_BINOP_CREATE(FRem, ASSERT_FP);
 UnaryOp::UnaryOp(Opcode op, Type t, const ref<Operation>& operand)
     : Operation(op, t, operand) {}
 
+ref<Operation> UnaryOp::Create(Opcode op, const ref<Operation>& operand) {
+  CAFFEINE_ASSERT(operand, "operand was null");
+  CAFFEINE_ASSERT((op & 0x3) == 1, "Opcode doesn't have 2 operands");
+
+  return ref<Operation>(new UnaryOp(op, operand->type(), operand));
+}
+
 #define DECL_UNOP_CREATE(opcode, assert)                                       \
   ref<Operation> UnaryOp::Create##opcode(const ref<Operation>& operand) {      \
-    CAFFEINE_ASSERT(operand, "operand was null");                              \
     assert(operand);                                                           \
                                                                                \
     return Create(Opcode::opcode, operand);                                    \
