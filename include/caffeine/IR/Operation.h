@@ -64,7 +64,7 @@ enum class FCmpOpcode : uint8_t {
  * In general, an expression node has
  * 1. An opcode
  * 2. A type
- * 3. 0-3 opcodes
+ * 3. 0-3 operands
  *
  * The base operation class provides access to operands, types, and the
  * opcode. Custom payloads (e.g. for constants) can only be accessed by
