@@ -5,6 +5,12 @@
 
 namespace caffeine {
 
+/**
+ * An expression that has boolean (i1) type. Optionally, it can be empty which
+ * is semantically equivalent to a constant `true` value.
+ *
+ * These are what is actually passed in to the solver.
+ */
 class Assertion {
 private:
   ref<Operation> value_;
