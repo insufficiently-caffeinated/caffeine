@@ -2,6 +2,7 @@
 #define CAFFEINE_IR_OPERATION_H
 
 #include <cstdint>
+#include <string>
 
 #include <llvm/ADT/APFloat.h>
 #include <llvm/ADT/APInt.h>
@@ -101,6 +102,7 @@ public:
     Invalid = 0,
 
     // Constants
+    Constant = detail::opcode(1, 0, 2),
     ConstantInt = detail::opcode(1, 0, 0),
     ConstantFloat = detail::opcode(1, 0, 1),
 
@@ -188,6 +190,7 @@ protected:
     ref<Operation> operands_[3];
     llvm::APInt iconst_;
     llvm::APFloat fconst_;
+    std::string name_;
   };
 
   // So ref can get at the refcount field.
@@ -211,6 +214,8 @@ protected:
 
   Operation(Opcode op, const llvm::APFloat& fconst);
   Operation(Opcode op, llvm::APFloat&& fconst);
+
+  Operation(Opcode op, Type t, const std::string& name);
 
   Operation(Opcode op, Type t, const ref<Operation>& op0);
   Operation(Opcode op, Type t, const ref<Operation>& op0,
@@ -281,6 +286,24 @@ protected:
 
 private:
   void invalidate() noexcept;
+};
+
+/**
+ * 
+ */
+class Constant : public Operation {
+private:
+  Constant(Type t, const std::string& name);
+  Constant(Type t, std::string&& name);
+
+public:
+  std::string& name();
+  const std::string& name() const;
+
+  static ref<Operation> Create(Type t, const std::string& name);
+  static ref<Operation> Create(Type t, std::string&& name);
+
+  static bool classof(const Operation* op);
 };
 
 /**

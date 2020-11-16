@@ -41,6 +41,11 @@ Operation::Operation(Opcode op, llvm::APFloat&& fconst)
   CAFFEINE_ASSERT(op == ConstantFloat);
 }
 
+Operation::Operation(Opcode op, Type t, const std::string& name)
+    : opcode_(op), type_(t), name_(name) {
+  CAFFEINE_ASSERT(op == Constant);
+}
+
 Operation::Operation(const Operation& op) noexcept
     : opcode_(op.opcode_), type_(op.type_) {
   if (is_constant()) {
@@ -116,6 +121,9 @@ Operation& Operation::operator=(const Operation& op) noexcept {
     case ConstantFloat:
       new (&fconst_) llvm::APFloat(op.fconst_);
       break;
+    case Constant:
+      new (&name_) std::string(op.name_);
+      break;
     default:
       CAFFEINE_UNREACHABLE();
     }
@@ -139,6 +147,9 @@ Operation& Operation::operator=(Operation&& op) noexcept {
       break;
     case ConstantFloat:
       new (&fconst_) llvm::APFloat(std::move(op.fconst_));
+      break;
+    case Constant:
+      new (&name_) std::string(std::move(op.name_));
       break;
     default:
       CAFFEINE_UNREACHABLE();
@@ -193,6 +204,9 @@ void Operation::invalidate() noexcept {
       break;
     case ConstantFloat:
       fconst_.~APFloat();
+      break;
+    case Constant:
+      name_.~basic_string();
       break;
     default:
       CAFFEINE_UNREACHABLE();
@@ -319,8 +333,8 @@ DECL_UNOP_CREATE(FNeg, ASSERT_FP);
  * SelectOp                                        *
  ***************************************************/
 SelectOp::SelectOp(Type t, const ref<Operation>& cond,
-                 const ref<Operation>& true_val,
-                 const ref<Operation>& false_val)
+                   const ref<Operation>& true_val,
+                   const ref<Operation>& false_val)
     : Operation(Opcode::Select, t, cond, true_val, false_val) {}
 
 ref<Operation> SelectOp::Create(const ref<Operation>& cond,

@@ -26,6 +26,10 @@ namespace caffeine {
 // All derived operation types should be the same size
 static_assert(sizeof(ConstantInt) == sizeof(Operation));
 static_assert(sizeof(ConstantFloat) == sizeof(Operation));
+static_assert(sizeof(Constant) == sizeof(Operation));
+static_assert(sizeof(BinaryOp) == sizeof(Operation));
+static_assert(sizeof(UnaryOp) == sizeof(Operation));
+static_assert(sizeof(SelectOp) == sizeof(Operation));
 
 namespace detail {
   template <typename T>
@@ -177,8 +181,18 @@ inline Type Operation::type() const {
 }
 
 inline bool Operation::is_constant() const {
-  // Needs to be updated if constant opcode representation changes 
+  // Needs to be updated if constant opcode representation changes
   return (opcode_ >> 6) == 1;
+}
+
+/***************************************************
+ * Constant                                        *
+ ***************************************************/
+inline std::string& Constant::name() {
+  return name_;
+}
+inline const std::string& Constant::name() const {
+  return name_;
 }
 
 /***************************************************
@@ -292,6 +306,7 @@ inline bool FCmpOp::is_unordered() const {
 
 CAFFEINE_OP_DECL_CLASSOF(ConstantInt, ConstantInt);
 CAFFEINE_OP_DECL_CLASSOF(ConstantFloat, ConstantFloat);
+CAFFEINE_OP_DECL_CLASSOF(Constant, Constant);
 CAFFEINE_OP_DECL_CLASSOF(SelectOp, Select);
 
 inline bool BinaryOp::classof(const Operation* op) {
