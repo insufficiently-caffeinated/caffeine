@@ -2,7 +2,6 @@
 #define CAFFEINE_SOLVER_SOLVER_H
 
 #include <memory>
-#include <string_view>
 #include <vector>
 
 #include "caffeine/ADT/Ref.h"
@@ -11,6 +10,7 @@ namespace caffeine {
 
 class Assertion;
 class Operation;
+class Constant;
 
 enum SolverResult { UNSAT, SAT, Unknown };
 
@@ -49,7 +49,7 @@ public:
    *
    * It is invalid to call this method if the model is not SAT.
    */
-  virtual ref<Operation> lookup(std::string_view name) const = 0;
+  virtual ref<Operation> lookup(const Constant& constant) const = 0;
 
 protected:
   Model(const Model&) = default;

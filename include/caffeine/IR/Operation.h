@@ -289,7 +289,9 @@ private:
 };
 
 /**
+ * Symbolic constant.
  * 
+ * Symbolic constants are uniquely identified by a string name.
  */
 class Constant : public Operation {
 private:
