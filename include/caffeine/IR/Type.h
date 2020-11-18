@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <optional>
 
+#include <llvm/ADT/Hashing.h>
+
 #include "caffeine/ADT/Ref.h"
 
 namespace llvm {
@@ -47,6 +49,8 @@ private:
   uint32_t desc_ : 24;
 
   Type(Kind kind, uint32_t desc, llvm::Type* inner = nullptr);
+
+  friend llvm::hash_code hash_value(const Type& type);
 
 public:
   explicit Type(llvm::Type* type);

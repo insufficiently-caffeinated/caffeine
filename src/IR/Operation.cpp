@@ -1,5 +1,7 @@
 #include "caffeine/IR/Operation.h"
 
+#include <llvm/ADT/Hashing.h>
+
 namespace caffeine {
 
 Operation::Operation() : opcode_(Invalid), type_(Type::void_ty()) {}
@@ -393,6 +395,34 @@ ref<Operation> FCmpOp::CreateFCmp(FCmpOpcode cmp, const ref<Operation>& lhs,
                   "icmp can only be created with integer operands");
 
   return ref<Operation>(new FCmpOp(cmp, lhs->type(), lhs, rhs));
+}
+
+/***************************************************
+ * hashing implementations                         *
+ ***************************************************/
+llvm::hash_code hash_value(const Operation& op) {
+  std::size_t hash = llvm::hash_combine(op.opcode(), op.type());
+
+  if (op.num_operands() == 0) {
+    switch (op.opcode()) {
+    case Operation::Constant:
+      hash = llvm::hash_combine(hash, op.name_);
+      break;
+    case Operation::ConstantInt:
+      hash = llvm::hash_combine(hash, op.iconst_);
+      break;
+    case Operation::ConstantFloat:
+      hash = llvm::hash_combine(hash, op.fconst_);
+      break;
+    default:
+      CAFFEINE_UNREACHABLE();
+    }
+  } else {
+    for (const auto& operand : op.operands())
+      hash = llvm::hash_combine(hash, operand);
+  }
+
+  return llvm::hash_code(hash);
 }
 
 } // namespace caffeine

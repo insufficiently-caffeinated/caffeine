@@ -46,6 +46,22 @@ inline bool Type::operator!=(const Type& b) const {
   return !(*this == b);
 }
 
+inline llvm::hash_code hash_value(const Type& type) {
+  return llvm::hash_combine(type.llvm_, type.kind_, type.desc_);
 }
+
+}
+
+namespace std {
+
+template <>
+struct hash<caffeine::Type> {
+  std::size_t operator()(const caffeine::Type& type) const noexcept {
+    using llvm::hash_value;
+    return hash_value(type);
+  }
+};
+
+} // namespace std
 
 #endif

@@ -2,6 +2,7 @@
 #ifndef CAFFEINE_IR_OPERATION_INL
 #define CAFFEINE_IR_OPERATION_INL
 
+#include <functional>
 #include <type_traits>
 
 #include "caffeine/IR/Operation.h"
@@ -324,6 +325,22 @@ inline bool FCmpOp::classof(const Operation* op) {
 
 #undef CAFFEINE_OP_DECL_CLASSOF
 
+/***************************************************
+ * hashing implementations                         *
+ ***************************************************/
+llvm::hash_code hash_value(const Operation& op);
+
 } // namespace caffeine
+
+namespace std {
+
+template <>
+struct hash<caffeine::Operation> {
+  std::size_t operator()(const caffeine::Operation& op) const noexcept {
+    return static_cast<std::size_t>(caffeine::hash_value(op));
+  }
+};
+
+} // namespace std
 
 #endif
