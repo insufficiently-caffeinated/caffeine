@@ -202,6 +202,8 @@ protected:
   template <typename T, typename Deleter>
   friend class ref;
 
+  friend llvm::hash_code hash_value(const Operation& op);
+
 protected:
   // Specialization that provides some sanity checking when
   // the caller is using a fixed-size array.
