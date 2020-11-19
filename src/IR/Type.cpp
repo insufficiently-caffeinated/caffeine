@@ -2,9 +2,9 @@
 
 #include <llvm/ADT/APFloat.h>
 #include <llvm/ADT/APInt.h>
+#include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Type.h>
-#include <llvm/IR/DerivedTypes.h>
 
 using llvm::LLVMContext;
 

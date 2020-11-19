@@ -22,3 +22,19 @@ include(setup-warnings)
 
 add_subdirectory(src)
 add_subdirectory(test)
+
+file(
+  GLOB_RECURSE fmt_sources
+  *.c
+  *.cpp
+  *.h
+  *.hpp
+  *.inl
+)
+
+add_custom_target(format
+  COMMAND clang-format -i ${fmt_sources}
+  VERBATIM
+  WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+)
+

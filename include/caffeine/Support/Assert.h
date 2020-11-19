@@ -28,8 +28,9 @@ struct message {
  * Usually, this function should not be called directly. Use
  * DECAF_ASSERT instead.
  */
-[[noreturn]] void assert_fail(const char *condition, const char *function, unsigned int line,
-                              const char *file, message message);
+[[noreturn]] void assert_fail(const char* condition, const char* function,
+                              unsigned int line, const char* file,
+                              message message);
 
 /**
  * Exit the process with an abort message and print a backtrace of
@@ -39,7 +40,8 @@ struct message {
  * or one of the other abortion macros such as DECAF_UNIMPLEMENTED or
  * DECAF_UNREACHABLE instead.
  */
-[[noreturn]] void abort(const char *function, unsigned int line, const char *file, message message);
+[[noreturn]] void abort(const char* function, unsigned int line,
+                        const char* file, message message);
 
 } // namespace caffeine::detail
 
@@ -64,19 +66,20 @@ struct message {
  * Note that the message is only evaluated if the assertion fails.
  */
 
-#define CAFFEINE_ASSERT(cond, ...)                                                                 \
-  do {                                                                                             \
-    if (!(cond)) {                                                                                 \
-      ::caffeine::detail::assert_fail(#cond, CAFFEINE_FUNCTION, __LINE__, __FILE__,                \
-                                      ::caffeine::detail::message(__VA_ARGS__));                   \
-    }                                                                                              \
+#define CAFFEINE_ASSERT(cond, ...)                                             \
+  do {                                                                         \
+    if (!(cond)) {                                                             \
+      ::caffeine::detail::assert_fail(                                         \
+          #cond, CAFFEINE_FUNCTION, __LINE__, __FILE__,                        \
+          ::caffeine::detail::message(__VA_ARGS__));                           \
+    }                                                                          \
   } while (false)
 
 /**
  * Abort the process with an optional message.
  */
-#define CAFFEINE_ABORT(...)                                                                        \
-  ::caffeine::detail::abort(CAFFEINE_FUNCTION, __LINE__, __FILE__,                                 \
+#define CAFFEINE_ABORT(...)                                                    \
+  ::caffeine::detail::abort(CAFFEINE_FUNCTION, __LINE__, __FILE__,             \
                             ::caffeine::detail::message(__VA_ARGS__))
 
 #define CAFFEINE_UNREACHABLE() CAFFEINE_ABORT("entered unreachable code")
