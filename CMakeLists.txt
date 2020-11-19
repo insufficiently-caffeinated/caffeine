@@ -29,6 +29,7 @@ file(
   *.cpp
   *.h
   *.hpp
+  *.inl
 )
 
 add_custom_target(format
