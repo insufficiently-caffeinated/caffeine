@@ -222,6 +222,83 @@ void Operation::invalidate() noexcept {
   opcode_ = Invalid;
 }
 
+const char* Operation::opcode_name() const {
+  return opcode_name(static_cast<Opcode>(opcode()));
+}
+const char* Operation::opcode_name(Opcode op) {
+  // clang-format off
+  switch (op) {
+  case Invalid:       return "Invalid";
+  case Constant:      return "Constant";
+  case ConstantInt:   return "ConstantInt";
+  case ConstantFloat: return "ConstantFloat";
+
+  case Add:   return "Add";
+  case Sub:   return "Sub";
+  case Mul:   return "Mul";
+  case UDiv:  return "UDiv";
+  case SDiv:  return "SDiv";
+  case URem:  return "URem";
+  case SRem:  return "SRem";
+  case And:   return "And";
+  case Or:    return "Or";
+  case Xor:   return "Xor";
+  case Shl:   return "Shl";
+  case LShr:  return "LShr";
+  case AShr:  return "AShr";
+  case Not:   return "Not";
+
+  case FAdd:  return "FAdd";
+  case FSub:  return "FSub";
+  case FMul:  return "FMul";
+  case FDiv:  return "FDiv";
+  case FRem:  return "FRem";
+  case FNeg:  return "FNeg";
+
+  case Trunc:   return "Trunc";
+  case SExt:    return "SExt";
+  case ZExt:    return "ZExt";
+  case FpTrunc: return "FpTrunc";
+  case FpExt:   return "FpExt";
+  case FpToUI:  return "FpToUI";
+  case FpToSI:  return "FpToSI";
+  case UIToFp:  return "UIToFp";
+  case SIToFp:  return "SIToFp";
+
+  case ICmpEq:
+  case ICmpNe:
+  case ICmpUgt:
+  case ICmpUge:
+  case ICmpUlt:
+  case ICmpUle:
+  case ICmpSgt:
+  case ICmpSge:
+  case ICmpSlt:
+  case ICmpSle:
+    return "ICmp";
+
+  case FCmpOeq:
+  case FCmpOgt:
+  case FCmpOge:
+  case FCmpOlt:
+  case FCmpOle:
+  case FCmpOne:
+  case FCmpOrd:
+  case FCmpUno:
+  case FCmpUeq:
+  case FCmpUgt:
+  case FCmpUge:
+  case FCmpUlt:
+  case FCmpUle:
+  case FCmpUne:
+    return "FCmp";
+
+  case Select: return "Select";
+  }
+  // clang-format on
+  return "Unknown";
+}
+
 /***************************************************
  * ConstantInt                                     *
  ***************************************************/

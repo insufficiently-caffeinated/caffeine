@@ -182,8 +182,21 @@ inline Type Operation::type() const {
 }
 
 inline bool Operation::is_constant() const {
-  // Needs to be updated if constant opcode representation changes
+  // The opcodes of constant operations are currently represented as (1, 0,
+  // <arbitrary aux data>). If this representation change then we'll have to
+  // update this function.
   return (opcode_ >> 6) == 1;
+}
+
+inline Operation& Operation::operator[](size_t idx) {
+  CAFFEINE_ASSERT(idx < num_operands(),
+                  "Tried to access out-of-bounds operand");
+  return *operands_[idx];
+}
+inline const Operation& Operation::operator[](size_t idx) const {
+  CAFFEINE_ASSERT(idx < num_operands(),
+                  "Tried to access out-of-bounds operand");
+  return *operands_[idx];
 }
 
 /***************************************************
