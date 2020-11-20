@@ -27,10 +27,15 @@ Z3Solver::Z3Solver() {
 std::unique_ptr<Model> Z3Solver::resolve(std::vector<Assertion>& assertions,
                                          const Assertion& extra) {
   z3::solver solver = z3::tactic(ctx, "default").mk_solver();
+
+  auto visitor = Z3OpVisitor(&ctx);
+
+  for (size_t i = 0 ; i < assertions.size() ; ++i) {
+
+  }
 }
 
-Z3OpVisitor::Z3OpVisitor(z3::context* ctx, z3::solver* solver)
-    : ctx(ctx), solver(solver) {}
+Z3OpVisitor::Z3OpVisitor(z3::context* ctx) : ctx(ctx) {}
 
 z3::expr Z3OpVisitor::visitConstant(const Constant& op) {
   return ctx->real_const(op.name().c_str()); // Is this right?
@@ -124,19 +129,19 @@ z3::expr Z3OpVisitor::visitFCmp(const FCmpOp& op) {
   // TODO: Need to fix ordered checks to have an is NaN check
   switch (op.comparison()) {
   case FCmpOpcode::OEQ:
-    return lhs == rhs;
+    return lhs == rhs && lhs == lhs && rhs == rhs ;
   case FCmpOpcode::OGT:
-    return lhs > rhs;
+    return lhs > rhs && lhs == lhs && rhs == rhs;
   case FCmpOpcode::OGE:
-    return lhs >= rhs;
+    return lhs >= rhs && lhs == lhs && rhs == rhs;
   case FCmpOpcode::OLT:
-    return lhs < rhs;
+    return lhs < rhs && lhs == lhs && rhs == rhs;
   case FCmpOpcode::OLE:
-    return lhs <= rhs;
+    return lhs <= rhs && lhs == lhs && rhs == rhs;
   case FCmpOpcode::ONE:
-    return lhs != rhs;
+    return lhs != rhs && lhs == lhs && rhs == rhs;
   case FCmpOpcode::ORD:
-    return lhs;
+    return lhs == lhs && rhs == rhs;
   case FCmpOpcode::UEQ:
     return lhs == rhs;
   case FCmpOpcode::UGT:
@@ -150,7 +155,7 @@ z3::expr Z3OpVisitor::visitFCmp(const FCmpOp& op) {
   case FCmpOpcode::UNE:
     return lhs != rhs;
   case FCmpOpcode::UNO:
-    return rhs;
+    return lhs != lhs || rhs != rhs;
   default:
     CAFFEINE_ASSERT(false, "Unknown FCmpOpcode");
   }

@@ -4,14 +4,17 @@
 #include <memory>
 #include <z3++.h>
 
-#include "Solver.h"
 #include "caffeine/IR/Operation.h"
+#include "caffeine/IR/Solver.h"
 #include "caffeine/IR/Visitor.h"
 
 namespace caffeine {
 
 class Z3OpVisitor : public ConstOpVisitor<Z3OpVisitor, z3::expr> {
-  Z3OpVisitor(z3::context *ctx, z3::solver *solver);
+  z3::context* ctx;
+
+public:
+  Z3OpVisitor(z3::context* ctx);
 
   // clang-format off
   z3::expr visitConstant     (const Constant& op);
@@ -47,8 +50,8 @@ class Z3OpVisitor : public ConstOpVisitor<Z3OpVisitor, z3::expr> {
 
   // clang-format on
 protected:
-  z3::context *ctx;
-  z3::solver *solver;
+  z3::context* ctx;
+  z3::solver* solver;
 };
 
 class Z3Model : Model {
