@@ -33,8 +33,8 @@ namespace detail {
  * To define your own visitor, inherit from either OpVisitor or ConstOpVisitor
  * depending on whether you want to be able to modify the instruction instances
  * being visited. Then, "override" the visitXXX method to get handle each
- * instruction variant. Note that all methods are staticly resolved, so override
- * doesn't actually declare a virtual method.
+ * instruction variant. Note that all methods are staticly resolved, so
+ * overriding them doesn't actually declare a virtual method.
  *
  * If you don't implement the visitXXX for some operation type, then the
  * visitXXX for its supertype will be called all the way up to the base
@@ -46,6 +46,28 @@ namespace detail {
  * specifies the type that the instruction visitation functions should return.
  * If you specify this, then you *MUST* provide an implementation of
  * visitInstruction.
+ *
+ * Example
+ * =======
+ * Suppose we want to create a visitor that could be used to count the number of
+ * symbolic constants that occur in an expression tree. It would look something
+ * like this:
+ * 
+ * ```cpp
+ * class CountingVisitor : ConstOpVisitor<CountingVisitor> {
+ * public:
+ *   size_t num_consts = 0;
+ * 
+ *   void visitOperation(const Operation& op) {
+ *     for (const Operation& operand : op.operands)
+ *       visit(operand);
+ *   }
+ * 
+ *   void visitConstant(const Constant&) {
+ *     num_constants += 1;
+ *   }
+ * };
+ * ```
  *
  * OpVisitorBase Details
  * =====================
@@ -63,6 +85,7 @@ private:
 
 public:
   RetTy visit(transform_t<Operation>& O);
+  RetTy visit(transform_t<Operation>* O);
 
   void visitOperation(transform_t<Operation>&) {}
 
@@ -101,6 +124,16 @@ public:
   // Unary operations
   RetTy visitNot (transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }
   RetTy visitFNeg(transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }
+
+  RetTy visitTrunc  (transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }
+  RetTy visitZExt   (transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }
+  RetTy visitSExt   (transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }
+  RetTy visitFpTrunc(transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }
+  RetTy visitFpExt  (transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }
+  RetTy visitFpToUI (transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }
+  RetTy visitFpToSI (transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }
+  RetTy visitUIToFp (transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }
+  RetTy visitSIToFp (transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }
   // clang-format on
 };
 

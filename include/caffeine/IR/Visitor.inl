@@ -60,6 +60,13 @@ RetTy OpVisitorBase<Transform, SubClass, RetTy>::visit(
 #undef DELEGATE
 }
 
+template <template <typename T> class Transform, typename SubClass,
+          typename RetTy>
+RetTy OpVisitorBase<Transform, SubClass, RetTy>::visit(
+    transform_t<Operation>* op) {
+  return visit(*op);
+}
+
 } // namespace caffeine
 
 #endif
