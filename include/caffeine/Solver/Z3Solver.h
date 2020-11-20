@@ -14,36 +14,36 @@ class Z3OpVisitor : public ConstOpVisitor<Z3OpVisitor, z3::expr> {
   Z3OpVisitor(z3::context *ctx, z3::solver *solver);
 
   // clang-format off
-  z3::expr visitConstant     (Constant& op);
-  z3::expr visitConstantInt  (ConstantInt& op);
-  z3::expr visitConstantFloat(ConstantFloat& op);
+  z3::expr visitConstant     (const Constant& op);
+  z3::expr visitConstantInt  (const ConstantInt& op);
+  z3::expr visitConstantFloat(const ConstantFloat& op);
 
   // Binary operations
-  z3::expr visitAdd (BinaryOp& op);
-  z3::expr visitSub (BinaryOp& op);
-  z3::expr visitMul (BinaryOp& op);
-  z3::expr visitUDiv(BinaryOp& op);
-  z3::expr visitSDiv(BinaryOp& op);
-  z3::expr visitURem(BinaryOp& op);
-  z3::expr visitSRem(BinaryOp& op);
-  z3::expr visitAnd (BinaryOp& op);
-  z3::expr visitOr  (BinaryOp& op);
-  z3::expr visitXor (BinaryOp& op);
-  z3::expr visitShl (BinaryOp& op);
-  z3::expr visitLShr(BinaryOp& op);
-  z3::expr visitAShr(BinaryOp& op);
-  z3::expr visitFAdd(BinaryOp& op);
-  z3::expr visitFSub(BinaryOp& op);
-  z3::expr visitFMul(BinaryOp& op);
-  z3::expr visitFDiv(BinaryOp& op);
-  z3::expr visitFRem(BinaryOp& op);
+  z3::expr visitAdd (const BinaryOp& op);
+  z3::expr visitSub (const BinaryOp& op);
+  z3::expr visitMul (const BinaryOp& op);
+  z3::expr visitUDiv(const BinaryOp& op);
+  z3::expr visitSDiv(const BinaryOp& op);
+  z3::expr visitURem(const BinaryOp& op);
+  z3::expr visitSRem(const BinaryOp& op);
+  z3::expr visitAnd (const BinaryOp& op);
+  z3::expr visitOr  (const BinaryOp& op);
+  z3::expr visitXor (const BinaryOp& op);
+  z3::expr visitShl (const BinaryOp& op);
+  z3::expr visitLShr(const BinaryOp& op);
+  z3::expr visitAShr(const BinaryOp& op);
+  z3::expr visitFAdd(const BinaryOp& op);
+  z3::expr visitFSub(const BinaryOp& op);
+  z3::expr visitFMul(const BinaryOp& op);
+  z3::expr visitFDiv(const BinaryOp& op);
+  z3::expr visitFRem(const BinaryOp& op);
 
-  z3::expr visitICmp(ICmpOp& op);
-  z3::expr visitFCmp(FCmpOp& op);
+  z3::expr visitICmp(const ICmpOp& op);
+  z3::expr visitFCmp(const FCmpOp& op);
 
   // Unary operations
-  z3::expr visitNot (UnaryOp& op);
-  z3::expr visitFNeg(UnaryOp& op);
+  z3::expr visitNot (const UnaryOp& op);
+  z3::expr visitFNeg(const UnaryOp& op);
 
   // clang-format on
 protected:
