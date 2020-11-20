@@ -52,7 +52,7 @@ RetTy OpVisitorBase<Transform, SubClass, RetTy>::visit(
 
   case Operation::Invalid:
     CAFFEINE_ABORT("tried to visit an invalid operation");
-  
+
   default:
     CAFFEINE_ABORT("unknown operation opcode");
   }
