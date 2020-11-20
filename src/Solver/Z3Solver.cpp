@@ -30,9 +30,7 @@ std::unique_ptr<Model> Z3Solver::resolve(std::vector<Assertion>& assertions,
 
   auto visitor = Z3OpVisitor(&ctx);
 
-  for (size_t i = 0 ; i < assertions.size() ; ++i) {
-
-  }
+  for (size_t i = 0; i < assertions.size(); ++i) {}
 }
 
 Z3OpVisitor::Z3OpVisitor(z3::context* ctx) : ctx(ctx) {}
@@ -64,7 +62,7 @@ z3::expr Z3OpVisitor::visitConstantFloat(const ConstantFloat& op) {
   return ctx->fpa_val(op.value().convertToFloat()); // TODO: Is this corret?
 }
 
-#define CAFFEINE_OP_IMPL_DELEGATE(name, op_code)                               \
+#define CAFFEINE_BINOP_IMPL(name, op_code)                                     \
   z3::expr Z3OpVisitor::visit##name(const BinaryOp& op) {                      \
     auto lhs = visit(*op.lhs());                                               \
     auto rhs = visit(*op.rhs());                                               \
@@ -72,24 +70,24 @@ z3::expr Z3OpVisitor::visitConstantFloat(const ConstantFloat& op) {
   }
 
 // clang-format off
-CAFFEINE_OP_IMPL_DELEGATE(Add, lhs + rhs)
-CAFFEINE_OP_IMPL_DELEGATE(Sub, lhs - rhs)
-CAFFEINE_OP_IMPL_DELEGATE(Mul, lhs * rhs)
-CAFFEINE_OP_IMPL_DELEGATE(UDiv, z3::udiv(lhs, rhs))
-CAFFEINE_OP_IMPL_DELEGATE(SDiv, lhs / rhs)
-CAFFEINE_OP_IMPL_DELEGATE(URem, z3::urem(lhs, rhs))
-CAFFEINE_OP_IMPL_DELEGATE(SRem, lhs % rhs)
-CAFFEINE_OP_IMPL_DELEGATE(And, lhs & rhs)
-CAFFEINE_OP_IMPL_DELEGATE(Or, lhs | rhs)
-CAFFEINE_OP_IMPL_DELEGATE(Xor, lhs ^ rhs)
-CAFFEINE_OP_IMPL_DELEGATE(Shl, z3::shl(lhs, rhs))
-CAFFEINE_OP_IMPL_DELEGATE(LShr, z3::lshr(lhs, rhs))
-CAFFEINE_OP_IMPL_DELEGATE(AShr, z3::ashr(lhs, rhs))
-CAFFEINE_OP_IMPL_DELEGATE(FAdd, lhs + rhs) // I did not see specific functions for floats?
-CAFFEINE_OP_IMPL_DELEGATE(FSub, lhs - rhs)
-CAFFEINE_OP_IMPL_DELEGATE(FDiv, lhs / rhs)
-CAFFEINE_OP_IMPL_DELEGATE(FRem, lhs % rhs)
-#undef CAFFEINE_OP_IMPL_DELEGATE
+CAFFEINE_BINOP_IMPL(Add, lhs + rhs)
+CAFFEINE_BINOP_IMPL(Sub, lhs - rhs)
+CAFFEINE_BINOP_IMPL(Mul, lhs * rhs)
+CAFFEINE_BINOP_IMPL(UDiv, z3::udiv(lhs, rhs))
+CAFFEINE_BINOP_IMPL(SDiv, lhs / rhs)
+CAFFEINE_BINOP_IMPL(URem, z3::urem(lhs, rhs))
+CAFFEINE_BINOP_IMPL(SRem, lhs % rhs)
+CAFFEINE_BINOP_IMPL(And, lhs & rhs)
+CAFFEINE_BINOP_IMPL(Or, lhs | rhs)
+CAFFEINE_BINOP_IMPL(Xor, lhs ^ rhs)
+CAFFEINE_BINOP_IMPL(Shl, z3::shl(lhs, rhs))
+CAFFEINE_BINOP_IMPL(LShr, z3::lshr(lhs, rhs))
+CAFFEINE_BINOP_IMPL(AShr, z3::ashr(lhs, rhs))
+CAFFEINE_BINOP_IMPL(FAdd, lhs + rhs) // I did not see specific functions for floats?
+CAFFEINE_BINOP_IMPL(FSub, lhs - rhs)
+CAFFEINE_BINOP_IMPL(FDiv, lhs / rhs)
+CAFFEINE_BINOP_IMPL(FRem, lhs % rhs)
+#undef CAFFEINE_BINOP_IMPL
 // clang-format on
 
 z3::expr Z3OpVisitor::visitICmp(const ICmpOp& op) {
@@ -126,10 +124,9 @@ z3::expr Z3OpVisitor::visitFCmp(const FCmpOp& op) {
   auto lhs = visit(*op.lhs());
   auto rhs = visit(*op.rhs());
 
-  // TODO: Need to fix ordered checks to have an is NaN check
   switch (op.comparison()) {
   case FCmpOpcode::OEQ:
-    return lhs == rhs && lhs == lhs && rhs == rhs ;
+    return lhs == rhs && lhs == lhs && rhs == rhs;
   case FCmpOpcode::OGT:
     return lhs > rhs && lhs == lhs && rhs == rhs;
   case FCmpOpcode::OGE:

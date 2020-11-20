@@ -5,7 +5,7 @@
 #include <z3++.h>
 
 #include "caffeine/IR/Operation.h"
-#include "caffeine/IR/Solver.h"
+#include "caffeine/Solver/Solver.h"
 #include "caffeine/IR/Visitor.h"
 
 namespace caffeine {
