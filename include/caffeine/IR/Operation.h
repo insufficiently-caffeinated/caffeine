@@ -86,6 +86,13 @@ enum class FCmpOpcode : uint8_t {
  *    derived so that llvm::dyn_cast and llvm::isa work.
  * 3. Add a builder function `CreateXXX` to the proper derived class that
  *    builds the correct Operation instance.
+ * 4. Add the correct delegation method to the OpVisitorBase class in Visitor.h.
+ *    See the other methods there as to how it should be written.
+ * 5. Add the opcode + its corresponding name to the switch statement within
+ *    opcode_name.
+ * 6. Add the logic required to handle the new opcode to ExprEvaluator within
+ *    Visitor.cpp. This may also require adding new built-in methods to the
+ *    Value type.
  */
 class Operation {
 public:
@@ -159,7 +166,7 @@ public:
     // what each of these mean.
     // TODO: Should these be broken down?
     FCmpOeq = detail::opcode(33, 2, (uint16_t)FCmpOpcode::OEQ),
-    FCmpOGt = detail::opcode(33, 2, (uint16_t)FCmpOpcode::OGT),
+    FCmpOgt = detail::opcode(33, 2, (uint16_t)FCmpOpcode::OGT),
     FCmpOge = detail::opcode(33, 2, (uint16_t)FCmpOpcode::OGE),
     FCmpOlt = detail::opcode(33, 2, (uint16_t)FCmpOpcode::OLT),
     FCmpOle = detail::opcode(33, 2, (uint16_t)FCmpOpcode::OLE),
@@ -239,6 +246,11 @@ public:
   // Get the opcode
   uint16_t opcode() const;
 
+  // Get a static string that contains the opcode name. Returns "Unknown" on
+  // unknown opcode.
+  const char* opcode_name() const;
+  static const char* opcode_name(Opcode op);
+
   // Read-only access to the refcount. If this is 0 then this is not a
   // reference-counted Operation instance.
   uint32_t refcnt() const;
@@ -263,6 +275,9 @@ public:
   size_t num_operands() const;
   llvm::iterator_range<operand_iterator> operands();
   llvm::iterator_range<const_operand_iterator> operands() const;
+
+  Operation& operator[](size_t idx);
+  const Operation& operator[](size_t idx) const;
 
   bool operator==(const Operation& op) const;
   bool operator!=(const Operation& op) const;
