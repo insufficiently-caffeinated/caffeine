@@ -50,7 +50,7 @@ inline llvm::hash_code hash_value(const Type& type) {
   return llvm::hash_combine(type.llvm_, type.kind_, type.desc_);
 }
 
-}
+} // namespace caffeine
 
 namespace std {
 

@@ -27,6 +27,10 @@ Type Type::void_ty() {
   return Type(Void, 0);
 }
 
+Type Type::bool_ty() {
+  return Type::int_ty(1);
+}
+
 Type Type::float_ty(uint32_t exponent, uint32_t mantissa) {
   CAFFEINE_ASSERT(exponent != 0 && exponent < (UINT32_C(1) << 12));
   CAFFEINE_ASSERT(mantissa != 0 && mantissa < (UINT32_C(1) << 12));
