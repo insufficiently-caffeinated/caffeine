@@ -415,7 +415,7 @@ public:
 };
 
 /**
- * Unary operations (e.g. not and fneg).
+ * Unary operations (e.g. not, fneg, conversion operations).
  *
  * Any more specific unary operations should inherit from this class.
  */
@@ -430,6 +430,16 @@ public:
   static ref<Operation> Create(Opcode op, const ref<Operation>& operand);
   static ref<Operation> CreateNot(const ref<Operation>& operand);
   static ref<Operation> CreateFNeg(const ref<Operation>& operand);
+
+  static ref<Operation> CreateTrunc(Type tgt, const ref<Operation>& operand);
+  static ref<Operation> CreateZExt(Type tgt, const ref<Operation>& operand);
+  static ref<Operation> CreateSExt(Type tgt, const ref<Operation>& operand);
+  static ref<Operation> CreateFpTrunc(Type tgt, const ref<Operation>& operand);
+  static ref<Operation> CreateFpExt(Type tgt, const ref<Operation>& operand);
+  static ref<Operation> CreateFpToUI(Type tgt, const ref<Operation>& operand);
+  static ref<Operation> CreateFpToSI(Type tgt, const ref<Operation>& operand);
+  static ref<Operation> CreateUIToFp(Type tgt, const ref<Operation>& operand);
+  static ref<Operation> CreateSIToFp(Type tgt, const ref<Operation>& operand);
 
   static bool classof(const Operation* op);
 };

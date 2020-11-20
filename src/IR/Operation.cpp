@@ -331,6 +331,68 @@ ref<Operation> UnaryOp::Create(Opcode op, const ref<Operation>& operand) {
 DECL_UNOP_CREATE(Not, ASSERT_INT);
 DECL_UNOP_CREATE(FNeg, ASSERT_FP);
 
+ref<Operation> UnaryOp::CreateTrunc(Type tgt, const ref<Operation>& operand) {
+  CAFFEINE_ASSERT(tgt.is_int());
+  CAFFEINE_ASSERT(operand->type().is_int());
+  CAFFEINE_ASSERT(tgt.bitwidth() < operand->type().bitwidth());
+
+  return ref<Operation>(new UnaryOp(Opcode::Trunc, tgt, operand));
+}
+ref<Operation> UnaryOp::CreateZExt(Type tgt, const ref<Operation>& operand) {
+  CAFFEINE_ASSERT(tgt.is_int());
+  CAFFEINE_ASSERT(operand->type().is_int());
+  CAFFEINE_ASSERT(tgt.bitwidth() > operand->type().bitwidth());
+
+  return ref<Operation>(new UnaryOp(Opcode::ZExt, tgt, operand));
+}
+ref<Operation> UnaryOp::CreateSExt(Type tgt, const ref<Operation>& operand) {
+  CAFFEINE_ASSERT(tgt.is_int());
+  CAFFEINE_ASSERT(operand->type().is_int());
+  CAFFEINE_ASSERT(tgt.bitwidth() > operand->type().bitwidth());
+
+  return ref<Operation>(new UnaryOp(Opcode::SExt, tgt, operand));
+}
+ref<Operation> UnaryOp::CreateFpTrunc(Type tgt, const ref<Operation>& operand) {
+  CAFFEINE_ASSERT(tgt.is_float());
+  CAFFEINE_ASSERT(operand->type().is_float());
+  CAFFEINE_ASSERT(tgt.exponent_bits() < operand->type().exponent_bits() &&
+                  tgt.mantissa_bits() < operand->type().mantissa_bits());
+
+  return ref<Operation>(new UnaryOp(Opcode::FpTrunc, tgt, operand));
+}
+ref<Operation> UnaryOp::CreateFpExt(Type tgt, const ref<Operation>& operand) {
+  CAFFEINE_ASSERT(tgt.is_float());
+  CAFFEINE_ASSERT(operand->type().is_float());
+  CAFFEINE_ASSERT(tgt.exponent_bits() > operand->type().exponent_bits() &&
+                  tgt.mantissa_bits() > operand->type().mantissa_bits());
+
+  return ref<Operation>(new UnaryOp(Opcode::FpExt, tgt, operand));
+}
+ref<Operation> UnaryOp::CreateFpToUI(Type tgt, const ref<Operation>& operand) {
+  CAFFEINE_ASSERT(tgt.is_int());
+  CAFFEINE_ASSERT(operand->type().is_float());
+
+  return ref<Operation>(new UnaryOp(Opcode::FpToUI, tgt, operand));
+}
+ref<Operation> UnaryOp::CreateFpToSI(Type tgt, const ref<Operation>& operand) {
+  CAFFEINE_ASSERT(tgt.is_int());
+  CAFFEINE_ASSERT(operand->type().is_float());
+
+  return ref<Operation>(new UnaryOp(Opcode::FpToSI, tgt, operand));
+}
+ref<Operation> UnaryOp::CreateUIToFp(Type tgt, const ref<Operation>& operand) {
+  CAFFEINE_ASSERT(tgt.is_float());
+  CAFFEINE_ASSERT(operand->type().is_int());
+
+  return ref<Operation>(new UnaryOp(Opcode::UIToFp, tgt, operand));
+}
+ref<Operation> UnaryOp::CreateSIToFp(Type tgt, const ref<Operation>& operand) {
+  CAFFEINE_ASSERT(tgt.is_float());
+  CAFFEINE_ASSERT(operand->type().is_int());
+
+  return ref<Operation>(new UnaryOp(Opcode::SIToFp, tgt, operand));
+}
+
 /***************************************************
  * SelectOp                                        *
  ***************************************************/
