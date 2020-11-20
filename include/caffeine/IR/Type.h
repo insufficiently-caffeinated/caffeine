@@ -73,6 +73,7 @@ public:
   static Type int_ty(uint32_t bitwidth);
   static Type void_ty();
   static Type float_ty(uint32_t exponent, uint32_t mantissa);
+  static Type bool_ty();
   // TODO: Address spaces? Not sure if we want to model them
   static Type pointer_ty();
 
