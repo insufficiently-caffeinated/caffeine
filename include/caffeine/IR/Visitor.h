@@ -52,17 +52,17 @@ namespace detail {
  * Suppose we want to create a visitor that could be used to count the number of
  * symbolic constants that occur in an expression tree. It would look something
  * like this:
- * 
+ *
  * ```cpp
  * class CountingVisitor : ConstOpVisitor<CountingVisitor> {
  * public:
  *   size_t num_consts = 0;
- * 
+ *
  *   void visitOperation(const Operation& op) {
  *     for (const Operation& operand : op.operands)
  *       visit(operand);
  *   }
- * 
+ *
  *   void visitConstant(const Constant&) {
  *     num_constants += 1;
  *   }
@@ -139,7 +139,7 @@ public:
 
 /**
  * Operation vistor.
- * 
+ *
  * See the docs on OpVisitorBase for more detailed docs.
  */
 template <typename SubClass, typename RetTy = void>
@@ -147,7 +147,7 @@ using OpVisitor = OpVisitorBase<detail::identity, SubClass, RetTy>;
 
 /**
  * Const operation visitor.
- * 
+ *
  * See the docs on OpVisitorBase for more detailed docs.
  */
 template <typename SubClass, typename RetTy = void>
