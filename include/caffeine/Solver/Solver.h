@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "caffeine/ADT/Ref.h"
+#include "caffeine/IR/Value.h"
 
 namespace caffeine {
 
@@ -39,7 +40,7 @@ public:
    *
    * It is invalid to call this method if the model is not SAT.
    */
-  virtual ref<Operation> evaluate(const ref<Operation>& expr) const = 0;
+  virtual Value evaluate(const Operation& expr) const;
 
   /**
    * Look up the value of a symbolic constant in this model. Returns an
@@ -49,7 +50,7 @@ public:
    *
    * It is invalid to call this method if the model is not SAT.
    */
-  virtual ref<Operation> lookup(const Constant& constant) const = 0;
+  virtual Value lookup(const Constant& constant) const = 0;
 
 protected:
   Model(const Model&) = default;
