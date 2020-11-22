@@ -1,6 +1,8 @@
 #ifndef CAFFEINE_INTERP_CONTEXT_H
 #define CAFFEINE_INTERP_CONTEXT_H
 
+#include <memory>
+
 #include <llvm/IR/Function.h>
 
 #include "caffeine/Interpreter/StackFrame.h"
@@ -11,8 +13,7 @@ namespace caffeine {
 class Context {
 private:
   /**
-   * This vector of assertions keeps the current set of invariants that we
-   * are keeping
+   * The current set of invariants for this context
    */
   std::vector<Assertion> assertions;
 
@@ -21,7 +22,7 @@ public:
    * The context is constructed with the solver and the function that will be
    * evaluated
    */
-  Context(const Solver& solver, llvm::Function* func);
+  Context(const std::shared_ptr<Solver>& solver, llvm::Function* func);
 
   /**
    * Create a new context that is independent from this
@@ -46,11 +47,13 @@ public:
    * get the solver model as a test case.
    */
   SolverResult check(const Assertion& expr);
+  SolverResult check(const std::vector<Assertion>& expr);
 
   /**
-   * Add a new assertion to the solver.
+   * Adds new assertions to the solver.
    */
   void add(const Assertion& assertion);
+  void add(const std::vector<Assertion>& assertions);
 };
 
 } // namespace caffeine

@@ -43,7 +43,7 @@ public:
    * 2. `value` is a constant
    *
    * In the first case we just look up the variable the `variables` map
-   * and then return it. In the second case we build a Z3 expression
+   * and then return it. In the second case we build an expression
    * that represents the constant and return that.
    *
    * This method should be preferred over directly interacting with
