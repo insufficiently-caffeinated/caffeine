@@ -6,9 +6,10 @@
 #include <unordered_map>
 
 #include "caffeine/IR/Operation.h"
-#include "caffeine/Interpreter/Context.h"
 
 namespace caffeine {
+
+class Context;
 
 class StackFrame {
 private:
@@ -16,10 +17,9 @@ private:
   llvm::BasicBlock* current_block;
   llvm::BasicBlock* prev_block;
   llvm::BasicBlock::iterator current;
-
-public:
   std::unordered_map<llvm::Value*, ref<Operation>> variables;
 
+public:
   StackFrame(llvm::Function* function);
 
   /**
@@ -34,7 +34,7 @@ public:
    * Insert a new value into the current stack frame. If that value
    * is already in the current stack frame then it overwrites it.
    */
-  void insert(llvm::Value* value, ref<Operation>& expr);
+  void insert(llvm::Value* value, const ref<Operation>& expr);
   /**
    * Lookup a value within the current stack frame.
    *
@@ -49,7 +49,7 @@ public:
    * This method should be preferred over directly interacting with
    * `variables` as it correctly handles constants.
    */
-  ref<Operation> lookup(llvm::Value* value, const Context& context) const;
+  ref<Operation> lookup(llvm::Value* value) const;
 };
 
 } // namespace caffeine
