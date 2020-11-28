@@ -14,10 +14,6 @@ class Context {
 private:
   std::vector<StackFrame> stack;
 public:
-  /**
-   * The context is constructed with the solver and the function that will be
-   * evaluated
-   */
   Context(llvm::Function* func);
 
   /**
