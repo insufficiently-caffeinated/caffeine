@@ -12,11 +12,7 @@ namespace caffeine {
 
 class Context {
 private:
-  /**
-   * The current set of invariants for this context
-   */
-  std::vector<Assertion> assertions;
-
+  std::shared_ptr<Solver> solver;
 public:
   /**
    * The context is constructed with the solver and the function that will be
