@@ -32,11 +32,11 @@ public:
 
   ExecutionResult visitInstruction(llvm::Instruction &inst);
 
-  ExecutionResult visitPHINode(llvm::PHINode &node)       { CAFFEINE_ABORT(); };
-  ExecutionResult visitBranchInst(llvm::BranchInst &inst) { CAFFEINE_ABORT(); };
-  ExecutionResult visitReturnInst(llvm::ReturnInst &inst) { CAFFEINE_ABORT(); };
-  ExecutionResult visitCallInst(llvm::CallInst &inst)     { CAFFEINE_ABORT(); };
-  ExecutionResult visitSelectInst(llvm::SelectInst &inst) { CAFFEINE_ABORT(); };
+  ExecutionResult visitPHINode(llvm::PHINode &node)       { CAFFEINE_UNIMPLEMENTED(); };
+  ExecutionResult visitBranchInst(llvm::BranchInst &inst) { CAFFEINE_UNIMPLEMENTED(); };
+  ExecutionResult visitReturnInst(llvm::ReturnInst &inst) { CAFFEINE_UNIMPLEMENTED(); };
+  ExecutionResult visitCallInst(llvm::CallInst &inst)     { CAFFEINE_UNIMPLEMENTED(); };
+  ExecutionResult visitSelectInst(llvm::SelectInst &inst) { CAFFEINE_UNIMPLEMENTED(); };
 };
 
 } // namespace caffeine
