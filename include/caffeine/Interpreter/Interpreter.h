@@ -1,6 +1,8 @@
 #ifndef CAFFEINE_INTERP_INTERPRETER_H
 #define CAFFEINE_INTERP_INTERPRETER_H
 
+#include <memory>
+
 #include "caffeine/Interpreter/Executor.h"
 #include "caffeine/IR/Assertion.h"
 #include "caffeine/Support/Assert.h"
@@ -13,6 +15,7 @@ enum class ExecutionResult { Continue, Stop };
 
 class Interpreter : public llvm::InstVisitor<Interpreter, ExecutionResult> {
 private:
+  Context *ctx;
   Executor* queue;
 
   /**
@@ -20,23 +23,26 @@ private:
    */
   std::vector<Assertion> assertions;
 
+  std::shared_ptr<Solver> solver;
 public:
   /**
    * The interpreter constructor needs an executor and context
    *
    * TODO: Add failure tracker
    */
-  Interpreter(Executor* queue);
+  Interpreter(Executor* queue, Context *ctx, const std::shared_ptr<Solver> & solver);
 
   void execute();
 
   ExecutionResult visitInstruction(llvm::Instruction &inst);
 
-  ExecutionResult visitPHINode(llvm::PHINode &node)       { CAFFEINE_UNIMPLEMENTED(); };
-  ExecutionResult visitBranchInst(llvm::BranchInst &inst) { CAFFEINE_UNIMPLEMENTED(); };
-  ExecutionResult visitReturnInst(llvm::ReturnInst &inst) { CAFFEINE_UNIMPLEMENTED(); };
-  ExecutionResult visitCallInst(llvm::CallInst &inst)     { CAFFEINE_UNIMPLEMENTED(); };
-  ExecutionResult visitSelectInst(llvm::SelectInst &inst) { CAFFEINE_UNIMPLEMENTED(); };
+  ExecutionResult visitAdd(llvm::BinaryOperator &op);
+
+  ExecutionResult visitPHINode(llvm::PHINode &)       { CAFFEINE_UNIMPLEMENTED(); };
+  ExecutionResult visitBranchInst(llvm::BranchInst &) { CAFFEINE_UNIMPLEMENTED(); };
+  ExecutionResult visitReturnInst(llvm::ReturnInst &) { CAFFEINE_UNIMPLEMENTED(); };
+  ExecutionResult visitCallInst(llvm::CallInst &)     { CAFFEINE_UNIMPLEMENTED(); };
+  ExecutionResult visitSelectInst(llvm::SelectInst &) { CAFFEINE_UNIMPLEMENTED(); };
 };
 
 } // namespace caffeine
