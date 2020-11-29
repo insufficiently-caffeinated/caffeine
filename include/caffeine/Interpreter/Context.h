@@ -13,6 +13,7 @@ namespace caffeine {
 class Context {
 private:
   std::vector<StackFrame> stack;
+
 public:
   Context(llvm::Function* func);
 

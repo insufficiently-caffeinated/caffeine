@@ -3,8 +3,8 @@
 
 #include <memory>
 
-#include "caffeine/Interpreter/Executor.h"
 #include "caffeine/IR/Assertion.h"
+#include "caffeine/Interpreter/Executor.h"
 #include "caffeine/Support/Assert.h"
 
 #include <llvm/IR/InstVisitor.h>
@@ -15,7 +15,7 @@ enum class ExecutionResult { Continue, Stop };
 
 class Interpreter : public llvm::InstVisitor<Interpreter, ExecutionResult> {
 private:
-  Context *ctx;
+  Context* ctx;
   Executor* queue;
 
   /**
@@ -24,25 +24,37 @@ private:
   std::vector<Assertion> assertions;
 
   std::shared_ptr<Solver> solver;
+
 public:
   /**
    * The interpreter constructor needs an executor and context
    *
    * TODO: Add failure tracker
    */
-  Interpreter(Executor* queue, Context *ctx, const std::shared_ptr<Solver> & solver);
+  Interpreter(Executor* queue, Context* ctx,
+              const std::shared_ptr<Solver>& solver);
 
   void execute();
 
-  ExecutionResult visitInstruction(llvm::Instruction &inst);
+  ExecutionResult visitInstruction(llvm::Instruction& inst);
 
-  ExecutionResult visitAdd(llvm::BinaryOperator &op);
+  ExecutionResult visitAdd(llvm::BinaryOperator& op);
 
-  ExecutionResult visitPHINode(llvm::PHINode &)       { CAFFEINE_UNIMPLEMENTED(); };
-  ExecutionResult visitBranchInst(llvm::BranchInst &) { CAFFEINE_UNIMPLEMENTED(); };
-  ExecutionResult visitReturnInst(llvm::ReturnInst &) { CAFFEINE_UNIMPLEMENTED(); };
-  ExecutionResult visitCallInst(llvm::CallInst &)     { CAFFEINE_UNIMPLEMENTED(); };
-  ExecutionResult visitSelectInst(llvm::SelectInst &) { CAFFEINE_UNIMPLEMENTED(); };
+  ExecutionResult visitPHINode(llvm::PHINode&) {
+    CAFFEINE_UNIMPLEMENTED();
+  };
+  ExecutionResult visitBranchInst(llvm::BranchInst&) {
+    CAFFEINE_UNIMPLEMENTED();
+  };
+  ExecutionResult visitReturnInst(llvm::ReturnInst&) {
+    CAFFEINE_UNIMPLEMENTED();
+  };
+  ExecutionResult visitCallInst(llvm::CallInst&) {
+    CAFFEINE_UNIMPLEMENTED();
+  };
+  ExecutionResult visitSelectInst(llvm::SelectInst&) {
+    CAFFEINE_UNIMPLEMENTED();
+  };
 };
 
 } // namespace caffeine
