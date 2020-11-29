@@ -14,12 +14,16 @@ class Context;
 class StackFrame {
 private:
   llvm::Function* function;
-  llvm::BasicBlock* current_block;
-  llvm::BasicBlock* prev_block;
-  llvm::BasicBlock::iterator current;
   std::unordered_map<llvm::Value*, ref<Operation>> variables;
 
 public:
+  /**
+   * Iterators used by Interpreter::execute
+   */
+  llvm::BasicBlock* current_block;
+  llvm::BasicBlock* prev_block;
+  llvm::BasicBlock::iterator current;
+
   StackFrame(llvm::Function* function);
 
   /**

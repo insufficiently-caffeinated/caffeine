@@ -12,13 +12,9 @@ namespace caffeine {
 
 class Context {
 private:
-  std::shared_ptr<Solver> solver;
+  std::vector<StackFrame> stack;
 public:
-  /**
-   * The context is constructed with the solver and the function that will be
-   * evaluated
-   */
-  Context(const std::shared_ptr<Solver>& solver, llvm::Function* func);
+  Context(llvm::Function* func);
 
   /**
    * Create a new context that is independent from this
@@ -34,22 +30,6 @@ public:
    * structures are implemented.
    */
   StackFrame& stack_top();
-
-  /**
-   * Check whether the current set of assertions + the given expression
-   * is satisfiable.
-   *
-   * Does not modify the solver state. If this returns sat then you can
-   * get the solver model as a test case.
-   */
-  SolverResult check(const Assertion& expr);
-  SolverResult check(const std::vector<Assertion>& expr);
-
-  /**
-   * Adds new assertions to the solver.
-   */
-  void add(const Assertion& assertion);
-  void add(const std::vector<Assertion>& assertions);
 };
 
 } // namespace caffeine
