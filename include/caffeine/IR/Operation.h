@@ -95,6 +95,12 @@ enum class FCmpOpcode : uint8_t {
  *    Value type.
  */
 class Operation {
+protected:
+  // Base opcode used for FCmp opcodes
+  static constexpr uint16_t fcmp_base = 4;
+  // Base opcode used for ICmp opcodes
+  static constexpr uint16_t icmp_base = 5;
+
 public:
   /**
    * Notes on bit representation:
@@ -112,76 +118,103 @@ public:
     Constant = detail::opcode(1, 0, 2),
     ConstantInt = detail::opcode(1, 0, 0),
     ConstantFloat = detail::opcode(1, 0, 1),
+    ConstantArray = detail::opcode(1, 0, 3),
 
-    // Integer opcodes
-    Add = detail::opcode(3, 2),
-    Sub = detail::opcode(4, 2),
-    Mul = detail::opcode(5, 2),
-    UDiv = detail::opcode(6, 2),
-    SDiv = detail::opcode(7, 2),
-    URem = detail::opcode(8, 2),
-    SRem = detail::opcode(9, 2),
+    /* Binary Opcodes */
+    Add = detail::opcode(2, 2, 0),
+    Sub = detail::opcode(2, 2, 1),
+    Mul = detail::opcode(2, 2, 2),
+    UDiv = detail::opcode(2, 2, 3),
+    SDiv = detail::opcode(2, 2, 4),
+    URem = detail::opcode(2, 2, 5),
+    SRem = detail::opcode(2, 2, 6),
 
-    And = detail::opcode(10, 2),
-    Or = detail::opcode(11, 2),
-    Xor = detail::opcode(12, 2),
-    Shl = detail::opcode(13, 2),
-    LShr = detail::opcode(14, 2),
-    AShr = detail::opcode(15, 2),
-    Not = detail::opcode(16, 1),
+    And = detail::opcode(2, 2, 7),
+    Or = detail::opcode(2, 2, 8),
+    Xor = detail::opcode(2, 2, 9),
+    Shl = detail::opcode(2, 2, 10),
+    LShr = detail::opcode(2, 2, 11),
+    AShr = detail::opcode(2, 2, 12),
 
     // Floating-point opcodes
-    FAdd = detail::opcode(17, 2),
-    FSub = detail::opcode(18, 2),
-    FMul = detail::opcode(19, 2),
-    FDiv = detail::opcode(20, 2),
-    FRem = detail::opcode(21, 2),
-    FNeg = detail::opcode(22, 1),
-
-    // Conversion opcodes
-    Trunc = detail::opcode(23, 1),
-    SExt = detail::opcode(24, 1),
-    ZExt = detail::opcode(25, 1),
-    FpTrunc = detail::opcode(26, 1),
-    FpExt = detail::opcode(27, 1),
-    FpToUI = detail::opcode(28, 1),
-    FpToSI = detail::opcode(29, 1),
-    UIToFp = detail::opcode(30, 1),
-    SIToFp = detail::opcode(31, 1),
+    FAdd = detail::opcode(3, 2, 0),
+    FSub = detail::opcode(3, 2, 1),
+    FMul = detail::opcode(3, 2, 2),
+    FDiv = detail::opcode(3, 2, 4),
+    FRem = detail::opcode(3, 2, 5),
 
     // Integer comparison operations
-    ICmpEq = detail::opcode(32, 2, (uint16_t)ICmpOpcode::EQ),
-    ICmpNe = detail::opcode(32, 2, (uint16_t)ICmpOpcode::NE),
-    ICmpUgt = detail::opcode(32, 2, (uint16_t)ICmpOpcode::UGT),
-    ICmpUge = detail::opcode(32, 2, (uint16_t)ICmpOpcode::UGE),
-    ICmpUlt = detail::opcode(32, 2, (uint16_t)ICmpOpcode::ULT),
-    ICmpUle = detail::opcode(32, 2, (uint16_t)ICmpOpcode::ULE),
-    ICmpSgt = detail::opcode(32, 2, (uint16_t)ICmpOpcode::SGT),
-    ICmpSge = detail::opcode(32, 2, (uint16_t)ICmpOpcode::SGE),
-    ICmpSlt = detail::opcode(32, 2, (uint16_t)ICmpOpcode::SLT),
-    ICmpSle = detail::opcode(32, 2, (uint16_t)ICmpOpcode::SLE),
+    ICmpEq = detail::opcode(icmp_base, 2, (uint16_t)ICmpOpcode::EQ),
+    ICmpNe = detail::opcode(icmp_base, 2, (uint16_t)ICmpOpcode::NE),
+    ICmpUgt = detail::opcode(icmp_base, 2, (uint16_t)ICmpOpcode::UGT),
+    ICmpUge = detail::opcode(icmp_base, 2, (uint16_t)ICmpOpcode::UGE),
+    ICmpUlt = detail::opcode(icmp_base, 2, (uint16_t)ICmpOpcode::ULT),
+    ICmpUle = detail::opcode(icmp_base, 2, (uint16_t)ICmpOpcode::ULE),
+    ICmpSgt = detail::opcode(icmp_base, 2, (uint16_t)ICmpOpcode::SGT),
+    ICmpSge = detail::opcode(icmp_base, 2, (uint16_t)ICmpOpcode::SGE),
+    ICmpSlt = detail::opcode(icmp_base, 2, (uint16_t)ICmpOpcode::SLT),
+    ICmpSle = detail::opcode(icmp_base, 2, (uint16_t)ICmpOpcode::SLE),
 
     // Floating-point comparison operations
     // See the corresponding predicates in llvm's CmpInst to understand
     // what each of these mean.
     // TODO: Should these be broken down?
-    FCmpOeq = detail::opcode(33, 2, (uint16_t)FCmpOpcode::OEQ),
-    FCmpOgt = detail::opcode(33, 2, (uint16_t)FCmpOpcode::OGT),
-    FCmpOge = detail::opcode(33, 2, (uint16_t)FCmpOpcode::OGE),
-    FCmpOlt = detail::opcode(33, 2, (uint16_t)FCmpOpcode::OLT),
-    FCmpOle = detail::opcode(33, 2, (uint16_t)FCmpOpcode::OLE),
-    FCmpOne = detail::opcode(33, 2, (uint16_t)FCmpOpcode::ONE),
-    FCmpOrd = detail::opcode(33, 2, (uint16_t)FCmpOpcode::ORD),
-    FCmpUno = detail::opcode(33, 2, (uint16_t)FCmpOpcode::UNO),
-    FCmpUeq = detail::opcode(33, 2, (uint16_t)FCmpOpcode::UEQ),
-    FCmpUgt = detail::opcode(33, 2, (uint16_t)FCmpOpcode::UGT),
-    FCmpUge = detail::opcode(33, 2, (uint16_t)FCmpOpcode::UGE),
-    FCmpUlt = detail::opcode(33, 2, (uint16_t)FCmpOpcode::ULT),
-    FCmpUle = detail::opcode(33, 2, (uint16_t)FCmpOpcode::ULE),
-    FCmpUne = detail::opcode(33, 2, (uint16_t)FCmpOpcode::UNE),
+    FCmpOeq = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::OEQ),
+    FCmpOgt = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::OGT),
+    FCmpOge = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::OGE),
+    FCmpOlt = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::OLT),
+    FCmpOle = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::OLE),
+    FCmpOne = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::ONE),
+    FCmpOrd = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::ORD),
+    FCmpUno = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::UNO),
+    FCmpUeq = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::UEQ),
+    FCmpUgt = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::UGT),
+    FCmpUge = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::UGE),
+    FCmpUlt = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::ULT),
+    FCmpUle = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::ULE),
+    FCmpUne = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::UNE),
+
+    BinaryOpLast,
+    BinaryOpFirst = Add,
+
+    /* Unary Opcodes */
+    Not = detail::opcode(10, 1, 0),
+    FNeg = detail::opcode(10, 1, 1),
+
+    // Conversion opcodes
+    Trunc = detail::opcode(11, 1, 0),
+    SExt = detail::opcode(11, 1, 1),
+    ZExt = detail::opcode(11, 1, 2),
+    FpTrunc = detail::opcode(11, 1, 3),
+    FpExt = detail::opcode(11, 1, 4),
+    FpToUI = detail::opcode(11, 1, 5),
+    FpToSI = detail::opcode(11, 1, 6),
+    UIToFp = detail::opcode(11, 1, 7),
+    SIToFp = detail::opcode(11, 1, 8),
+    Bitcast = detail::opcode(11, 1, 9),
+
+    UnaryOpLast,
+    UnaryOpFirst = Not,
 
     // Other instructions
-    Select = detail::opcode(34, 3)
+    Select = detail::opcode(20, 3),
+
+    // Allocation instructions
+    /**
+     * Create a new symbolic array that is filled with a default value.
+     *
+     * This is mean to be used for malloc and alloca. Constant arrays with
+     * prefilled data should use ConstantArray instead.
+     */
+    Alloc = detail::opcode(21, 2, 0),
+    /**
+     * Store a byte to a position within an array.
+     */
+    Store = detail::opcode(21, 3, 1),
+    /**
+     * Load a byte from a position within an array.
+     */
+    Load = detail::opcode(21, 2, 2),
   };
 
 protected:
@@ -457,6 +490,7 @@ public:
   static ref<Operation> CreateFpToSI(Type tgt, const ref<Operation>& operand);
   static ref<Operation> CreateUIToFp(Type tgt, const ref<Operation>& operand);
   static ref<Operation> CreateSIToFp(Type tgt, const ref<Operation>& operand);
+  static ref<Operation> CreateBitcast(Type tgt, const ref<Operation>& operand);
 
   static bool classof(const Operation* op);
 };
@@ -541,6 +575,80 @@ public:
 
   static ref<Operation> CreateFCmp(FCmpOpcode cmp, const ref<Operation>& lhs,
                                    const ref<Operation>& rhs);
+
+  bool classof(const Operation* op);
+};
+
+/**
+ * Memory allocation operation.
+ *
+ * This operation creates a new symbolic array that is filled with a default
+ * value (of type i8). It is meant to be used for modelling allocations (e.g.
+ * malloc or alloca).
+ */
+class AllocOp : public Operation {
+private:
+  AllocOp(const ref<Operation>& size, const ref<Operation>& defaultval);
+
+public:
+  ref<Operation>& size();
+  const ref<Operation>& size() const;
+
+  ref<Operation>& default_value();
+  const ref<Operation>& default_value() const;
+
+  static ref<Operation> Create(const ref<Operation>& size,
+                               const ref<Operation>& defaultval);
+
+  bool classof(const Operation* op);
+};
+
+/**
+ * Memory load operation.
+ *
+ * This loads a single byte (represented as an i8) from within a data array.
+ */
+class LoadOp : public Operation {
+private:
+  LoadOp(const ref<Operation>& data, const ref<Operation>& offset);
+
+public:
+  ref<Operation>& data();
+  const ref<Operation>& data() const;
+
+  ref<Operation>& offset();
+  const ref<Operation>& offset() const;
+
+  static ref<Operation> Create(const ref<Operation>& data,
+                               const ref<Operation>& offset);
+
+  bool classof(const Operation* op);
+};
+
+/**
+ * Memory store operation.
+ *
+ * This writes a single byte into a data array and yields the new array with the
+ * byte at index offset replaced by value.
+ */
+class StoreOp : public Operation {
+private:
+  StoreOp(const ref<Operation>& data, const ref<Operation>& offset,
+          const ref<Operation>& value);
+
+public:
+  ref<Operation>& data();
+  const ref<Operation>& data() const;
+
+  ref<Operation>& offset();
+  const ref<Operation>& offset() const;
+
+  ref<Operation>& value();
+  const ref<Operation>& value() const;
+
+  static ref<Operation> Create(const ref<Operation>& data,
+                               const ref<Operation>& offset,
+                               const ref<Operation>& value);
 
   bool classof(const Operation* op);
 };
