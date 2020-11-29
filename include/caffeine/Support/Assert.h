@@ -19,6 +19,12 @@ struct message {
 
   message() : has_value(false) {}
   message(std::string_view msg) : has_value(true), msg(msg) {}
+
+  message set_default(std::string_view defaultmsg) {
+    if (!has_value)
+      return message(defaultmsg);
+    return *this;
+  }
 };
 
 /**
@@ -81,8 +87,14 @@ struct message {
 #define CAFFEINE_ABORT(...)                                                    \
   ::caffeine::detail::abort(CAFFEINE_FUNCTION, __LINE__, __FILE__,             \
                             ::caffeine::detail::message(__VA_ARGS__))
+#define CAFFEINE_ABORT_DEFAULT(defaultmsg, ...)                                \
+  ::caffeine::detail::abort(                                                   \
+      CAFFEINE_FUNCTION, __LINE__, __FILE__,                                   \
+      ::caffeine::detail::message(__VA_ARGS__).set_default(defaultmsg))
 
-#define CAFFEINE_UNREACHABLE() CAFFEINE_ABORT("entered unreachable code")
-#define CAFFEINE_UNIMPLEMENTED() CAFFEINE_ABORT("not implemented")
+#define CAFFEINE_UNREACHABLE(...)                                              \
+  CAFFEINE_ABORT_DEFAULT("entered unreachable code", __VA_ARGS__)
+#define CAFFEINE_UNIMPLEMENTED(...)                                            \
+  CAFFEINE_ABORT_DEFAULT("not implemented", __VA_ARGS__)
 
 #endif
