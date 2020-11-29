@@ -310,6 +310,64 @@ inline bool FCmpOp::is_unordered() const {
 }
 
 /***************************************************
+ * AllocOp                                         *
+ ***************************************************/
+inline ref<Operation>& AllocOp::size() {
+  return operands_[0];
+}
+inline const ref<Operation>& AllocOp::size() const {
+  return operands_[0];
+}
+
+inline ref<Operation>& AllocOp::default_value() {
+  return operands_[1];
+}
+inline const ref<Operation>& AllocOp::default_value() const {
+  return operands_[1];
+}
+
+/***************************************************
+ * LoadOp                                          *
+ ***************************************************/
+inline ref<Operation>& LoadOp::data() {
+  return operands_[0];
+}
+inline const ref<Operation>& LoadOp::data() const {
+  return operands_[0];
+}
+
+inline ref<Operation>& LoadOp::offset() {
+  return operands_[1];
+}
+inline const ref<Operation>& LoadOp::offset() const {
+  return operands_[1];
+}
+
+/***************************************************
+ * StoreOp                                         *
+ ***************************************************/
+inline ref<Operation>& StoreOp::data() {
+  return operands_[0];
+}
+inline const ref<Operation>& StoreOp::data() const {
+  return operands_[0];
+}
+
+inline ref<Operation>& StoreOp::offset() {
+  return operands_[1];
+}
+inline const ref<Operation>& StoreOp::offset() const {
+  return operands_[1];
+}
+
+inline ref<Operation>& StoreOp::value() {
+  return operands_[2];
+}
+inline const ref<Operation>& StoreOp::value() const {
+  return operands_[2];
+}
+
+/***************************************************
  * classof method function impls                   *
  ***************************************************/
 #define CAFFEINE_OP_DECL_CLASSOF(derived, opcode_)                             \
@@ -322,12 +380,15 @@ CAFFEINE_OP_DECL_CLASSOF(ConstantInt, ConstantInt);
 CAFFEINE_OP_DECL_CLASSOF(ConstantFloat, ConstantFloat);
 CAFFEINE_OP_DECL_CLASSOF(Constant, Constant);
 CAFFEINE_OP_DECL_CLASSOF(SelectOp, Select);
+CAFFEINE_OP_DECL_CLASSOF(AllocOp, Alloc);
+CAFFEINE_OP_DECL_CLASSOF(LoadOp, Load);
+CAFFEINE_OP_DECL_CLASSOF(StoreOp, Store);
 
 inline bool BinaryOp::classof(const Operation* op) {
-  return op->num_operands() == 2;
+  return BinaryOpFirst <= op->opcode() && op->opcode() <= BinaryOpLast;
 }
 inline bool UnaryOp::classof(const Operation* op) {
-  return op->num_operands() == 1;
+  return UnaryOpFirst <= op->opcode() && op->opcode() <= UnaryOpLast;
 }
 inline bool ICmpOp::classof(const Operation* op) {
   return ICmpEq <= op->opcode() && op->opcode() <= ICmpSle;

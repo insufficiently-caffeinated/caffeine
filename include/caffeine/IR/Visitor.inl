@@ -45,11 +45,17 @@ RetTy OpVisitorBase<Transform, SubClass, RetTy>::visit(
     DELEGATE(Not, UnaryOp);
     DELEGATE(FNeg, UnaryOp);
 
-    DELEGATE(SelectOp, SelectOp);
+    DELEGATE(Select, SelectOp);
     DELEGATE(Constant, Constant);
     DELEGATE(ConstantInt, ConstantInt);
     DELEGATE(ConstantFloat, ConstantFloat);
 
+    DELEGATE(Alloc, AllocOp);
+    DELEGATE(Store, StoreOp);
+    DELEGATE(Load, LoadOp);
+
+  case Operation::BinaryOpLast:
+  case Operaiton::UnaryOpLast:
   case Operation::Invalid:
     CAFFEINE_ABORT("tried to visit an invalid operation");
 

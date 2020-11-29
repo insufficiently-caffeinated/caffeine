@@ -98,6 +98,10 @@ public:
   RetTy visitUnaryOp (transform_t<UnaryOp> & O) { return CAFFEINE_OP_DELEGATE(Operation); }
   RetTy visitSelectOp(transform_t<SelectOp>& O) { return CAFFEINE_OP_DELEGATE(Operation); }
 
+  RetTy visitAllocOp(transform_t<AllocOp>& O) { return CAFFEINE_OP_DELEGATE(Operation); }
+  RetTy visitStoreOp(transform_t<StoreOp>& O) { return CAFFEINE_OP_DELEGATE(Operation); }
+  RetTy visitLoadOp (transform_t<LoadOp>&  O) { return CAFFEINE_OP_DELEGATE(Operation); }
+
   // Binary operations
   RetTy visitAdd (transform_t<BinaryOp>& O) { return CAFFEINE_OP_DELEGATE(BinaryOp); }
   RetTy visitSub (transform_t<BinaryOp>& O) { return CAFFEINE_OP_DELEGATE(BinaryOp); }
@@ -134,6 +138,7 @@ public:
   RetTy visitFpToSI (transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }
   RetTy visitUIToFp (transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }
   RetTy visitSIToFp (transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }
+  RetTy visitBitcast(transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }
   // clang-format on
 };
 

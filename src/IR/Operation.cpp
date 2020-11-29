@@ -232,6 +232,7 @@ const char* Operation::opcode_name(Opcode op) {
   case Constant:      return "Constant";
   case ConstantInt:   return "ConstantInt";
   case ConstantFloat: return "ConstantFloat";
+  case ConstantArray: return "ConstantArray";
 
   case Add:   return "Add";
   case Sub:   return "Sub";
@@ -264,6 +265,7 @@ const char* Operation::opcode_name(Opcode op) {
   case FpToSI:  return "FpToSI";
   case UIToFp:  return "UIToFp";
   case SIToFp:  return "SIToFp";
+  case Bitcast: return "Bitcast";
 
   case ICmpEq:
   case ICmpNe:
@@ -294,6 +296,15 @@ const char* Operation::opcode_name(Opcode op) {
     return "FCmp";
 
   case Select: return "Select";
+
+  case Alloc: return "Alloc";
+  case Load:  return "Load";
+  case Store: return "Store";
+
+  // Silence warnings here
+  case UnaryOpLast:
+  case BinaryOpLast:
+    break;
   }
   // clang-format on
   return "Unknown";
@@ -472,6 +483,12 @@ ref<Operation> UnaryOp::CreateSIToFp(Type tgt, const ref<Operation>& operand) {
 
   return ref<Operation>(new UnaryOp(Opcode::SIToFp, tgt, operand));
 }
+ref<Operation> UnaryOp::CreateBitcast(Type tgt, const ref<Operation>& operand) {
+  // TODO: Validate sizes if possible.
+  // CAFFEINE_ASSERT(tgt.byte_size() == operand->type().byte_size());
+
+  return ref<Operation>(new UnaryOp(Opcode::Bitcast, tgt, operand));
+}
 
 /***************************************************
  * SelectOp                                        *
@@ -503,7 +520,7 @@ ref<Operation> SelectOp::Create(const ref<Operation>& cond,
 ICmpOp::ICmpOp(ICmpOpcode cmp, Type t, const ref<Operation>& lhs,
                const ref<Operation>& rhs)
     : BinaryOp(static_cast<Opcode>(
-                   detail::opcode(32, 2, static_cast<uint16_t>(cmp))),
+                   detail::opcode(icmp_base, 2, static_cast<uint16_t>(cmp))),
                t, lhs, rhs) {}
 
 ref<Operation> ICmpOp::CreateICmp(ICmpOpcode cmp, const ref<Operation>& lhs,
@@ -542,7 +559,7 @@ ref<Operation> ICmpOp::CreateICmp(ICmpOpcode cmp, uint64_t lhs,
 FCmpOp::FCmpOp(FCmpOpcode cmp, Type t, const ref<Operation>& lhs,
                const ref<Operation>& rhs)
     : BinaryOp(static_cast<Opcode>(
-                   detail::opcode(33, 2, static_cast<uint16_t>(cmp))),
+                   detail::opcode(fcmp_base, 2, static_cast<uint16_t>(cmp))),
                t, lhs, rhs) {}
 
 ref<Operation> FCmpOp::CreateFCmp(FCmpOpcode cmp, const ref<Operation>& lhs,
@@ -555,6 +572,61 @@ ref<Operation> FCmpOp::CreateFCmp(FCmpOpcode cmp, const ref<Operation>& lhs,
                   "icmp can only be created with integer operands");
 
   return ref<Operation>(new FCmpOp(cmp, lhs->type(), lhs, rhs));
+}
+
+/***************************************************
+ * AllocOp                                         *
+ ***************************************************/
+AllocOp::AllocOp(const ref<Operation>& size, const ref<Operation>& defaultval)
+    : Operation(Opcode::Alloc, Type::array_ty(), size, defaultval) {}
+
+ref<Operation> AllocOp::Create(const ref<Operation>& size,
+                               const ref<Operation>& defaultval) {
+  CAFFEINE_ASSERT(size, "size was null");
+  CAFFEINE_ASSERT(defaultval, "defaultval was null");
+  // To be fully correct, this should be validating that the bitwidth of size is
+  // the correct one for the architecture model. Unfortunately we don't have
+  // enough information here to validate that so instead we just ensure that
+  // size is an integer.
+  CAFFEINE_ASSERT(size->type().is_int(), "Array size must be an integer type");
+  CAFFEINE_ASSERT(defaultval->type() == Type::int_ty(8));
+  return ref<Operation>(new AllocOp(size, defaultval));
+}
+
+/***************************************************
+ * LoadOp                                          *
+ ***************************************************/
+LoadOp::LoadOp(const ref<Operation>& data, const ref<Operation>& offset)
+    : Operation(Opcode::Load, Type::int_ty(8), data, offset) {}
+
+ref<Operation> LoadOp::Create(const ref<Operation>& data,
+                              const ref<Operation>& offset) {
+  CAFFEINE_ASSERT(data, "data was null");
+  CAFFEINE_ASSERT(offset, "offset was null");
+  CAFFEINE_ASSERT(offset->type().is_int(),
+                  "Load offset must be a pointer-sized integer type");
+  return ref<Operation>(new LoadOp(data, offset));
+}
+
+/***************************************************
+ * StoreOp                                         *
+ ***************************************************/
+StoreOp::StoreOp(const ref<Operation>& data, const ref<Operation>& offset,
+                 const ref<Operation>& value)
+    : Operation(Opcode::Store, Type::array_ty(), data, offset, value) {}
+
+ref<Operation> StoreOp::Create(const ref<Operation>& data,
+                               const ref<Operation>& offset,
+                               const ref<Operation>& value) {
+  CAFFEINE_ASSERT(data, "data was null");
+  CAFFEINE_ASSERT(offset, "offset was null");
+  CAFFEINE_ASSERT(value, "value was null");
+
+  CAFFEINE_ASSERT(offset->type().is_int(),
+                  "Store offset must be a pointer-size integer type");
+  CAFFEINE_ASSERT(value->type() == Type::int_ty(8), "Value must be of type i8");
+
+  return ref<Operation>(new StoreOp(data, offset, value));
 }
 
 /***************************************************
