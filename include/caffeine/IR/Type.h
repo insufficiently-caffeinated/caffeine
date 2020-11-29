@@ -14,6 +14,7 @@ class APFloat;
 class Type;
 class FunctionType;
 class LLVMContext;
+class DataLayout;
 } // namespace llvm
 
 namespace caffeine {
@@ -32,6 +33,7 @@ namespace caffeine {
  * - Pointer: An untyped pointer. This is effectively an integer with a
  *   target-defined width.
  * - Function Pointer.
+ * - Byte array. This is the raw type of a memory allocation.
  */
 class Type {
 public:
@@ -40,7 +42,8 @@ public:
     Integer,
     FloatingPoint,
     Pointer,
-    FunctionPointer
+    FunctionPointer,
+    Array
   };
 
 private:
@@ -62,10 +65,18 @@ public:
   bool is_float() const;
   bool is_pointer() const;
   bool is_function_pointer() const;
+  bool is_array() const;
 
   uint32_t bitwidth() const;
   uint32_t mantissa_bits() const;
   uint32_t exponent_bits() const;
+
+  /**
+   * Size of the current type in bytes under the given data layout.
+   *
+   * Array types have no size and will cause an assertion failure.
+   */
+  uint32_t byte_size(const llvm::DataLayout& layout) const;
 
   // Signature of a function pointer.
   llvm::FunctionType* signature() const;
@@ -76,6 +87,7 @@ public:
   static Type bool_ty();
   // TODO: Address spaces? Not sure if we want to model them
   static Type pointer_ty();
+  static Type array_ty();
 
   static Type from_llvm(llvm::Type* type);
 

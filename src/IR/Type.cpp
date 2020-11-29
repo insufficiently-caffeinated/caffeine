@@ -3,6 +3,7 @@
 #include <llvm/ADT/APFloat.h>
 #include <llvm/ADT/APInt.h>
 #include <llvm/ADT/Hashing.h>
+#include <llvm/IR/DataLayout.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Type.h>
@@ -10,6 +11,10 @@
 using llvm::LLVMContext;
 
 namespace caffeine {
+
+static uint32_t divceil(uint32_t x, uint32_t y) {
+  return (x + (y - 1)) / y;
+}
 
 Type::Type(Kind kind, uint32_t desc, llvm::Type* inner)
     : llvm_(inner), kind_(kind), desc_(desc) {
@@ -42,6 +47,10 @@ Type Type::pointer_ty() {
   return Type(Pointer, 0);
 }
 
+Type Type::array_ty() {
+  return Type(Array, 0);
+}
+
 llvm::FunctionType* Type::signature() const {
   CAFFEINE_ASSERT(is_function_pointer());
 
@@ -49,6 +58,27 @@ llvm::FunctionType* Type::signature() const {
   CAFFEINE_ASSERT(fnty, "function type didn't contain a signature");
 
   return fnty;
+}
+
+uint32_t Type::byte_size(const llvm::DataLayout& layout) const {
+  // TODO: Might not always want to hardcode this?
+  constexpr uint32_t bits_per_byte = 8;
+
+  switch (kind()) {
+  case Void:
+    return 0;
+  case Integer:
+    return divceil(bitwidth(), bits_per_byte);
+  case FloatingPoint:
+    return divceil(mantissa_bits() + exponent_bits(), bits_per_byte);
+  case Pointer:
+  case FunctionPointer:
+    return layout.getPointerSize();
+  case Array:
+    CAFFEINE_ABORT("Arrays have no size");
+  }
+
+  CAFFEINE_UNREACHABLE("Unknown type kind");
 }
 
 Type Type::type_of(const llvm::APInt& apint) {
