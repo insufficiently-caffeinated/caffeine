@@ -10,6 +10,8 @@ find_package(Z3 4.8.7 REQUIRED)
 find_package(Boost REQUIRED)
 find_package(fmt REQUIRED)
 
+find_program(CLANG_FORMAT clang-format)
+
 enable_testing()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
@@ -32,9 +34,7 @@ file(
   *.inl
 )
 
-add_custom_target(format
-  COMMAND clang-format -i ${fmt_sources}
-  VERBATIM
-  WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-)
+if (NOT CLANG_FORMAT STREQUAL "CLANG_FORMAT-NOTFOUND")
+  include(formatting)
+endif()
 
