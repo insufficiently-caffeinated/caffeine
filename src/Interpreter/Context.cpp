@@ -1,12 +1,12 @@
 #include "caffeine/Interpreter/Context.h"
-#include "caffeine/IR/Type.h"
 #include "caffeine/IR/Operation.h"
+#include "caffeine/IR/Type.h"
 
 #include <llvm/Support/raw_ostream.h>
 
 namespace caffeine {
 
-void assert_int(llvm::Type *type) {
+void assert_int(llvm::Type* type) {
   if (type->isIntegerTy()) {
     return;
   }
@@ -21,14 +21,13 @@ void assert_int(llvm::Type *type) {
 
 Context::Context(llvm::Function* function) {
   stack.emplace_back(function);
-  StackFrame &frame = stack_top();
+  StackFrame& frame = stack_top();
 
-  for (auto &arg : function->args()) {
+  for (auto& arg : function->args()) {
     assert_int(arg.getType());
-    frame.insert(
-      &arg,
-      Constant::Create(Type::int_ty(arg.getType()->getIntegerBitWidth()), arg.getName().str())
-    );
+    frame.insert(&arg, Constant::Create(
+                           Type::int_ty(arg.getType()->getIntegerBitWidth()),
+                           arg.getName().str()));
   }
 }
 
@@ -36,4 +35,4 @@ Context Context::fork() const {
   return Context{*this};
 }
 
-}
+} // namespace caffeine
