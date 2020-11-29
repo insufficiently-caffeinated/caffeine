@@ -7,7 +7,14 @@ jobs:
       runs-on: ubuntu-latest
       steps:
         - uses: actions/checkout@v2
-        - uses: DoozyX/clang-format-lint-action@v0.10
-          with:
-            source: '.'
-            clangFormatVersion: 9
+        - name: Install Dependencies
+          run: |
+            sudo apt-get install -y clang-format-9 cmake
+        - name: Configure
+          run: |
+            mkdir -p build
+            cmake -B build -DCAFFEINE_FMTONLY=TRUE
+        - name: Check Formatting
+          run: |
+            cd build
+            make check-format

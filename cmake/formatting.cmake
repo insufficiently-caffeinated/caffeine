@@ -38,6 +38,7 @@ foreach(source ${fmt_sources})
     COMMAND diff -u "${CMAKE_SOURCE_DIR}/${source}" "${CMAKE_BINARY_DIR}/.fmt/${source}"
     DEPENDS "${CMAKE_SOURCE_DIR}/${source}"
     COMMENT "Checking formatting for ${source_name}"
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
   )
 
   list(APPEND formatted "${CMAKE_BINARY_DIR}/.fmt/${source}")
