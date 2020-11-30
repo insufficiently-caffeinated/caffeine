@@ -115,10 +115,11 @@ public:
     Invalid = 0,
 
     // Constants
-    Constant = detail::opcode(1, 0, 2),
-    ConstantInt = detail::opcode(1, 0, 0),
-    ConstantFloat = detail::opcode(1, 0, 1),
-    ConstantArray = detail::opcode(1, 0, 3),
+    ConstantNamed = detail::opcode(1, 0, 0),
+    ConstantNumbered = detail::opcode(1, 0, 1),
+    ConstantInt = detail::opcode(1, 0, 5),
+    ConstantFloat = detail::opcode(1, 0, 6),
+    ConstantArray = detail::opcode(1, 0, 7),
 
     /* Binary Opcodes */
     Add = detail::opcode(2, 2, 0),
@@ -341,7 +342,12 @@ private:
 /**
  * Symbolic constant.
  *
- * Symbolic constants are uniquely identified by a string name.
+ * Symbolic constants are uniquely identified by either a string name or a
+ * number.
+ *
+ * Generally user specified constants will be identified by a string name
+ * whereas internal constants (e.g. memory allocation addresses) are identified
+ * by a number.
  */
 class Constant : public Operation {
 private:
@@ -349,11 +355,15 @@ private:
   Constant(Type t, std::string&& name);
 
 public:
-  std::string& name();
-  const std::string& name() const;
+  std::string_view name() const;
+  uint64_t number() const;
+
+  bool is_numbered() const;
+  bool is_named() const;
 
   static ref<Operation> Create(Type t, const std::string& name);
   static ref<Operation> Create(Type t, std::string&& name);
+  static ref<Operation> Create(Type t, uint64_t number);
 
   static bool classof(const Operation* op);
 };
