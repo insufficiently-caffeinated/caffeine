@@ -66,8 +66,10 @@ ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst& inst) {
   auto& frame = ctx->stack_top();
   auto cond = frame.lookup(inst.getCondition());
 
-  auto is_t = ctx->check(Assertion::constant(cond != 0));
-  auto is_f = ctx->check(Assertion::constant(cond == 0));
+  auto zero = ConstantInt::Create(llvm::APInt(cond->type().bitwidth(), 0));
+  auto assertion = Assertion(cond);
+  auto is_t = ctx->check(assertion);
+  auto is_f = ctx->check(!assertion);
 
   // Note: For the purposes of branching we consider unknown to be
   //       equivalent to sat. Maybe future branches will bring the
@@ -78,8 +80,8 @@ ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst& inst) {
     // In cases where both conditions are possible we follow the
     // false path. This should be enough to get us out of most loops
     // and actually exploring the rest of the program.
-    fork.add(cond);
-    ctx->add(Assertion::constant(!cond));
+    fork.add(assertion);
+    ctx->add(!assertion);
 
     fork.stack_top().jump_to(inst.getSuccessor(0));
     ctx->stack_top().jump_to(inst.getSuccessor(1));
@@ -87,11 +89,11 @@ ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst& inst) {
     queue->add_context(std::move(fork));
     return ExecutionResult::Continue;
   } else if (is_t != SolverResult::UNSAT) {
-    ctx->add(cond);
+    ctx->add(assertion);
     ctx->stack_top().jump_to(inst.getSuccessor(0));
     return ExecutionResult::Continue;
   } else if (is_f != SolverResult::UNSAT) {
-    ctx->add(Assertion::constant(!cond));
+    ctx->add(!assertion);
     ctx->stack_top().jump_to(inst.getSuccessor(1));
     return ExecutionResult::Continue;
   } else {
