@@ -313,6 +313,9 @@ ref<Operation> ConstantInt::Create(const llvm::APInt& iconst) {
 ref<Operation> ConstantInt::Create(llvm::APInt&& iconst) {
   return ref<Operation>(new ConstantInt(iconst));
 }
+ref<Operation> ConstantInt::Create(bool value) {
+  return ConstantInt::Create(llvm::APInt(1, static_cast<uint64_t>(value)));
+}
 
 /***************************************************
  * ConstantFloat                                   *
@@ -512,7 +515,25 @@ ref<Operation> ICmpOp::CreateICmp(ICmpOpcode cmp, const ref<Operation>& lhs,
   CAFFEINE_ASSERT(lhs->type().is_int(),
                   "icmp can only be created with integer operands");
 
-  return ref<Operation>(new ICmpOp(cmp, lhs->type(), lhs, rhs));
+  return ref<Operation>(new ICmpOp(cmp, Type::int_ty(1), lhs, rhs));
+}
+ref<Operation> ICmpOp::CreateICmp(ICmpOpcode cmp, const ref<Operation>& lhs,
+                                  uint64_t rhs) {
+  CAFFEINE_ASSERT(lhs, "lhs was null");
+  CAFFEINE_ASSERT(lhs->type().is_int(),
+                  "icmp can only be created with integer operands");
+
+  return ICmpOp::CreateICmp(
+      cmp, lhs, ConstantInt::Create(llvm::APInt(lhs->type().bitwidth(), rhs)));
+}
+ref<Operation> ICmpOp::CreateICmp(ICmpOpcode cmp, uint64_t lhs,
+                                  const ref<Operation>& rhs) {
+  CAFFEINE_ASSERT(rhs, "rhs was null");
+  CAFFEINE_ASSERT(rhs->type().is_int(),
+                  "icmp can only be created with integer operands");
+
+  return ICmpOp::CreateICmp(
+      cmp, ConstantInt::Create(llvm::APInt(rhs->type().bitwidth(), lhs)), rhs);
 }
 
 /***************************************************

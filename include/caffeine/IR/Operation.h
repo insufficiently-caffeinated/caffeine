@@ -342,6 +342,8 @@ public:
 
   static ref<Operation> Create(const llvm::APInt& iconst);
   static ref<Operation> Create(llvm::APInt&& iconst);
+  // Specialization for creating boolean constants
+  static ref<Operation> Create(bool value);
 
   static bool classof(const Operation* op);
 };
@@ -512,6 +514,10 @@ public:
   bool is_unsigned() const;
 
   static ref<Operation> CreateICmp(ICmpOpcode cmp, const ref<Operation>& lhs,
+                                   const ref<Operation>& rhs);
+  static ref<Operation> CreateICmp(ICmpOpcode cmp, const ref<Operation>& lhs,
+                                   uint64_t rhs);
+  static ref<Operation> CreateICmp(ICmpOpcode cmp, uint64_t lhs,
                                    const ref<Operation>& rhs);
 
   bool classof(const Operation* op);
