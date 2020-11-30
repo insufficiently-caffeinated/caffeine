@@ -26,12 +26,12 @@ Operation::Operation(Opcode op, Type t, ref<Operation>* operands)
 Operation::Operation(Opcode op, const llvm::APInt& iconst)
     : opcode_(op), type_(Type::type_of(iconst)), iconst_(iconst) {
   // Currently only ConstantInt is valid here
-  CAFFEINE_ASSERT(op == ConstantInt);
+  CAFFEINE_ASSERT(op == ConstantInt || op == ConstantNumbered);
 }
 Operation::Operation(Opcode op, llvm::APInt&& iconst)
     : opcode_(op), type_(Type::type_of(iconst)), iconst_(iconst) {
   // Currently only ConstantInt is valid here
-  CAFFEINE_ASSERT(op == ConstantInt);
+  CAFFEINE_ASSERT(op == ConstantInt || op == ConstantNumbered);
 }
 
 Operation::Operation(Opcode op, const llvm::APFloat& fconst)
@@ -45,7 +45,7 @@ Operation::Operation(Opcode op, llvm::APFloat&& fconst)
 
 Operation::Operation(Opcode op, Type t, const std::string& name)
     : opcode_(op), type_(t), name_(name) {
-  CAFFEINE_ASSERT(op == Constant);
+  CAFFEINE_ASSERT(op == ConstantNamed);
 }
 
 Operation::Operation(const Operation& op) noexcept
@@ -53,10 +53,14 @@ Operation::Operation(const Operation& op) noexcept
   if (is_constant()) {
     switch (opcode_) {
     case ConstantInt:
+    case ConstantNumbered:
       new (&iconst_) llvm::APInt(op.iconst_);
       break;
     case ConstantFloat:
       new (&fconst_) llvm::APFloat(op.fconst_);
+      break;
+    case ConstantNamed:
+      new (&name_) std::string(op.name_);
       break;
     default:
       CAFFEINE_UNREACHABLE();
@@ -72,10 +76,14 @@ Operation::Operation(Operation&& op) noexcept
   if (is_constant()) {
     switch (opcode_) {
     case ConstantInt:
+    case ConstantNumbered:
       new (&iconst_) llvm::APInt(std::move(op.iconst_));
       break;
     case ConstantFloat:
       new (&fconst_) llvm::APFloat(std::move(op.fconst_));
+      break;
+    case ConstantNamed:
+      new (&name_) std::string(op.name_);
       break;
     default:
       CAFFEINE_UNREACHABLE();
@@ -118,12 +126,13 @@ Operation& Operation::operator=(const Operation& op) noexcept {
   if (is_constant()) {
     switch (opcode_) {
     case ConstantInt:
+    case ConstantNumbered:
       new (&iconst_) llvm::APInt(op.iconst_);
       break;
     case ConstantFloat:
       new (&fconst_) llvm::APFloat(op.fconst_);
       break;
-    case Constant:
+    case ConstantNamed:
       new (&name_) std::string(op.name_);
       break;
     default:
@@ -145,12 +154,13 @@ Operation& Operation::operator=(Operation&& op) noexcept {
   if (is_constant()) {
     switch (opcode_) {
     case ConstantInt:
+    case ConstantNumbered:
       new (&iconst_) llvm::APInt(std::move(op.iconst_));
       break;
     case ConstantFloat:
       new (&fconst_) llvm::APFloat(std::move(op.fconst_));
       break;
-    case Constant:
+    case ConstantNamed:
       new (&name_) std::string(std::move(op.name_));
       break;
     default:
@@ -182,11 +192,14 @@ bool Operation::operator==(const Operation& op) const {
   } else {
     switch (opcode_) {
     case ConstantInt:
+    case ConstantNumbered:
       return iconst_ == op.iconst_;
     case ConstantFloat:
       // TODO: It might be better to use semantic equality here?
       //       Would have to figure out how to deal with NaNs in that case.
       return fconst_.bitwiseIsEqual(op.fconst_);
+    case ConstantNamed:
+      return name_ == op.name_;
     default:
       CAFFEINE_UNREACHABLE();
     }
@@ -202,12 +215,13 @@ void Operation::invalidate() noexcept {
   if (is_constant()) {
     switch (opcode_) {
     case ConstantInt:
+    case ConstantNumbered:
       iconst_.~APInt();
       break;
     case ConstantFloat:
       fconst_.~APFloat();
       break;
-    case Constant:
+    case ConstantNamed:
       name_.~basic_string();
       break;
     default:
@@ -229,7 +243,8 @@ const char* Operation::opcode_name(Opcode op) {
   // clang-format off
   switch (op) {
   case Invalid:       return "Invalid";
-  case Constant:      return "Constant";
+  case ConstantNumbered:
+  case ConstantNamed: return "Constant";
   case ConstantInt:   return "ConstantInt";
   case ConstantFloat: return "ConstantFloat";
   case ConstantArray: return "ConstantArray";
@@ -637,10 +652,11 @@ llvm::hash_code hash_value(const Operation& op) {
 
   if (op.num_operands() == 0) {
     switch (op.opcode()) {
-    case Operation::Constant:
+    case Operation::ConstantNamed:
       hash = llvm::hash_combine(hash, op.name_);
       break;
     case Operation::ConstantInt:
+    case Operation::ConstantNumbered:
       hash = llvm::hash_combine(hash, op.iconst_);
       break;
     case Operation::ConstantFloat:

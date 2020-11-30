@@ -202,11 +202,18 @@ inline const Operation& Operation::operator[](size_t idx) const {
 /***************************************************
  * Constant                                        *
  ***************************************************/
-inline std::string& Constant::name() {
+inline std::string_view Constant::name() const {
   return name_;
 }
-inline const std::string& Constant::name() const {
-  return name_;
+inline uint64_t Constant::number() const {
+  return iconst_.getLimitedValue();
+}
+
+inline bool Constant::is_numbered() const {
+  return opcode() == ConstantNumbered;
+}
+inline bool Constant::is_named() const {
+  return opcode() == ConstantNamed;
 }
 
 /***************************************************
@@ -378,12 +385,14 @@ inline const ref<Operation>& StoreOp::value() const {
 
 CAFFEINE_OP_DECL_CLASSOF(ConstantInt, ConstantInt);
 CAFFEINE_OP_DECL_CLASSOF(ConstantFloat, ConstantFloat);
-CAFFEINE_OP_DECL_CLASSOF(Constant, Constant);
 CAFFEINE_OP_DECL_CLASSOF(SelectOp, Select);
 CAFFEINE_OP_DECL_CLASSOF(AllocOp, Alloc);
 CAFFEINE_OP_DECL_CLASSOF(LoadOp, Load);
 CAFFEINE_OP_DECL_CLASSOF(StoreOp, Store);
 
+inline bool Constant::classof(const Operation* op) {
+  return op->opcode() == ConstantNamed || op->opcode() == ConstantNumbered;
+}
 inline bool BinaryOp::classof(const Operation* op) {
   return BinaryOpFirst <= op->opcode() && op->opcode() <= BinaryOpLast;
 }
