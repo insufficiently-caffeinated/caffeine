@@ -46,4 +46,58 @@ ExecutionResult Interpreter::visitAdd(llvm::BinaryOperator& op) {
   return ExecutionResult::Continue;
 }
 
+ExecutionResult Interpreter::visitPHINode(llvm::PHINode& node) {
+  auto &frame = ctx->stack_top();
+
+  // PHI nodes in the entry block is invalid.
+  CAFFEINE_ASSERT(frame.prev_block != nullptr);
+
+  auto value = frame.lookup(node.getIncomingValueForBlock(frame.prev_block));
+  frame.insert(&node, value);
+
+  return ExecutionResult::Continue;
+}
+
+ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst &inst) {
+  if (!inst.isConditional()) {
+    ctx->stack_top().jump_to(inst.getSuccessor(0));
+    return ExecutionResult::Continue;
+  }
+
+  auto &frame = ctx->stack_top();
+  auto cond = normalize_to_bool(frame.lookup(inst.getCondition(), *z3));
+
+  auto is_t = solver->check(cond);
+  auto is_f = solver->check(!cond);
+
+  // Note: For the purposes of branching we consider unknown to be
+  //       equivalent to sat. Maybe future branches will bring the
+  //       equation back to being solvable.
+  if (is_t != z3::unsat && is_f != z3::unsat) {
+    auto fork = ctx->fork();
+
+    // In cases where both conditions are possible we follow the
+    // false path. This should be enough to get us out of most loops
+    // and actually exploring the rest of the program.
+    fork.add(cond);
+    ctx->add(!cond);
+
+    fork.stack_top().jump_to(inst.getSuccessor(0));
+    ctx->stack_top().jump_to(inst.getSuccessor(1));
+
+    queue->add_context(std::move(fork));
+    return ExecutionResult::Continue;
+  } else if (is_t != z3::unsat) {
+    ctx->add(cond);
+    ctx->stack_top().jump_to(inst.getSuccessor(0));
+    return ExecutionResult::Continue;
+  } else if (is_f != z3::unsat) {
+    ctx->add(!cond);
+    ctx->stack_top().jump_to(inst.getSuccessor(1));
+    return ExecutionResult::Continue;
+  } else {
+    return ExecutionResult::Stop;
+  }
+}
+
 } // namespace caffeine

@@ -39,13 +39,8 @@ public:
   ExecutionResult visitInstruction(llvm::Instruction& inst);
 
   ExecutionResult visitAdd(llvm::BinaryOperator& op);
-
-  ExecutionResult visitPHINode(llvm::PHINode&) {
-    CAFFEINE_UNIMPLEMENTED();
-  };
-  ExecutionResult visitBranchInst(llvm::BranchInst&) {
-    CAFFEINE_UNIMPLEMENTED();
-  };
+  ExecutionResult visitPHINode(llvm::PHINode& node);
+  ExecutionResult visitBranchInst(llvm::BranchInst&);
   ExecutionResult visitReturnInst(llvm::ReturnInst&) {
     CAFFEINE_UNIMPLEMENTED();
   };
