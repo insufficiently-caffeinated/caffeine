@@ -16,7 +16,7 @@ private:
   ref<Operation> value_;
 
 public:
-  Assertion() = default;
+  Assertion();
   Assertion(const ref<Operation>& value);
 
   ref<Operation>& value() &;
@@ -26,6 +26,10 @@ public:
 
   bool is_empty() const;
   bool is_constant() const;
+
+  Assertion operator!() const;
+
+  static Assertion constant(bool value);
 };
 
 } // namespace caffeine
