@@ -515,7 +515,7 @@ ref<Operation> ICmpOp::CreateICmp(ICmpOpcode cmp, const ref<Operation>& lhs,
   CAFFEINE_ASSERT(lhs->type().is_int(),
                   "icmp can only be created with integer operands");
 
-  return ref<Operation>(new ICmpOp(cmp, lhs->type(), lhs, rhs));
+  return ref<Operation>(new ICmpOp(cmp, Type::int_ty(1), lhs, rhs));
 }
 ref<Operation> ICmpOp::CreateICmp(ICmpOpcode cmp, const ref<Operation>& lhs,
                                   uint64_t rhs) {
