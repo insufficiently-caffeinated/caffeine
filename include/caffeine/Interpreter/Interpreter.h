@@ -18,21 +18,13 @@ private:
   Context* ctx;
   Executor* queue;
 
-  /**
-   * The current set of invariants for this context
-   */
-  std::vector<Assertion> assertions;
-
-  std::shared_ptr<Solver> solver;
-
 public:
   /**
    * The interpreter constructor needs an executor and context
    *
    * TODO: Add failure tracker
    */
-  Interpreter(Executor* queue, Context* ctx,
-              const std::shared_ptr<Solver>& solver);
+  Interpreter(Executor* queue, Context* ct);
 
   void execute();
 

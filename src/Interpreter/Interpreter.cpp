@@ -6,9 +6,8 @@
 
 namespace caffeine {
 
-Interpreter::Interpreter(Executor* queue, Context* ctx,
-                         const std::shared_ptr<Solver>& solver)
-    : ctx{ctx}, queue{queue}, solver{solver} {}
+Interpreter::Interpreter(Executor* queue, Context* ctx)
+    : ctx{ctx}, queue{queue} {}
 
 void Interpreter::execute() {
   ExecutionResult exec;
