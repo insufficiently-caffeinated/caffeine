@@ -46,7 +46,7 @@ ExecutionResult Interpreter::visitAdd(llvm::BinaryOperator& op) {
 }
 
 ExecutionResult Interpreter::visitPHINode(llvm::PHINode& node) {
-  auto &frame = ctx->stack_top();
+  auto& frame = ctx->stack_top();
 
   // PHI nodes in the entry block is invalid.
   CAFFEINE_ASSERT(frame.prev_block != nullptr);
@@ -57,13 +57,13 @@ ExecutionResult Interpreter::visitPHINode(llvm::PHINode& node) {
   return ExecutionResult::Continue;
 }
 
-ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst &inst) {
+ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst& inst) {
   if (!inst.isConditional()) {
     ctx->stack_top().jump_to(inst.getSuccessor(0));
     return ExecutionResult::Continue;
   }
 
-  auto &frame = ctx->stack_top();
+  auto& frame = ctx->stack_top();
   auto cond = frame.lookup(inst.getCondition());
 
   auto is_t = ctx->check(Assertion::constant(cond != 0));
