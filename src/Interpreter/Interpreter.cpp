@@ -64,34 +64,34 @@ ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst &inst) {
   }
 
   auto &frame = ctx->stack_top();
-  auto cond = normalize_to_bool(frame.lookup(inst.getCondition(), *z3));
+  auto cond = frame.lookup(inst.getCondition());
 
-  auto is_t = solver->check(cond);
-  auto is_f = solver->check(!cond);
+  auto is_t = ctx->check(Assertion::constant(cond != 0));
+  auto is_f = ctx->check(Assertion::constant(cond == 0));
 
   // Note: For the purposes of branching we consider unknown to be
   //       equivalent to sat. Maybe future branches will bring the
   //       equation back to being solvable.
-  if (is_t != z3::unsat && is_f != z3::unsat) {
+  if (is_t != SolverResult::UNSAT && is_f != SolverResult::UNSAT) {
     auto fork = ctx->fork();
 
     // In cases where both conditions are possible we follow the
     // false path. This should be enough to get us out of most loops
     // and actually exploring the rest of the program.
     fork.add(cond);
-    ctx->add(!cond);
+    ctx->add(Assertion::constant(!cond));
 
     fork.stack_top().jump_to(inst.getSuccessor(0));
     ctx->stack_top().jump_to(inst.getSuccessor(1));
 
     queue->add_context(std::move(fork));
     return ExecutionResult::Continue;
-  } else if (is_t != z3::unsat) {
+  } else if (is_t != SolverResult::UNSAT) {
     ctx->add(cond);
     ctx->stack_top().jump_to(inst.getSuccessor(0));
     return ExecutionResult::Continue;
-  } else if (is_f != z3::unsat) {
-    ctx->add(!cond);
+  } else if (is_f != SolverResult::UNSAT) {
+    ctx->add(Assertion::constant(!cond));
     ctx->stack_top().jump_to(inst.getSuccessor(1));
     return ExecutionResult::Continue;
   } else {
