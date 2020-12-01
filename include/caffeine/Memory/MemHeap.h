@@ -1,6 +1,7 @@
 #ifndef CAFFEINE_MEMORY_MEMHEAP_H
 #define CAFFEINE_MEMORY_MEMHEAP_H
 
+#include "caffeine/ADT/SlotMap.h"
 #include "caffeine/IR/Operation.h"
 
 #include <llvm/ADT/APInt.h>
@@ -12,6 +13,7 @@ namespace caffeine {
 
 class Context;
 class Assertion;
+class MemHeap;
 
 /**
  * A memory allocation (either alive or dead).
@@ -36,17 +38,16 @@ private:
   ref<Operation> size_;
   ref<Operation> data_;
 
-  mutable uint32_t refcount = 0;
-  bool dead_;
+  mutable size_t refcount = 0;
 
   template <typename T, typename Deleter>
   friend class ref;
 
 public:
   Allocation(const ref<Operation>& address, const ref<Operation>& size,
-             const ref<Operation>& data, bool dead = false);
+             const ref<Operation>& data);
   Allocation(const ref<Operation>& address, const ConstantInt& size,
-             const ref<Operation>& data, bool dead = false);
+             const ref<Operation>& data);
 
   const ref<Operation>& size() const;
   ref<Operation>& size();
@@ -56,9 +57,6 @@ public:
 
   const ref<Operation>& address() const;
   ref<Operation>& address();
-
-  bool dead() const;
-  bool& dead();
 
   bool is_constant_size() const;
 
@@ -90,6 +88,139 @@ public:
    */
   void write(const ref<Operation>& offset, const ref<Operation>& value,
              const llvm::DataLayout& layout);
+};
+
+using AllocId = typename slot_map<Allocation>::key_type;
+
+/**
+ * A pointer (either raw or to an allocation).
+ *
+ * Pointers have two possible representations:
+ * - An absolute pointer value. This is not known to be associated with any
+ *   allocation and so before it can be dereferenced it will have to be
+ *   re-associated with some allocation.
+ * - An allocation + an offset within that allocation. This is a pointer that is
+ *   known to be relative to an existing allocation.
+ *
+ * To go from the allocation + offset representation just call value(). This is
+ * cheap and quick to do. To go the other way it is necessary to call
+ * MemHeap::resolve. This is usually quite expensive so, where semantics permit,
+ * pointers should be kept as an allocation + offset pair as much as possible.
+ *
+ * # Working with Pointers
+ * The main rule to keep in mind is this: unless you know that the semantics
+ * disallow crossing between allocations (e.g. LLVM's GetElementPtr) then always
+ * use value() to get the absolute pointer and work with that. This will prevent
+ * situations where the code does something like this
+ *
+ * ```
+ * char* a = <allocation>;
+ * char* b = <allocation>;
+ * ptrdiff_t x = a - b;
+ * char v = *(a + x);
+ * ```
+ *
+ * being detected as an out-of-bounds pointer even though this is perfectly
+ * valid code.
+ */
+class Pointer {
+private:
+  AllocId alloc_;
+  ref<Operation> offset_;
+
+public:
+  explicit Pointer(const ref<Operation>& value);
+  Pointer(const AllocId& alloc, const ref<Operation>& offset);
+
+  AllocId alloc() const;
+  const ref<Operation>& offset() const;
+
+  /**
+   * The absolute value of this pointer.
+   *
+   * Pointers can be stored either as an absolute value or as an allocation +
+   * offset pair. This method normalizes it to just the absolute value. Use
+   * MemHeap::resolve to go the other way.
+   */
+  ref<Operation> value(const MemHeap& heap) const;
+
+  /**
+   * Whether this pointer has been resolved to a specific allocation.
+   *
+   * If not, then this is a pointer to an absolute address. Use MemHeap::resolve
+   * to convert it to a set of allocation pointers.
+   */
+  bool is_resolved() const;
+
+  /**
+   * Get an assertion to check if this pointer is a null pointer.
+   */
+  Assertion check_null(const MemHeap& heap) const;
+};
+
+class MemHeap {
+private:
+  slot_map<Allocation> allocs_;
+
+public:
+  MemHeap() = default;
+
+  Allocation& operator[](const AllocId& alloc);
+  const Allocation& operator[](const AllocId& alloc) const;
+
+  /**
+   * Creates a new allocation that has a distinct address from all currently
+   * live allocations.
+   *
+   * This will add the corresponding assertions to the context as well.
+   */
+  AllocId allocate(const ref<Operation>& size, const ref<Operation>& alignment,
+                   Context& ctx);
+
+  /**
+   * Deallocate an existing allocation.
+   *
+   * An assertion failure will result if the allocation is not a valid one for
+   * the current heap.
+   */
+  void deallocate(const AllocId& alloc);
+
+  /**
+   * Check whether the provided allocation is a live allocation on this heap.
+   */
+  bool check_live(const AllocId& alloc) const;
+
+  /**
+   * Get an assertion that checks whether the provided pointer could be a part
+   * of any allocation.
+   *
+   * If the pointer has already been resolved to an allocation then this simply
+   * checks that the offset is not greater than the size. Otherwise, it compares
+   * the absolute value with those of all existant allocations and returns an
+   * assertion that the pointer points within one of them.
+   */
+  Assertion check_valid(const Pointer& value);
+
+  /**
+   * Resolve all the allocations that a pointer could point to.
+   *
+   * This returns a resolved pointer for each allocation. Although it takes a
+   * non-const reference to the context instance, it makes no changes beyond
+   * those that a solver call would make.
+   *
+   * If the pointer is already resolved, then this is a no-op and it just
+   * returns the pointer.
+   *
+   * # Cost
+   * Unless the pointer has already been resolved to an allocation, this method
+   * requires a solver call for every possible allocation. Furthermore, it is
+   * likely to require that the interpreter fork for every returned allocation.
+   * If at all possible, it is recommended to try and avoid needing to call this
+   * method when an already known allocation can be preserved across multiple
+   * uses.
+   */
+  llvm::SmallVector<Pointer, 1> resolve(const Pointer& value,
+                                        Context& ctx) const;
 };
 
 } // namespace caffeine
