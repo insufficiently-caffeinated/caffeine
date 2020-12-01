@@ -439,6 +439,11 @@ private:
   }
 };
 
+template <typename T>
+void swap(slot_map<T>& a, slot_map<T>& b) {
+  a.swap(b);
+}
+
 } // namespace caffeine
 
 #endif
