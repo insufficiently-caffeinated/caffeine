@@ -11,6 +11,12 @@
 namespace caffeine {
 
 namespace detail {
+  /**
+   * RAII class that calls a user-provided function during it's destructor.
+   *
+   * This is useful for ensuring that code is executed even if an exception is
+   * thrown (i.e. it can be used to emulate a try/finally statenent).
+   */
   template <typename F>
   class drop_guard : F {
   public:
@@ -40,9 +46,6 @@ namespace detail {
     loc = value;
     return old;
   }
-
-  template <typename T>
-  using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
 } // namespace detail
 
 /**
