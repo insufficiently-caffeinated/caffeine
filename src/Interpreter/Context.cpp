@@ -54,4 +54,8 @@ std::unique_ptr<Model> Context::resolve(const Assertion& extra) {
   return solver_->resolve(assertions_, extra);
 }
 
+uint64_t Context::next_constant() {
+  return constant_num_++;
+}
+
 } // namespace caffeine

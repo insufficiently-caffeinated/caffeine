@@ -21,6 +21,8 @@ RetTy OpVisitorBase<Transform, SubClass, RetTy>::visit(
     return static_cast<SubClass*>(this)->visitICmp(*icmp);
   if (auto* fcmp = llvm::dyn_cast<transform_t<FCmpOp>>(&op))
     return static_cast<SubClass*>(this)->visitFCmp(*fcmp);
+  if (auto* cnst = llvm::dyn_cast<transform_t<Constant>>(&op))
+    return static_cast<SubClass*>(this)->visitConstant(*cnst);
 
   switch (op.opcode()) {
     DELEGATE(Add, BinaryOp);
@@ -46,7 +48,6 @@ RetTy OpVisitorBase<Transform, SubClass, RetTy>::visit(
     DELEGATE(FNeg, UnaryOp);
 
     DELEGATE(Select, SelectOp);
-    DELEGATE(Constant, Constant);
     DELEGATE(ConstantInt, ConstantInt);
     DELEGATE(ConstantFloat, ConstantFloat);
 
@@ -55,7 +56,7 @@ RetTy OpVisitorBase<Transform, SubClass, RetTy>::visit(
     DELEGATE(Load, LoadOp);
 
   case Operation::BinaryOpLast:
-  case Operaiton::UnaryOpLast:
+  case Operation::UnaryOpLast:
   case Operation::Invalid:
     CAFFEINE_ABORT("tried to visit an invalid operation");
 

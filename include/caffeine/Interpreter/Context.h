@@ -17,6 +17,7 @@ private:
   // The current set of invariants for this context
   std::vector<Assertion> assertions_;
   std::shared_ptr<Solver> solver_;
+  uint64_t constant_num_ = 0;
 
 public:
   Context(llvm::Function* func, std::shared_ptr<Solver> solver);
@@ -37,6 +38,15 @@ public:
   StackFrame& stack_top();
 
   std::shared_ptr<Solver> solver() const;
+
+  /**
+   * Get a unique constant number among all of the ones in this context.
+   *
+   * This is useful for creating the unnamed symbolic constants that are needed
+   * to implement stuff such as memory addresses and the like which can change
+   * from run to run.
+   */
+  uint64_t next_constant();
 
   /**
    * Add a new assertion to this context.
