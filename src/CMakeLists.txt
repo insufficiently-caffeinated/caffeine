@@ -1,5 +1,5 @@
 
-add_subdirectory(Bin)
+add_subdirectory(bin)
 
 file(
   GLOB subdirs
