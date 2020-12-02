@@ -5,6 +5,7 @@
 
 #include "caffeine/IR/Assertion.h"
 #include "caffeine/Interpreter/Executor.h"
+#include "caffeine/Interpreter/FailureLogger.h"
 #include "caffeine/Support/Assert.h"
 
 #include <llvm/IR/InstVisitor.h>
@@ -17,14 +18,14 @@ class Interpreter : public llvm::InstVisitor<Interpreter, ExecutionResult> {
 private:
   Context* ctx;
   Executor* queue;
+  FailureLogger* logger;
 
 public:
   /**
-   * The interpreter constructor needs an executor and context
-   *
-   * TODO: Add failure tracker
+   * The interpreter constructor needs an executor and context as well as a way
+   * to log assertion failures.
    */
-  Interpreter(Executor* queue, Context* ct);
+  Interpreter(Executor* queue, Context* ctx, FailureLogger* logger);
 
   void execute();
 

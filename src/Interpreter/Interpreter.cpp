@@ -6,8 +6,8 @@
 
 namespace caffeine {
 
-Interpreter::Interpreter(Executor* queue, Context* ctx)
-    : ctx{ctx}, queue{queue} {}
+Interpreter::Interpreter(Executor* queue, Context* ctx, FailureLogger* logger)
+    : ctx{ctx}, queue{queue}, logger{logger} {}
 
 void Interpreter::execute() {
   ExecutionResult exec;
