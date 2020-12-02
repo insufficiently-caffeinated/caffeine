@@ -4,6 +4,8 @@
 #include <llvm/ADT/APFloat.h>
 #include <llvm/ADT/APInt.h>
 
+#include <iosfwd>
+
 namespace caffeine {
 
 class Type;
@@ -106,7 +108,11 @@ public:
 
 private:
   void invalidate();
+
+  friend std::ostream& operator<<(std::ostream& os, const Value& v);
 };
+
+std::ostream& operator<<(std::ostream& os, const Value& v);
 
 } // namespace caffeine
 

@@ -31,7 +31,7 @@ Operation::Operation(Opcode op, const llvm::APInt& iconst)
 Operation::Operation(Opcode op, llvm::APInt&& iconst)
     : opcode_(op), type_(Type::type_of(iconst)), iconst_(iconst) {
   // Currently only ConstantInt is valid here
-  CAFFEINE_ASSERT(op == ConstantInt || op == ConstantNumbered);
+  CAFFEINE_ASSERT(op == ConstantInt);
 }
 
 Operation::Operation(Opcode op, const llvm::APFloat& fconst)
@@ -46,6 +46,10 @@ Operation::Operation(Opcode op, llvm::APFloat&& fconst)
 Operation::Operation(Opcode op, Type t, const std::string& name)
     : opcode_(op), type_(t), name_(name) {
   CAFFEINE_ASSERT(op == ConstantNamed);
+}
+Operation::Operation(Opcode op, Type t, uint64_t number)
+    : opcode_(op), type_(t), iconst_(64, number) {
+  CAFFEINE_ASSERT(op == ConstantNumbered);
 }
 
 Operation::Operation(const Operation& op) noexcept
@@ -323,6 +327,30 @@ const char* Operation::opcode_name(Opcode op) {
   }
   // clang-format on
   return "Unknown";
+}
+
+/***************************************************
+ * Constant                                        *
+ ***************************************************/
+Constant::Constant(Type t, const std::string& name)
+    : Operation(ConstantNamed, t, name) {}
+Constant::Constant(Type t, std::string&& name)
+    : Operation(ConstantNamed, t, std::move(name)) {}
+Constant::Constant(Type t, uint64_t number)
+    : Operation(ConstantNumbered, t, number) {}
+
+ref<Operation> Constant::Create(Type t, const std::string& name) {
+  CAFFEINE_ASSERT(!name.empty(), "cannot create constant with empty name");
+
+  return ref<Operation>(new Constant(t, name));
+}
+ref<Operation> Constant::Create(Type t, std::string&& name) {
+  CAFFEINE_ASSERT(!name.empty(), "cannot create constant with empty name");
+
+  return ref<Operation>(new Constant(t, std::move(name)));
+}
+ref<Operation> Constant::Create(Type t, uint64_t number) {
+  return ref<Operation>(new Constant(t, number));
 }
 
 /***************************************************

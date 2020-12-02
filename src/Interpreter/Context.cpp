@@ -36,8 +36,18 @@ Context Context::fork() const {
   return Context{*this};
 }
 
+StackFrame& Context::stack_top() {
+  CAFFEINE_ASSERT(!stack.empty());
+  return stack.back();
+}
+
 std::shared_ptr<Solver> Context::solver() const {
   return solver_;
+}
+
+llvm::iterator_range<std::vector<Assertion>::const_iterator>
+Context::assertions() const {
+  return {std::begin(assertions_), std::end(assertions_)};
 }
 
 void Context::add(const Assertion& assertion) {

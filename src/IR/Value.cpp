@@ -3,6 +3,11 @@
 #include "caffeine/IR/Type.h"
 #include "caffeine/Support/Assert.h"
 
+#include <llvm/ADT/SmallString.h>
+
+#include <iostream>
+#include <string_view>
+
 namespace caffeine {
 
 Value::Value() : kind_(Empty) {}
@@ -266,12 +271,30 @@ Value Value::frem(const Value& lhs, const Value& rhs) {
   value.remainder(rhs.apfloat_);
   return value;
 }
+Value Value::fneg(const Value& v) {
+  CAFFEINE_ASSERT(v.is_float());
+
+  return llvm::APFloat::getZero(v.apfloat_.getSemantics()) - v.apfloat_;
+}
 
 Value Value::select(const Value& cond, const Value& t, const Value& f) {
   CAFFEINE_ASSERT(cond.type() == Type::bool_ty());
   CAFFEINE_ASSERT(t.type() == f.type());
 
   return cond.apint() == 1 ? t : f;
+}
+
+std::ostream& operator<<(std::ostream& os, const Value& v) {
+  if (v.is_int())
+    return os << v.apint().toString(10, false);
+  else if (v.is_float()) {
+    llvm::SmallString<256> str;
+    v.apfloat().toString(str);
+
+    return os << std::string_view(str.data(), str.size());
+  } else {
+    return os << "<empty>";
+  }
 }
 
 } // namespace caffeine

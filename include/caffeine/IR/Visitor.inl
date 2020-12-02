@@ -2,6 +2,7 @@
 #define CAFFEINE_IR_VISITOR_INL
 
 #include "caffeine/IR/Visitor.h"
+#include "caffeine/Support/Macros.h"
 
 #include <llvm/Support/Casting.h>
 
@@ -11,10 +12,17 @@ template <template <typename T> class Transform, typename SubClass,
           typename RetTy>
 RetTy OpVisitorBase<Transform, SubClass, RetTy>::visit(
     transform_t<Operation>& op) {
-#define DELEGATE(opcode, type_)                                                \
+
+#define CAFFEINE_DELEGATE_2(opcode, type_)                                     \
   case Operation::opcode:                                                      \
     return static_cast<SubClass*>(this)->visit##opcode(                        \
         *static_cast<transform_t<type_>*>(&op))
+#define CAFFEINE_DELEGATE_3(opcode, type_, name)                               \
+  case Operation::opcode:                                                      \
+    return static_cast<SubClass*>(this)->visit##name(                          \
+        *static_cast<transform_t<type_>*>(&op))
+
+#define DELEGATE(...) CAFFEINE_INVOKE_NUMBERED(CAFFEINE_DELEGATE_, __VA_ARGS__)
 
   // Special case for icmp and fcmp since they have multiple opcodes
   if (auto* icmp = llvm::dyn_cast<transform_t<ICmpOp>>(&op))
@@ -47,13 +55,13 @@ RetTy OpVisitorBase<Transform, SubClass, RetTy>::visit(
     DELEGATE(Not, UnaryOp);
     DELEGATE(FNeg, UnaryOp);
 
-    DELEGATE(Select, SelectOp);
+    DELEGATE(Select, SelectOp, SelectOp);
     DELEGATE(ConstantInt, ConstantInt);
     DELEGATE(ConstantFloat, ConstantFloat);
 
-    DELEGATE(Alloc, AllocOp);
-    DELEGATE(Store, StoreOp);
-    DELEGATE(Load, LoadOp);
+    DELEGATE(Alloc, AllocOp, AllocOp);
+    DELEGATE(Store, StoreOp, StoreOp);
+    DELEGATE(Load, LoadOp, LoadOp);
 
   case Operation::BinaryOpLast:
   case Operation::UnaryOpLast:
@@ -64,7 +72,8 @@ RetTy OpVisitorBase<Transform, SubClass, RetTy>::visit(
     CAFFEINE_ABORT("unknown operation opcode");
   }
 
-#undef DELEGATE
+#undef CAFFEINE_DELEGATE_2
+#undef CAFFEINE_DELEGATE_3
 }
 
 template <template <typename T> class Transform, typename SubClass,
