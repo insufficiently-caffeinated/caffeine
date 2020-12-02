@@ -4,11 +4,11 @@
 #include <memory>
 #include <z3++.h>
 
-#include "caffeine/IR/Operation.h"
 #include "caffeine/IR/Assertion.h"
+#include "caffeine/IR/Operation.h"
 #include "caffeine/IR/Value.h"
-#include "caffeine/Solver/Solver.h"
 #include "caffeine/IR/Visitor.h"
+#include "caffeine/Solver/Solver.h"
 
 namespace caffeine {
 
@@ -57,10 +57,11 @@ class Z3Model : public Model {
 protected:
   z3::context* ctx;
   z3::model model;
-  std::map<std::string, z3::expr*> constants; 
+  std::map<std::string, z3::expr*> constants;
 
 public:
-  Z3Model(SolverResult, z3::context*, z3::model, std::map<std::string, z3::expr*>);
+  Z3Model(SolverResult, z3::context*, z3::model,
+          std::map<std::string, z3::expr*>);
   /**
    * Evaluate an expression using this model. Returns an appropriate constant
    * expression (i.e. is_constant returns true) with the value of said constant.

@@ -4,7 +4,8 @@
 
 namespace caffeine {
 
-Z3Model::Z3Model(SolverResult result, z3::context* ctx, z3::model model, std::map<std::string, z3::expr*> map)
+Z3Model::Z3Model(SolverResult result, z3::context* ctx, z3::model model,
+                 std::map<std::string, z3::expr*> map)
     : Model(result), ctx(ctx), model(model), constants(map) {}
 
 Value Z3Model::evaluate(const ref<Operation>& expr) const {
@@ -12,12 +13,12 @@ Value Z3Model::evaluate(const ref<Operation>& expr) const {
 
   std::map<std::string, z3::expr*> cc;
   Z3OpVisitor visitor(ctx, cc);
-  auto expression = visitor.visit(expr.get()); 
+  auto expression = visitor.visit(expr.get());
 
   auto result = model.eval(expression, false);
 
   if (result == z3::sat) {
-  if (result.is_int()) {
+    if (result.is_int()) {
       return Value(llvm::APInt(32, result.get_numeral_int()));
     } else {
       return Value(); // I cant find the way to extract fpa
