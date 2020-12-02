@@ -14,10 +14,11 @@ namespace caffeine {
 
 class Z3OpVisitor : public ConstOpVisitor<Z3OpVisitor, z3::expr> {
   z3::context* ctx;
-  std::map<std::string, z3::expr*>& constMap;
+  std::unordered_map<std::string, z3::expr>& constMap;
 
 public:
-  Z3OpVisitor(z3::context* ctx, std::map<std::string, z3::expr*>& constMap);
+  Z3OpVisitor(z3::context* ctx,
+              std::unordered_map<std::string, z3::expr>& constMap);
 
   // clang-format off
   z3::expr visitConstant     (const Constant& op);
@@ -57,18 +58,11 @@ class Z3Model : public Model {
 protected:
   z3::context* ctx;
   z3::model model;
-  std::map<std::string, z3::expr*> constants;
+  std::unordered_map<std::string, z3::expr> constants;
 
 public:
-  Z3Model(SolverResult, z3::context*, z3::model,
-          std::map<std::string, z3::expr*>);
-  /**
-   * Evaluate an expression using this model. Returns an appropriate constant
-   * expression (i.e. is_constant returns true) with the value of said constant.
-   *
-   * It is invalid to call this method if the model is not SAT.
-   */
-  Value evaluate(const ref<Operation>& expr) const;
+  Z3Model(SolverResult result, z3::context* ctx, z3::model model,
+          const std::unordered_map<std::string, z3::expr>& map);
 
   /**
    * Look up the value of a symbolic constant in this model. Returns an

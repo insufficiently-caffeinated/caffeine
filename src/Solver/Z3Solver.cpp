@@ -5,28 +5,8 @@
 namespace caffeine {
 
 Z3Model::Z3Model(SolverResult result, z3::context* ctx, z3::model model,
-                 std::map<std::string, z3::expr*> map)
+                 const std::unordered_map<std::string, z3::expr>& map)
     : Model(result), ctx(ctx), model(model), constants(map) {}
-
-Value Z3Model::evaluate(const ref<Operation>& expr) const {
-  CAFFEINE_ASSERT(result() == SolverResult::SAT, "Model is not SAT");
-
-  std::map<std::string, z3::expr*> cc;
-  Z3OpVisitor visitor(ctx, cc);
-  auto expression = visitor.visit(expr.get());
-
-  auto result = model.eval(expression, false);
-
-  if (result == z3::sat) {
-    if (result.is_int()) {
-      return Value(llvm::APInt(32, result.get_numeral_int()));
-    } else {
-      return Value(); // I cant find the way to extract fpa
-    }
-  } else {
-    return Value();
-  }
-}
 
 Value Z3Model::lookup(const Constant& constant) const {
   CAFFEINE_ASSERT(result() == SolverResult::SAT, "Model is not SAT");
@@ -36,8 +16,8 @@ Value Z3Model::lookup(const Constant& constant) const {
     return Value();
   }
 
-  if (it->second->is_int()) {
-    return Value(llvm::APInt(32, it->second->get_numeral_int()));
+  if (it->second.is_int()) {
+    return Value(llvm::APInt(it->second, it->second.get_numeral_int()));
   } else {
     return Value(); // I cant find the way to extract fpa
   }
@@ -53,9 +33,9 @@ Z3Solver::Z3Solver() {
 std::unique_ptr<Model> Z3Solver::resolve(std::vector<Assertion>& assertions,
                                          const Assertion& extra) {
   z3::solver solver = z3::tactic(ctx, "default").mk_solver();
-  std::map<std::string, z3::expr*> constMap;
+  std::unordered_map<std::string, z3::expr> constMap;
 
-  Z3OpVisitor visitor(&ctx, constMap);
+  Z3OpVisitor visitor{&ctx, constMap};
   for (Assertion assertion : assertions) {
     if (assertion.is_empty()) {
       continue;
@@ -87,40 +67,46 @@ std::unique_ptr<Model> Z3Solver::resolve(std::vector<Assertion>& assertions,
 // #########################################################
 
 Z3OpVisitor::Z3OpVisitor(z3::context* ctx,
-                         std::map<std::string, z3::expr*>& constMap)
+                         std::unordered_map<std::string, z3::expr>& constMap)
     : ctx(ctx), constMap(constMap) {}
 
 z3::expr Z3OpVisitor::visitConstant(const Constant& op) {
   auto type = op.type();
   std::string name(op.name());
 
+  // Reuse already created constants (otherwise Z3 will view them as different?)
+  auto it = constMap.find(name);
+  if (it != constMap.end()) {
+    // TODO: Ensure that they're the same type?
+    return it->second;
+  }
+
   switch (type.kind()) {
   case Type::Kind::Integer: {
     auto expr = ctx->int_const(name.c_str());
-    constMap[name] = &expr;
+    constMap.insert({name, expr});
     return expr;
   }
   case Type::Kind::FloatingPoint: {
     auto expr = ctx->fpa_const(name.c_str(), type.exponent_bits(),
                                type.mantissa_bits());
-    constMap[name] = &expr;
+    constMap.insert({name, expr});
     return expr;
   }
   case Type::Kind::Array: {
     auto expr = ctx->bv_const(name.c_str(), type.bitwidth());
-    constMap[name] = &expr;
+    constMap.insert({name, expr});
     return expr;
   }
   case Type::Kind::Void:
+    CAFFEINE_ABORT("Cannot make symbolic void constants");
   case Type::Kind::Pointer:
+    CAFFEINE_ABORT("Cannot make symbolic pointer constants");
   case Type::Kind::FunctionPointer:
-  default: {
-    auto expr =
-        ctx->constant(name.c_str(), ctx->uninterpreted_sort(name.c_str()));
-    constMap[name] = &expr;
-    return expr;
+    CAFFEINE_ABORT("Cannot make symbolic function constants");
   }
-  }
+
+  CAFFEINE_UNREACHABLE("Unknown type kind");
 }
 
 z3::expr Z3OpVisitor::visitConstantInt(const ConstantInt& op) {
@@ -143,7 +129,8 @@ z3::expr Z3OpVisitor::visitConstantInt(const ConstantInt& op) {
 }
 
 z3::expr Z3OpVisitor::visitConstantFloat(const ConstantFloat& op) {
-  return ctx->fpa_val(op.value().convertToFloat()); // TODO: Is this corret?
+  // TODO: Reimplement this correctly
+  return ctx->fpa_val(op.value().convertToFloat());
 }
 
 #define CAFFEINE_BINOP_IMPL(name, op_code)                                     \
