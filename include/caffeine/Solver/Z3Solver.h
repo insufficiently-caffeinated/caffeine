@@ -47,14 +47,10 @@ public:
   // Unary operations
   z3::expr visitNot (const UnaryOp& op);
   z3::expr visitFNeg(const UnaryOp& op);
-
   // clang-format on
-protected:
-  z3::context* ctx;
-  z3::solver* solver;
 };
 
-class Z3Model : Model {
+class Z3Model : public Model {
 protected:
   z3::context* ctx;
   z3::model model;

@@ -14,7 +14,14 @@ ref<Operation> Z3Model::evaluate(const ref<Operation>& expr) const {
 ref<Operation> Z3Model::lookup(const Constant& constant) const {
   CAFFEINE_ASSERT(result() == SolverResult::SAT, "Model is not SAT");
 
-  // TODO convert to operation
+  z3::expr expr = model.get_const_interp(
+      model.get_const_decl((unsigned)constant.name()));
+
+  if (expr.is_int()) {
+    return ConstantInt::Create(llvm::APInt(32, expr.get_numeral_int()));
+  } else if (expr.is_fpa()) {
+    // return ConstantFloat::Create(llvm::APFloat(expr.get))
+  }
 }
 
 Z3Solver::Z3Solver() {
@@ -30,7 +37,30 @@ std::unique_ptr<Model> Z3Solver::resolve(std::vector<Assertion>& assertions,
 
   auto visitor = Z3OpVisitor(&ctx);
 
-  for (size_t i = 0; i < assertions.size(); ++i) {}
+  for (size_t i = 0; i < assertions.size(); ++i) {
+    if (assertions[i].is_empty()) {
+      continue;
+    }
+    auto exp = visitor.visit(assertions[i].value());
+    solver.add(exp);
+  }
+
+  if (!extra.is_empty()) {
+    solver.add(visitor.visit(extra.value()));
+  }
+
+  auto result = solver.check();
+
+  switch (result) {
+  case z3::sat:
+    return std::make_unique<Z3Model>(SolverResult::SAT, ctx, solver.get_model());
+  case z3::unsat:
+    return std::make_unique<Z3Model>(SolverResult::UNSAT, ctx,
+                                     solver.get_model());
+  default:
+    return std::make_unique<Z3Model>(SolverResult::Unknown, ctx,
+                                     solver.get_model());
+  }
 }
 
 Z3OpVisitor::Z3OpVisitor(z3::context* ctx) : ctx(ctx) {}
@@ -83,7 +113,7 @@ CAFFEINE_BINOP_IMPL(Xor, lhs ^ rhs)
 CAFFEINE_BINOP_IMPL(Shl, z3::shl(lhs, rhs))
 CAFFEINE_BINOP_IMPL(LShr, z3::lshr(lhs, rhs))
 CAFFEINE_BINOP_IMPL(AShr, z3::ashr(lhs, rhs))
-CAFFEINE_BINOP_IMPL(FAdd, lhs + rhs) // I did not see specific functions for floats?
+CAFFEINE_BINOP_IMPL(FAdd, lhs + rhs)
 CAFFEINE_BINOP_IMPL(FSub, lhs - rhs)
 CAFFEINE_BINOP_IMPL(FDiv, lhs / rhs)
 CAFFEINE_BINOP_IMPL(FRem, lhs % rhs)
