@@ -17,7 +17,8 @@ Value Z3Model::lookup(const Constant& constant) const {
   }
 
   if (it->second.is_int()) {
-    return Value(llvm::APInt(it->second, it->second.get_numeral_int()));
+    return Value(llvm::APInt(it->second.get_sort().bv_size(),
+                             it->second.get_numeral_int()));
   } else {
     return Value(); // I cant find the way to extract fpa
   }
