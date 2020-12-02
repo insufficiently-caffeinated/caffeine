@@ -39,6 +39,9 @@ public:
 
   std::shared_ptr<Solver> solver() const;
 
+  llvm::iterator_range<std::vector<Assertion>::const_iterator>
+  assertions() const;
+
   /**
    * Get a unique constant number among all of the ones in this context.
    *

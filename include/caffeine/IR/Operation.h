@@ -259,6 +259,7 @@ protected:
   Operation(Opcode op, llvm::APFloat&& fconst);
 
   Operation(Opcode op, Type t, const std::string& name);
+  Operation(Opcode op, Type t, uint64_t number);
 
   Operation(Opcode op, Type t, const ref<Operation>& op0);
   Operation(Opcode op, Type t, const ref<Operation>& op0,
@@ -353,6 +354,7 @@ class Constant : public Operation {
 private:
   Constant(Type t, const std::string& name);
   Constant(Type t, std::string&& name);
+  Constant(Type t, uint64_t number);
 
 public:
   std::string_view name() const;
@@ -529,7 +531,7 @@ public:
                                const ref<Operation>& true_value,
                                const ref<Operation>& false_value);
 
-  bool classof(const Operation* op);
+  static bool classof(const Operation* op);
 };
 
 /**
@@ -564,7 +566,7 @@ public:
   static ref<Operation> CreateICmp(ICmpOpcode cmp, uint64_t lhs,
                                    const ref<Operation>& rhs);
 
-  bool classof(const Operation* op);
+  static bool classof(const Operation* op);
 };
 
 /**
@@ -586,7 +588,7 @@ public:
   static ref<Operation> CreateFCmp(FCmpOpcode cmp, const ref<Operation>& lhs,
                                    const ref<Operation>& rhs);
 
-  bool classof(const Operation* op);
+  static bool classof(const Operation* op);
 };
 
 /**
@@ -610,7 +612,7 @@ public:
   static ref<Operation> Create(const ref<Operation>& size,
                                const ref<Operation>& defaultval);
 
-  bool classof(const Operation* op);
+  static bool classof(const Operation* op);
 };
 
 /**
@@ -632,7 +634,7 @@ public:
   static ref<Operation> Create(const ref<Operation>& data,
                                const ref<Operation>& offset);
 
-  bool classof(const Operation* op);
+  static bool classof(const Operation* op);
 };
 
 /**
@@ -660,7 +662,7 @@ public:
                                const ref<Operation>& offset,
                                const ref<Operation>& value);
 
-  bool classof(const Operation* op);
+  static bool classof(const Operation* op);
 };
 
 } // namespace caffeine

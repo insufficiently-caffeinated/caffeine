@@ -4,6 +4,7 @@
 #include "caffeine/IR/Operation.h"
 
 #include <llvm/IR/InstVisitor.h>
+#include <llvm/Support/Casting.h>
 
 namespace caffeine {
 
@@ -19,9 +20,9 @@ namespace detail {
   };
 } // namespace detail
 
-#define CAFFEINE_OP_DELEGATE(class)                                            \
-  static_cast<SubClass*>(this)->visit##class(                                  \
-      static_cast<transform_t<class>&>(O))
+#define CAFFEINE_OP_DELEGATE(class_)                                           \
+  static_cast<SubClass*>(this)->visit##class_(                                 \
+      static_cast<transform_t<class_>&>(O))
 
 /**
  * Base class for operation visitors.
@@ -84,9 +85,6 @@ private:
   using transform_t = typename Transform<T>::type;
 
 public:
-  RetTy visit(transform_t<Operation>& O);
-  RetTy visit(transform_t<Operation>* O);
-
   void visitOperation(transform_t<Operation>&) {}
 
   // clang-format off
@@ -140,6 +138,9 @@ public:
   RetTy visitSIToFp (transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }
   RetTy visitBitcast(transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }
   // clang-format on
+
+  RetTy visit(transform_t<Operation>* O);
+  RetTy visit(transform_t<Operation>& O);
 };
 
 /**
@@ -161,5 +162,7 @@ using ConstOpVisitor = OpVisitorBase<detail::as_const, SubClass, RetTy>;
 #undef CAFFEINE_OP_DELEGATE
 
 } // namespace caffeine
+
+#include "Visitor.inl"
 
 #endif

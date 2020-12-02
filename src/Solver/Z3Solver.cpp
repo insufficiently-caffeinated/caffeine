@@ -2,8 +2,13 @@
 #include "caffeine/IR/Type.h"
 #include "caffeine/Support/Assert.h"
 
+#include <fmt/format.h>
+
 namespace caffeine {
 
+/***************************************************
+ * Z3Model                                         *
+ ***************************************************/
 Z3Model::Z3Model(SolverResult result, z3::context* ctx, z3::model model,
                  const std::unordered_map<std::string, z3::expr>& map)
     : Model(result), ctx(ctx), model(model), constants(map) {}
@@ -24,6 +29,9 @@ Value Z3Model::lookup(const Constant& constant) const {
   }
 }
 
+/***************************************************
+ * Z3Solver                                        *
+ ***************************************************/
 Z3Solver::Z3Solver() {
   // We want z3 to generate models
   ctx.set("model", true);
@@ -65,11 +73,17 @@ std::unique_ptr<Model> Z3Solver::resolve(std::vector<Assertion>& assertions,
   }
 }
 
-// #########################################################
-
+/***************************************************
+ * Z3OpVisitor                                     *
+ ***************************************************/
 Z3OpVisitor::Z3OpVisitor(z3::context* ctx,
                          std::unordered_map<std::string, z3::expr>& constMap)
     : ctx(ctx), constMap(constMap) {}
+
+z3::expr Z3OpVisitor::visitOperation(const Operation& op) {
+  CAFFEINE_ABORT(fmt::format("Z3Solver does not have support for opcode {}",
+                             op.opcode_name()));
+}
 
 z3::expr Z3OpVisitor::visitConstant(const Constant& op) {
   auto type = op.type();
@@ -157,6 +171,7 @@ CAFFEINE_BINOP_IMPL(LShr, z3::lshr(lhs, rhs))
 CAFFEINE_BINOP_IMPL(AShr, z3::ashr(lhs, rhs))
 CAFFEINE_BINOP_IMPL(FAdd, lhs + rhs)
 CAFFEINE_BINOP_IMPL(FSub, lhs - rhs)
+CAFFEINE_BINOP_IMPL(FMul, lhs * rhs)
 CAFFEINE_BINOP_IMPL(FDiv, lhs / rhs)
 CAFFEINE_BINOP_IMPL(FRem, lhs % rhs)
 #undef CAFFEINE_BINOP_IMPL

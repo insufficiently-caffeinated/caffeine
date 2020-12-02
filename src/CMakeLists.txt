@@ -1,11 +1,31 @@
 
+add_subdirectory(bin)
+
 file(
-  GLOB_RECURSE sources
+  GLOB subdirs
   CONFIGURE_DEPENDS
-  *.cpp
-  *.hpp
-  *.h
+  RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
+  "${CMAKE_CURRENT_SOURCE_DIR}/*"
 )
+
+set(sources "")
+
+foreach(subdir ${subdirs})
+  if (
+    IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${subdir}"
+    AND NOT "${subdir}" STREQUAL "bin")
+
+    file(
+      GLOB_RECURSE dir_sources
+      CONFIGURE_DEPENDS
+      "${subdir}/*.cpp"
+      "${subdir}/*.hpp"
+      "${subdir}/*.h"
+    )
+
+    list(APPEND sources ${dir_sources})
+  endif()
+endforeach()
 
 file(
   GLOB_RECURSE headers

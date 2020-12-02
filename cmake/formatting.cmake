@@ -35,7 +35,7 @@ foreach(source ${fmt_sources})
     OUTPUT "${CMAKE_BINARY_DIR}/.fmt/${source}"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/.fmt/${source_dir}"
     COMMAND ${CLANG_FORMAT} "${CMAKE_SOURCE_DIR}/${source}" > "${CMAKE_BINARY_DIR}/.fmt/${source}"
-    COMMAND diff -u "${CMAKE_SOURCE_DIR}/${source}" "${CMAKE_BINARY_DIR}/.fmt/${source}"
+    COMMAND diff --color=always -u "${CMAKE_SOURCE_DIR}/${source}" "${CMAKE_BINARY_DIR}/.fmt/${source}"
     DEPENDS "${CMAKE_SOURCE_DIR}/${source}"
     COMMENT "Checking formatting for ${source_name}"
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"

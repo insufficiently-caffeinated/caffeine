@@ -20,6 +20,8 @@ public:
   Z3OpVisitor(z3::context* ctx,
               std::unordered_map<std::string, z3::expr>& constMap);
 
+  z3::expr visitOperation(const Operation& op);
+
   // clang-format off
   z3::expr visitConstant     (const Constant& op);
   z3::expr visitConstantInt  (const ConstantInt& op);
@@ -83,36 +85,6 @@ public:
 
   /**
    * Validate whether the set of assertions combined with the extra assertion,
-   * if it isn't empty, is satisfiable.
-   *
-   * Solvers are free to perform any modifications to the assertions vector
-   * provided as long as they
-   * 1. don't change the satisfiability of the end result or the space of valid
-   *    models, and
-   * 2. don't incorporate any information from `extra`. As an example, if the
-   *    assertion vector contains `x < 5` and `x = 2` then it would be valid to
-   *    simplify that to `true` and `x = 2`. But if extra is `x = 2` then it
-   *    wouldn't be valid to perform that simplification. Note, however, that
-   *    the final SAT/UNSAT result should take extra into account.
-   *
-   * This includes modifying the backing expression trees and so on. Note that
-   * care must be taken not to modify expressions that have multiple references
-   * (refcount > 1) as that could modify unrelated expressions.
-   *
-   * Default Implementation
-   * ======================
-   * By default this is implemented by calling resolve and then throwing away
-   * the model.
-   *
-   * Solver adapters should forward this method (after performing any applicable
-   * modifications to the assertions) as it may be more efficient for some
-   * solvers.
-   */
-  SolverResult check(std::vector<Assertion>& assertions,
-                     const Assertion& extra);
-
-  /**
-   * Validate whether the set of assertions combined with the extra assertion,
    * if it isn't empty, is satisfiable and return a model.
    *
    * Solvers are free to perform any modifications to the assertions vector
@@ -130,7 +102,7 @@ public:
    * (refcount > 1) as that could modify unrelated expressions.
    */
   std::unique_ptr<Model> resolve(std::vector<Assertion>& assertions,
-                                 const Assertion& extra);
+                                 const Assertion& extra) override;
 };
 
 } // namespace caffeine
