@@ -4,23 +4,41 @@
 
 namespace caffeine {
 
-Z3Model::Z3Model(SolverResult result, z3::context* ctx, z3::model model)
-    : Model(result), ctx(ctx), model(model) {}
+Z3Model::Z3Model(SolverResult result, z3::context* ctx, z3::model model, std::map<std::string, z3::expr*> map)
+    : Model(result), ctx(ctx), model(model), constants(map) {}
 
-ref<Operation> Z3Model::evaluate(const ref<Operation>& expr) const {
+Value Z3Model::evaluate(const ref<Operation>& expr) const {
   CAFFEINE_ASSERT(result() == SolverResult::SAT, "Model is not SAT");
+
+  std::map<std::string, z3::expr*> cc;
+  Z3OpVisitor visitor(ctx, cc);
+  auto expression = visitor.visit(expr.get()); 
+
+  auto result = model.eval(expression, false);
+
+  if (result == z3::sat) {
+  if (result.is_int()) {
+      return Value(llvm::APInt(32, result.get_numeral_int()));
+    } else {
+      return Value(); // I cant find the way to extract fpa
+    }
+  } else {
+    return Value();
+  }
 }
 
-ref<Operation> Z3Model::lookup(const Constant& constant) const {
+Value Z3Model::lookup(const Constant& constant) const {
   CAFFEINE_ASSERT(result() == SolverResult::SAT, "Model is not SAT");
 
-  z3::expr expr = model.get_const_interp(
-      model.get_const_decl((unsigned)constant.name()));
+  auto it = constants.find(std::string(constant.name()));
+  if (it == constants.end()) {
+    return Value();
+  }
 
-  if (expr.is_int()) {
-    return ConstantInt::Create(llvm::APInt(32, expr.get_numeral_int()));
-  } else if (expr.is_fpa()) {
-    // return ConstantFloat::Create(llvm::APFloat(expr.get))
+  if (it->second->is_int()) {
+    return Value(llvm::APInt(32, it->second->get_numeral_int()));
+  } else {
+    return Value(); // I cant find the way to extract fpa
   }
 }
 
@@ -34,39 +52,74 @@ Z3Solver::Z3Solver() {
 std::unique_ptr<Model> Z3Solver::resolve(std::vector<Assertion>& assertions,
                                          const Assertion& extra) {
   z3::solver solver = z3::tactic(ctx, "default").mk_solver();
+  std::map<std::string, z3::expr*> constMap;
 
-  auto visitor = Z3OpVisitor(&ctx);
-
-  for (size_t i = 0; i < assertions.size(); ++i) {
-    if (assertions[i].is_empty()) {
+  Z3OpVisitor visitor(&ctx, constMap);
+  for (Assertion assertion : assertions) {
+    if (assertion.is_empty()) {
       continue;
     }
-    auto exp = visitor.visit(assertions[i].value());
+
+    auto exp = visitor.visit(*assertion.value());
     solver.add(exp);
   }
 
   if (!extra.is_empty()) {
-    solver.add(visitor.visit(extra.value()));
+    solver.add(visitor.visit(*extra.value()));
   }
 
   auto result = solver.check();
 
   switch (result) {
   case z3::sat:
-    return std::make_unique<Z3Model>(SolverResult::SAT, ctx, solver.get_model());
+    return std::make_unique<Z3Model>(SolverResult::SAT, &ctx,
+                                     solver.get_model(), constMap);
   case z3::unsat:
-    return std::make_unique<Z3Model>(SolverResult::UNSAT, ctx,
-                                     solver.get_model());
+    return std::make_unique<Z3Model>(SolverResult::UNSAT, &ctx,
+                                     solver.get_model(), constMap);
   default:
-    return std::make_unique<Z3Model>(SolverResult::Unknown, ctx,
-                                     solver.get_model());
+    return std::make_unique<Z3Model>(SolverResult::Unknown, &ctx,
+                                     solver.get_model(), constMap);
   }
 }
 
-Z3OpVisitor::Z3OpVisitor(z3::context* ctx) : ctx(ctx) {}
+// #########################################################
+
+Z3OpVisitor::Z3OpVisitor(z3::context* ctx,
+                         std::map<std::string, z3::expr*>& constMap)
+    : ctx(ctx), constMap(constMap) {}
 
 z3::expr Z3OpVisitor::visitConstant(const Constant& op) {
-  return ctx->real_const(op.name().c_str()); // Is this right?
+  auto type = op.type();
+  std::string name(op.name());
+
+  switch (type.kind()) {
+  case Type::Kind::Integer: {
+    auto expr = ctx->int_const(name.c_str());
+    constMap[name] = &expr;
+    return expr;
+  }
+  case Type::Kind::FloatingPoint: {
+    auto expr = ctx->fpa_const(name.c_str(), type.exponent_bits(),
+                               type.mantissa_bits());
+    constMap[name] = &expr;
+    return expr;
+  }
+  case Type::Kind::Array: {
+    auto expr = ctx->bv_const(name.c_str(), type.bitwidth());
+    constMap[name] = &expr;
+    return expr;
+  }
+  case Type::Kind::Void:
+  case Type::Kind::Pointer:
+  case Type::Kind::FunctionPointer:
+  default: {
+    auto expr =
+        ctx->constant(name.c_str(), ctx->uninterpreted_sort(name.c_str()));
+    constMap[name] = &expr;
+    return expr;
+  }
+  }
 }
 
 z3::expr Z3OpVisitor::visitConstantInt(const ConstantInt& op) {

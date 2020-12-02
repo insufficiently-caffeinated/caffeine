@@ -5,6 +5,8 @@
 #include <z3++.h>
 
 #include "caffeine/IR/Operation.h"
+#include "caffeine/IR/Assertion.h"
+#include "caffeine/IR/Value.h"
 #include "caffeine/Solver/Solver.h"
 #include "caffeine/IR/Visitor.h"
 
@@ -12,9 +14,10 @@ namespace caffeine {
 
 class Z3OpVisitor : public ConstOpVisitor<Z3OpVisitor, z3::expr> {
   z3::context* ctx;
+  std::map<std::string, z3::expr*>& constMap;
 
 public:
-  Z3OpVisitor(z3::context* ctx);
+  Z3OpVisitor(z3::context* ctx, std::map<std::string, z3::expr*>& constMap);
 
   // clang-format off
   z3::expr visitConstant     (const Constant& op);
@@ -54,16 +57,17 @@ class Z3Model : public Model {
 protected:
   z3::context* ctx;
   z3::model model;
+  std::map<std::string, z3::expr*> constants; 
 
 public:
-  Z3Model(SolverResult, z3::context*, z3::model);
+  Z3Model(SolverResult, z3::context*, z3::model, std::map<std::string, z3::expr*>);
   /**
    * Evaluate an expression using this model. Returns an appropriate constant
    * expression (i.e. is_constant returns true) with the value of said constant.
    *
    * It is invalid to call this method if the model is not SAT.
    */
-  ref<Operation> evaluate(const ref<Operation>& expr) const;
+  Value evaluate(const ref<Operation>& expr) const;
 
   /**
    * Look up the value of a symbolic constant in this model. Returns an
@@ -73,7 +77,7 @@ public:
    *
    * It is invalid to call this method if the model is not SAT.
    */
-  ref<Operation> lookup(const Constant& constant) const;
+  Value lookup(const Constant& constant) const;
 }; // class Z3Model
 
 class Z3Solver : public Solver {
