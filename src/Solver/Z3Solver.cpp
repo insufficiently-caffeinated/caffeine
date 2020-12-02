@@ -188,7 +188,7 @@ z3::expr Z3OpVisitor::visitICmp(const ICmpOp& op) {
   case ICmpOpcode::SLE:
     return lhs <= rhs;
   default:
-    CAFFEINE_ASSERT(false, "Unknown ICmpOpcode");
+    CAFFEINE_ABORT("Unknown ICmpOpcode");
   }
 }
 
@@ -226,7 +226,7 @@ z3::expr Z3OpVisitor::visitFCmp(const FCmpOp& op) {
   case FCmpOpcode::UNO:
     return lhs != lhs || rhs != rhs;
   default:
-    CAFFEINE_ASSERT(false, "Unknown FCmpOpcode");
+    CAFFEINE_ABORT("Unknown FCmpOpcode");
   }
 }
 
