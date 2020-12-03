@@ -44,6 +44,16 @@ ExecutionResult Interpreter::visitAdd(llvm::BinaryOperator& op) {
 
   return ExecutionResult::Continue;
 }
+ExecutionResult Interpreter::visitSub(llvm::BinaryOperator& op) {
+  StackFrame& frame = ctx->stack_top();
+
+  auto lhs = frame.lookup(op.getOperand(0));
+  auto rhs = frame.lookup(op.getOperand(1));
+
+  frame.insert(&op, BinaryOp::CreateSub(lhs, rhs));
+
+  return ExecutionResult::Continue;
+}
 
 ExecutionResult Interpreter::visitPHINode(llvm::PHINode& node) {
   auto& frame = ctx->stack_top();

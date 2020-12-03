@@ -32,7 +32,7 @@ public:
   ExecutionResult visitInstruction(llvm::Instruction& inst);
 
   ExecutionResult visitAdd(llvm::BinaryOperator& op);
-  // ExecutionResult visitSub(llvm::BinaryOperator &op);
+  ExecutionResult visitSub(llvm::BinaryOperator &op);
   // ExecutionResult visitMul(llvm::BinaryOperator &op);
   // ExecutionResult visitUDiv(llvm::BinaryOperator &op);
   // ExecutionResult visitSDiv(llvm::BinaryOperator &op);
