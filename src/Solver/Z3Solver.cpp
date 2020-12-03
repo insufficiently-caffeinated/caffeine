@@ -228,68 +228,99 @@ z3::expr Z3OpVisitor::visitICmp(const ICmpOp& op) {
   auto lhs = visit(*op.lhs());
   auto rhs = visit(*op.rhs());
 
+  z3::expr expr = z3::expr(lhs.ctx(), nullptr);
+
   switch (op.comparison()) {
   case ICmpOpcode::EQ:
-    return bool_to_bv(lhs == rhs);
+    expr = lhs == rhs;
+    break;
   case ICmpOpcode::NE:
-    return bool_to_bv(lhs != rhs);
+    expr = lhs != rhs;
+    break;
   case ICmpOpcode::UGT:
-    return bool_to_bv(z3::ugt(lhs, rhs));
+    expr = z3::ugt(lhs, rhs);
+    break;
   case ICmpOpcode::UGE:
-    return bool_to_bv(z3::uge(lhs, rhs));
+    expr = z3::uge(lhs, rhs);
+    break;
   case ICmpOpcode::ULT:
-    return bool_to_bv(z3::ult(lhs, rhs));
+    expr = z3::ult(lhs, rhs);
+    break;
   case ICmpOpcode::ULE:
-    return bool_to_bv(z3::ule(lhs, rhs));
+    expr = z3::ule(lhs, rhs);
+    break;
   case ICmpOpcode::SGT:
-    return bool_to_bv(lhs > rhs);
+    expr = lhs > rhs;
+    break;
   case ICmpOpcode::SGE:
-    return bool_to_bv(lhs >= rhs);
+    expr = lhs >= rhs;
+    break;
   case ICmpOpcode::SLT:
-    return bool_to_bv(lhs < rhs);
+    expr = lhs < rhs;
+    break;
   case ICmpOpcode::SLE:
-    return bool_to_bv(lhs <= rhs);
+    expr = lhs <= rhs;
+    break;
   default:
     CAFFEINE_ABORT("Unknown ICmpOpcode");
   }
+
+  return bool_to_bv(expr);
 }
 
 z3::expr Z3OpVisitor::visitFCmp(const FCmpOp& op) {
   auto lhs = visit(*op.lhs());
   auto rhs = visit(*op.rhs());
 
+  z3::expr expr = z3::expr(lhs.ctx(), nullptr);
   switch (op.comparison()) {
   case FCmpOpcode::OEQ:
-    return lhs == rhs && lhs == lhs && rhs == rhs;
+    expr = lhs == rhs && lhs == lhs && rhs == rhs;
+    break;
   case FCmpOpcode::OGT:
-    return lhs > rhs && lhs == lhs && rhs == rhs;
+    expr = lhs > rhs && lhs == lhs && rhs == rhs;
+    break;
   case FCmpOpcode::OGE:
-    return lhs >= rhs && lhs == lhs && rhs == rhs;
+    expr = lhs >= rhs && lhs == lhs && rhs == rhs;
+    break;
   case FCmpOpcode::OLT:
-    return lhs < rhs && lhs == lhs && rhs == rhs;
+    expr = lhs < rhs && lhs == lhs && rhs == rhs;
+    break;
   case FCmpOpcode::OLE:
-    return lhs <= rhs && lhs == lhs && rhs == rhs;
+    expr = lhs <= rhs && lhs == lhs && rhs == rhs;
+    break;
   case FCmpOpcode::ONE:
-    return lhs != rhs && lhs == lhs && rhs == rhs;
+    expr = lhs != rhs && lhs == lhs && rhs == rhs;
+    break;
   case FCmpOpcode::ORD:
-    return lhs == lhs && rhs == rhs;
+    expr = lhs == lhs && rhs == rhs;
+    break;
   case FCmpOpcode::UEQ:
-    return lhs == rhs;
+    expr = lhs == rhs;
+    break;
   case FCmpOpcode::UGT:
-    return lhs > rhs;
+    expr = lhs > rhs;
+    break;
   case FCmpOpcode::UGE:
-    return lhs >= rhs;
+    expr = lhs >= rhs;
+    break;
   case FCmpOpcode::ULT:
-    return lhs < rhs;
+    expr = lhs < rhs;
+    break;
   case FCmpOpcode::ULE:
-    return lhs <= rhs;
+    expr = lhs <= rhs;
+    break;
   case FCmpOpcode::UNE:
-    return lhs != rhs;
+    expr = lhs != rhs;
+    break;
   case FCmpOpcode::UNO:
-    return lhs != lhs || rhs != rhs;
+    expr = lhs != lhs || rhs != rhs;
+    break;
   default:
     CAFFEINE_ABORT("Unknown FCmpOpcode");
   }
+
+  return bool_to_bv(expr);
 }
 
 z3::expr Z3OpVisitor::visitNot(const UnaryOp& op) {

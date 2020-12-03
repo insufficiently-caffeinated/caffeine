@@ -8,9 +8,9 @@
 
 namespace caffeine {
 
-  namespace detail::visitor {
-    std::string unknown_opcode_msg(const Operation& op);
-  }
+namespace detail::visitor {
+  std::string unknown_opcode_msg(const Operation& op);
+}
 
 template <template <typename T> class Transform, typename SubClass,
           typename RetTy>
