@@ -20,6 +20,35 @@ static llvm::APInt z3_to_apint(const z3::expr& expr) {
   }
 }
 
+static z3::expr bool_to_bv(const z3::expr& expr) {
+  CAFFEINE_ASSERT(expr.is_bool());
+
+  auto& ctx = expr.ctx();
+  return z3::ite(expr, ctx.bv_val(1, 1), ctx.bv_val(0, 1));
+}
+
+static z3::expr bv_to_bool(const z3::expr& expr) {
+  CAFFEINE_ASSERT(expr.is_bv() && expr.get_sort().bv_size() == 1);
+  return expr == 1;
+}
+
+static z3::expr normalize_to_bool(const z3::expr& expr) {
+  if (expr.is_bv())
+    return bv_to_bool(expr);
+  return expr;
+}
+
+class EmptyModel : public Model {
+public:
+  EmptyModel(SolverResult result) : Model(result) {
+    CAFFEINE_ASSERT(result != SolverResult::SAT);
+  }
+
+  Value lookup(const Constant&) const override {
+    CAFFEINE_ABORT("Model was empty");
+  }
+};
+
 /***************************************************
  * Z3Model                                         *
  ***************************************************/
@@ -66,11 +95,12 @@ std::unique_ptr<Model> Z3Solver::resolve(std::vector<Assertion>& assertions,
     }
 
     auto exp = visitor.visit(*assertion.value());
-    solver.add(exp);
+    solver.add(normalize_to_bool(exp));
   }
 
   if (!extra.is_empty()) {
-    solver.add(visitor.visit(*extra.value()));
+    auto exp = visitor.visit(*extra.value());
+    solver.add(normalize_to_bool(exp));
   }
 
   auto result = solver.check();
@@ -79,12 +109,12 @@ std::unique_ptr<Model> Z3Solver::resolve(std::vector<Assertion>& assertions,
   case z3::sat:
     return std::make_unique<Z3Model>(SolverResult::SAT, &ctx,
                                      solver.get_model(), constMap);
+
   case z3::unsat:
-    return std::make_unique<Z3Model>(SolverResult::UNSAT, &ctx,
-                                     solver.get_model(), constMap);
+    return std::make_unique<EmptyModel>(SolverResult::UNSAT);
+
   default:
-    return std::make_unique<Z3Model>(SolverResult::Unknown, &ctx,
-                                     solver.get_model(), constMap);
+    return std::make_unique<EmptyModel>(SolverResult::Unknown);
   }
 }
 
@@ -115,6 +145,7 @@ z3::expr Z3OpVisitor::visitConstant(const Constant& op) {
   case Type::Kind::Integer: {
     auto expr = ctx->bv_const(name.c_str(), type.bitwidth());
     constMap.insert({name, expr});
+    std::cout << "v = " << expr << std::endl;
     return expr;
   }
   case Type::Kind::FloatingPoint: {
@@ -199,25 +230,25 @@ z3::expr Z3OpVisitor::visitICmp(const ICmpOp& op) {
 
   switch (op.comparison()) {
   case ICmpOpcode::EQ:
-    return lhs == rhs;
+    return bool_to_bv(lhs == rhs);
   case ICmpOpcode::NE:
-    return lhs != rhs;
+    return bool_to_bv(lhs != rhs);
   case ICmpOpcode::UGT:
-    return z3::ugt(lhs, rhs);
+    return bool_to_bv(z3::ugt(lhs, rhs));
   case ICmpOpcode::UGE:
-    return z3::uge(lhs, rhs);
+    return bool_to_bv(z3::uge(lhs, rhs));
   case ICmpOpcode::ULT:
-    return z3::ult(lhs, rhs);
+    return bool_to_bv(z3::ult(lhs, rhs));
   case ICmpOpcode::ULE:
-    return z3::ule(lhs, rhs);
+    return bool_to_bv(z3::ule(lhs, rhs));
   case ICmpOpcode::SGT:
-    return lhs > rhs;
+    return bool_to_bv(lhs > rhs);
   case ICmpOpcode::SGE:
-    return lhs >= rhs;
+    return bool_to_bv(lhs >= rhs);
   case ICmpOpcode::SLT:
-    return lhs < rhs;
+    return bool_to_bv(lhs < rhs);
   case ICmpOpcode::SLE:
-    return lhs <= rhs;
+    return bool_to_bv(lhs <= rhs);
   default:
     CAFFEINE_ABORT("Unknown ICmpOpcode");
   }
@@ -262,13 +293,11 @@ z3::expr Z3OpVisitor::visitFCmp(const FCmpOp& op) {
 }
 
 z3::expr Z3OpVisitor::visitNot(const UnaryOp& op) {
-  auto val = visit(*op.operand());
-  return ~val;
+  return ~visit(*op.operand());
 }
 
 z3::expr Z3OpVisitor::visitFNeg(const UnaryOp& op) {
-  auto val = visit(*op.operand());
-  return ~val;
+  return -visit(*op.operand());
 }
 
 } // namespace caffeine
