@@ -147,6 +147,74 @@ ExecutionResult Interpreter::visitURem(llvm::BinaryOperator& op) {
   return ExecutionResult::Continue;
 }
 
+ExecutionResult Interpreter::visitShl(llvm::BinaryOperator& op) {
+  StackFrame& frame = ctx->stack_top();
+
+  auto lhs = frame.lookup(op.getOperand(0));
+  auto rhs = frame.lookup(op.getOperand(1));
+
+  frame.insert(&op, BinaryOp::CreateShl(lhs, rhs));
+
+  return ExecutionResult::Continue;
+}
+ExecutionResult Interpreter::visitLShr(llvm::BinaryOperator& op) {
+  StackFrame& frame = ctx->stack_top();
+
+  auto lhs = frame.lookup(op.getOperand(0));
+  auto rhs = frame.lookup(op.getOperand(1));
+
+  frame.insert(&op, BinaryOp::CreateLShr(lhs, rhs));
+
+  return ExecutionResult::Continue;
+}
+ExecutionResult Interpreter::visitAShr(llvm::BinaryOperator& op) {
+  StackFrame& frame = ctx->stack_top();
+
+  auto lhs = frame.lookup(op.getOperand(0));
+  auto rhs = frame.lookup(op.getOperand(1));
+
+  frame.insert(&op, BinaryOp::CreateAShr(lhs, rhs));
+
+  return ExecutionResult::Continue;
+}
+ExecutionResult Interpreter::visitAnd(llvm::BinaryOperator& op) {
+  StackFrame& frame = ctx->stack_top();
+
+  auto lhs = frame.lookup(op.getOperand(0));
+  auto rhs = frame.lookup(op.getOperand(1));
+
+  frame.insert(&op, BinaryOp::CreateAnd(lhs, rhs));
+
+  return ExecutionResult::Continue;
+}
+ExecutionResult Interpreter::visitOr(llvm::BinaryOperator& op) {
+  StackFrame& frame = ctx->stack_top();
+
+  auto lhs = frame.lookup(op.getOperand(0));
+  auto rhs = frame.lookup(op.getOperand(1));
+
+  frame.insert(&op, BinaryOp::CreateOr(lhs, rhs));
+
+  return ExecutionResult::Continue;
+}
+ExecutionResult Interpreter::visitXor(llvm::BinaryOperator& op) {
+  StackFrame& frame = ctx->stack_top();
+
+  auto lhs = frame.lookup(op.getOperand(0));
+  auto rhs = frame.lookup(op.getOperand(1));
+
+  frame.insert(&op, BinaryOp::CreateXor(lhs, rhs));
+
+  return ExecutionResult::Continue;
+}
+ExecutionResult Interpreter::visitNot(llvm::BinaryOperator& op) {
+  StackFrame& frame = ctx->stack_top();
+
+  frame.insert(&op, UnaryOp::CreateNot(frame.lookup(op.getOperand(0))));
+
+  return ExecutionResult::Continue;
+}
+
 ExecutionResult Interpreter::visitPHINode(llvm::PHINode& node) {
   auto& frame = ctx->stack_top();
 

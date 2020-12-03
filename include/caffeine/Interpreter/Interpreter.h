@@ -38,13 +38,14 @@ public:
   ExecutionResult visitSDiv(llvm::BinaryOperator& op);
   ExecutionResult visitURem(llvm::BinaryOperator& op);
   ExecutionResult visitSRem(llvm::BinaryOperator& op);
-  // ExecutionResult visitShl(llvm::BinaryOperator &op);
-  // ExecutionResult visitLShr(llvm::BinaryOperator &op);
-  // ExecutionResult visitAShr(llvm::BinaryOperator &op);
-  // ExecutionResult visitAnd(llvm::BinaryOperator &op);
-  // ExecutionResult visitOr(llvm::BinaryOperator &op);
-  // ExecutionResult visitXor(llvm::BinaryOperator &op);
-  // ExecutionResult visitNot(llvm::BinaryOperator &op);
+
+  ExecutionResult visitShl(llvm::BinaryOperator& op);
+  ExecutionResult visitLShr(llvm::BinaryOperator& op);
+  ExecutionResult visitAShr(llvm::BinaryOperator& op);
+  ExecutionResult visitAnd(llvm::BinaryOperator& op);
+  ExecutionResult visitOr(llvm::BinaryOperator& op);
+  ExecutionResult visitXor(llvm::BinaryOperator& op);
+  ExecutionResult visitNot(llvm::BinaryOperator& op);
 
   // ExecutionResult visitTrunc(llvm::TruncInst &trunc);
   // ExecutionResult visitICmpInst(llvm::ICmpInst &icmp);
