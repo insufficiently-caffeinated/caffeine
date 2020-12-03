@@ -2,6 +2,7 @@
 #include "caffeine/IR/Operation.h"
 #include "caffeine/IR/Type.h"
 
+#include <fmt/format.h>
 #include <llvm/Support/raw_ostream.h>
 
 namespace caffeine {
@@ -24,11 +25,20 @@ Context::Context(llvm::Function* function, std::shared_ptr<Solver> solver)
   stack.emplace_back(function);
   StackFrame& frame = stack_top();
 
+  size_t i = 0;
   for (auto& arg : function->args()) {
     assert_int(arg.getType());
-    frame.insert(&arg, Constant::Create(
-                           Type::int_ty(arg.getType()->getIntegerBitWidth()),
-                           arg.getName().str()));
+
+    std::string name = arg.getName().str();
+
+    if (name.empty())
+      name = fmt::format("arg{}", i);
+
+    frame.insert(&arg,
+                 Constant::Create(
+                     Type::int_ty(arg.getType()->getIntegerBitWidth()), name));
+
+    i += 1;
   }
 }
 
