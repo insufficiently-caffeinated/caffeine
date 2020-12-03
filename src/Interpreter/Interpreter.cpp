@@ -80,6 +80,31 @@ ExecutionResult Interpreter::visitUDiv(llvm::BinaryOperator& op) {
 
   return ExecutionResult::Continue;
 }
+ExecutionResult Interpreter::visitSDiv(llvm::BinaryOperator& op) {
+  StackFrame& frame = ctx->stack_top();
+
+  auto lhs = frame.lookup(op.getOperand(0));
+  auto rhs = frame.lookup(op.getOperand(1));
+
+  auto cmp1 = ICmpOp::CreateICmp(ICmpOpcode::EQ, rhs, 0);
+  auto cmp2 =
+      ICmpOp::CreateICmp(ICmpOpcode::EQ, lhs,
+                         ConstantInt::Create(llvm::APInt::getSignedMinValue(
+                             lhs->type().bitwidth())));
+  auto cmp3 = ICmpOp::CreateICmp(ICmpOpcode::EQ, rhs, -1);
+
+  // lhs == 0 || (lhs == INT_MIN && rhs == -1)
+  Assertion assertion =
+      BinaryOp::CreateOr(cmp1, BinaryOp::CreateAnd(cmp2, cmp3));
+  auto model = ctx->resolve(assertion);
+  if (model->result() == SolverResult::SAT)
+    logger->log_failure(model.get(), *ctx);
+  ctx->add(!assertion);
+
+  frame.insert(&op, BinaryOp::CreateSDiv(lhs, rhs));
+
+  return ExecutionResult::Continue;
+}
 
 ExecutionResult Interpreter::visitPHINode(llvm::PHINode& node) {
   auto& frame = ctx->stack_top();
