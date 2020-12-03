@@ -53,6 +53,15 @@ public:
     increment();
   }
 
+  /**
+   * Allow casting from nullptr literals implicitly.
+   *
+   * Normally we wouldn't want ref's taking ownership of pointers implicitly but
+   * with a nullptr there's nothing to take ownership of so it's fine.
+   */
+  ref(std::nullptr_t, const Deleter& deleter = Deleter())
+      : Deleter(deleter), value(nullptr) {}
+
   // References are implicitly convertable to const references.
   operator ref<const T>() const {
     return ref<const T>(get(), this->deleter());
