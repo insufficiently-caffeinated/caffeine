@@ -64,6 +64,22 @@ ExecutionResult Interpreter::visitMul(llvm::BinaryOperator& op) {
 
   return ExecutionResult::Continue;
 }
+ExecutionResult Interpreter::visitUDiv(llvm::BinaryOperator& op) {
+  StackFrame& frame = ctx->stack_top();
+
+  auto lhs = frame.lookup(op.getOperand(0));
+  auto rhs = frame.lookup(op.getOperand(1));
+
+  Assertion assertion = ICmpOp::CreateICmp(ICmpOpcode::NE, rhs, 0);
+  auto model = ctx->resolve(!assertion);
+  if (model->result() == SolverResult::SAT)
+    logger->log_failure(model.get(), *ctx);
+  ctx->add(assertion);
+
+  frame.insert(&op, BinaryOp::CreateUDiv(lhs, rhs));
+
+  return ExecutionResult::Continue;
+}
 
 ExecutionResult Interpreter::visitPHINode(llvm::PHINode& node) {
   auto& frame = ctx->stack_top();

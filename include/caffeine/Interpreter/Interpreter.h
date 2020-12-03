@@ -34,7 +34,7 @@ public:
   ExecutionResult visitAdd(llvm::BinaryOperator& op);
   ExecutionResult visitSub(llvm::BinaryOperator& op);
   ExecutionResult visitMul(llvm::BinaryOperator& op);
-  // ExecutionResult visitUDiv(llvm::BinaryOperator &op);
+  ExecutionResult visitUDiv(llvm::BinaryOperator &op);
   // ExecutionResult visitSDiv(llvm::BinaryOperator &op);
   // ExecutionResult visitURem(llvm::BinaryOperator &op);
   // ExecutionResult visitSRem(llvm::BinaryOperator &op);
