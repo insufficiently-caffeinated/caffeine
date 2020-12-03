@@ -225,4 +225,6 @@ public:
 
 } // namespace caffeine
 
+#include "MemHeap.inl"
+
 #endif
