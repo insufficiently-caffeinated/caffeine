@@ -101,4 +101,26 @@ ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst& inst) {
   }
 }
 
+ExecutionResult Interpreter::visitReturnInst(llvm::ReturnInst& inst) {
+  auto& frame = ctx->stack_top();
+
+  ref<Operation> result = nullptr;
+  if (inst.getNumOperands() != 0)
+    result = frame.lookup(inst.getOperand(0));
+
+  ctx->pop();
+
+  if (ctx->empty())
+    return ExecutionResult::Stop;
+
+  if (result) {
+    auto& parent = ctx->stack_top();
+    auto& caller = *std::prev(parent.current);
+
+    parent.insert(&caller, result);
+  }
+
+  return ExecutionResult::Continue;
+}
+
 } // namespace caffeine
