@@ -36,8 +36,8 @@ public:
   ExecutionResult visitMul(llvm::BinaryOperator& op);
   ExecutionResult visitUDiv(llvm::BinaryOperator& op);
   ExecutionResult visitSDiv(llvm::BinaryOperator& op);
-  // ExecutionResult visitURem(llvm::BinaryOperator &op);
-  // ExecutionResult visitSRem(llvm::BinaryOperator &op);
+  ExecutionResult visitURem(llvm::BinaryOperator& op);
+  ExecutionResult visitSRem(llvm::BinaryOperator& op);
   // ExecutionResult visitShl(llvm::BinaryOperator &op);
   // ExecutionResult visitLShr(llvm::BinaryOperator &op);
   // ExecutionResult visitAShr(llvm::BinaryOperator &op);
