@@ -19,6 +19,19 @@ using caffeine::Context;
 using caffeine::Executor;
 using caffeine::Interpreter;
 
+class CountingFailureLogger : public caffeine::PrintingFailureLogger {
+public:
+  uint64_t num_failures = 0;
+
+  using caffeine::PrintingFailureLogger::PrintingFailureLogger;
+
+  void log_failure(const caffeine::Model* model,
+                   const caffeine::Context& ctx) override {
+    num_failures += 1;
+    caffeine::PrintingFailureLogger::log_failure(model, ctx);
+  }
+};
+
 cl::opt<std::string> input_filename{cl::Positional};
 cl::opt<std::string> target_method{cl::Positional};
 
@@ -94,7 +107,7 @@ int main(int argc, char** argv) {
 
   std::shared_ptr<caffeine::Solver> solver =
       std::make_shared<caffeine::Z3Solver>();
-  auto logger = caffeine::PrintingFailureLogger{std::cout};
+  auto logger = CountingFailureLogger{std::cout};
 
   Executor exec;
   exec.add_context(Context{function, solver});
@@ -106,5 +119,7 @@ int main(int argc, char** argv) {
     interp.execute();
   }
 
-  return 0;
+  if (logger.num_failures == 0)
+    return 0;
+  return 1;
 }
