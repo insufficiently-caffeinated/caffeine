@@ -41,6 +41,21 @@ StackFrame& Context::stack_top() {
   return stack.back();
 }
 
+void Context::push(const StackFrame& frame) {
+  stack.push_back(frame);
+}
+void Context::push(StackFrame&& frame) {
+  stack.push_back(frame);
+}
+void Context::pop() {
+  CAFFEINE_ASSERT(!stack.empty());
+  stack.pop_back();
+}
+
+bool Context::empty() const {
+  return stack.empty();
+}
+
 std::shared_ptr<Solver> Context::solver() const {
   return solver_;
 }
