@@ -8,6 +8,10 @@
 
 namespace caffeine {
 
+namespace detail::visitor {
+  std::string unknown_opcode_msg(const Operation& op);
+}
+
 template <template <typename T> class Transform, typename SubClass,
           typename RetTy>
 RetTy OpVisitorBase<Transform, SubClass, RetTy>::visit(
@@ -69,7 +73,7 @@ RetTy OpVisitorBase<Transform, SubClass, RetTy>::visit(
     CAFFEINE_ABORT("tried to visit an invalid operation");
 
   default:
-    CAFFEINE_ABORT("unknown operation opcode");
+    CAFFEINE_ABORT(detail::visitor::unknown_opcode_msg(op));
   }
 
 #undef CAFFEINE_DELEGATE_2

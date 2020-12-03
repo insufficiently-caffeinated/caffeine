@@ -2,6 +2,7 @@
 #include "caffeine/Interpreter/Interpreter.h"
 #include "caffeine/Solver/Z3Solver.h"
 
+#include <boost/core/demangle.hpp>
 #include <llvm/IR/DiagnosticInfo.h>
 #include <llvm/IR/DiagnosticPrinter.h>
 #include <llvm/IR/Module.h>
@@ -9,7 +10,9 @@
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/InitLLVM.h>
 #include <llvm/Support/WithColor.h>
+#include <z3++.h>
 
+#include <exception>
 #include <iostream>
 #include <memory>
 
@@ -65,6 +68,43 @@ struct DecafDiagnosticHandler : public DiagnosticHandler {
     return true;
   }
 };
+
+std::terminate_handler llvm_handler = nullptr;
+
+void custom_terminate_handler() {
+  try {
+    // special-case handling to print the contained message
+    try {
+      auto current = std::current_exception();
+
+      if (!current) {
+        llvm_handler();
+        std::abort();
+      }
+
+      std::rethrow_exception(current);
+    } catch (std::exception& e) {
+      const auto& ty = typeid(e);
+      std::cerr << "std::terminate called after throwing an instance of '"
+                << boost::core::demangle(ty.name()) << "' and message\n  "
+                << e.what() << std::endl;
+      throw;
+    } catch (z3::exception& e) {
+      // Why oh why does z3::exception not inherit from std::exception??? :(
+      const auto& ty = typeid(e);
+      std::cerr << "std::terminate called after throwing an instance of '"
+                << boost::core::demangle(ty.name()) << "' and message\n  "
+                << e.msg() << std::endl;
+      throw;
+    }
+  } catch (...) {
+    // Use default llvm handling logic for the rest
+    if (llvm_handler)
+      llvm_handler();
+  }
+  std::abort();
+} // namespace
+
 } // namespace
 
 static std::unique_ptr<Module>
@@ -104,6 +144,9 @@ int main(int argc, char** argv) {
     WithColor::error() << " no method '" << target_method.getValue() << "'";
     return 1;
   }
+
+  // Print out exception messages in std::terminate
+  llvm_handler = std::set_terminate(custom_terminate_handler);
 
   std::shared_ptr<caffeine::Solver> solver =
       std::make_shared<caffeine::Z3Solver>();

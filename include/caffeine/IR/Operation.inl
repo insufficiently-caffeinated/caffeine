@@ -400,10 +400,12 @@ inline bool UnaryOp::classof(const Operation* op) {
   return UnaryOpFirst <= op->opcode() && op->opcode() <= UnaryOpLast;
 }
 inline bool ICmpOp::classof(const Operation* op) {
-  return ICmpEq <= op->opcode() && op->opcode() <= ICmpSle;
+  return detail::opcode(icmp_base, 0, 0) <= op->opcode() &&
+         op->opcode() <= detail::opcode(icmp_base, 3, 0xF);
 }
 inline bool FCmpOp::classof(const Operation* op) {
-  return FCmpOeq <= op->opcode() && op->opcode() <= FCmpUno;
+  return detail::opcode(fcmp_base, 0, 0) <= op->opcode() &&
+         op->opcode() <= detail::opcode(fcmp_base, 3, 0xF);
 }
 
 #undef CAFFEINE_OP_DECL_CLASSOF

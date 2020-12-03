@@ -5,7 +5,7 @@
 
 #include <stdbool.h>
 
-#ifndef __cplusplus
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -26,7 +26,7 @@ void caffeine_assert(bool cond);
  */
 void caffeine_assume(bool cond);
 
-#ifndef __cplusplus
+#ifdef __cplusplus
 }
 #endif
 
