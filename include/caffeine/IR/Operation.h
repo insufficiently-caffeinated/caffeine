@@ -561,10 +561,10 @@ public:
 
   static ref<Operation> CreateICmp(ICmpOpcode cmp, const ref<Operation>& lhs,
                                    const ref<Operation>& rhs);
-  static ref<Operation> CreateICmp(ICmpOpcode cmp, const ref<Operation>& lhs,
-                                   uint64_t rhs);
-  static ref<Operation> CreateICmp(ICmpOpcode cmp, uint64_t lhs,
+  static ref<Operation> CreateICmp(ICmpOpcode cmp, int64_t lhs,
                                    const ref<Operation>& rhs);
+  static ref<Operation> CreateICmp(ICmpOpcode cmp, const ref<Operation>& lhs,
+                                   int64_t rhs);
 
   static bool classof(const Operation* op);
 };

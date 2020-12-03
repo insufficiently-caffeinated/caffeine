@@ -44,6 +44,206 @@ ExecutionResult Interpreter::visitAdd(llvm::BinaryOperator& op) {
 
   return ExecutionResult::Continue;
 }
+ExecutionResult Interpreter::visitSub(llvm::BinaryOperator& op) {
+  StackFrame& frame = ctx->stack_top();
+
+  auto lhs = frame.lookup(op.getOperand(0));
+  auto rhs = frame.lookup(op.getOperand(1));
+
+  frame.insert(&op, BinaryOp::CreateSub(lhs, rhs));
+
+  return ExecutionResult::Continue;
+}
+ExecutionResult Interpreter::visitMul(llvm::BinaryOperator& op) {
+  StackFrame& frame = ctx->stack_top();
+
+  auto lhs = frame.lookup(op.getOperand(0));
+  auto rhs = frame.lookup(op.getOperand(1));
+
+  frame.insert(&op, BinaryOp::CreateMul(lhs, rhs));
+
+  return ExecutionResult::Continue;
+}
+ExecutionResult Interpreter::visitUDiv(llvm::BinaryOperator& op) {
+  StackFrame& frame = ctx->stack_top();
+
+  auto lhs = frame.lookup(op.getOperand(0));
+  auto rhs = frame.lookup(op.getOperand(1));
+
+  Assertion assertion = ICmpOp::CreateICmp(ICmpOpcode::NE, rhs, 0);
+  auto model = ctx->resolve(!assertion);
+  if (model->result() == SolverResult::SAT)
+    logger->log_failure(model.get(), *ctx);
+  ctx->add(assertion);
+
+  frame.insert(&op, BinaryOp::CreateUDiv(lhs, rhs));
+
+  return ExecutionResult::Continue;
+}
+ExecutionResult Interpreter::visitSDiv(llvm::BinaryOperator& op) {
+  StackFrame& frame = ctx->stack_top();
+
+  auto lhs = frame.lookup(op.getOperand(0));
+  auto rhs = frame.lookup(op.getOperand(1));
+
+  auto cmp1 = ICmpOp::CreateICmp(ICmpOpcode::EQ, rhs, 0);
+  auto cmp2 =
+      ICmpOp::CreateICmp(ICmpOpcode::EQ, lhs,
+                         ConstantInt::Create(llvm::APInt::getSignedMinValue(
+                             lhs->type().bitwidth())));
+  auto cmp3 = ICmpOp::CreateICmp(ICmpOpcode::EQ, rhs, -1);
+
+  // lhs == 0 || (lhs == INT_MIN && rhs == -1)
+  Assertion assertion =
+      BinaryOp::CreateOr(cmp1, BinaryOp::CreateAnd(cmp2, cmp3));
+  auto model = ctx->resolve(assertion);
+  if (model->result() == SolverResult::SAT)
+    logger->log_failure(model.get(), *ctx);
+  ctx->add(!assertion);
+
+  frame.insert(&op, BinaryOp::CreateSDiv(lhs, rhs));
+
+  return ExecutionResult::Continue;
+}
+ExecutionResult Interpreter::visitSRem(llvm::BinaryOperator& op) {
+  StackFrame& frame = ctx->stack_top();
+
+  auto lhs = frame.lookup(op.getOperand(0));
+  auto rhs = frame.lookup(op.getOperand(1));
+
+  auto cmp1 = ICmpOp::CreateICmp(ICmpOpcode::EQ, rhs, 0);
+  auto cmp2 =
+      ICmpOp::CreateICmp(ICmpOpcode::EQ, lhs,
+                         ConstantInt::Create(llvm::APInt::getSignedMinValue(
+                             lhs->type().bitwidth())));
+  auto cmp3 = ICmpOp::CreateICmp(ICmpOpcode::EQ, rhs, -1);
+
+  // lhs == 0 || (lhs == INT_MIN && rhs == -1)
+  Assertion assertion =
+      BinaryOp::CreateOr(cmp1, BinaryOp::CreateAnd(cmp2, cmp3));
+  auto model = ctx->resolve(assertion);
+  if (model->result() == SolverResult::SAT)
+    logger->log_failure(model.get(), *ctx);
+  ctx->add(!assertion);
+
+  frame.insert(&op, BinaryOp::CreateSRem(lhs, rhs));
+
+  return ExecutionResult::Continue;
+}
+ExecutionResult Interpreter::visitURem(llvm::BinaryOperator& op) {
+  StackFrame& frame = ctx->stack_top();
+
+  auto lhs = frame.lookup(op.getOperand(0));
+  auto rhs = frame.lookup(op.getOperand(1));
+
+  Assertion assertion = ICmpOp::CreateICmp(ICmpOpcode::NE, rhs, 0);
+  auto model = ctx->resolve(!assertion);
+  if (model->result() == SolverResult::SAT)
+    logger->log_failure(model.get(), *ctx);
+  ctx->add(assertion);
+
+  frame.insert(&op, BinaryOp::CreateURem(lhs, rhs));
+
+  return ExecutionResult::Continue;
+}
+
+ExecutionResult Interpreter::visitShl(llvm::BinaryOperator& op) {
+  StackFrame& frame = ctx->stack_top();
+
+  auto lhs = frame.lookup(op.getOperand(0));
+  auto rhs = frame.lookup(op.getOperand(1));
+
+  frame.insert(&op, BinaryOp::CreateShl(lhs, rhs));
+
+  return ExecutionResult::Continue;
+}
+ExecutionResult Interpreter::visitLShr(llvm::BinaryOperator& op) {
+  StackFrame& frame = ctx->stack_top();
+
+  auto lhs = frame.lookup(op.getOperand(0));
+  auto rhs = frame.lookup(op.getOperand(1));
+
+  frame.insert(&op, BinaryOp::CreateLShr(lhs, rhs));
+
+  return ExecutionResult::Continue;
+}
+ExecutionResult Interpreter::visitAShr(llvm::BinaryOperator& op) {
+  StackFrame& frame = ctx->stack_top();
+
+  auto lhs = frame.lookup(op.getOperand(0));
+  auto rhs = frame.lookup(op.getOperand(1));
+
+  frame.insert(&op, BinaryOp::CreateAShr(lhs, rhs));
+
+  return ExecutionResult::Continue;
+}
+ExecutionResult Interpreter::visitAnd(llvm::BinaryOperator& op) {
+  StackFrame& frame = ctx->stack_top();
+
+  auto lhs = frame.lookup(op.getOperand(0));
+  auto rhs = frame.lookup(op.getOperand(1));
+
+  frame.insert(&op, BinaryOp::CreateAnd(lhs, rhs));
+
+  return ExecutionResult::Continue;
+}
+ExecutionResult Interpreter::visitOr(llvm::BinaryOperator& op) {
+  StackFrame& frame = ctx->stack_top();
+
+  auto lhs = frame.lookup(op.getOperand(0));
+  auto rhs = frame.lookup(op.getOperand(1));
+
+  frame.insert(&op, BinaryOp::CreateOr(lhs, rhs));
+
+  return ExecutionResult::Continue;
+}
+ExecutionResult Interpreter::visitXor(llvm::BinaryOperator& op) {
+  StackFrame& frame = ctx->stack_top();
+
+  auto lhs = frame.lookup(op.getOperand(0));
+  auto rhs = frame.lookup(op.getOperand(1));
+
+  frame.insert(&op, BinaryOp::CreateXor(lhs, rhs));
+
+  return ExecutionResult::Continue;
+}
+ExecutionResult Interpreter::visitNot(llvm::BinaryOperator& op) {
+  StackFrame& frame = ctx->stack_top();
+
+  frame.insert(&op, UnaryOp::CreateNot(frame.lookup(op.getOperand(0))));
+
+  return ExecutionResult::Continue;
+}
+
+ExecutionResult Interpreter::visitICmpInst(llvm::ICmpInst& icmp) {
+  using llvm::ICmpInst;
+
+  auto& frame = ctx->stack_top();
+
+  auto lhs = frame.lookup(icmp.getOperand(0));
+  auto rhs = frame.lookup(icmp.getOperand(1));
+
+#define ICMP_CASE(op)                                                          \
+  case ICmpInst::ICMP_##op:                                                    \
+    frame.insert(&icmp, ICmpOp::CreateICmp(ICmpOpcode::op, lhs, rhs));         \
+    return ExecutionResult::Continue
+
+  switch (icmp.getPredicate()) {
+    ICMP_CASE(EQ);
+    ICMP_CASE(NE);
+    ICMP_CASE(UGT);
+    ICMP_CASE(UGE);
+    ICMP_CASE(ULT);
+    ICMP_CASE(ULE);
+    ICMP_CASE(SGT);
+    ICMP_CASE(SGE);
+    ICMP_CASE(SLT);
+    ICMP_CASE(SLE);
+  default:
+    CAFFEINE_UNREACHABLE();
+  }
+#undef ICMP_CASE
+}
 
 ExecutionResult Interpreter::visitPHINode(llvm::PHINode& node) {
   auto& frame = ctx->stack_top();
@@ -56,7 +256,6 @@ ExecutionResult Interpreter::visitPHINode(llvm::PHINode& node) {
 
   return ExecutionResult::Continue;
 }
-
 ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst& inst) {
   if (!inst.isConditional()) {
     ctx->stack_top().jump_to(inst.getSuccessor(0));
@@ -99,6 +298,27 @@ ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst& inst) {
   } else {
     return ExecutionResult::Stop;
   }
+}
+ExecutionResult Interpreter::visitReturnInst(llvm::ReturnInst& inst) {
+  auto& frame = ctx->stack_top();
+
+  ref<Operation> result = nullptr;
+  if (inst.getNumOperands() != 0)
+    result = frame.lookup(inst.getOperand(0));
+
+  ctx->pop();
+
+  if (ctx->empty())
+    return ExecutionResult::Stop;
+
+  if (result) {
+    auto& parent = ctx->stack_top();
+    auto& caller = *std::prev(parent.current);
+
+    parent.insert(&caller, result);
+  }
+
+  return ExecutionResult::Continue;
 }
 
 } // namespace caffeine

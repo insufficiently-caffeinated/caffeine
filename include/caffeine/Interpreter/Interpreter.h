@@ -32,17 +32,33 @@ public:
   ExecutionResult visitInstruction(llvm::Instruction& inst);
 
   ExecutionResult visitAdd(llvm::BinaryOperator& op);
+  ExecutionResult visitSub(llvm::BinaryOperator& op);
+  ExecutionResult visitMul(llvm::BinaryOperator& op);
+  ExecutionResult visitUDiv(llvm::BinaryOperator& op);
+  ExecutionResult visitSDiv(llvm::BinaryOperator& op);
+  ExecutionResult visitURem(llvm::BinaryOperator& op);
+  ExecutionResult visitSRem(llvm::BinaryOperator& op);
+
+  ExecutionResult visitShl(llvm::BinaryOperator& op);
+  ExecutionResult visitLShr(llvm::BinaryOperator& op);
+  ExecutionResult visitAShr(llvm::BinaryOperator& op);
+  ExecutionResult visitAnd(llvm::BinaryOperator& op);
+  ExecutionResult visitOr(llvm::BinaryOperator& op);
+  ExecutionResult visitXor(llvm::BinaryOperator& op);
+  ExecutionResult visitNot(llvm::BinaryOperator& op);
+
+  ExecutionResult visitICmpInst(llvm::ICmpInst& icmp);
+
+  // ExecutionResult visitTrunc(llvm::TruncInst &trunc);
+
+  // ExecutionResult visitSExtInst(llvm::SExtInst &sext);
+  // ExecutionResult visitZExtInst(llvm::ZExtInst &zext);
+
   ExecutionResult visitPHINode(llvm::PHINode& node);
-  ExecutionResult visitBranchInst(llvm::BranchInst&);
-  ExecutionResult visitReturnInst(llvm::ReturnInst&) {
-    CAFFEINE_UNIMPLEMENTED();
-  };
-  ExecutionResult visitCallInst(llvm::CallInst&) {
-    CAFFEINE_UNIMPLEMENTED();
-  };
-  ExecutionResult visitSelectInst(llvm::SelectInst&) {
-    CAFFEINE_UNIMPLEMENTED();
-  };
+  ExecutionResult visitBranchInst(llvm::BranchInst& inst);
+  ExecutionResult visitReturnInst(llvm::ReturnInst& inst);
+  // ExecutionResult visitCallInst(llvm::CallInst &inst);
+  // ExecutionResult visitSelectInst(llvm::SelectInst &inst);
 };
 
 } // namespace caffeine

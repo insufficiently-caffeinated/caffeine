@@ -37,6 +37,14 @@ public:
    */
   StackFrame& stack_top();
 
+  // Utility methods for adding/removing stack frames
+  void pop();
+  void push(StackFrame&& frame);
+  void push(const StackFrame& frame);
+
+  // Does this context have any stack frames?
+  bool empty() const;
+
   std::shared_ptr<Solver> solver() const;
 
   llvm::iterator_range<std::vector<Assertion>::const_iterator>

@@ -577,23 +577,27 @@ ref<Operation> ICmpOp::CreateICmp(ICmpOpcode cmp, const ref<Operation>& lhs,
 
   return ref<Operation>(new ICmpOp(cmp, Type::int_ty(1), lhs, rhs));
 }
-ref<Operation> ICmpOp::CreateICmp(ICmpOpcode cmp, const ref<Operation>& lhs,
-                                  uint64_t rhs) {
-  CAFFEINE_ASSERT(lhs, "lhs was null");
-  CAFFEINE_ASSERT(lhs->type().is_int(),
-                  "icmp can only be created with integer operands");
-
-  return ICmpOp::CreateICmp(
-      cmp, lhs, ConstantInt::Create(llvm::APInt(lhs->type().bitwidth(), rhs)));
-}
-ref<Operation> ICmpOp::CreateICmp(ICmpOpcode cmp, uint64_t lhs,
+ref<Operation> ICmpOp::CreateICmp(ICmpOpcode cmp, int64_t lhs,
                                   const ref<Operation>& rhs) {
   CAFFEINE_ASSERT(rhs, "rhs was null");
   CAFFEINE_ASSERT(rhs->type().is_int(),
                   "icmp can only be created with integer operands");
 
+  auto literal = llvm::APInt(64, static_cast<uint64_t>(lhs));
   return ICmpOp::CreateICmp(
-      cmp, ConstantInt::Create(llvm::APInt(rhs->type().bitwidth(), lhs)), rhs);
+      cmp, ConstantInt::Create(literal.sextOrTrunc(rhs->type().bitwidth())),
+      rhs);
+}
+ref<Operation> ICmpOp::CreateICmp(ICmpOpcode cmp, const ref<Operation>& lhs,
+                                  int64_t rhs) {
+  CAFFEINE_ASSERT(lhs, "rhs was null");
+  CAFFEINE_ASSERT(lhs->type().is_int(),
+                  "icmp can only be created with integer operands");
+
+  auto literal = llvm::APInt(64, static_cast<uint64_t>(rhs));
+  return ICmpOp::CreateICmp(
+      cmp, lhs,
+      ConstantInt::Create(literal.sextOrTrunc(lhs->type().bitwidth())));
 }
 
 /***************************************************
