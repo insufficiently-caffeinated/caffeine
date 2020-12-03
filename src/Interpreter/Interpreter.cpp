@@ -2,6 +2,8 @@
 #include "caffeine/Interpreter/StackFrame.h"
 #include "caffeine/Support/Assert.h"
 
+#include <boost/range/combine.hpp>
+#include <boost/range/iterator_range.hpp>
 #include <fmt/format.h>
 
 namespace caffeine {
@@ -317,6 +319,79 @@ ExecutionResult Interpreter::visitReturnInst(llvm::ReturnInst& inst) {
 
     parent.insert(&caller, result);
   }
+
+  return ExecutionResult::Continue;
+}
+ExecutionResult Interpreter::visitCallInst(llvm::CallInst& call) {
+  auto func = call.getCalledFunction();
+
+  if (func->isIntrinsic()) {
+    CAFFEINE_ABORT(fmt::format("Intrinsic function '{}' is not supported",
+                               func->getName().str()));
+  }
+
+  CAFFEINE_ASSERT(!call.isIndirectCall(),
+                  "Indirect function calls are not supported yet");
+
+  if (func->empty())
+    return visitExternFunc(call);
+
+  StackFrame callee{func};
+  auto& frame = ctx->stack_top();
+  for (auto arg_pair : boost::combine(
+           boost::make_iterator_range(func->arg_begin(), func->arg_end()),
+           boost::make_iterator_range(call.arg_begin(), call.arg_end()))) {
+    callee.insert(&boost::get<0>(arg_pair),
+                  frame.lookup(boost::get<1>(arg_pair).get()));
+  }
+
+  ctx->push(std::move(callee));
+
+  return ExecutionResult::Continue;
+}
+
+/***************************************************
+ * External function                               *
+ ***************************************************/
+
+ExecutionResult Interpreter::visitExternFunc(llvm::CallInst& call) {
+  auto func = call.getCalledFunction();
+  auto name = func->getName();
+
+  CAFFEINE_ASSERT(func->empty(),
+                  "visitExternFunc called with non-external function");
+
+  if (name == "caffeine_assert")
+    return visitAssert(call);
+  if (name == "caffeine_assume")
+    return visitAssume(call);
+
+  CAFFEINE_ABORT(
+      fmt::format("external function '{}' not implemented", name.str()));
+}
+
+ExecutionResult Interpreter::visitAssume(llvm::CallInst& call) {
+  CAFFEINE_ASSERT(call.getNumArgOperands() == 1);
+
+  auto& frame = ctx->stack_top();
+  ctx->add(frame.lookup(call.getArgOperand(0)));
+
+  // Don't check whether adding the assumption causes this path to become
+  // dead since assumptions are rare, solver calls are expensive, and it'll
+  // get caught at the next conditional branch anyway.
+  return ExecutionResult::Continue;
+}
+ExecutionResult Interpreter::visitAssert(llvm::CallInst& call) {
+  CAFFEINE_ASSERT(call.getNumArgOperands() == 1);
+
+  auto& frame = ctx->stack_top();
+  auto assertion = Assertion(frame.lookup(call.getArgOperand(0)));
+
+  auto model = ctx->resolve(!assertion);
+  if (model->result() == SolverResult::SAT)
+    logger->log_failure(model.get(), *ctx);
+
+  ctx->add(assertion);
 
   return ExecutionResult::Continue;
 }

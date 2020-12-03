@@ -57,8 +57,14 @@ public:
   ExecutionResult visitPHINode(llvm::PHINode& node);
   ExecutionResult visitBranchInst(llvm::BranchInst& inst);
   ExecutionResult visitReturnInst(llvm::ReturnInst& inst);
-  // ExecutionResult visitCallInst(llvm::CallInst &inst);
+  ExecutionResult visitCallInst(llvm::CallInst& inst);
   // ExecutionResult visitSelectInst(llvm::SelectInst &inst);
+
+private:
+  ExecutionResult visitExternFunc(llvm::CallInst& inst);
+
+  ExecutionResult visitAssume(llvm::CallInst& inst);
+  ExecutionResult visitAssert(llvm::CallInst& inst);
 };
 
 } // namespace caffeine
