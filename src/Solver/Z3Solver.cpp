@@ -2,9 +2,23 @@
 #include "caffeine/IR/Type.h"
 #include "caffeine/Support/Assert.h"
 
+#include <climits>
 #include <fmt/format.h>
 
 namespace caffeine {
+
+static llvm::APInt z3_to_apint(const z3::expr& expr) {
+  CAFFEINE_ASSERT(expr.is_bv());
+
+  unsigned bitwidth = expr.get_sort().bv_size();
+
+  try {
+    return llvm::APInt(bitwidth, expr.get_numeral_uint64());
+  } catch (z3::exception&) {
+    auto decimal = expr.get_decimal_string(INT_MAX);
+    return llvm::APInt(bitwidth, decimal, 10);
+  }
+}
 
 /***************************************************
  * Z3Model                                         *
@@ -21,11 +35,12 @@ Value Z3Model::lookup(const Constant& constant) const {
     return Value();
   }
 
-  if (it->second.is_int()) {
-    return Value(llvm::APInt(it->second.get_sort().bv_size(),
-                             it->second.get_numeral_int()));
+  auto evaluated = model.eval(it->second, true);
+
+  if (evaluated.is_bv()) {
+    return Value(z3_to_apint(evaluated));
   } else {
-    return Value(); // I cant find the way to extract fpa
+    CAFFEINE_ABORT("FPA numerals are not supported right now");
   }
 }
 
@@ -98,7 +113,7 @@ z3::expr Z3OpVisitor::visitConstant(const Constant& op) {
 
   switch (type.kind()) {
   case Type::Kind::Integer: {
-    auto expr = ctx->int_const(name.c_str());
+    auto expr = ctx->bv_const(name.c_str(), type.bitwidth());
     constMap.insert({name, expr});
     return expr;
   }
@@ -109,6 +124,7 @@ z3::expr Z3OpVisitor::visitConstant(const Constant& op) {
     return expr;
   }
   case Type::Kind::Array: {
+    CAFFEINE_ABORT("Symbolic arrays are unimplemented");
     auto expr = ctx->bv_const(name.c_str(), type.bitwidth());
     constMap.insert({name, expr});
     return expr;
