@@ -47,8 +47,9 @@ public:
   ExecutionResult visitXor(llvm::BinaryOperator& op);
   ExecutionResult visitNot(llvm::BinaryOperator& op);
 
+  ExecutionResult visitICmpInst(llvm::ICmpInst& icmp);
+
   // ExecutionResult visitTrunc(llvm::TruncInst &trunc);
-  // ExecutionResult visitICmpInst(llvm::ICmpInst &icmp);
 
   // ExecutionResult visitSExtInst(llvm::SExtInst &sext);
   // ExecutionResult visitZExtInst(llvm::ZExtInst &zext);

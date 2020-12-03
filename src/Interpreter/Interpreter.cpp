@@ -215,6 +215,36 @@ ExecutionResult Interpreter::visitNot(llvm::BinaryOperator& op) {
   return ExecutionResult::Continue;
 }
 
+ExecutionResult Interpreter::visitICmpInst(llvm::ICmpInst& icmp) {
+  using llvm::ICmpInst;
+
+  auto& frame = ctx->stack_top();
+
+  auto lhs = frame.lookup(icmp.getOperand(0));
+  auto rhs = frame.lookup(icmp.getOperand(1));
+
+#define ICMP_CASE(op)                                                          \
+  case ICmpInst::ICMP_##op:                                                    \
+    frame.insert(&icmp, ICmpOp::CreateICmp(ICmpOpcode::op, lhs, rhs));         \
+    return ExecutionResult::Continue
+
+  switch (icmp.getPredicate()) {
+    ICMP_CASE(EQ);
+    ICMP_CASE(NE);
+    ICMP_CASE(UGT);
+    ICMP_CASE(UGE);
+    ICMP_CASE(ULT);
+    ICMP_CASE(ULE);
+    ICMP_CASE(SGT);
+    ICMP_CASE(SGE);
+    ICMP_CASE(SLT);
+    ICMP_CASE(SLE);
+  default:
+    CAFFEINE_UNREACHABLE();
+  }
+#undef ICMP_CASE
+}
+
 ExecutionResult Interpreter::visitPHINode(llvm::PHINode& node) {
   auto& frame = ctx->stack_top();
 
@@ -226,7 +256,6 @@ ExecutionResult Interpreter::visitPHINode(llvm::PHINode& node) {
 
   return ExecutionResult::Continue;
 }
-
 ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst& inst) {
   if (!inst.isConditional()) {
     ctx->stack_top().jump_to(inst.getSuccessor(0));
@@ -270,7 +299,6 @@ ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst& inst) {
     return ExecutionResult::Stop;
   }
 }
-
 ExecutionResult Interpreter::visitReturnInst(llvm::ReturnInst& inst) {
   auto& frame = ctx->stack_top();
 
