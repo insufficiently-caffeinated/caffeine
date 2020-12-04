@@ -11,6 +11,7 @@ RUN apt-get update \
     && apt-get -y install \
         llvm-10-dev \
         clang-10 \
+        clang++-10 \
         libz-dev \
         build-essential \
         gcc-9 \
