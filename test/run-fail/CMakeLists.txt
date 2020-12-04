@@ -5,18 +5,30 @@ file(GLOB ir_tests  CONFIGURE_DEPENDS *.ll)
 
 set(CLANG_FLAGS -S -emit-llvm -O3 -fcolor-diagnostics)
 
+include(testutils)
+
+
 foreach(test ${ir_tests})
   file(RELATIVE_PATH test_file "${CMAKE_CURRENT_SOURCE_DIR}" "${test}")
+  should_skip_test(should_skip "${test}")
 
-  add_test(
-    NAME "run-pass/${test_file}"
-    COMMAND caffeine-bin "${test}" test
-  )
+  if (should_skip)
+    add_test(
+      NAME "run-fail/${test_file}"
+      COMMAND skip-test "${test}" test
+    )
+  else()
+    add_test(
+      NAME "run-fail/${test_file}"
+      COMMAND caffeine-bin "${test}" test
+    )
+  endif()
   
   set_tests_properties(
     "run-fail/${test_file}"
     PROPERTIES
-    WILL_FAIL TRUE  
+    WILL_FAIL TRUE
+    SKIP_RETURN_CODE 77
   )
 endforeach()
 
@@ -24,6 +36,7 @@ if (NOT "${CLANG}" STREQUAL "CLANG-NOTFOUND")
   foreach(test ${c_tests})
     file(RELATIVE_PATH test_file "${CMAKE_CURRENT_SOURCE_DIR}" "${test}")
     set(TEST_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${test_file}.ll")
+    should_skip_test(should_skip "${test}")
 
     add_custom_command(
       OUTPUT "${TEST_OUTPUT}"
@@ -31,15 +44,23 @@ if (NOT "${CLANG}" STREQUAL "CLANG-NOTFOUND")
       MAIN_DEPENDENCY "${test}"
     )
 
-    add_test(
-      NAME "run-fail/${test_file}"
-      COMMAND caffeine-bin "${TEST_OUTPUT}" test
-    )
+    if (should_skip)
+      add_test(
+        NAME "run-fail/${test_file}"
+        COMMAND skip-test "${test}" test
+      )
+    else()
+      add_test(
+        NAME "run-fail/${test_file}"
+        COMMAND caffeine-bin "${TEST_OUTPUT}" test
+      )
+    endif()
 
     set_tests_properties(
       "run-fail/${test_file}"
       PROPERTIES
-      WILL_FAIL TRUE  
+      WILL_FAIL TRUE
+      SKIP_RETURN_CODE 77
     )
 
     list(APPEND test_files "${TEST_OUTPUT}")
@@ -50,6 +71,7 @@ if (NOT "${CLANGXX}" STREQUAL "CLANGXX-NOTFOUND")
   foreach(test ${cpp_tests})
     file(RELATIVE_PATH test_file "${CMAKE_CURRENT_SOURCE_DIR}" "${test}")
     set(TEST_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${test_file}.ll")
+    should_skip_test(should_skip "${test}")
 
     add_custom_command(
       OUTPUT "${TEST_OUTPUT}"
@@ -57,15 +79,23 @@ if (NOT "${CLANGXX}" STREQUAL "CLANGXX-NOTFOUND")
       MAIN_DEPENDENCY "${test}"
     )
 
-    add_test(
-      NAME "run-fail/${test_file}"
-      COMMAND caffeine-bin "${TEST_OUTPUT}" test
-    )
+    if (should_skip)
+      add_test(
+        NAME "run-fail/${test_file}"
+        COMMAND skip-test "${test}" test
+      )
+    else()
+      add_test(
+        NAME "run-fail/${test_file}"
+        COMMAND caffeine-bin "${TEST_OUTPUT}" test
+      )
+    endif()
 
     set_tests_properties(
       "run-fail/${test_file}"
       PROPERTIES
-      WILL_FAIL TRUE  
+      WILL_FAIL TRUE
+      SKIP_RETURN_CODE 77
     )
 
     list(APPEND test_files "${TEST_OUTPUT}")
