@@ -35,14 +35,14 @@ static z3::expr bv_to_bool(const z3::expr& expr) {
 }
 
 static z3::expr normalize_to_bool(const z3::expr& expr) {
-  if (expr.is_bv())
+  if (expr.is_bv() && expr.get_sort().bv_size() == 1)
     return bv_to_bool(expr);
   return expr;
 }
 
 static z3::expr normalize_to_bv(const z3::expr& expr) {
   if (expr.is_bool())
-    return z3::ite(expr, expr.ctx().bv_val(1, 1), expr.ctx().bv_val(0, 1));
+    return bool_to_bv(expr);
   return expr;
 }
 
