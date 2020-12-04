@@ -103,7 +103,7 @@ void custom_terminate_handler() {
       llvm_handler();
   }
   std::abort();
-} // namespace
+}
 
 } // namespace
 
