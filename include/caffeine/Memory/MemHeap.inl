@@ -48,7 +48,7 @@ inline bool Pointer::is_resolved() const {
   // TODO: This depends on some internal parts of slot_map which aren't really
   //       meant to be exposed. It should be fine but if slotmap ever starts
   //       using a different key type then it'll be necessary to rework this.
-  return alloc_.second == SIZE_MAX;
+  return alloc_.second != SIZE_MAX;
 }
 
 } // namespace caffeine
