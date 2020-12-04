@@ -20,5 +20,5 @@ if (${CMAKE_VERSION} VERSION_LESS "3.10.0")
   add_test(NAME unit-tests COMMAND caffeine-unittest)
 else()
   # This lists all the tests individually 
-  gtest_discover_tests(caffeine-unittest TEST_PREFIX unit.)
+  gtest_discover_tests(caffeine-unittest TEST_PREFIX unit/)
 endif()
