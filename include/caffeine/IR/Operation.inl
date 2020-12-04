@@ -203,9 +203,11 @@ inline const Operation& Operation::operator[](size_t idx) const {
  * Constant                                        *
  ***************************************************/
 inline std::string_view Constant::name() const {
+  CAFFEINE_ASSERT(is_named(), "tried to access name of unnamed constant");
   return name_;
 }
 inline uint64_t Constant::number() const {
+  CAFFEINE_ASSERT(is_numbered(), "tried to access number of named constant");
   return iconst_.getLimitedValue();
 }
 
