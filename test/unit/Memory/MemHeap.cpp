@@ -31,10 +31,8 @@ class MemHeapTests : public ::testing::Test {
 protected:
   llvm::LLVMContext llvm;
   std::shared_ptr<Solver> solver = std::make_shared<Z3Solver>();
-  MemHeap heap;
   llvm::DataLayout layout{X86_64_LINUX};
   std::unique_ptr<llvm::Function> function = empty_function(llvm);
-  Context context{function.get(), solver};
 
   ref<Operation> MakeInt(uint64_t value, unsigned AS = 0) {
     return ConstantInt::Create(
@@ -43,6 +41,9 @@ protected:
 };
 
 TEST_F(MemHeapTests, resolve_pointer_single) {
+  MemHeap heap;
+  Context context{function.get(), solver};
+
   unsigned index_size = layout.getIndexSizeInBits(0);
   auto align = MakeInt(16);
   auto size = Constant::Create(Type::int_ty(index_size), "size");

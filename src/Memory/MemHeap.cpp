@@ -180,9 +180,14 @@ AllocId MemHeap::allocate(const ref<Operation>& size,
       AllocOp::Create(size, ConstantInt::Create(llvm::APInt(8, 0xDC))));
 
   // Ensure that the allocation is properly aligned
-  ctx.add(Assertion(ICmpOp::CreateICmp(
+  ctx.add(ICmpOp::CreateICmp(
       ICmpOpcode::EQ, BinaryOp::CreateURem(allocation.address(), alignment),
-      0)));
+      0));
+  // The allocation can never wrap around the address space
+  ctx.add(ICmpOp::CreateICmp(ICmpOpcode::ULE, allocation.address(),
+                             BinaryOp::CreateAdd(allocation.address(), size)));
+  // The allocation is not null
+  ctx.add(ICmpOp::CreateICmp(ICmpOpcode::NE, allocation.address(), 0));
 
   for (const auto& alloc : allocs_) {
     /**
@@ -236,7 +241,7 @@ Assertion MemHeap::check_valid(const Pointer& ptr) {
     auto cmp2 = ICmpOp::CreateICmp(ICmpOpcode::ULT, value, end);
 
     // result |= (address <= value) && (value < address + size)
-    result = BinaryOp::CreateAnd(cmp1, cmp2);
+    result = BinaryOp::CreateOr(result, BinaryOp::CreateAnd(cmp1, cmp2));
   }
 
   return result;
