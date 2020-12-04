@@ -355,6 +355,8 @@ ExecutionResult Interpreter::visitSelectInst(llvm::SelectInst& inst) {
   auto trueVal = frame.lookup(inst.getTrueValue());
   auto falseVal = frame.lookup(inst.getFalseValue());
   frame.insert(&inst, SelectOp::Create(cond, trueVal, falseVal));
+
+  return ExecutionResult::Continue;
 }
 
 /***************************************************

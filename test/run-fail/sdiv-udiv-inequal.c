@@ -3,10 +3,7 @@
 #include <stdint.h>
 
 uint32_t sdiv(uint32_t x, uint32_t y) {
-  // Don't have or yet. Need to emulate it.
-  if (x == INT32_MIN)
-    caffeine_assume(y != -1);
-  caffeine_assume(y != 0);
+  caffeine_assume(x != INT32_MIN || y != -1);
 
   return (int32_t)x / (int32_t)y;
 }
