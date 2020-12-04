@@ -25,6 +25,9 @@ inline bool Type::is_void() const {
 inline bool Type::is_function_pointer() const {
   return kind() == FunctionPointer;
 }
+inline bool Type::is_array() const {
+  return kind() == Array;
+}
 
 inline uint32_t Type::bitwidth() const {
   CAFFEINE_ASSERT(is_int());
