@@ -82,3 +82,18 @@ TEST(slotmap, iterate) {
 
   ASSERT_TRUE(success);
 }
+
+TEST(slotmap, const_iterate) {
+  slot_map<unsigned> _map;
+  _map.insert(1);
+
+  const auto& map = _map;
+
+  bool success = false;
+  for (auto val : map) {
+    success = true;
+    ASSERT_EQ(val, 1);
+  }
+
+  ASSERT_TRUE(success);
+}
