@@ -50,6 +50,8 @@ public:
   z3::expr visitICmp(const ICmpOp& op);
   z3::expr visitFCmp(const FCmpOp& op);
 
+  z3::expr visitSelectOp(const SelectOp& op);
+
   // Unary operations
   z3::expr visitNot (const UnaryOp& op);
   z3::expr visitFNeg(const UnaryOp& op);

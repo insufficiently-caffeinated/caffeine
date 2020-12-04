@@ -38,6 +38,15 @@ static z3::expr normalize_to_bool(const z3::expr& expr) {
   return expr;
 }
 
+static z3::expr normalize_to_int(const z3::expr& expr) {
+  auto sort = expr.get_sort();
+
+  if (sort.is_bv() && sort.bv_size() == 1)
+    return expr == 1;
+
+  return expr;
+}
+
 class EmptyModel : public Model {
 public:
   EmptyModel(SolverResult result) : Model(result) {
@@ -329,6 +338,18 @@ z3::expr Z3OpVisitor::visitNot(const UnaryOp& op) {
 
 z3::expr Z3OpVisitor::visitFNeg(const UnaryOp& op) {
   return -visit(*op.operand());
+}
+
+z3::expr Z3OpVisitor::visitSelectOp(const SelectOp& op) {
+  auto selectCond = visit(*op.condition());
+  auto trueVal = visit(*op.true_value());
+  auto falseVal = visit(*op.false_value());
+
+  auto cond = normalize_to_bool(selectCond);
+  auto t_val = normalize_to_int(trueVal);
+  auto f_val = normalize_to_int(falseVal);
+
+  return z3::ite(cond, t_val, f_val);
 }
 
 } // namespace caffeine
