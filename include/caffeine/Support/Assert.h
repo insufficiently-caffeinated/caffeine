@@ -32,7 +32,7 @@ struct message {
  * backtrace of where the assertion failed.
  *
  * Usually, this function should not be called directly. Use
- * DECAF_ASSERT instead.
+ * CAFFEINE_ASSERT instead.
  */
 [[noreturn]] void assert_fail(const char* condition, const char* function,
                               unsigned int line, const char* file,
@@ -42,9 +42,9 @@ struct message {
  * Exit the process with an abort message and print a backtrace of
  * where the process aborted.
  *
- * Usually, this function should not be called directly. Use DECAF_ABORT
- * or one of the other abortion macros such as DECAF_UNIMPLEMENTED or
- * DECAF_UNREACHABLE instead.
+ * Usually, this function should not be called directly. Use CAFFEINE_ABORT
+ * or one of the other abortion macros such as CAFFEINE_UNIMPLEMENTED or
+ * CAFFEINE_UNREACHABLE instead.
  */
 [[noreturn]] void abort(const char* function, unsigned int line,
                         const char* file, message message);
