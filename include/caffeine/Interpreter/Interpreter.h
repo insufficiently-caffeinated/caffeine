@@ -58,7 +58,7 @@ public:
   ExecutionResult visitBranchInst(llvm::BranchInst& inst);
   ExecutionResult visitReturnInst(llvm::ReturnInst& inst);
   ExecutionResult visitCallInst(llvm::CallInst& inst);
-  // ExecutionResult visitSelectInst(llvm::SelectInst &inst);
+  ExecutionResult visitSelectInst(llvm::SelectInst& inst);
 
 private:
   ExecutionResult visitExternFunc(llvm::CallInst& inst);

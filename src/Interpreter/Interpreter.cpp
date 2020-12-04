@@ -349,6 +349,15 @@ ExecutionResult Interpreter::visitCallInst(llvm::CallInst& call) {
 
   return ExecutionResult::Continue;
 }
+ExecutionResult Interpreter::visitSelectInst(llvm::SelectInst& inst) {
+  auto& frame = ctx->stack_top();
+  auto cond = frame.lookup(inst.getCondition());
+  auto trueVal = frame.lookup(inst.getTrueValue());
+  auto falseVal = frame.lookup(inst.getFalseValue());
+  frame.insert(&inst, SelectOp::Create(cond, trueVal, falseVal));
+
+  return ExecutionResult::Continue;
+}
 
 /***************************************************
  * External function                               *
