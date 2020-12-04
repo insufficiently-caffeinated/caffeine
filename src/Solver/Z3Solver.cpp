@@ -2,6 +2,8 @@
 #include "caffeine/IR/Type.h"
 #include "caffeine/Support/Assert.h"
 
+#include "Z3Solver.h"
+
 #include <climits>
 #include <fmt/format.h>
 
@@ -38,13 +40,49 @@ static z3::expr normalize_to_bool(const z3::expr& expr) {
   return expr;
 }
 
-static z3::expr normalize_to_int(const z3::expr& expr) {
-  auto sort = expr.get_sort();
-
-  if (sort.is_bv() && sort.bv_size() == 1)
-    return expr == 1;
-
+static z3::expr normalize_to_bv(const z3::expr& expr) {
+  if (expr.is_bool())
+    return z3::ite(expr, expr.ctx().bv_val(1, 1), expr.ctx().bv_val(0, 1));
   return expr;
+}
+
+static Z3Model::SymbolName op_name(const Constant& constant) {
+  if (constant.is_numbered()) {
+    return constant.number();
+  }
+
+  return std::string(constant.name());
+}
+
+static z3::symbol name_to_symbol(z3::context& ctx,
+                                 const Z3Model::SymbolName& name) {
+  if (auto ptr = std::get_if<std::string>(&name))
+    return ctx.str_symbol(ptr->c_str());
+  if (auto ptr = std::get_if<uint64_t>(&name)) {
+    CAFFEINE_ASSERT(*ptr <= (uint64_t)INT_MAX);
+    return ctx.int_symbol(*ptr);
+  }
+
+  CAFFEINE_UNREACHABLE();
+}
+
+static z3::sort type_to_sort(z3::context& ctx, const Type& type) {
+  switch (type.kind()) {
+  case Type::Integer:
+    return ctx.bv_sort(type.bitwidth());
+  case Type::FloatingPoint:
+    return ctx.fpa_sort(type.exponent_bits(), type.mantissa_bits());
+  case Type::Array:
+    CAFFEINE_ABORT("Symbolic arrays are unimplemented");
+  case Type::Void:
+    CAFFEINE_ABORT("Cannot make symbolic void constants");
+  case Type::Pointer:
+    CAFFEINE_ABORT("Cannot make symbolic pointer constants");
+  case Type::FunctionPointer:
+    CAFFEINE_ABORT("Cannot make symbolic function constants");
+  }
+
+  CAFFEINE_UNREACHABLE();
 }
 
 class EmptyModel : public Model {
@@ -61,14 +99,13 @@ public:
 /***************************************************
  * Z3Model                                         *
  ***************************************************/
-Z3Model::Z3Model(SolverResult result, z3::context* ctx, z3::model model,
-                 const std::unordered_map<std::string, z3::expr>& map)
-    : Model(result), ctx(ctx), model(model), constants(map) {}
+Z3Model::Z3Model(SolverResult result, z3::model model, const ConstMap& map)
+    : Model(result), model(model), constants(map) {}
 
 Value Z3Model::lookup(const Constant& constant) const {
   CAFFEINE_ASSERT(result() == SolverResult::SAT, "Model is not SAT");
 
-  auto it = constants.find(std::string(constant.name()));
+  auto it = constants.find(op_name(constant));
   if (it == constants.end()) {
     return Value();
   }
@@ -85,19 +122,21 @@ Value Z3Model::lookup(const Constant& constant) const {
 /***************************************************
  * Z3Solver                                        *
  ***************************************************/
-Z3Solver::Z3Solver() {
+Z3Solver::Z3Solver() : ctx(std::make_unique<z3::context>()) {
   // We want z3 to generate models
-  ctx.set("model", true);
+  ctx->set("model", true);
   // Automatically select and configure the solver
-  ctx.set("auto_config", true);
+  ctx->set("auto_config", true);
 }
+
+Z3Solver::~Z3Solver() {}
 
 std::unique_ptr<Model> Z3Solver::resolve(std::vector<Assertion>& assertions,
                                          const Assertion& extra) {
-  z3::solver solver = z3::tactic(ctx, "default").mk_solver();
-  std::unordered_map<std::string, z3::expr> constMap;
+  z3::solver solver = z3::tactic(*ctx, "default").mk_solver();
+  Z3Model::ConstMap constMap;
 
-  Z3OpVisitor visitor{&ctx, constMap};
+  Z3OpVisitor visitor{ctx.get(), constMap};
   for (Assertion assertion : assertions) {
     if (assertion.is_empty()) {
       continue;
@@ -116,8 +155,8 @@ std::unique_ptr<Model> Z3Solver::resolve(std::vector<Assertion>& assertions,
 
   switch (result) {
   case z3::sat:
-    return std::make_unique<Z3Model>(SolverResult::SAT, &ctx,
-                                     solver.get_model(), constMap);
+    return std::make_unique<Z3Model>(SolverResult::SAT, solver.get_model(),
+                                     constMap);
 
   case z3::unsat:
     return std::make_unique<EmptyModel>(SolverResult::UNSAT);
@@ -130,8 +169,7 @@ std::unique_ptr<Model> Z3Solver::resolve(std::vector<Assertion>& assertions,
 /***************************************************
  * Z3OpVisitor                                     *
  ***************************************************/
-Z3OpVisitor::Z3OpVisitor(z3::context* ctx,
-                         std::unordered_map<std::string, z3::expr>& constMap)
+Z3OpVisitor::Z3OpVisitor(z3::context* ctx, Z3Model::ConstMap& constMap)
     : ctx(ctx), constMap(constMap) {}
 
 z3::expr Z3OpVisitor::visitOperation(const Operation& op) {
@@ -141,7 +179,7 @@ z3::expr Z3OpVisitor::visitOperation(const Operation& op) {
 
 z3::expr Z3OpVisitor::visitConstant(const Constant& op) {
   auto type = op.type();
-  std::string name(op.name());
+  auto name = op_name(op);
 
   // Reuse already created constants (otherwise Z3 will view them as different?)
   auto it = constMap.find(name);
@@ -150,34 +188,10 @@ z3::expr Z3OpVisitor::visitConstant(const Constant& op) {
     return it->second;
   }
 
-  switch (type.kind()) {
-  case Type::Kind::Integer: {
-    auto expr = ctx->bv_const(name.c_str(), type.bitwidth());
-    constMap.insert({name, expr});
-    std::cout << "v = " << expr << std::endl;
-    return expr;
-  }
-  case Type::Kind::FloatingPoint: {
-    auto expr = ctx->fpa_const(name.c_str(), type.exponent_bits(),
-                               type.mantissa_bits());
-    constMap.insert({name, expr});
-    return expr;
-  }
-  case Type::Kind::Array: {
-    CAFFEINE_ABORT("Symbolic arrays are unimplemented");
-    auto expr = ctx->bv_const(name.c_str(), type.bitwidth());
-    constMap.insert({name, expr});
-    return expr;
-  }
-  case Type::Kind::Void:
-    CAFFEINE_ABORT("Cannot make symbolic void constants");
-  case Type::Kind::Pointer:
-    CAFFEINE_ABORT("Cannot make symbolic pointer constants");
-  case Type::Kind::FunctionPointer:
-    CAFFEINE_ABORT("Cannot make symbolic function constants");
-  }
-
-  CAFFEINE_UNREACHABLE("Unknown type kind");
+  auto sort = type_to_sort(*ctx, type);
+  auto expr = ctx->constant(name_to_symbol(*ctx, name), sort);
+  constMap.insert({name, expr});
+  return expr;
 }
 
 z3::expr Z3OpVisitor::visitConstantInt(const ConstantInt& op) {
@@ -206,8 +220,8 @@ z3::expr Z3OpVisitor::visitConstantFloat(const ConstantFloat& op) {
 
 #define CAFFEINE_BINOP_IMPL(name, op_code)                                     \
   z3::expr Z3OpVisitor::visit##name(const BinaryOp& op) {                      \
-    auto lhs = visit(*op.lhs());                                               \
-    auto rhs = visit(*op.rhs());                                               \
+    auto lhs = normalize_to_bv(visit(*op.lhs()));                              \
+    auto rhs = normalize_to_bv(visit(*op.rhs()));                              \
     return op_code;                                                            \
   }
 
@@ -219,8 +233,6 @@ CAFFEINE_BINOP_IMPL(UDiv, z3::udiv(lhs, rhs))
 CAFFEINE_BINOP_IMPL(SDiv, lhs / rhs)
 CAFFEINE_BINOP_IMPL(URem, z3::urem(lhs, rhs))
 CAFFEINE_BINOP_IMPL(SRem, lhs % rhs)
-CAFFEINE_BINOP_IMPL(And, lhs & rhs)
-CAFFEINE_BINOP_IMPL(Or, lhs | rhs)
 CAFFEINE_BINOP_IMPL(Xor, lhs ^ rhs)
 CAFFEINE_BINOP_IMPL(Shl, z3::shl(lhs, rhs))
 CAFFEINE_BINOP_IMPL(LShr, z3::lshr(lhs, rhs))
@@ -233,9 +245,29 @@ CAFFEINE_BINOP_IMPL(FRem, lhs % rhs)
 #undef CAFFEINE_BINOP_IMPL
 // clang-format on
 
+// Special cases for and and or which try to keep values as booleans
+z3::expr Z3OpVisitor::visitAnd(const BinaryOp& op) {
+  auto lhs = normalize_to_bool(visit(*op.lhs()));
+  auto rhs = normalize_to_bool(visit(*op.rhs()));
+
+  if (lhs.is_bool())
+    return lhs && rhs;
+
+  return lhs & rhs;
+}
+z3::expr Z3OpVisitor::visitOr(const BinaryOp& op) {
+  auto lhs = normalize_to_bool(visit(*op.lhs()));
+  auto rhs = normalize_to_bool(visit(*op.rhs()));
+
+  if (lhs.is_bool())
+    return lhs || rhs;
+
+  return lhs | rhs;
+}
+
 z3::expr Z3OpVisitor::visitICmp(const ICmpOp& op) {
-  auto lhs = visit(*op.lhs());
-  auto rhs = visit(*op.rhs());
+  auto lhs = normalize_to_bv(visit(*op.lhs()));
+  auto rhs = normalize_to_bv(visit(*op.rhs()));
 
   z3::expr expr = z3::expr(lhs.ctx(), nullptr);
 
@@ -274,7 +306,7 @@ z3::expr Z3OpVisitor::visitICmp(const ICmpOp& op) {
     CAFFEINE_ABORT("Unknown ICmpOpcode");
   }
 
-  return bool_to_bv(expr);
+  return expr;
 }
 
 z3::expr Z3OpVisitor::visitFCmp(const FCmpOp& op) {
@@ -329,11 +361,15 @@ z3::expr Z3OpVisitor::visitFCmp(const FCmpOp& op) {
     CAFFEINE_ABORT("Unknown FCmpOpcode");
   }
 
-  return bool_to_bv(expr);
+  return expr;
 }
 
 z3::expr Z3OpVisitor::visitNot(const UnaryOp& op) {
-  return ~visit(*op.operand());
+  auto expr = normalize_to_bool(visit(*op.operand()));
+
+  if (expr.is_bool())
+    return !expr;
+  return ~expr;
 }
 
 z3::expr Z3OpVisitor::visitFNeg(const UnaryOp& op) {
@@ -346,8 +382,8 @@ z3::expr Z3OpVisitor::visitSelectOp(const SelectOp& op) {
   auto falseVal = visit(*op.false_value());
 
   auto cond = normalize_to_bool(selectCond);
-  auto t_val = normalize_to_int(trueVal);
-  auto f_val = normalize_to_int(falseVal);
+  auto t_val = normalize_to_bv(trueVal);
+  auto f_val = normalize_to_bv(falseVal);
 
   return z3::ite(cond, t_val, f_val);
 }
