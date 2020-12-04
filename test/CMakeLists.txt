@@ -14,3 +14,5 @@ if ("${CLANGXX}" STREQUAL "CLANGXX-NOTFOUND")
 add_subdirectory(unit)
 add_subdirectory(run-pass)
 add_subdirectory(run-fail)
+
+add_executable(skip-test skip-test.cpp)
