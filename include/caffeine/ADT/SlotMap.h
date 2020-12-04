@@ -383,7 +383,7 @@ public:
     return const_iterator(this, 0);
   }
   const_iterator end() const {
-    return const_iterator(this, 0);
+    return const_iterator(this, entries_.size());
   }
 
   void swap(slot_map<T>& other) {

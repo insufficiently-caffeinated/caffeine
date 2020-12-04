@@ -68,3 +68,32 @@ TEST(slotmap, removed_key) {
   ASSERT_TRUE(value.has_value());
   ASSERT_EQ(*value, 1);
 }
+
+TEST(slotmap, iterate) {
+  slot_map<unsigned> map;
+
+  map.insert(1);
+
+  bool success = false;
+  for (auto val : map) {
+    success = true;
+    ASSERT_EQ(val, 1);
+  }
+
+  ASSERT_TRUE(success);
+}
+
+TEST(slotmap, const_iterate) {
+  slot_map<unsigned> _map;
+  _map.insert(1);
+
+  const auto& map = _map;
+
+  bool success = false;
+  for (auto val : map) {
+    success = true;
+    ASSERT_EQ(val, 1);
+  }
+
+  ASSERT_TRUE(success);
+}
