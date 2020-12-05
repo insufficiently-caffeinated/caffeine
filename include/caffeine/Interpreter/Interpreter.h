@@ -49,10 +49,10 @@ public:
 
   ExecutionResult visitICmpInst(llvm::ICmpInst& icmp);
 
-  ExecutionResult visitTrunc(llvm::TruncInst &trunc);
+  ExecutionResult visitTrunc(llvm::TruncInst& trunc);
 
-  ExecutionResult visitSExt(llvm::SExtInst &sext);
-  ExecutionResult visitZExt(llvm::ZExtInst &zext);
+  ExecutionResult visitSExt(llvm::SExtInst& sext);
+  ExecutionResult visitZExt(llvm::ZExtInst& zext);
 
   ExecutionResult visitPHINode(llvm::PHINode& node);
   ExecutionResult visitBranchInst(llvm::BranchInst& inst);
