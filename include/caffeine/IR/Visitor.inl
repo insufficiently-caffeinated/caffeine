@@ -63,6 +63,10 @@ RetTy OpVisitorBase<Transform, SubClass, RetTy>::visit(
     DELEGATE(ConstantInt, ConstantInt);
     DELEGATE(ConstantFloat, ConstantFloat);
 
+    DELEGATE(Trunc, UnaryOp);
+    DELEGATE(SExt, UnaryOp);
+    DELEGATE(ZExt, UnaryOp);
+
     DELEGATE(Alloc, AllocOp, AllocOp);
     DELEGATE(Store, StoreOp, StoreOp);
     DELEGATE(Load, LoadOp, LoadOp);
@@ -73,6 +77,8 @@ RetTy OpVisitorBase<Transform, SubClass, RetTy>::visit(
     CAFFEINE_ABORT("tried to visit an invalid operation");
 
   default:
+    // this will also assert if your instruction above doesn't have a
+    // delegate call
     CAFFEINE_ABORT(detail::visitor::unknown_opcode_msg(op));
   }
 
