@@ -75,7 +75,7 @@ ExecutionResult Interpreter::visitUDiv(llvm::BinaryOperator& op) {
   Assertion assertion = ICmpOp::CreateICmp(ICmpOpcode::NE, rhs, 0);
   auto model = ctx->resolve(!assertion);
   if (model->result() == SolverResult::SAT)
-    logger->log_failure(model.get(), *ctx);
+    logger->log_failure(*model, *ctx, Failure(!assertion));
   ctx->add(assertion);
 
   frame.insert(&op, BinaryOp::CreateUDiv(lhs, rhs));
@@ -100,7 +100,7 @@ ExecutionResult Interpreter::visitSDiv(llvm::BinaryOperator& op) {
       BinaryOp::CreateOr(cmp1, BinaryOp::CreateAnd(cmp2, cmp3));
   auto model = ctx->resolve(assertion);
   if (model->result() == SolverResult::SAT)
-    logger->log_failure(model.get(), *ctx);
+    logger->log_failure(*model, *ctx, Failure(!assertion));
   ctx->add(!assertion);
 
   frame.insert(&op, BinaryOp::CreateSDiv(lhs, rhs));
@@ -125,7 +125,7 @@ ExecutionResult Interpreter::visitSRem(llvm::BinaryOperator& op) {
       BinaryOp::CreateOr(cmp1, BinaryOp::CreateAnd(cmp2, cmp3));
   auto model = ctx->resolve(assertion);
   if (model->result() == SolverResult::SAT)
-    logger->log_failure(model.get(), *ctx);
+    logger->log_failure(*model, *ctx, Failure(assertion));
   ctx->add(!assertion);
 
   frame.insert(&op, BinaryOp::CreateSRem(lhs, rhs));
@@ -141,7 +141,7 @@ ExecutionResult Interpreter::visitURem(llvm::BinaryOperator& op) {
   Assertion assertion = ICmpOp::CreateICmp(ICmpOpcode::NE, rhs, 0);
   auto model = ctx->resolve(!assertion);
   if (model->result() == SolverResult::SAT)
-    logger->log_failure(model.get(), *ctx);
+    logger->log_failure(*model, *ctx, Failure(!assertion));
   ctx->add(assertion);
 
   frame.insert(&op, BinaryOp::CreateURem(lhs, rhs));
@@ -427,7 +427,7 @@ ExecutionResult Interpreter::visitAssert(llvm::CallInst& call) {
 
   auto model = ctx->resolve(!assertion);
   if (model->result() == SolverResult::SAT)
-    logger->log_failure(model.get(), *ctx);
+    logger->log_failure(*model, *ctx, Failure(!assertion));
 
   ctx->add(assertion);
 
