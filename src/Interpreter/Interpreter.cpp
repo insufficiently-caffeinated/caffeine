@@ -247,6 +247,32 @@ ExecutionResult Interpreter::visitICmpInst(llvm::ICmpInst& icmp) {
 #undef ICMP_CASE
 }
 
+ExecutionResult Interpreter::visitTrunc(llvm::TruncInst &trunc) {
+  auto& frame = ctx->stack_top();
+  auto operand = frame.lookup(trunc.getOperand(0));
+  auto truncOp = UnaryOp::CreateTrunc(Type::int_ty(trunc.getType()->getIntegerBitWidth()), operand);
+  frame.insert(&trunc, truncOp);
+
+  return ExecutionResult::Continue;
+}
+
+ExecutionResult Interpreter::visitSExt(llvm::SExtInst &sext){
+  auto& frame = ctx->stack_top();
+  auto operand = frame.lookup(sext.getOperand(0));
+  auto truncOp = UnaryOp::CreateSExt(Type::int_ty(sext.getType()->getIntegerBitWidth()), operand);
+  frame.insert(&sext, truncOp);
+
+  return ExecutionResult::Continue;
+}
+ExecutionResult Interpreter::visitZExt(llvm::ZExtInst &zext){
+  auto& frame = ctx->stack_top();
+  auto operand = frame.lookup(zext.getOperand(0));
+  auto truncOp = UnaryOp::CreateZExt(Type::int_ty(zext.getType()->getIntegerBitWidth()), operand);
+  frame.insert(&zext, truncOp);
+
+  return ExecutionResult::Continue;
+}
+
 ExecutionResult Interpreter::visitPHINode(llvm::PHINode& node) {
   auto& frame = ctx->stack_top();
 

@@ -388,4 +388,24 @@ z3::expr Z3OpVisitor::visitSelectOp(const SelectOp& op) {
   return z3::ite(cond, t_val, f_val);
 }
 
+z3::expr Z3OpVisitor::visitTrunc(const UnaryOp& op) {
+  auto operand = visit(*op.operand());
+  auto src = normalize_to_bv(operand);
+
+  return src.extract(op.type().bitwidth() - 1, 0);
+}
+
+z3::expr Z3OpVisitor::visitZExt(const UnaryOp& op) {
+  auto operand = visit(*op.operand());
+  auto src = normalize_to_bv(operand);
+
+  return z3::zext(src, op.type().bitwidth() - operand.get_sort().bv_size());
+}
+z3::expr Z3OpVisitor::visitSExt(const UnaryOp& op) {
+  auto operand = visit(*op.operand());
+  auto src = normalize_to_bv(operand);
+
+  return z3::sext(src, op.type().bitwidth() - operand.get_sort().bv_size());
+}
+
 } // namespace caffeine
