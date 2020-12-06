@@ -14,6 +14,12 @@ ref<Operation> evaluate_constant(const llvm::Constant* constant) {
     return ConstantInt::Create(value);
   }
 
+  if (auto* fpconst = llvm::dyn_cast<llvm::ConstantFP>(constant)) {
+    const llvm::APFloat& value = fpconst->getValueAPF();
+
+    return ConstantFloat::Create(value);
+  }
+
   // We only implement integers at the moment
   CAFFEINE_UNIMPLEMENTED();
 }
