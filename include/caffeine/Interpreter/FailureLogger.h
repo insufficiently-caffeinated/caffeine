@@ -8,12 +8,22 @@
 
 namespace caffeine {
 
+struct Failure {
+  Assertion check;
+  std::string_view message;
+
+  explicit Failure(const Assertion& check) : check(check), message("") {}
+  Failure(const Assertion& check, std::string_view msg)
+      : check(check), message(msg) {}
+};
+
 class FailureLogger {
 public:
   FailureLogger() = default;
   virtual ~FailureLogger() = default;
 
-  virtual void log_failure(const Model* model, const Context& context) = 0;
+  virtual void log_failure(const Model& model, const Context& context,
+                           const Failure& failure) = 0;
 
 protected:
   FailureLogger(const FailureLogger&) = default;
@@ -30,7 +40,8 @@ private:
 public:
   PrintingFailureLogger(std::ostream& os);
 
-  void log_failure(const Model* model, const Context& context) override;
+  void log_failure(const Model& model, const Context& context,
+                   const Failure& failure) override;
 };
 
 } // namespace caffeine
