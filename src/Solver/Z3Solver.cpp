@@ -52,6 +52,8 @@ static llvm::APFloat z3_to_apfloat(const z3::expr& expr) {
   if (Z3_fpa_get_numeral_exponent_int64(expr.ctx(), expr, &e, false)) {
     exponent = llvm::APInt(ebits, e, true);
   } else if (Z3_fpa_is_numeral_nan(expr.ctx(), expr)) {
+    // Z3 doesn't allow us to extract the exponent of NaNs. However there's only
+    // one possible exponent for a NaN so just hardcode it here.
     exponent = llvm::APInt::getAllOnesValue(ebits);
   } else {
     // Not worth implementing until we have a float implementation that supports
