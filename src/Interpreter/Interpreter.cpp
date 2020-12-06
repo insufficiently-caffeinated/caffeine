@@ -246,6 +246,40 @@ ExecutionResult Interpreter::visitICmpInst(llvm::ICmpInst& icmp) {
   }
 #undef ICMP_CASE
 }
+ExecutionResult Interpreter::visitFCmpInst(llvm::FCmpInst& fcmp) {
+  using llvm::FCmpInst;
+
+  auto& frame = ctx->stack_top();
+
+  auto lhs = frame.lookup(fcmp.getOperand(0));
+  auto rhs = frame.lookup(fcmp.getOperand(1));
+
+#define FCMP_CASE(op)                                                          \
+  case FCmpInst::FCMP_##op:                                                    \
+    frame.insert(&fcmp, FCmpOp::CreateFCmp(FCmpOpcode::op, lhs, rhs));         \
+    return ExecutionResult::Continue
+
+  switch (fcmp.getPredicate()) {
+    FCMP_CASE(OEQ);
+    FCMP_CASE(OGT);
+    FCMP_CASE(OGE);
+    FCMP_CASE(OLT);
+    FCMP_CASE(OLE);
+    FCMP_CASE(ONE);
+    FCMP_CASE(ORD);
+    FCMP_CASE(UEQ);
+    FCMP_CASE(UGT);
+    FCMP_CASE(UGE);
+    FCMP_CASE(ULT);
+    FCMP_CASE(ULE);
+    FCMP_CASE(UNE);
+    FCMP_CASE(UNO);
+  default:
+    CAFFEINE_UNREACHABLE();
+  }
+
+#undef FCMP_CASE
+}
 
 ExecutionResult Interpreter::visitTrunc(llvm::TruncInst& trunc) {
   auto& frame = ctx->stack_top();
