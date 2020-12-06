@@ -156,8 +156,11 @@ public:
 /***************************************************
  * Z3Model                                         *
  ***************************************************/
-Z3Model::Z3Model(SolverResult result, z3::model model, const ConstMap& map)
+Z3Model::Z3Model(SolverResult result, const z3::model& model,
+                 const ConstMap& map)
     : Model(result), model(model), constants(map) {}
+Z3Model::Z3Model(SolverResult result, const z3::model& model, ConstMap&& map)
+    : Model(result), model(model), constants(std::move(map)) {}
 
 Value Z3Model::lookup(const Constant& constant) const {
   CAFFEINE_ASSERT(result() == SolverResult::SAT, "Model is not SAT");
@@ -215,7 +218,7 @@ std::unique_ptr<Model> Z3Solver::resolve(std::vector<Assertion>& assertions,
   switch (result) {
   case z3::sat:
     return std::make_unique<Z3Model>(SolverResult::SAT, solver.get_model(),
-                                     constMap);
+                                     std::move(constMap));
 
   case z3::unsat:
     return std::make_unique<EmptyModel>(SolverResult::UNSAT);
