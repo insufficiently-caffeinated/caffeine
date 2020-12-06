@@ -38,6 +38,9 @@ if (NOT "${CLANG}" STREQUAL "CLANG-NOTFOUND")
     set(TEST_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${test_file}.ll")
     should_skip_test(should_skip "${test}")
 
+    get_filename_component(output_dir "${TEST_OUTPUT}" DIRECTORY)
+    file(MAKE_DIRECTORY "${output_dir}")
+
     add_custom_command(
       OUTPUT "${TEST_OUTPUT}"
       COMMAND "${CLANG}" -std=c11 ${CLANG_FLAGS} "${test}" -o "${TEST_OUTPUT}"
@@ -72,6 +75,9 @@ if (NOT "${CLANGXX}" STREQUAL "CLANGXX-NOTFOUND")
     file(RELATIVE_PATH test_file "${CMAKE_CURRENT_SOURCE_DIR}" "${test}")
     set(TEST_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${test_file}.ll")
     should_skip_test(should_skip "${test}")
+
+    get_filename_component(output_dir "${TEST_OUTPUT}" DIRECTORY)
+    file(MAKE_DIRECTORY "${output_dir}")
 
     add_custom_command(
       OUTPUT "${TEST_OUTPUT}"
