@@ -26,7 +26,8 @@ private:
   ConstMap constants;
 
 public:
-  Z3Model(SolverResult result, z3::model model, const ConstMap& map);
+  Z3Model(SolverResult result, const z3::model& model, const ConstMap& map);
+  Z3Model(SolverResult result, const z3::model& model, ConstMap&& map);
 
   /**
    * Look up the value of a symbolic constant in this model. Returns an
