@@ -151,6 +151,7 @@ std::unique_ptr<Model> Z3Solver::resolve(std::vector<Assertion>& assertions,
     solver.add(normalize_to_bool(exp));
   }
 
+  std::cout << solver.to_smt2() << std::endl;
   auto result = solver.check();
 
   switch (result) {
@@ -309,6 +310,11 @@ z3::expr Z3OpVisitor::visitICmp(const ICmpOp& op) {
   return expr;
 }
 
+// Z3's C++ API doesn't include this so we need to use the C API
+static z3::expr is_nan(const z3::expr& e) {
+  return z3::expr(e.ctx(), Z3_mk_fpa_is_nan(e.ctx(), e));
+}
+
 z3::expr Z3OpVisitor::visitFCmp(const FCmpOp& op) {
   auto lhs = visit(*op.lhs());
   auto rhs = visit(*op.rhs());
@@ -316,46 +322,46 @@ z3::expr Z3OpVisitor::visitFCmp(const FCmpOp& op) {
   z3::expr expr = z3::expr(lhs.ctx(), nullptr);
   switch (op.comparison()) {
   case FCmpOpcode::OEQ:
-    expr = lhs == rhs && lhs == lhs && rhs == rhs;
+    expr = lhs == rhs && !is_nan(lhs) && !is_nan(rhs);
     break;
   case FCmpOpcode::OGT:
-    expr = lhs > rhs && lhs == lhs && rhs == rhs;
+    expr = lhs > rhs && !is_nan(lhs) && !is_nan(rhs);
     break;
   case FCmpOpcode::OGE:
-    expr = lhs >= rhs && lhs == lhs && rhs == rhs;
+    expr = lhs >= rhs && !is_nan(lhs) && !is_nan(rhs);
     break;
   case FCmpOpcode::OLT:
-    expr = lhs < rhs && lhs == lhs && rhs == rhs;
+    expr = lhs < rhs && !is_nan(lhs) && !is_nan(rhs);
     break;
   case FCmpOpcode::OLE:
-    expr = lhs <= rhs && lhs == lhs && rhs == rhs;
+    expr = lhs <= rhs && !is_nan(lhs) && !is_nan(rhs);
     break;
   case FCmpOpcode::ONE:
-    expr = lhs != rhs && lhs == lhs && rhs == rhs;
+    expr = lhs != rhs && !is_nan(lhs) && !is_nan(rhs);
     break;
   case FCmpOpcode::ORD:
-    expr = lhs == lhs && rhs == rhs;
+    expr = !is_nan(lhs) && !is_nan(rhs);
     break;
   case FCmpOpcode::UEQ:
-    expr = lhs == rhs;
+    expr = lhs == rhs || is_nan(lhs) || is_nan(rhs);
     break;
   case FCmpOpcode::UGT:
-    expr = lhs > rhs;
+    expr = lhs > rhs || is_nan(lhs) || is_nan(rhs);
     break;
   case FCmpOpcode::UGE:
-    expr = lhs >= rhs;
+    expr = lhs >= rhs || is_nan(lhs) || is_nan(rhs);
     break;
   case FCmpOpcode::ULT:
-    expr = lhs < rhs;
+    expr = lhs < rhs || is_nan(lhs) || is_nan(rhs);
     break;
   case FCmpOpcode::ULE:
-    expr = lhs <= rhs;
+    expr = lhs <= rhs || is_nan(lhs) || is_nan(rhs);
     break;
   case FCmpOpcode::UNE:
-    expr = lhs != rhs;
+    expr = lhs != rhs || is_nan(lhs) || is_nan(rhs);
     break;
   case FCmpOpcode::UNO:
-    expr = lhs != lhs || rhs != rhs;
+    expr = is_nan(lhs) || is_nan(rhs);
     break;
   default:
     CAFFEINE_ABORT("Unknown FCmpOpcode");
