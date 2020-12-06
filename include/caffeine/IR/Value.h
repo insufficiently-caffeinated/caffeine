@@ -98,6 +98,11 @@ public:
 
   static Value select(const Value& cond, const Value& t, const Value& f);
 
+  static Value trunc(const Value& v, uint32_t bitwidth);
+  static Value sext(const Value& v, uint32_t bitwidth);
+  static Value zext(const Value& v, uint32_t bitwidth);
+  static Value bitcast(const Value& v, const Type& tgt);
+
   // These need to be defined since Value has an internal union
   Value(const Value&);
   Value(Value&&);
