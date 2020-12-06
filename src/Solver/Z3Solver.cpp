@@ -61,7 +61,7 @@ static llvm::APFloat z3_to_apfloat(const z3::expr& expr) {
 
   int sign = 0;
   if (Z3_fpa_is_numeral_nan(expr.ctx(), expr)) {
-    // There's no way to extract the sign bit from Z3
+    // There's no way to extract the sign bit from Z3 for NaNs
     sign = 0;
   } else if (!Z3_fpa_get_numeral_sign(expr.ctx(), expr, &sign)) {
     CAFFEINE_ABORT("broken fpa numeral");
