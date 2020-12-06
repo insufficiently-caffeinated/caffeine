@@ -274,6 +274,14 @@ ExecutionResult Interpreter::visitFCmpInst(llvm::FCmpInst& fcmp) {
     FCMP_CASE(ULE);
     FCMP_CASE(UNE);
     FCMP_CASE(UNO);
+
+  case FCmpInst::FCMP_TRUE:
+    frame.insert(&fcmp, ConstantInt::Create(true));
+    return ExecutionResult::Continue;
+  case FCmpInst::FCMP_FALSE:
+    frame.insert(&fcmp, ConstantInt::Create(false));
+    return ExecutionResult::Continue;
+
   default:
     CAFFEINE_UNREACHABLE();
   }
