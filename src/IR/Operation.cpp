@@ -618,7 +618,7 @@ ref<Operation> FCmpOp::CreateFCmp(FCmpOpcode cmp, const ref<Operation>& lhs,
   CAFFEINE_ASSERT(lhs->type().is_float(),
                   "icmp can only be created with integer operands");
 
-  return ref<Operation>(new FCmpOp(cmp, lhs->type(), lhs, rhs));
+  return ref<Operation>(new FCmpOp(cmp, Type::type_of<bool>(), lhs, rhs));
 }
 
 /***************************************************

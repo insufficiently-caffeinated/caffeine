@@ -91,6 +91,11 @@ inline Type Type::type_of<void>() {
   return Type::void_ty();
 }
 
+template <>
+inline Type Type::type_of<bool>() {
+  return Type::int_ty(1);
+}
+
 #undef CAFFEINE_TYPE_TYPEOF_INT
 
 } // namespace caffeine
