@@ -8,15 +8,18 @@
 #include <iostream>
 #include <string_view>
 
+using llvm::APFloat;
+using llvm::APInt;
+
 namespace caffeine {
 
 Value::Value() : kind_(Empty) {}
 
-Value::Value(const llvm::APInt& apint) : kind_(Int), apint_(apint) {}
-Value::Value(llvm::APInt&& apint) : kind_(Int), apint_(std::move(apint)) {}
+Value::Value(const APInt& apint) : kind_(Int), apint_(apint) {}
+Value::Value(APInt&& apint) : kind_(Int), apint_(std::move(apint)) {}
 
-Value::Value(const llvm::APFloat& apfloat) : kind_(Float), apfloat_(apfloat) {}
-Value::Value(llvm::APFloat&& apfloat) : kind_(Float), apfloat_(apfloat) {}
+Value::Value(const APFloat& apfloat) : kind_(Float), apfloat_(apfloat) {}
+Value::Value(APFloat&& apfloat) : kind_(Float), apfloat_(apfloat) {}
 
 Value::Value(const ConstantInt& constant) : Value(constant.value()) {}
 Value::Value(const ConstantFloat& constant) : Value(constant.value()) {}
@@ -26,10 +29,10 @@ Value::Value(const Value& v) : kind_(Empty) {
   case Empty:
     break;
   case Int:
-    new (&apint_) llvm::APInt(v.apint_);
+    new (&apint_) APInt(v.apint_);
     break;
   case Float:
-    new (&apfloat_) llvm::APFloat(v.apfloat_);
+    new (&apfloat_) APFloat(v.apfloat_);
     break;
   }
 
@@ -40,10 +43,10 @@ Value::Value(Value&& v) : kind_(Empty) {
   case Empty:
     break;
   case Int:
-    new (&apint_) llvm::APInt(std::move(v.apint_));
+    new (&apint_) APInt(std::move(v.apint_));
     break;
   case Float:
-    new (&apfloat_) llvm::APFloat(std::move(v.apfloat_));
+    new (&apfloat_) APFloat(std::move(v.apfloat_));
     break;
   }
 
@@ -56,10 +59,10 @@ Value& Value::operator=(const Value& v) {
   case Empty:
     break;
   case Int:
-    new (&apint_) llvm::APInt(v.apint_);
+    new (&apint_) APInt(v.apint_);
     break;
   case Float:
-    new (&apfloat_) llvm::APFloat(v.apfloat_);
+    new (&apfloat_) APFloat(v.apfloat_);
     break;
   }
 
@@ -73,10 +76,10 @@ Value& Value::operator=(Value&& v) {
   case Empty:
     break;
   case Int:
-    new (&apint_) llvm::APInt(std::move(v.apint_));
+    new (&apint_) APInt(std::move(v.apint_));
     break;
   case Float:
-    new (&apfloat_) llvm::APFloat(std::move(v.apfloat_));
+    new (&apfloat_) APFloat(std::move(v.apfloat_));
     break;
   }
 
@@ -109,28 +112,28 @@ Type Value::type() const {
   case Empty:
     return Type::void_ty();
   case Int:
-    return Type::type_of(apfloat_);
-  case Float:
     return Type::type_of(apint_);
+  case Float:
+    return Type::type_of(apfloat_);
   }
 
   CAFFEINE_UNREACHABLE();
 }
 
-llvm::APInt& Value::apint() {
+APInt& Value::apint() {
   CAFFEINE_ASSERT(is_int());
   return apint_;
 }
-const llvm::APInt& Value::apint() const {
+const APInt& Value::apint() const {
   CAFFEINE_ASSERT(is_int());
   return apint_;
 }
 
-llvm::APFloat& Value::apfloat() {
+APFloat& Value::apfloat() {
   CAFFEINE_ASSERT(is_float());
   return apfloat_;
 }
-const llvm::APFloat& Value::apfloat() const {
+const APFloat& Value::apfloat() const {
   CAFFEINE_ASSERT(is_float());
   return apfloat_;
 }
@@ -274,7 +277,7 @@ Value Value::frem(const Value& lhs, const Value& rhs) {
 Value Value::fneg(const Value& v) {
   CAFFEINE_ASSERT(v.is_float());
 
-  return llvm::APFloat::getZero(v.apfloat_.getSemantics()) - v.apfloat_;
+  return APFloat::getZero(v.apfloat_.getSemantics()) - v.apfloat_;
 }
 
 Value Value::select(const Value& cond, const Value& t, const Value& f) {
@@ -282,6 +285,52 @@ Value Value::select(const Value& cond, const Value& t, const Value& f) {
   CAFFEINE_ASSERT(t.type() == f.type());
 
   return cond.apint() == 1 ? t : f;
+}
+
+Value Value::trunc(const Value& v, uint32_t bitwidth) {
+  CAFFEINE_ASSERT(v.is_int());
+  CAFFEINE_ASSERT(v.type().bitwidth() > bitwidth);
+
+  return v.apint().trunc(bitwidth);
+}
+Value Value::sext(const Value& v, uint32_t bitwidth) {
+  CAFFEINE_ASSERT(v.is_int());
+  CAFFEINE_ASSERT(v.type().bitwidth() < bitwidth);
+
+  return v.apint().sext(bitwidth);
+}
+Value Value::zext(const Value& v, uint32_t bitwidth) {
+  CAFFEINE_ASSERT(v.is_int());
+  CAFFEINE_ASSERT(v.type().bitwidth() < bitwidth);
+
+  return v.apint().zext(bitwidth);
+}
+Value Value::bitcast(const Value& v, const Type& tgt) {
+  if (v.is_int()) {
+    CAFFEINE_ASSERT(tgt.is_float());
+    CAFFEINE_ASSERT(v.type().bitwidth() ==
+                    tgt.mantissa_bits() + tgt.exponent_bits());
+
+    if (tgt == Type::type_of<float>())
+      return APFloat(v.apint().bitsToFloat());
+    if (tgt == Type::type_of<double>())
+      return APFloat(v.apint().bitsToDouble());
+    if (tgt == Type::float_ty(5, 11))
+      return APFloat(APFloat::EnumToSemantics(APFloat::S_IEEEhalf), v.apint());
+    if (tgt == Type::float_ty(15, 113))
+      return APFloat(APFloat::EnumToSemantics(APFloat::S_IEEEquad), v.apint());
+    if (tgt == Type::float_ty(15, 64))
+      return APFloat(APFloat::EnumToSemantics(APFloat::S_x87DoubleExtended),
+                     v.apint());
+
+    CAFFEINE_UNIMPLEMENTED();
+  } else {
+    CAFFEINE_ASSERT(tgt.is_int());
+    CAFFEINE_ASSERT(tgt.bitwidth() ==
+                    v.type().mantissa_bits() + v.type().exponent_bits());
+
+    return v.apfloat().bitcastToAPInt();
+  }
 }
 
 std::ostream& operator<<(std::ostream& os, const Value& v) {
