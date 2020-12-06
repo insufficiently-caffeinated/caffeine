@@ -45,17 +45,18 @@ public:
 
 PrintingFailureLogger::PrintingFailureLogger(std::ostream& os) : os(&os) {}
 
-void PrintingFailureLogger::log_failure(const Model* model,
-                                        const Context& ctx) {
-  CAFFEINE_ASSERT(model->result() == SolverResult::SAT);
+void PrintingFailureLogger::log_failure(const Model& model, const Context& ctx,
+                                        const Failure& failure) {
+  CAFFEINE_ASSERT(model.result() == SolverResult::SAT);
 
-  ConstantPrinter printer{*os, model};
+  ConstantPrinter printer{*os, &model};
 
   *os << "Found assertion failure:\n";
 
   for (const auto& assertion : ctx.assertions()) {
     printer.visit(*assertion.value());
   }
+  printer.visit(*failure.check.value());
 
   *os << std::flush;
 }

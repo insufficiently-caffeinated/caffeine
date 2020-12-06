@@ -28,10 +28,10 @@ public:
 
   using caffeine::PrintingFailureLogger::PrintingFailureLogger;
 
-  void log_failure(const caffeine::Model* model,
-                   const caffeine::Context& ctx) override {
+  void log_failure(const caffeine::Model& model, const caffeine::Context& ctx,
+                   const caffeine::Failure& failure) override {
     num_failures += 1;
-    caffeine::PrintingFailureLogger::log_failure(model, ctx);
+    caffeine::PrintingFailureLogger::log_failure(model, ctx, failure);
   }
 };
 

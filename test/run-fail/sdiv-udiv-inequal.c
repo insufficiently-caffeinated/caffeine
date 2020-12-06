@@ -4,6 +4,7 @@
 
 uint32_t sdiv(uint32_t x, uint32_t y) {
   caffeine_assume(x != INT32_MIN || y != -1);
+  caffeine_assume(y != 0);
 
   return (int32_t)x / (int32_t)y;
 }
