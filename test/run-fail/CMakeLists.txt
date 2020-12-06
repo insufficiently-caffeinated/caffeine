@@ -1,9 +1,9 @@
 
-file(GLOB c_tests   CONFIGURE_DEPENDS *.c)
-file(GLOB cpp_tests CONFIGURE_DEPENDS *.cpp *.cc)
-file(GLOB ir_tests  CONFIGURE_DEPENDS *.ll)
+file(GLOB_RECURSE c_tests   CONFIGURE_DEPENDS *.c)
+file(GLOB_RECURSE cpp_tests CONFIGURE_DEPENDS *.cpp *.cc)
+file(GLOB_RECURSE ir_tests  CONFIGURE_DEPENDS *.ll)
 
-set(CLANG_FLAGS -S -emit-llvm -O3 -fcolor-diagnostics)
+set(CLANG_FLAGS -S -emit-llvm -O3 -fcolor-diagnostics "-I${CMAKE_SOURCE_DIR}/interface")
 
 include(testutils)
 
