@@ -277,7 +277,12 @@ z3::expr Z3OpVisitor::visitConstantInt(const ConstantInt& op) {
 
 z3::expr Z3OpVisitor::visitConstantFloat(const ConstantFloat& op) {
   // TODO: Reimplement this correctly
-  return ctx->fpa_val(op.value().convertToFloat());
+  auto expr = z3::expr(
+      *ctx, Z3_mk_fpa_numeral_double(*ctx, op.value().convertToDouble(),
+                                     ctx->fpa_sort(op.type().exponent_bits(),
+                                                   op.type().mantissa_bits())));
+  expr.check_error();
+  return expr;
 }
 
 #define CAFFEINE_BINOP_IMPL(name, op_code)                                     \
@@ -378,6 +383,27 @@ static z3::expr is_nan(const z3::expr& e) {
   return expr;
 }
 
+static z3::expr fpa_leq(const z3::expr& a, const z3::expr& b) {
+  auto val = z3::expr(a.ctx(), Z3_mk_fpa_leq(a.ctx(), a, b));
+  val.check_error();
+  return val;
+}
+static z3::expr fpa_lt(const z3::expr& a, const z3::expr& b) {
+  auto val = z3::expr(a.ctx(), Z3_mk_fpa_lt(a.ctx(), a, b));
+  val.check_error();
+  return val;
+}
+static z3::expr fpa_geq(const z3::expr& a, const z3::expr& b) {
+  auto val = z3::expr(a.ctx(), Z3_mk_fpa_geq(a.ctx(), a, b));
+  val.check_error();
+  return val;
+}
+static z3::expr fpa_gt(const z3::expr& a, const z3::expr& b) {
+  auto val = z3::expr(a.ctx(), Z3_mk_fpa_leq(a.ctx(), a, b));
+  val.check_error();
+  return val;
+}
+
 z3::expr Z3OpVisitor::visitFCmp(const FCmpOp& op) {
   auto lhs = visit(*op.lhs());
   auto rhs = visit(*op.rhs());
@@ -388,16 +414,16 @@ z3::expr Z3OpVisitor::visitFCmp(const FCmpOp& op) {
     expr = lhs == rhs && !is_nan(lhs) && !is_nan(rhs);
     break;
   case FCmpOpcode::OGT:
-    expr = lhs > rhs && !is_nan(lhs) && !is_nan(rhs);
+    expr = fpa_gt(lhs, rhs) && !is_nan(lhs) && !is_nan(rhs);
     break;
   case FCmpOpcode::OGE:
-    expr = lhs >= rhs && !is_nan(lhs) && !is_nan(rhs);
+    expr = fpa_geq(lhs, rhs) && !is_nan(lhs) && !is_nan(rhs);
     break;
   case FCmpOpcode::OLT:
-    expr = lhs < rhs && !is_nan(lhs) && !is_nan(rhs);
+    expr = fpa_lt(lhs, rhs) && !is_nan(lhs) && !is_nan(rhs);
     break;
   case FCmpOpcode::OLE:
-    expr = lhs <= rhs && !is_nan(lhs) && !is_nan(rhs);
+    expr = fpa_leq(lhs, rhs) && !is_nan(lhs) && !is_nan(rhs);
     break;
   case FCmpOpcode::ONE:
     expr = lhs != rhs && !is_nan(lhs) && !is_nan(rhs);
@@ -409,16 +435,16 @@ z3::expr Z3OpVisitor::visitFCmp(const FCmpOp& op) {
     expr = lhs == rhs || is_nan(lhs) || is_nan(rhs);
     break;
   case FCmpOpcode::UGT:
-    expr = lhs > rhs || is_nan(lhs) || is_nan(rhs);
+    expr = fpa_gt(lhs, rhs) || is_nan(lhs) || is_nan(rhs);
     break;
   case FCmpOpcode::UGE:
-    expr = lhs >= rhs || is_nan(lhs) || is_nan(rhs);
+    expr = fpa_geq(lhs, rhs) || is_nan(lhs) || is_nan(rhs);
     break;
   case FCmpOpcode::ULT:
-    expr = lhs < rhs || is_nan(lhs) || is_nan(rhs);
+    expr = fpa_lt(lhs, rhs) || is_nan(lhs) || is_nan(rhs);
     break;
   case FCmpOpcode::ULE:
-    expr = lhs <= rhs || is_nan(lhs) || is_nan(rhs);
+    expr = fpa_leq(lhs, rhs) || is_nan(lhs) || is_nan(rhs);
     break;
   case FCmpOpcode::UNE:
     expr = lhs != rhs || is_nan(lhs) || is_nan(rhs);

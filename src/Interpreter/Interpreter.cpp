@@ -217,6 +217,47 @@ ExecutionResult Interpreter::visitNot(llvm::BinaryOperator& op) {
   return ExecutionResult::Continue;
 }
 
+ExecutionResult Interpreter::visitFAdd(llvm::BinaryOperator& op) {
+  StackFrame& frame = ctx->stack_top();
+
+  auto lhs = frame.lookup(op.getOperand(0));
+  auto rhs = frame.lookup(op.getOperand(1));
+
+  frame.insert(&op, BinaryOp::CreateFAdd(lhs, rhs));
+
+  return ExecutionResult::Continue;
+}
+ExecutionResult Interpreter::visitFSub(llvm::BinaryOperator& op) {
+  StackFrame& frame = ctx->stack_top();
+
+  auto lhs = frame.lookup(op.getOperand(0));
+  auto rhs = frame.lookup(op.getOperand(1));
+
+  frame.insert(&op, BinaryOp::CreateFAdd(lhs, rhs));
+
+  return ExecutionResult::Continue;
+}
+ExecutionResult Interpreter::visitFMul(llvm::BinaryOperator& op) {
+  StackFrame& frame = ctx->stack_top();
+
+  auto lhs = frame.lookup(op.getOperand(0));
+  auto rhs = frame.lookup(op.getOperand(1));
+
+  frame.insert(&op, BinaryOp::CreateFAdd(lhs, rhs));
+
+  return ExecutionResult::Continue;
+}
+ExecutionResult Interpreter::visitFDiv(llvm::BinaryOperator& op) {
+  StackFrame& frame = ctx->stack_top();
+
+  auto lhs = frame.lookup(op.getOperand(0));
+  auto rhs = frame.lookup(op.getOperand(1));
+
+  frame.insert(&op, BinaryOp::CreateFAdd(lhs, rhs));
+
+  return ExecutionResult::Continue;
+}
+
 ExecutionResult Interpreter::visitICmpInst(llvm::ICmpInst& icmp) {
   using llvm::ICmpInst;
 
