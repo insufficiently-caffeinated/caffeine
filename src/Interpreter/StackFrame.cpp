@@ -20,7 +20,6 @@ ref<Operation> evaluate_constant(const llvm::Constant* constant) {
     return ConstantFloat::Create(value);
   }
 
-  // We only implement integers at the moment
   CAFFEINE_UNIMPLEMENTED();
 }
 
