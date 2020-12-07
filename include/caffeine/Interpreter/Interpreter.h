@@ -48,6 +48,7 @@ public:
   ExecutionResult visitNot(llvm::BinaryOperator& op);
 
   ExecutionResult visitICmpInst(llvm::ICmpInst& icmp);
+  ExecutionResult visitFCmpInst(llvm::FCmpInst& fcmp);
 
   ExecutionResult visitTrunc(llvm::TruncInst& trunc);
 

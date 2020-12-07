@@ -29,7 +29,6 @@ set(formatted "")
 
 foreach(source ${fmt_sources})
   get_filename_component(source_dir "${source}" DIRECTORY)
-  get_filename_component(source_name "${source}" NAME)
 
   add_custom_command(
     OUTPUT "${CMAKE_BINARY_DIR}/.fmt/${source}"
@@ -37,7 +36,7 @@ foreach(source ${fmt_sources})
     COMMAND ${CLANG_FORMAT} "${CMAKE_SOURCE_DIR}/${source}" > "${CMAKE_BINARY_DIR}/.fmt/${source}"
     COMMAND diff --color=always -u "${CMAKE_SOURCE_DIR}/${source}" "${CMAKE_BINARY_DIR}/.fmt/${source}"
     DEPENDS "${CMAKE_SOURCE_DIR}/${source}"
-    COMMENT "Checking formatting for ${source_name}"
+    COMMENT "Checking formatting for ${source}"
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
   )
 
