@@ -94,6 +94,9 @@ public:
   static Type type_of(const llvm::APInt& apint);
   static Type type_of(const llvm::APFloat& apfloat);
 
+  template <typename T>
+  static Type type_of();
+
   bool operator==(const Type& b) const;
   bool operator!=(const Type& b) const;
 

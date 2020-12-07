@@ -16,7 +16,9 @@ public:
   }
 
   Value visitConstant(const Constant& op) {
-    return model_->lookup(op);
+    auto value = model_->lookup(op);
+    CAFFEINE_ASSERT(value.type() != Type::void_ty());
+    return value;
   }
   Value visitConstantInt(const ConstantInt& op) {
     return op.value();
@@ -59,6 +61,20 @@ public:
 
   Value visitSelectOp(const SelectOp& select) {
     return Value::select(visit(select[0]), visit(select[1]), visit(select[2]));
+  }
+
+  Value visitTrunc(const UnaryOp& op) {
+    return Value::trunc(visit(op[0]), op.type().bitwidth());
+  }
+  Value visitZExt(const UnaryOp& op) {
+    return Value::zext(visit(op[0]), op.type().bitwidth());
+  }
+  Value visitSExt(const UnaryOp& op) {
+    return Value::sext(visit(op[0]), op.type().bitwidth());
+  }
+
+  Value visitBitcast(const UnaryOp& op) {
+    return Value::bitcast(visit(op[0]), op.type());
   }
 
 private:
