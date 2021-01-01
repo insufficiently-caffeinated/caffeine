@@ -47,6 +47,11 @@ public:
   ExecutionResult visitXor(llvm::BinaryOperator& op);
   ExecutionResult visitNot(llvm::BinaryOperator& op);
 
+  ExecutionResult visitFAdd(llvm::BinaryOperator& op);
+  ExecutionResult visitFSub(llvm::BinaryOperator& op);
+  ExecutionResult visitFMul(llvm::BinaryOperator& op);
+  ExecutionResult visitFDiv(llvm::BinaryOperator& op);
+
   ExecutionResult visitICmpInst(llvm::ICmpInst& icmp);
   ExecutionResult visitFCmpInst(llvm::FCmpInst& fcmp);
 

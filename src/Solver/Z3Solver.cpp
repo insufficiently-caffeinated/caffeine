@@ -9,7 +9,7 @@
 
 namespace caffeine {
 
-static llvm::APInt z3_to_apint(const z3::expr& expr) {
+llvm::APInt z3_to_apint(const z3::expr& expr) {
   CAFFEINE_ASSERT(expr.is_bv());
 
   unsigned bitwidth = expr.get_sort().bv_size();
@@ -22,7 +22,7 @@ static llvm::APInt z3_to_apint(const z3::expr& expr) {
   }
 }
 
-static llvm::APFloat z3_to_apfloat(const z3::expr& expr) {
+llvm::APFloat z3_to_apfloat(const z3::expr& expr) {
   CAFFEINE_ASSERT(expr.is_fpa());
 
   unsigned int sbits = expr.get_sort().fpa_sbits();
@@ -49,12 +49,16 @@ static llvm::APFloat z3_to_apfloat(const z3::expr& expr) {
 
   llvm::APInt exponent;
   int64_t e = 0;
-  if (Z3_fpa_get_numeral_exponent_int64(expr.ctx(), expr, &e, false)) {
-    exponent = llvm::APInt(ebits, e, true);
-  } else if (Z3_fpa_is_numeral_nan(expr.ctx(), expr)) {
+  if (Z3_fpa_is_numeral_nan(expr.ctx(), expr)) {
     // Z3 doesn't allow us to extract the exponent of NaNs. However there's only
     // one possible exponent for a NaN so just hardcode it here.
     exponent = llvm::APInt::getAllOnesValue(ebits);
+  } else if (Z3_fpa_is_numeral_inf(expr.ctx(), expr)) {
+    // Reading the exponent numeral doesn't seem to work correctly so here we
+    // manually set the exponent as well.
+    exponent = llvm::APInt::getAllOnesValue(ebits);
+  } else if (Z3_fpa_get_numeral_exponent_int64(expr.ctx(), expr, &e, true)) {
+    exponent = llvm::APInt(ebits, e, true);
   } else {
     // Not worth implementing until we have a float implementation that supports
     // more than 16-bit exponents.
@@ -71,7 +75,7 @@ static llvm::APFloat z3_to_apfloat(const z3::expr& expr) {
 
   llvm::APInt total = mantissa.zext(ebits + sbits) |
                       (exponent.zext(ebits + sbits) << (sbits - 1));
-  if (sign < 0)
+  if (sign)
     total.setSignBit();
 
   return std::move(
@@ -277,7 +281,12 @@ z3::expr Z3OpVisitor::visitConstantInt(const ConstantInt& op) {
 
 z3::expr Z3OpVisitor::visitConstantFloat(const ConstantFloat& op) {
   // TODO: Reimplement this correctly
-  return ctx->fpa_val(op.value().convertToFloat());
+  auto expr = z3::expr(
+      *ctx, Z3_mk_fpa_numeral_double(*ctx, op.value().convertToDouble(),
+                                     ctx->fpa_sort(op.type().exponent_bits(),
+                                                   op.type().mantissa_bits())));
+  expr.check_error();
+  return expr;
 }
 
 #define CAFFEINE_BINOP_IMPL(name, op_code)                                     \
@@ -378,6 +387,27 @@ static z3::expr is_nan(const z3::expr& e) {
   return expr;
 }
 
+static z3::expr fpa_leq(const z3::expr& a, const z3::expr& b) {
+  auto val = z3::expr(a.ctx(), Z3_mk_fpa_leq(a.ctx(), a, b));
+  val.check_error();
+  return val;
+}
+static z3::expr fpa_lt(const z3::expr& a, const z3::expr& b) {
+  auto val = z3::expr(a.ctx(), Z3_mk_fpa_lt(a.ctx(), a, b));
+  val.check_error();
+  return val;
+}
+static z3::expr fpa_geq(const z3::expr& a, const z3::expr& b) {
+  auto val = z3::expr(a.ctx(), Z3_mk_fpa_geq(a.ctx(), a, b));
+  val.check_error();
+  return val;
+}
+static z3::expr fpa_gt(const z3::expr& a, const z3::expr& b) {
+  auto val = z3::expr(a.ctx(), Z3_mk_fpa_gt(a.ctx(), a, b));
+  val.check_error();
+  return val;
+}
+
 z3::expr Z3OpVisitor::visitFCmp(const FCmpOp& op) {
   auto lhs = visit(*op.lhs());
   auto rhs = visit(*op.rhs());
@@ -388,16 +418,16 @@ z3::expr Z3OpVisitor::visitFCmp(const FCmpOp& op) {
     expr = lhs == rhs && !is_nan(lhs) && !is_nan(rhs);
     break;
   case FCmpOpcode::OGT:
-    expr = lhs > rhs && !is_nan(lhs) && !is_nan(rhs);
+    expr = fpa_gt(lhs, rhs) && !is_nan(lhs) && !is_nan(rhs);
     break;
   case FCmpOpcode::OGE:
-    expr = lhs >= rhs && !is_nan(lhs) && !is_nan(rhs);
+    expr = fpa_geq(lhs, rhs) && !is_nan(lhs) && !is_nan(rhs);
     break;
   case FCmpOpcode::OLT:
-    expr = lhs < rhs && !is_nan(lhs) && !is_nan(rhs);
+    expr = fpa_lt(lhs, rhs) && !is_nan(lhs) && !is_nan(rhs);
     break;
   case FCmpOpcode::OLE:
-    expr = lhs <= rhs && !is_nan(lhs) && !is_nan(rhs);
+    expr = fpa_leq(lhs, rhs) && !is_nan(lhs) && !is_nan(rhs);
     break;
   case FCmpOpcode::ONE:
     expr = lhs != rhs && !is_nan(lhs) && !is_nan(rhs);
@@ -409,16 +439,16 @@ z3::expr Z3OpVisitor::visitFCmp(const FCmpOp& op) {
     expr = lhs == rhs || is_nan(lhs) || is_nan(rhs);
     break;
   case FCmpOpcode::UGT:
-    expr = lhs > rhs || is_nan(lhs) || is_nan(rhs);
+    expr = fpa_gt(lhs, rhs) || is_nan(lhs) || is_nan(rhs);
     break;
   case FCmpOpcode::UGE:
-    expr = lhs >= rhs || is_nan(lhs) || is_nan(rhs);
+    expr = fpa_geq(lhs, rhs) || is_nan(lhs) || is_nan(rhs);
     break;
   case FCmpOpcode::ULT:
-    expr = lhs < rhs || is_nan(lhs) || is_nan(rhs);
+    expr = fpa_lt(lhs, rhs) || is_nan(lhs) || is_nan(rhs);
     break;
   case FCmpOpcode::ULE:
-    expr = lhs <= rhs || is_nan(lhs) || is_nan(rhs);
+    expr = fpa_leq(lhs, rhs) || is_nan(lhs) || is_nan(rhs);
     break;
   case FCmpOpcode::UNE:
     expr = lhs != rhs || is_nan(lhs) || is_nan(rhs);
