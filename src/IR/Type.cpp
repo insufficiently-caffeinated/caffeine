@@ -156,6 +156,8 @@ std::ostream& operator<<(std::ostream& os, const Type& t) {
     return os << "i" << t.bitwidth();
 
   if (t.is_float())
+    // TODO: Need a way to distinguish between same-size floats
+    //       for now this should work.
     return os << "f" << (t.mantissa_bits() + t.exponent_bits());
 
   if (t.is_pointer())
@@ -164,7 +166,8 @@ std::ostream& operator<<(std::ostream& os, const Type& t) {
   if (t.is_array())
     return os << "array";
 
-  CAFFEINE_UNIMPLEMENTED();
+  // TODO: Properly implement printing for any missing types
+  return os << "<unimplemented>";
 }
 
 } // namespace caffeine
