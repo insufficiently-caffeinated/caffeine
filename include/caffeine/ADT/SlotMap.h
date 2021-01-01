@@ -5,6 +5,7 @@
 #include <climits>
 #include <deque>
 #include <optional>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 

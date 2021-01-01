@@ -121,7 +121,7 @@ static z3::symbol name_to_symbol(z3::context& ctx,
     return ctx.str_symbol(ptr->c_str());
   if (auto ptr = std::get_if<uint64_t>(&name)) {
     CAFFEINE_ASSERT(*ptr <= (uint64_t)INT_MAX);
-    return ctx.int_symbol(*ptr);
+    return ctx.int_symbol(static_cast<int>(*ptr));
   }
 
   CAFFEINE_UNREACHABLE();

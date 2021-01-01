@@ -33,9 +33,6 @@ class ref : Deleter {
 private:
   T* value;
 
-  static const bool is_nothrow_destructible =
-      std::is_nothrow_destructible<T>::value;
-
   enum raw_t { raw };
   constexpr ref(raw_t, T* value, Deleter deleter)
       : Deleter(deleter), value(value) {}
@@ -150,25 +147,21 @@ public:
     return value != r.value;
   }
 
-  ref(const ref<T>& r) noexcept(std::is_nothrow_copy_constructible_v<Deleter>)
-      : Deleter(r.deleter()), value(r.value) {
+  ref(const ref<T>& r) : Deleter(r.deleter()), value(r.value) {
     increment();
   }
-  ref(ref<T>&& r) noexcept(std::is_nothrow_move_constructible_v<Deleter>)
-      : Deleter(r.deleter()), value(r.value) {
+  ref(ref<T>&& r) noexcept : Deleter(r.deleter()), value(r.value) {
     r.value = nullptr;
   }
 
-  ref<T>& operator=(const ref<T>& r) noexcept(
-      is_nothrow_destructible&& std::is_nothrow_copy_assignable_v<Deleter>) {
+  ref<T>& operator=(const ref<T>& r) {
     decrement();
     value = r.value;
     *(Deleter*)this = r.deleter();
     increment();
     return *this;
   }
-  ref<T>& operator=(ref<T>&& r) noexcept(
-      is_nothrow_destructible&& std::is_nothrow_move_assignable_v<Deleter>) {
+  ref<T>& operator=(ref<T>&& r) noexcept {
     decrement();
     value = r.value;
     r.value = nullptr;
@@ -176,13 +169,13 @@ public:
     return *this;
   }
 
-  ref<T>& operator=(std::nullptr_t) noexcept(is_nothrow_destructible) {
+  ref<T>& operator=(std::nullptr_t) noexcept {
     decrement();
     value = nullptr;
     return *this;
   }
 
-  ~ref() noexcept(is_nothrow_destructible) {
+  ~ref() noexcept {
     decrement();
   }
 

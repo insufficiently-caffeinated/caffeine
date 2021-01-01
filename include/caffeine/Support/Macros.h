@@ -1,6 +1,12 @@
 #ifndef CAFFEINE_SUPPORT_MACROS_H
 #define CAFFEINE_SUPPORT_MACROS_H
 
+#ifdef _MSC_VER
+#define CAFFEINE_MSVC_PRAGMA(x) __pragma(x)
+#else
+#define CAFFEINE_MSVC_PRAGMA(x)
+#endif
+
 /**
  * Support library for doing macro tricks.
  */
@@ -15,8 +21,9 @@
 #define CAFFEINE_INVOKE_NUMBERED_(x, _1, _2, _3, _4, _5, _6, _7, _8, _9, FUNC, \
                                   ...)                                         \
   FUNC
+
 /**
- *
+ * Invoke a macro with a conditional number of arguments
  *
  * Based off of https://stackoverflow.com/a/8814003/4821282
  */

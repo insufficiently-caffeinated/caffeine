@@ -84,7 +84,7 @@ ref<Operation> Allocation::read(const ref<Operation>& offset, const Type& t,
     // extended = zext(bytes[i], bitwidth) << (i * 8)
     auto extended = BinaryOp::CreateShl(
         UnaryOp::CreateZExt(Type::int_ty(bitwidth), bytes[i]),
-        ConstantInt::Create(llvm::APInt(bitwidth, i * 8)));
+        ConstantInt::Create(llvm::APInt(bitwidth, (uint64_t)i * 8)));
     bitresult = BinaryOp::CreateOr(bitresult, extended);
   }
 
@@ -131,10 +131,10 @@ void Allocation::write(const ref<Operation>& offset,
   for (uint32_t i = 0; i < width; ++i) {
     auto byte = UnaryOp::CreateTrunc(
         Type::int_ty(8),
-        BinaryOp::CreateLShr(
-            value, ConstantInt::Create(llvm::APInt(i * 8, width * 8))));
+        BinaryOp::CreateLShr(value, ConstantInt::Create(llvm::APInt(
+                                        i * 8, (uint64_t)width * 8))));
     auto index = BinaryOp::CreateAdd(
-        offset, ConstantInt::Create(llvm::APInt(i, width * 8)));
+        offset, ConstantInt::Create(llvm::APInt(i, (uint64_t)width * 8)));
 
     overwrite(StoreOp::Create(data(), index, byte));
   }
