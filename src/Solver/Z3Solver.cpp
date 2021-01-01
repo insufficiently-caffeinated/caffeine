@@ -399,7 +399,7 @@ static z3::expr fpa_geq(const z3::expr& a, const z3::expr& b) {
   return val;
 }
 static z3::expr fpa_gt(const z3::expr& a, const z3::expr& b) {
-  auto val = z3::expr(a.ctx(), Z3_mk_fpa_leq(a.ctx(), a, b));
+  auto val = z3::expr(a.ctx(), Z3_mk_fpa_gt(a.ctx(), a, b));
   val.check_error();
   return val;
 }
