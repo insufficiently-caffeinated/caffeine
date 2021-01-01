@@ -6,6 +6,11 @@
 
 #include <llvm/Support/Casting.h>
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4002 4003)
+#endif
+
 namespace caffeine {
 
 namespace detail::visitor {
@@ -94,5 +99,9 @@ RetTy OpVisitorBase<Transform, SubClass, RetTy>::visit(
 }
 
 } // namespace caffeine
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 #endif

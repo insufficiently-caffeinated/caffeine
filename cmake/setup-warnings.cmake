@@ -14,7 +14,7 @@ if (MSVC)
   )
 
   # Enable more detailed warnings (but not all of them).
-  add_compile_options(/W4)
+  add_compile_options(/W3)
 
   # Some code within LLVM triggers this. It's not something we can fix so
   # better to silence the warning than have it drown everything out.
