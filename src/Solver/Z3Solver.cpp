@@ -9,7 +9,7 @@
 
 namespace caffeine {
 
-static llvm::APInt z3_to_apint(const z3::expr& expr) {
+llvm::APInt z3_to_apint(const z3::expr& expr) {
   CAFFEINE_ASSERT(expr.is_bv());
 
   unsigned bitwidth = expr.get_sort().bv_size();
@@ -22,7 +22,7 @@ static llvm::APInt z3_to_apint(const z3::expr& expr) {
   }
 }
 
-static llvm::APFloat z3_to_apfloat(const z3::expr& expr) {
+llvm::APFloat z3_to_apfloat(const z3::expr& expr) {
   CAFFEINE_ASSERT(expr.is_fpa());
 
   unsigned int sbits = expr.get_sort().fpa_sbits();
@@ -49,12 +49,16 @@ static llvm::APFloat z3_to_apfloat(const z3::expr& expr) {
 
   llvm::APInt exponent;
   int64_t e = 0;
-  if (Z3_fpa_get_numeral_exponent_int64(expr.ctx(), expr, &e, false)) {
-    exponent = llvm::APInt(ebits, e, true);
-  } else if (Z3_fpa_is_numeral_nan(expr.ctx(), expr)) {
+  if (Z3_fpa_is_numeral_nan(expr.ctx(), expr)) {
     // Z3 doesn't allow us to extract the exponent of NaNs. However there's only
     // one possible exponent for a NaN so just hardcode it here.
     exponent = llvm::APInt::getAllOnesValue(ebits);
+  } else if (Z3_fpa_is_numeral_inf(expr.ctx(), expr)) {
+    // Reading the exponent numeral doesn't seem to work correctly so here we
+    // manually set the exponent as well.
+    exponent = llvm::APInt::getAllOnesValue(ebits);
+  } else if (Z3_fpa_get_numeral_exponent_int64(expr.ctx(), expr, &e, true)) {
+    exponent = llvm::APInt(ebits, e, true);
   } else {
     // Not worth implementing until we have a float implementation that supports
     // more than 16-bit exponents.
@@ -71,7 +75,7 @@ static llvm::APFloat z3_to_apfloat(const z3::expr& expr) {
 
   llvm::APInt total = mantissa.zext(ebits + sbits) |
                       (exponent.zext(ebits + sbits) << (sbits - 1));
-  if (sign < 0)
+  if (sign)
     total.setSignBit();
 
   return std::move(

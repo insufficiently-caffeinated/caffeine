@@ -92,4 +92,10 @@ public:
   // clang-format on
 };
 
+// Convert a Z3 expression to an APInt
+llvm::APInt z3_to_apint(const z3::expr& expr);
+
+// Convert a Z3 expression to an APFloat
+llvm::APFloat z3_to_apfloat(const z3::expr& expr);
+
 } // namespace caffeine
