@@ -131,8 +131,8 @@ void Allocation::write(const ref<Operation>& offset,
   for (uint32_t i = 0; i < width; ++i) {
     auto byte = UnaryOp::CreateTrunc(
         Type::int_ty(8),
-        BinaryOp::CreateLShr(
-            value, ConstantInt::Create(llvm::APInt(i * 8, (uint64_t)width * 8))));
+        BinaryOp::CreateLShr(value, ConstantInt::Create(llvm::APInt(
+                                        i * 8, (uint64_t)width * 8))));
     auto index = BinaryOp::CreateAdd(
         offset, ConstantInt::Create(llvm::APInt(i, (uint64_t)width * 8)));
 

@@ -147,12 +147,10 @@ public:
     return value != r.value;
   }
 
-  ref(const ref<T>& r)
-      : Deleter(r.deleter()), value(r.value) {
+  ref(const ref<T>& r) : Deleter(r.deleter()), value(r.value) {
     increment();
   }
-  ref(ref<T>&& r) noexcept
-      : Deleter(r.deleter()), value(r.value) {
+  ref(ref<T>&& r) noexcept : Deleter(r.deleter()), value(r.value) {
     r.value = nullptr;
   }
 
