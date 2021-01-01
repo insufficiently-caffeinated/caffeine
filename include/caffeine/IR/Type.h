@@ -2,6 +2,7 @@
 #define CAFFEINE_IR_TYPE_H
 
 #include <cstdint>
+#include <iosfwd>
 #include <optional>
 
 #include <llvm/ADT/Hashing.h>
@@ -106,6 +107,8 @@ public:
   Type& operator=(const Type&) = default;
   Type& operator=(Type&&) = default;
 };
+
+std::ostream& operator<<(std::ostream& os, const Type& t);
 
 } // namespace caffeine
 
