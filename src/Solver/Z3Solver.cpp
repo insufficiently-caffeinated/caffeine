@@ -6,6 +6,7 @@
 
 #include <climits>
 #include <fmt/format.h>
+#include <fmt/ostream.h>
 
 namespace caffeine {
 
@@ -238,6 +239,17 @@ std::unique_ptr<Model> Z3Solver::resolve(std::vector<Assertion>& assertions,
 Z3OpVisitor::Z3OpVisitor(z3::context* ctx, Z3Model::ConstMap& constMap)
     : ctx(ctx), constMap(constMap) {}
 
+z3::expr Z3OpVisitor::visit(const Operation& op) {
+  // Memoize visited expressions to avoid combinatorial explosion
+  auto it = cache.find(&op);
+  if (it != cache.end())
+    return it->second;
+
+  z3::expr value = ConstOpVisitor<Z3OpVisitor, z3::expr>::visit(op);
+  cache.emplace(&op, value);
+  return value;
+}
+
 z3::expr Z3OpVisitor::visitOperation(const Operation& op) {
   CAFFEINE_ABORT(fmt::format("Z3Solver does not have support for opcode {}",
                              op.opcode_name()));
@@ -287,6 +299,28 @@ z3::expr Z3OpVisitor::visitConstantFloat(const ConstantFloat& op) {
                                                    op.type().mantissa_bits())));
   expr.check_error();
   return expr;
+}
+
+z3::expr Z3OpVisitor::visitUndef(const Undef& op) {
+  // TODO: Semantically, we can return absolutely any value when working with
+  //       undef. In the future we'll probably want to do something a bit more
+  //       useful than just picking an arbitrary value.
+
+  auto type = op.type();
+
+  if (type.is_int())
+    return ctx->bv_val(0, op.type().bitwidth());
+  if (type.is_float()) {
+    z3::expr val(*ctx, Z3_mk_fpa_zero(*ctx,
+                                      ctx->fpa_sort(type.exponent_bits(),
+                                                    type.mantissa_bits()),
+                                      false));
+    ctx->check_error();
+    return val;
+  }
+
+  CAFFEINE_UNIMPLEMENTED(
+      fmt::format(FMT_STRING("Unsupported undef type {}"), type));
 }
 
 #define CAFFEINE_BINOP_IMPL(name, op_code)                                     \
