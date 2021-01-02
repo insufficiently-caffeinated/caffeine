@@ -1,6 +1,7 @@
 #ifndef CAFFEINE_INTERP_STACKFRAME_H
 #define CAFFEINE_INTERP_STACKFRAME_H
 
+#include <llvm/ADT/SmallVector.h>
 #include <llvm/IR/BasicBlock.h>
 
 #include <unordered_map>
@@ -12,9 +13,12 @@ namespace caffeine {
 class Context;
 
 class StackFrame {
+public:
+  using VarType = llvm::SmallVector<ref<Operation>, 1>;
+
 private:
   llvm::Function* function;
-  std::unordered_map<llvm::Value*, ref<Operation>> variables;
+  std::unordered_map<llvm::Value*, VarType> variables;
 
 public:
   /**
@@ -39,6 +43,9 @@ public:
    * is already in the current stack frame then it overwrites it.
    */
   void insert(llvm::Value* value, const ref<Operation>& expr);
+
+  void insert(llvm::Value* value, const VarType& exprs);
+
   /**
    * Lookup a value within the current stack frame.
    *
@@ -53,7 +60,7 @@ public:
    * This method should be preferred over directly interacting with
    * `variables` as it correctly handles constants.
    */
-  ref<Operation> lookup(llvm::Value* value) const;
+  VarType lookup(llvm::Value* value) const;
 };
 
 } // namespace caffeine

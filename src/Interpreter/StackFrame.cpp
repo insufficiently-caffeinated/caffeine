@@ -8,6 +8,8 @@
 namespace caffeine {
 
 ref<Operation> evaluate_constant(const llvm::Constant* constant) {
+  CAFFEINE_ASSERT(!constant->getType()->isVectorTy());
+
   if (auto* intconst = llvm::dyn_cast<llvm::ConstantInt>(constant)) {
     const llvm::APInt& value = intconst->getValue();
 
@@ -34,12 +36,15 @@ void StackFrame::jump_to(llvm::BasicBlock* block) {
 }
 
 void StackFrame::insert(llvm::Value* value, const ref<Operation>& expr) {
-  variables.insert_or_assign(value, expr);
+  variables.insert_or_assign(value, VarType{expr});
+}
+void StackFrame::insert(llvm::Value* value, const VarType& exprs) {
+  variables.insert_or_assign(value, exprs);
 }
 
-ref<Operation> StackFrame::lookup(llvm::Value* value) const {
+StackFrame::VarType StackFrame::lookup(llvm::Value* value) const {
   if (auto* constant = llvm::dyn_cast_or_null<llvm::Constant>(value))
-    return evaluate_constant(constant);
+    return VarType{evaluate_constant(constant)};
 
   auto it = variables.find(value);
   CAFFEINE_ASSERT(it != variables.end(), "Tried to access unknown variable");

@@ -2,11 +2,61 @@
 #include "caffeine/Interpreter/StackFrame.h"
 #include "caffeine/Support/Assert.h"
 
+#include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/combine.hpp>
 #include <boost/range/iterator_range.hpp>
 #include <fmt/format.h>
 
 namespace caffeine {
+
+using VarType = StackFrame::VarType;
+
+namespace detail {
+  template <typename F, typename Tuple, size_t... Idxs>
+  auto apply_detail(F&& func, Tuple&& tuple, std::index_sequence<Idxs...>) {
+    return func(tuple.template get<Idxs>()...);
+  }
+
+  // Given a functor object and its arguments as a tuple, call the functor
+  // using the provided arguments.
+  template <typename F, typename Tuple>
+  auto apply(F&& func, Tuple&& tuple) {
+    return apply_detail(
+        std::forward<F>(func), std::forward<Tuple>(tuple),
+        std::make_index_sequence<
+            boost::tuples::length<std::decay_t<Tuple>>::value>());
+  }
+
+  template <typename T, typename U>
+  std::pair<T, U> tuple_to_pair(const boost::tuple<T, U>& tuple) {
+    return std::make_pair(tuple.template get<0>(), tuple.template get<1>());
+  }
+} // namespace detail
+
+template <typename R1, typename R2>
+auto zip(R1& range1, R2& range2) {
+  return boost::combine(range1, range2) |
+         boost::adaptors::transformed(
+             detail::tuple_to_pair<std::decay_t<decltype(*range1.begin())>,
+                                   std::decay_t<decltype(*range2.begin())>>);
+}
+
+// Transform the input ranges using the provided function and collect them
+// into the output vector.
+//
+// This is essentially a map combined with collecting the results.
+template <typename F, typename R1, typename... Rs>
+VarType op_transform(F&& func, R1&& range1, Rs&&... ranges) {
+  VarType result;
+  result.reserve(range1.size());
+
+  for (const auto& v :
+       boost::combine(std::forward<R1>(range1), std::forward<Rs>(ranges)...)) {
+    result.push_back(detail::apply(func, v));
+  }
+
+  return result;
+}
 
 Interpreter::Interpreter(Executor* queue, Context* ctx, FailureLogger* logger)
     : ctx{ctx}, queue{queue}, logger{logger} {}
@@ -42,7 +92,7 @@ ExecutionResult Interpreter::visitAdd(llvm::BinaryOperator& op) {
   auto lhs = frame.lookup(op.getOperand(0));
   auto rhs = frame.lookup(op.getOperand(1));
 
-  frame.insert(&op, BinaryOp::CreateAdd(lhs, rhs));
+  frame.insert(&op, op_transform(BinaryOp::CreateAdd, lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -52,7 +102,7 @@ ExecutionResult Interpreter::visitSub(llvm::BinaryOperator& op) {
   auto lhs = frame.lookup(op.getOperand(0));
   auto rhs = frame.lookup(op.getOperand(1));
 
-  frame.insert(&op, BinaryOp::CreateSub(lhs, rhs));
+  frame.insert(&op, op_transform(BinaryOp::CreateSub, lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -62,7 +112,7 @@ ExecutionResult Interpreter::visitMul(llvm::BinaryOperator& op) {
   auto lhs = frame.lookup(op.getOperand(0));
   auto rhs = frame.lookup(op.getOperand(1));
 
-  frame.insert(&op, BinaryOp::CreateMul(lhs, rhs));
+  frame.insert(&op, op_transform(BinaryOp::CreateMul, lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -72,13 +122,20 @@ ExecutionResult Interpreter::visitUDiv(llvm::BinaryOperator& op) {
   auto lhs = frame.lookup(op.getOperand(0));
   auto rhs = frame.lookup(op.getOperand(1));
 
-  Assertion assertion = ICmpOp::CreateICmp(ICmpOpcode::NE, rhs, 0);
-  auto model = ctx->resolve(!assertion);
-  if (model->result() == SolverResult::SAT)
-    logger->log_failure(*model, *ctx, Failure(!assertion));
-  ctx->add(assertion);
+  VarType result;
+  result.reserve(lhs.size());
 
-  frame.insert(&op, BinaryOp::CreateUDiv(lhs, rhs));
+  for (auto [lhs, rhs] : zip(lhs, rhs)) {
+    Assertion assertion = ICmpOp::CreateICmp(ICmpOpcode::NE, rhs, 0);
+    auto model = ctx->resolve(!assertion);
+    if (model->result() == SolverResult::SAT)
+      logger->log_failure(*model, *ctx, Failure(!assertion));
+    ctx->add(assertion);
+
+    result.push_back(BinaryOp::CreateUDiv(lhs, rhs));
+  }
+
+  frame.insert(&op, std::move(result));
 
   return ExecutionResult::Continue;
 }
@@ -88,22 +145,29 @@ ExecutionResult Interpreter::visitSDiv(llvm::BinaryOperator& op) {
   auto lhs = frame.lookup(op.getOperand(0));
   auto rhs = frame.lookup(op.getOperand(1));
 
-  auto cmp1 = ICmpOp::CreateICmp(ICmpOpcode::EQ, rhs, 0);
-  auto cmp2 =
-      ICmpOp::CreateICmp(ICmpOpcode::EQ, lhs,
-                         ConstantInt::Create(llvm::APInt::getSignedMinValue(
-                             lhs->type().bitwidth())));
-  auto cmp3 = ICmpOp::CreateICmp(ICmpOpcode::EQ, rhs, -1);
+  VarType result;
+  result.reserve(lhs.size());
 
-  // lhs == 0 || (lhs == INT_MIN && rhs == -1)
-  Assertion assertion =
-      BinaryOp::CreateOr(cmp1, BinaryOp::CreateAnd(cmp2, cmp3));
-  auto model = ctx->resolve(assertion);
-  if (model->result() == SolverResult::SAT)
-    logger->log_failure(*model, *ctx, Failure(!assertion));
-  ctx->add(!assertion);
+  for (auto [lhs, rhs] : zip(lhs, rhs)) {
+    auto cmp1 = ICmpOp::CreateICmp(ICmpOpcode::EQ, rhs, 0);
+    auto cmp2 =
+        ICmpOp::CreateICmp(ICmpOpcode::EQ, lhs,
+                           ConstantInt::Create(llvm::APInt::getSignedMinValue(
+                               lhs->type().bitwidth())));
+    auto cmp3 = ICmpOp::CreateICmp(ICmpOpcode::EQ, rhs, -1);
 
-  frame.insert(&op, BinaryOp::CreateSDiv(lhs, rhs));
+    // lhs == 0 || (lhs == INT_MIN && rhs == -1)
+    Assertion assertion =
+        BinaryOp::CreateOr(cmp1, BinaryOp::CreateAnd(cmp2, cmp3));
+    auto model = ctx->resolve(assertion);
+    if (model->result() == SolverResult::SAT)
+      logger->log_failure(*model, *ctx, Failure(!assertion));
+    ctx->add(!assertion);
+
+    result.push_back(BinaryOp::CreateSDiv(lhs, rhs));
+  }
+
+  frame.insert(&op, std::move(result));
 
   return ExecutionResult::Continue;
 }
@@ -113,22 +177,29 @@ ExecutionResult Interpreter::visitSRem(llvm::BinaryOperator& op) {
   auto lhs = frame.lookup(op.getOperand(0));
   auto rhs = frame.lookup(op.getOperand(1));
 
-  auto cmp1 = ICmpOp::CreateICmp(ICmpOpcode::EQ, rhs, 0);
-  auto cmp2 =
-      ICmpOp::CreateICmp(ICmpOpcode::EQ, lhs,
-                         ConstantInt::Create(llvm::APInt::getSignedMinValue(
-                             lhs->type().bitwidth())));
-  auto cmp3 = ICmpOp::CreateICmp(ICmpOpcode::EQ, rhs, -1);
+  VarType result;
+  result.reserve(lhs.size());
 
-  // lhs == 0 || (lhs == INT_MIN && rhs == -1)
-  Assertion assertion =
-      BinaryOp::CreateOr(cmp1, BinaryOp::CreateAnd(cmp2, cmp3));
-  auto model = ctx->resolve(assertion);
-  if (model->result() == SolverResult::SAT)
-    logger->log_failure(*model, *ctx, Failure(assertion));
-  ctx->add(!assertion);
+  for (auto [lhs, rhs] : zip(rhs, lhs)) {
+    auto cmp1 = ICmpOp::CreateICmp(ICmpOpcode::EQ, rhs, 0);
+    auto cmp2 =
+        ICmpOp::CreateICmp(ICmpOpcode::EQ, lhs,
+                           ConstantInt::Create(llvm::APInt::getSignedMinValue(
+                               lhs->type().bitwidth())));
+    auto cmp3 = ICmpOp::CreateICmp(ICmpOpcode::EQ, rhs, -1);
 
-  frame.insert(&op, BinaryOp::CreateSRem(lhs, rhs));
+    // lhs == 0 || (lhs == INT_MIN && rhs == -1)
+    Assertion assertion =
+        BinaryOp::CreateOr(cmp1, BinaryOp::CreateAnd(cmp2, cmp3));
+    auto model = ctx->resolve(assertion);
+    if (model->result() == SolverResult::SAT)
+      logger->log_failure(*model, *ctx, Failure(assertion));
+    ctx->add(!assertion);
+
+    result.push_back(BinaryOp::CreateSRem(lhs, rhs));
+  }
+
+  frame.insert(&op, std::move(result));
 
   return ExecutionResult::Continue;
 }
@@ -138,13 +209,20 @@ ExecutionResult Interpreter::visitURem(llvm::BinaryOperator& op) {
   auto lhs = frame.lookup(op.getOperand(0));
   auto rhs = frame.lookup(op.getOperand(1));
 
-  Assertion assertion = ICmpOp::CreateICmp(ICmpOpcode::NE, rhs, 0);
-  auto model = ctx->resolve(!assertion);
-  if (model->result() == SolverResult::SAT)
-    logger->log_failure(*model, *ctx, Failure(!assertion));
-  ctx->add(assertion);
+  VarType result;
+  result.reserve(lhs.size());
 
-  frame.insert(&op, BinaryOp::CreateURem(lhs, rhs));
+  for (auto [lhs, rhs] : zip(lhs, rhs)) {
+    Assertion assertion = ICmpOp::CreateICmp(ICmpOpcode::NE, rhs, 0);
+    auto model = ctx->resolve(!assertion);
+    if (model->result() == SolverResult::SAT)
+      logger->log_failure(*model, *ctx, Failure(!assertion));
+    ctx->add(assertion);
+
+    result.push_back(BinaryOp::CreateURem(lhs, rhs));
+  }
+
+  frame.insert(&op, std::move(result));
 
   return ExecutionResult::Continue;
 }
@@ -155,7 +233,7 @@ ExecutionResult Interpreter::visitShl(llvm::BinaryOperator& op) {
   auto lhs = frame.lookup(op.getOperand(0));
   auto rhs = frame.lookup(op.getOperand(1));
 
-  frame.insert(&op, BinaryOp::CreateShl(lhs, rhs));
+  frame.insert(&op, op_transform(BinaryOp::CreateShl, lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -165,7 +243,7 @@ ExecutionResult Interpreter::visitLShr(llvm::BinaryOperator& op) {
   auto lhs = frame.lookup(op.getOperand(0));
   auto rhs = frame.lookup(op.getOperand(1));
 
-  frame.insert(&op, BinaryOp::CreateLShr(lhs, rhs));
+  frame.insert(&op, op_transform(BinaryOp::CreateLShr, lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -175,7 +253,7 @@ ExecutionResult Interpreter::visitAShr(llvm::BinaryOperator& op) {
   auto lhs = frame.lookup(op.getOperand(0));
   auto rhs = frame.lookup(op.getOperand(1));
 
-  frame.insert(&op, BinaryOp::CreateAShr(lhs, rhs));
+  frame.insert(&op, op_transform(BinaryOp::CreateAShr, lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -185,7 +263,7 @@ ExecutionResult Interpreter::visitAnd(llvm::BinaryOperator& op) {
   auto lhs = frame.lookup(op.getOperand(0));
   auto rhs = frame.lookup(op.getOperand(1));
 
-  frame.insert(&op, BinaryOp::CreateAnd(lhs, rhs));
+  frame.insert(&op, op_transform(BinaryOp::CreateAnd, lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -195,7 +273,7 @@ ExecutionResult Interpreter::visitOr(llvm::BinaryOperator& op) {
   auto lhs = frame.lookup(op.getOperand(0));
   auto rhs = frame.lookup(op.getOperand(1));
 
-  frame.insert(&op, BinaryOp::CreateOr(lhs, rhs));
+  frame.insert(&op, op_transform(BinaryOp::CreateOr, lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -205,14 +283,16 @@ ExecutionResult Interpreter::visitXor(llvm::BinaryOperator& op) {
   auto lhs = frame.lookup(op.getOperand(0));
   auto rhs = frame.lookup(op.getOperand(1));
 
-  frame.insert(&op, BinaryOp::CreateXor(lhs, rhs));
+  frame.insert(&op, op_transform(BinaryOp::CreateXor, lhs, rhs));
 
   return ExecutionResult::Continue;
 }
 ExecutionResult Interpreter::visitNot(llvm::BinaryOperator& op) {
   StackFrame& frame = ctx->stack_top();
 
-  frame.insert(&op, UnaryOp::CreateNot(frame.lookup(op.getOperand(0))));
+  auto operand = frame.lookup(op.getOperand(0));
+
+  frame.insert(&op, op_transform(UnaryOp::CreateNot, operand));
 
   return ExecutionResult::Continue;
 }
@@ -223,7 +303,7 @@ ExecutionResult Interpreter::visitFAdd(llvm::BinaryOperator& op) {
   auto lhs = frame.lookup(op.getOperand(0));
   auto rhs = frame.lookup(op.getOperand(1));
 
-  frame.insert(&op, BinaryOp::CreateFAdd(lhs, rhs));
+  frame.insert(&op, op_transform(BinaryOp::CreateFAdd, lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -233,7 +313,7 @@ ExecutionResult Interpreter::visitFSub(llvm::BinaryOperator& op) {
   auto lhs = frame.lookup(op.getOperand(0));
   auto rhs = frame.lookup(op.getOperand(1));
 
-  frame.insert(&op, BinaryOp::CreateFAdd(lhs, rhs));
+  frame.insert(&op, op_transform(BinaryOp::CreateFSub, lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -243,7 +323,7 @@ ExecutionResult Interpreter::visitFMul(llvm::BinaryOperator& op) {
   auto lhs = frame.lookup(op.getOperand(0));
   auto rhs = frame.lookup(op.getOperand(1));
 
-  frame.insert(&op, BinaryOp::CreateFAdd(lhs, rhs));
+  frame.insert(&op, op_transform(BinaryOp::CreateFMul, lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -253,7 +333,7 @@ ExecutionResult Interpreter::visitFDiv(llvm::BinaryOperator& op) {
   auto lhs = frame.lookup(op.getOperand(0));
   auto rhs = frame.lookup(op.getOperand(1));
 
-  frame.insert(&op, BinaryOp::CreateFAdd(lhs, rhs));
+  frame.insert(&op, op_transform(BinaryOp::CreateFAdd, lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -268,7 +348,12 @@ ExecutionResult Interpreter::visitICmpInst(llvm::ICmpInst& icmp) {
 
 #define ICMP_CASE(op)                                                          \
   case ICmpInst::ICMP_##op:                                                    \
-    frame.insert(&icmp, ICmpOp::CreateICmp(ICmpOpcode::op, lhs, rhs));         \
+    frame.insert(&icmp, op_transform(                                          \
+                            [](const auto& lhs, const auto& rhs) {             \
+                              return ICmpOp::CreateICmp(ICmpOpcode::op, lhs,   \
+                                                        rhs);                  \
+                            },                                                 \
+                            lhs, rhs));                                        \
     return ExecutionResult::Continue
 
   switch (icmp.getPredicate()) {
@@ -286,7 +371,7 @@ ExecutionResult Interpreter::visitICmpInst(llvm::ICmpInst& icmp) {
     CAFFEINE_UNREACHABLE();
   }
 #undef ICMP_CASE
-}
+} // namespace caffeine
 ExecutionResult Interpreter::visitFCmpInst(llvm::FCmpInst& fcmp) {
   using llvm::FCmpInst;
 
@@ -297,7 +382,11 @@ ExecutionResult Interpreter::visitFCmpInst(llvm::FCmpInst& fcmp) {
 
 #define FCMP_CASE(op)                                                          \
   case FCmpInst::FCMP_##op:                                                    \
-    frame.insert(&fcmp, FCmpOp::CreateFCmp(FCmpOpcode::op, lhs, rhs));         \
+    frame.insert(                                                              \
+        &fcmp,                                                                 \
+        op_transform(std::bind(FCmpOp::CreateFCmp, FCmpOpcode::op,             \
+                               std::placeholders::_1, std::placeholders::_2),  \
+                     lhs, rhs));                                               \
     return ExecutionResult::Continue
 
   switch (fcmp.getPredicate()) {
@@ -333,9 +422,12 @@ ExecutionResult Interpreter::visitFCmpInst(llvm::FCmpInst& fcmp) {
 ExecutionResult Interpreter::visitTrunc(llvm::TruncInst& trunc) {
   auto& frame = ctx->stack_top();
   auto operand = frame.lookup(trunc.getOperand(0));
-  auto truncOp = UnaryOp::CreateTrunc(
-      Type::int_ty(trunc.getType()->getIntegerBitWidth()), operand);
-  frame.insert(&trunc, truncOp);
+
+  auto func = [&](const auto& operand) {
+    return UnaryOp::CreateTrunc(
+        Type::int_ty(trunc.getType()->getIntegerBitWidth()), operand);
+  };
+  frame.insert(&trunc, op_transform(func, operand));
 
   return ExecutionResult::Continue;
 }
@@ -343,18 +435,24 @@ ExecutionResult Interpreter::visitTrunc(llvm::TruncInst& trunc) {
 ExecutionResult Interpreter::visitSExt(llvm::SExtInst& sext) {
   auto& frame = ctx->stack_top();
   auto operand = frame.lookup(sext.getOperand(0));
-  auto truncOp = UnaryOp::CreateSExt(
-      Type::int_ty(sext.getType()->getIntegerBitWidth()), operand);
-  frame.insert(&sext, truncOp);
+
+  auto func = [&](const auto& operand) {
+    return UnaryOp::CreateSExt(
+        Type::int_ty(sext.getType()->getIntegerBitWidth()), operand);
+  };
+  frame.insert(&sext, op_transform(func, operand));
 
   return ExecutionResult::Continue;
 }
 ExecutionResult Interpreter::visitZExt(llvm::ZExtInst& zext) {
   auto& frame = ctx->stack_top();
   auto operand = frame.lookup(zext.getOperand(0));
-  auto truncOp = UnaryOp::CreateZExt(
-      Type::int_ty(zext.getType()->getIntegerBitWidth()), operand);
-  frame.insert(&zext, truncOp);
+
+  auto func = [&](const auto& operand) {
+    return UnaryOp::CreateZExt(
+        Type::int_ty(zext.getType()->getIntegerBitWidth()), operand);
+  };
+  frame.insert(&zext, op_transform(func, operand));
 
   return ExecutionResult::Continue;
 }
@@ -365,8 +463,8 @@ ExecutionResult Interpreter::visitPHINode(llvm::PHINode& node) {
   // PHI nodes in the entry block is invalid.
   CAFFEINE_ASSERT(frame.prev_block != nullptr);
 
-  auto value = frame.lookup(node.getIncomingValueForBlock(frame.prev_block));
-  frame.insert(&node, value);
+  frame.insert(&node,
+               frame.lookup(node.getIncomingValueForBlock(frame.prev_block)));
 
   return ExecutionResult::Continue;
 }
@@ -377,7 +475,7 @@ ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst& inst) {
   }
 
   auto& frame = ctx->stack_top();
-  auto cond = frame.lookup(inst.getCondition());
+  auto cond = frame.lookup(inst.getCondition())[0];
 
   auto zero = ConstantInt::Create(llvm::APInt(cond->type().bitwidth(), 0));
   auto assertion = Assertion(cond);
@@ -416,7 +514,7 @@ ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst& inst) {
 ExecutionResult Interpreter::visitReturnInst(llvm::ReturnInst& inst) {
   auto& frame = ctx->stack_top();
 
-  ref<Operation> result = nullptr;
+  VarType result;
   if (inst.getNumOperands() != 0)
     result = frame.lookup(inst.getOperand(0));
 
@@ -425,11 +523,11 @@ ExecutionResult Interpreter::visitReturnInst(llvm::ReturnInst& inst) {
   if (ctx->empty())
     return ExecutionResult::Stop;
 
-  if (result) {
+  if (!result.empty()) {
     auto& parent = ctx->stack_top();
     auto& caller = *std::prev(parent.current);
 
-    parent.insert(&caller, result);
+    parent.insert(&caller, std::move(result));
   }
 
   return ExecutionResult::Continue;
@@ -450,11 +548,10 @@ ExecutionResult Interpreter::visitCallInst(llvm::CallInst& call) {
 
   StackFrame callee{func};
   auto& frame = ctx->stack_top();
-  for (auto arg_pair : boost::combine(
-           boost::make_iterator_range(func->arg_begin(), func->arg_end()),
+  for (auto [arg, val] :
+       zip(boost::make_iterator_range(func->arg_begin(), func->arg_end()),
            boost::make_iterator_range(call.arg_begin(), call.arg_end()))) {
-    callee.insert(&boost::get<0>(arg_pair),
-                  frame.lookup(boost::get<1>(arg_pair).get()));
+    callee.insert(&arg, frame.lookup(val.get()));
   }
 
   ctx->push(std::move(callee));
@@ -466,7 +563,7 @@ ExecutionResult Interpreter::visitSelectInst(llvm::SelectInst& inst) {
   auto cond = frame.lookup(inst.getCondition());
   auto trueVal = frame.lookup(inst.getTrueValue());
   auto falseVal = frame.lookup(inst.getFalseValue());
-  frame.insert(&inst, SelectOp::Create(cond, trueVal, falseVal));
+  frame.insert(&inst, op_transform(SelectOp::Create, cond, trueVal, falseVal));
 
   return ExecutionResult::Continue;
 }
@@ -495,7 +592,11 @@ ExecutionResult Interpreter::visitAssume(llvm::CallInst& call) {
   CAFFEINE_ASSERT(call.getNumArgOperands() == 1);
 
   auto& frame = ctx->stack_top();
-  ctx->add(frame.lookup(call.getArgOperand(0)));
+  auto cond = frame.lookup(call.getArgOperand(0));
+
+  CAFFEINE_ASSERT(cond.size() == 1);
+
+  ctx->add(cond[0]);
 
   // Don't check whether adding the assumption causes this path to become
   // dead since assumptions are rare, solver calls are expensive, and it'll
@@ -506,7 +607,8 @@ ExecutionResult Interpreter::visitAssert(llvm::CallInst& call) {
   CAFFEINE_ASSERT(call.getNumArgOperands() == 1);
 
   auto& frame = ctx->stack_top();
-  auto assertion = Assertion(frame.lookup(call.getArgOperand(0)));
+  auto cond = frame.lookup(call.getArgOperand(0));
+  auto assertion = Assertion(cond[0]);
 
   auto model = ctx->resolve(!assertion);
   if (model->result() == SolverResult::SAT)
