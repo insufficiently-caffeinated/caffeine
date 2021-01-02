@@ -7,6 +7,7 @@
 #include <unordered_map>
 
 #include "caffeine/IR/Operation.h"
+#include "caffeine/Interpreter/Value.h"
 
 namespace caffeine {
 
@@ -14,11 +15,11 @@ class Context;
 
 class StackFrame {
 public:
-  using VarType = llvm::SmallVector<ref<Operation>, 1>;
+  using VarType = ContextValue;
 
 private:
   llvm::Function* function;
-  std::unordered_map<llvm::Value*, VarType> variables;
+  std::unordered_map<llvm::Value*, ContextValue> variables;
 
 public:
   /**
