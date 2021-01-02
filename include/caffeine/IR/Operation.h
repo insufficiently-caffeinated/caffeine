@@ -123,7 +123,7 @@ public:
     /**
      * An unnamed symbolic constant that can have any value whenever it is
      * used. Has the same semantics as LLVM's undef.
-     * 
+     *
      * It is valid for solvers to have any value for the undef constant.
      */
     Undef = detail::opcode(1, 0, 15),
@@ -675,7 +675,7 @@ public:
 
 /**
  * Undefined value.
- * 
+ *
  * Each time this is used it can correspond to any possible bitpattern of
  * it's corresponding type. The resolved value does not have to be consistent
  * between uses of the same value.
