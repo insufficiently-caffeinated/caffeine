@@ -391,6 +391,7 @@ CAFFEINE_OP_DECL_CLASSOF(SelectOp, Select);
 CAFFEINE_OP_DECL_CLASSOF(AllocOp, Alloc);
 CAFFEINE_OP_DECL_CLASSOF(LoadOp, Load);
 CAFFEINE_OP_DECL_CLASSOF(StoreOp, Store);
+CAFFEINE_OP_DECL_CLASSOF(Undef, Undef);
 
 inline bool Constant::classof(const Operation* op) {
   return op->opcode() == ConstantNamed || op->opcode() == ConstantNumbered;
