@@ -2,6 +2,7 @@
 #define CAFFEINE_IR_OPERATION_H
 
 #include <cstdint>
+#include <iosfwd>
 #include <string>
 #include <variant>
 
@@ -356,6 +357,8 @@ protected:
   ref<Operation>& operand_at(size_t idx);
   const ref<Operation>& operand_at(size_t idx) const;
 };
+
+std::ostream& operator<<(std::ostream& os, const Operation& op);
 
 /**
  * Symbolic constant.

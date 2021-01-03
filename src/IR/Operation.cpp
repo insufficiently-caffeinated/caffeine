@@ -1,9 +1,11 @@
 #include "caffeine/IR/Operation.h"
-
 #include "Operation.h"
 
 #include <boost/container_hash/hash.hpp>
 #include <llvm/ADT/Hashing.h>
+#include <llvm/Support/raw_ostream.h>
+
+#include <iostream>
 
 namespace caffeine {
 
@@ -185,6 +187,108 @@ const char* Operation::opcode_name(Opcode op) {
   }
   // clang-format on
   return "Unknown";
+}
+
+template <typename T, typename... Ts>
+static std::ostream& print_spaced(std::ostream& os, const T& first,
+                                  const Ts&... values) {
+  os << first;
+  (..., (os << ' ' << values));
+  return os;
+}
+
+template <typename... Ts>
+static std::ostream& print_cons(std::ostream& os, const Ts&... values) {
+  static_assert(sizeof...(Ts) != 0);
+
+  if constexpr (sizeof...(Ts) == 1) {
+    (os << ... << values);
+    return os;
+  } else {
+    return print_spaced(os << '(', values...) << ')';
+  }
+}
+
+std::ostream& operator<<(std::ostream& os, const Operation& op) {
+  if (const auto* constant = llvm::dyn_cast<Constant>(&op)) {
+    if (constant->is_named())
+      return print_cons(os, "const", constant->name());
+    return print_cons(os, "const", constant->number());
+  }
+
+  if (const auto* constant = llvm::dyn_cast<ConstantInt>(&op)) {
+    return print_cons(os, op.type(), constant->value().toString(10, false));
+  }
+
+  if (const auto* constant = llvm::dyn_cast<ConstantFloat>(&op)) {
+    std::string s;
+    llvm::raw_string_ostream o(s);
+    constant->value().print(o);
+    return print_cons(os, op.type(), s);
+  }
+
+  std::string name = op.opcode_name();
+  std::transform(name.begin(), name.end(), name.begin(),
+                 [](char c) { return std::tolower(c); });
+
+  if (const auto* icmp = llvm::dyn_cast<ICmpOp>(&op)) {
+    const char* cmp = "<unknown>";
+    switch (icmp->comparison()) {
+    // clang-format off
+    case ICmpOpcode::EQ:  cmp = "eq";  break;
+    case ICmpOpcode::NE:  cmp = "ne";  break;
+    case ICmpOpcode::UGT: cmp = "ugt"; break;
+    case ICmpOpcode::UGE: cmp = "uge"; break;
+    case ICmpOpcode::ULT: cmp = "ult"; break;
+    case ICmpOpcode::ULE: cmp = "ule"; break;
+    case ICmpOpcode::SGT: cmp = "sgt"; break;
+    case ICmpOpcode::SGE: cmp = "sge"; break;
+    case ICmpOpcode::SLT: cmp = "slt"; break;
+    case ICmpOpcode::SLE: cmp = "sle"; break;
+      // clang-format on
+    }
+
+    name.push_back('.');
+    name += cmp;
+  }
+
+  if (const auto* fcmp = llvm::dyn_cast<FCmpOp>(&op)) {
+    const char* cmp = "<unknown>";
+    switch (fcmp->comparison()) {
+    // clang-format off
+    case FCmpOpcode::OEQ: cmp = "oeq"; break;
+    case FCmpOpcode::OGT: cmp = "ogt"; break;
+    case FCmpOpcode::OGE: cmp = "oge"; break;
+    case FCmpOpcode::OLT: cmp = "olt"; break;
+    case FCmpOpcode::OLE: cmp = "ole"; break;
+    case FCmpOpcode::ONE: cmp = "one"; break;
+    case FCmpOpcode::ORD: cmp = "ord"; break;
+    case FCmpOpcode::UNO: cmp = "uno"; break;
+    case FCmpOpcode::UEQ: cmp = "ueq"; break;
+    case FCmpOpcode::UGT: cmp = "ugt"; break;
+    case FCmpOpcode::UGE: cmp = "uge"; break;
+    case FCmpOpcode::ULT: cmp = "ult"; break;
+    case FCmpOpcode::ULE: cmp = "ule"; break;
+    case FCmpOpcode::UNE: cmp = "une"; break;
+      // clang-format on
+    }
+
+    name.push_back('.');
+    name += cmp;
+  }
+
+  switch (op.num_operands()) {
+  case 0:
+    return print_cons(os, name);
+  case 1:
+    return print_cons(os, name, op[0]);
+  case 2:
+    return print_cons(os, name, op[0], op[1]);
+  case 3:
+    return print_cons(os, name, op[0], op[1], op[2]);
+  }
+
+  CAFFEINE_UNREACHABLE();
 }
 
 /***************************************************
@@ -569,7 +673,7 @@ ref<Operation> UnaryOp::CreateTrunc(Type tgt, const ref<Operation>& operand) {
   CAFFEINE_ASSERT(operand->type().is_int());
   CAFFEINE_ASSERT(tgt.bitwidth() < operand->type().bitwidth());
 
-  if (const auto* undef = llvm::dyn_cast<caffeine::Undef>(operand.get()))
+  if (llvm::isa<caffeine::Undef>(operand.get()))
     return Undef::Create(tgt);
 
   if (const auto* op = llvm::dyn_cast<caffeine::ConstantInt>(operand.get()))
@@ -592,7 +696,7 @@ ref<Operation> UnaryOp::CreateSExt(Type tgt, const ref<Operation>& operand) {
   CAFFEINE_ASSERT(operand->type().is_int());
   CAFFEINE_ASSERT(tgt.bitwidth() > operand->type().bitwidth());
 
-  if (const auto* undef = llvm::dyn_cast<caffeine::Undef>(operand.get()))
+  if (llvm::isa<caffeine::Undef>(operand.get()))
     return Undef::Create(tgt);
 
   if (const auto* op = llvm::dyn_cast<caffeine::ConstantInt>(operand.get()))
