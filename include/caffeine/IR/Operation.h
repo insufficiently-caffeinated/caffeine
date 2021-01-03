@@ -334,10 +334,10 @@ public:
   }
 
   // Need to manually define these since we have an internal union.
-  Operation(const Operation& op) noexcept = default;
+  Operation(const Operation& op) = default;
   Operation(Operation&& op) noexcept = default;
 
-  Operation& operator=(const Operation& op) noexcept = default;
+  Operation& operator=(const Operation& op) = default;
   Operation& operator=(Operation&& op) noexcept = default;
 
   ~Operation() = default;
