@@ -673,7 +673,7 @@ ref<Operation> UnaryOp::CreateTrunc(Type tgt, const ref<Operation>& operand) {
   CAFFEINE_ASSERT(operand->type().is_int());
   CAFFEINE_ASSERT(tgt.bitwidth() < operand->type().bitwidth());
 
-  if (const auto* undef = llvm::dyn_cast<caffeine::Undef>(operand.get()))
+  if (llvm::isa<caffeine::Undef>(operand.get()))
     return Undef::Create(tgt);
 
   if (const auto* op = llvm::dyn_cast<caffeine::ConstantInt>(operand.get()))
@@ -696,7 +696,7 @@ ref<Operation> UnaryOp::CreateSExt(Type tgt, const ref<Operation>& operand) {
   CAFFEINE_ASSERT(operand->type().is_int());
   CAFFEINE_ASSERT(tgt.bitwidth() > operand->type().bitwidth());
 
-  if (const auto* undef = llvm::dyn_cast<caffeine::Undef>(operand.get()))
+  if (llvm::isa<caffeine::Undef>(operand.get()))
     return Undef::Create(tgt);
 
   if (const auto* op = llvm::dyn_cast<caffeine::ConstantInt>(operand.get()))
