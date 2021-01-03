@@ -67,8 +67,8 @@ public:
   ExecutionResult visitSelectInst(llvm::SelectInst& inst);
 
   ExecutionResult visitInsertElementInst(llvm::InsertElementInst& inst);
-  // ExecutionResult visitExtractElementInst(llvm::ExtractElementInst& inst);
-  // ExecutionResult visitShuffleVectorInst(llvm::ShuffleVectorInst& inst);
+  ExecutionResult visitExtractElementInst(llvm::ExtractElementInst& inst);
+  ExecutionResult visitShuffleVectorInst(llvm::ShuffleVectorInst& inst);
 
 private:
   ExecutionResult visitExternFunc(llvm::CallInst& inst);

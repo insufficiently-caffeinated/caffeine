@@ -6,6 +6,8 @@
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/Function.h>
 
+#include <iostream>
+
 namespace caffeine {
 
 StackFrame::StackFrame(llvm::Function* function)
@@ -19,7 +21,7 @@ void StackFrame::jump_to(llvm::BasicBlock* block) {
 }
 
 void StackFrame::insert(llvm::Value* value, const ref<Operation>& expr) {
-  variables.insert_or_assign(value, VarType{expr});
+  insert(value, VarType{expr});
 }
 void StackFrame::insert(llvm::Value* value, const VarType& exprs) {
   variables.insert_or_assign(value, exprs);

@@ -7,7 +7,9 @@
 #include <boost/range/combine.hpp>
 #include <boost/range/iterator_range.hpp>
 #include <fmt/format.h>
+#include <llvm/Support/raw_ostream.h>
 
+#include <iostream>
 #include <optional>
 
 namespace caffeine {
@@ -15,21 +17,6 @@ namespace caffeine {
 using VarType = StackFrame::VarType;
 
 namespace detail {
-  template <typename F, typename Tuple, size_t... Idxs>
-  auto apply_detail(F&& func, Tuple&& tuple, std::index_sequence<Idxs...>) {
-    return func(tuple.template get<Idxs>()...);
-  }
-
-  // Given a functor object and its arguments as a tuple, call the functor
-  // using the provided arguments.
-  template <typename F, typename Tuple>
-  auto apply(F&& func, Tuple&& tuple) {
-    return apply_detail(
-        std::forward<F>(func), std::forward<Tuple>(tuple),
-        std::make_index_sequence<
-            boost::tuples::length<std::decay_t<Tuple>>::value>());
-  }
-
   template <typename T, typename U>
   std::pair<T, U> tuple_to_pair(const boost::tuple<T, U>& tuple) {
     return std::make_pair(tuple.template get<0>(), tuple.template get<1>());
@@ -570,6 +557,90 @@ Interpreter::visitInsertElementInst(llvm::InsertElementInst& inst) {
                                   elt, op);
         },
         vec[i]));
+  }
+
+  frame.insert(&inst, ContextValue(std::move(result)));
+
+  return ExecutionResult::Continue;
+}
+ExecutionResult
+Interpreter::visitExtractElementInst(llvm::ExtractElementInst& inst) {
+  auto& frame = ctx->stack_top();
+
+  auto vec_ = frame.lookup(inst.getOperand(0));
+  auto vec = vec_.vector();
+  auto idx = frame.lookup(inst.getOperand(1)).scalar();
+
+  CAFFEINE_ASSERT(vec.size() != 0);
+
+  ContextValue result =
+      transform([](const auto& v) { return Undef::Create(v->type()); }, vec[0]);
+
+  for (size_t i = 0; i < vec.size(); ++i) {
+    result = transform(
+        [&](const auto& r, const auto& v) {
+          return SelectOp::Create(ICmpOp::CreateICmp(ICmpOpcode::EQ, idx, i), v,
+                                  r);
+        },
+        result, vec[i]);
+  }
+
+  frame.insert(&inst, std::move(result));
+
+  return ExecutionResult::Continue;
+}
+ExecutionResult
+Interpreter::visitShuffleVectorInst(llvm::ShuffleVectorInst& inst) {
+  auto& frame = ctx->stack_top();
+
+  auto vec1_ = frame.lookup(inst.getOperand(0));
+  auto vec2_ = frame.lookup(inst.getOperand(1));
+  auto mask_ = frame.lookup(inst.getOperand(2));
+
+  auto vec1 = vec1_.vector();
+  auto vec2 = vec2_.vector();
+  auto mask = mask_.vector();
+
+  std::vector<ContextValue> result;
+  result.reserve(vec1.size());
+
+  /**
+   * The semantics of shufflevector end up basically being an array lookup.
+   * Given two vectors x, y and a mask m, we form one big vector z by
+   * concatenating z = x||y. Then the values in m are used as indices in z
+   * to get the final vector value.
+   *
+   * We emulate these semantics by creating nested select chains. For constant
+   * masks we rely on constant-folding to make these more efficient.
+   */
+  for (size_t i = 0; i < mask.size(); ++i) {
+    // Any non-specified index is undef
+    ContextValue value = transform(
+        [&](const auto& v1, const auto& v2) {
+          CAFFEINE_ASSERT(v1->type() == v2->type());
+          return Undef::Create(v1->type());
+        },
+        vec1[i], vec2[i]);
+
+    for (size_t j = 0; j < mask.size(); ++j) {
+      value = transform(
+          [&](const auto& r, const auto& v, const auto& m) {
+            return SelectOp::Create(ICmpOp::CreateICmp(ICmpOpcode::EQ, m, j), v,
+                                    r);
+          },
+          value, vec1[j], mask[i]);
+    }
+
+    for (size_t j = 0; j < mask.size(); ++j) {
+      value = transform(
+          [&](const auto& r, const auto& v, const auto& m) {
+            return SelectOp::Create(
+                ICmpOp::CreateICmp(ICmpOpcode::EQ, m, j + mask.size()), v, r);
+          },
+          value, vec2[j], mask[i]);
+    }
+
+    result.push_back(value);
   }
 
   frame.insert(&inst, ContextValue(std::move(result)));
