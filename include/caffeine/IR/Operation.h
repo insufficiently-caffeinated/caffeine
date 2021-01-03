@@ -327,6 +327,11 @@ public:
 
   bool is_constant() const;
 
+  template <typename T>
+  bool is() const {
+    return llvm::isa<T>(*this);
+  }
+
   // Need to manually define these since we have an internal union.
   Operation(const Operation& op) noexcept;
   Operation(Operation&& op) noexcept;
