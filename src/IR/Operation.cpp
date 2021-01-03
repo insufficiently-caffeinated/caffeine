@@ -2,6 +2,7 @@
 
 #include "Operation.h"
 
+#include <boost/container_hash/hash.hpp>
 #include <llvm/ADT/Hashing.h>
 
 namespace caffeine {
@@ -11,13 +12,9 @@ Operation::Operation() : opcode_(Invalid), type_(Type::void_ty()) {}
 Operation::Operation(Opcode op, Type t)
     : opcode_(static_cast<uint16_t>(op)), type_(t) {}
 
-// clang-format off
 Operation::Operation(Opcode op, Type t, ref<Operation>* operands)
-    : opcode_(static_cast<uint16_t>(op)),
-      type_(t), operands_{(opcode_ & 0x3) > 0 ? operands[0] : ref<Operation>(),
-                          (opcode_ & 0x3) > 1 ? operands[0] : ref<Operation>(),
-                          (opcode_ & 0x3) > 2 ? operands[0] : ref<Operation>()} 
-{
+    : opcode_(static_cast<uint16_t>(op)), type_(t),
+      inner_(opvec(operands, operands + (opcode_ & 0x3))) {
   CAFFEINE_ASSERT((opcode_ >> 6) != 1,
                   "Tried to create a constant with operands");
   // Don't use this constructor to create an invalid opcode.
@@ -26,233 +23,78 @@ Operation::Operation(Opcode op, Type t, ref<Operation>* operands)
   // No opcodes have > 3 operands
   CAFFEINE_ASSERT(num_operands() <= 3, "Invalid opcode");
 }
-// clang-format on
 
 Operation::Operation(Opcode op, const llvm::APInt& iconst)
-    : opcode_(op), type_(Type::type_of(iconst)), iconst_(iconst) {
+    : opcode_(op), type_(Type::type_of(iconst)), inner_(iconst) {
   // Currently only ConstantInt is valid here
-  CAFFEINE_ASSERT(op == ConstantInt || op == ConstantNumbered);
+  CAFFEINE_ASSERT(op == ConstantInt);
 }
 Operation::Operation(Opcode op, llvm::APInt&& iconst)
-    : opcode_(op), type_(Type::type_of(iconst)), iconst_(iconst) {
+    : opcode_(op), type_(Type::type_of(iconst)), inner_(iconst) {
   // Currently only ConstantInt is valid here
   CAFFEINE_ASSERT(op == ConstantInt);
 }
 
 Operation::Operation(Opcode op, const llvm::APFloat& fconst)
-    : opcode_(op), type_(Type::type_of(fconst)), fconst_(fconst) {
+    : opcode_(op), type_(Type::type_of(fconst)), inner_(fconst) {
   CAFFEINE_ASSERT(op == ConstantFloat);
 }
 Operation::Operation(Opcode op, llvm::APFloat&& fconst)
-    : opcode_(op), type_(Type::type_of(fconst)), fconst_(fconst) {
+    : opcode_(op), type_(Type::type_of(fconst)), inner_(fconst) {
   CAFFEINE_ASSERT(op == ConstantFloat);
 }
 
 Operation::Operation(Opcode op, Type t, const std::string& name)
-    : opcode_(op), type_(t), name_(name) {
+    : opcode_(op), type_(t), inner_(name) {
   CAFFEINE_ASSERT(op == ConstantNamed);
 }
 Operation::Operation(Opcode op, Type t, uint64_t number)
-    : opcode_(op), type_(t), iconst_(64, number) {
+    : opcode_(op), type_(t), inner_(number) {
   CAFFEINE_ASSERT(op == ConstantNumbered);
 }
 
-Operation::Operation(const Operation& op) noexcept
-    : opcode_(op.opcode_), type_(op.type_) {
-  if (is_constant()) {
-    switch (opcode_) {
-    case ConstantInt:
-    case ConstantNumbered:
-      new (&iconst_) llvm::APInt(op.iconst_);
-      break;
-    case ConstantFloat:
-      new (&fconst_) llvm::APFloat(op.fconst_);
-      break;
-    case ConstantNamed:
-      new (&name_) std::string(op.name_);
-      break;
-    case Undef:
-      break;
-    default:
-      CAFFEINE_UNREACHABLE();
-    }
-  } else {
-    new (&operands_[0]) ref<Operation>(op.operands_[0]);
-    new (&operands_[1]) ref<Operation>(op.operands_[1]);
-    new (&operands_[2]) ref<Operation>(op.operands_[2]);
-  }
-}
-Operation::Operation(Operation&& op) noexcept
-    : opcode_(op.opcode_), type_(op.type_) {
-  if (is_constant()) {
-    switch (opcode_) {
-    case ConstantInt:
-    case ConstantNumbered:
-      new (&iconst_) llvm::APInt(std::move(op.iconst_));
-      break;
-    case ConstantFloat:
-      new (&fconst_) llvm::APFloat(std::move(op.fconst_));
-      break;
-    case ConstantNamed:
-      new (&name_) std::string(op.name_);
-      break;
-    case Undef:
-      break;
-    default:
-      CAFFEINE_UNREACHABLE();
-    }
-  } else {
-    new (&operands_[0]) ref<Operation>(std::move(op.operands_[0]));
-    new (&operands_[1]) ref<Operation>(std::move(op.operands_[1]));
-    new (&operands_[2]) ref<Operation>(std::move(op.operands_[2]));
-  }
-}
-
 Operation::Operation(Opcode op, Type t, const ref<Operation>& op0)
-    : opcode_(static_cast<uint16_t>(op)),
-      type_(t), operands_{op0, ref<Operation>(), ref<Operation>()} {
+    : opcode_(static_cast<uint16_t>(op)), type_(t), inner_(opvec{op0}) {
   CAFFEINE_ASSERT((opcode_ >> 6) != 1,
                   "Tried to create a constant with operands");
   CAFFEINE_ASSERT(num_operands() == 1);
 }
 Operation::Operation(Opcode op, Type t, const ref<Operation>& op0,
                      const ref<Operation>& op1)
-    : opcode_(static_cast<uint16_t>(op)),
-      type_(t), operands_{op0, op1, ref<Operation>()} {
+    : opcode_(static_cast<uint16_t>(op)), type_(t), inner_(opvec{op0, op1}) {
   CAFFEINE_ASSERT((opcode_ >> 6) != 1,
                   "Tried to create a constant with operands");
   CAFFEINE_ASSERT(num_operands() == 2);
 }
 Operation::Operation(Opcode op, Type t, const ref<Operation>& op0,
                      const ref<Operation>& op1, const ref<Operation>& op2)
-    : opcode_(static_cast<uint16_t>(op)), type_(t), operands_{op0, op1, op2} {
+    : opcode_(static_cast<uint16_t>(op)), type_(t),
+      inner_(opvec{op0, op1, op2}) {
   CAFFEINE_ASSERT((opcode_ >> 6) != 1,
                   "Tried to create a constant with operands");
   CAFFEINE_ASSERT(num_operands() == 3);
-}
-
-Operation& Operation::operator=(const Operation& op) noexcept {
-  invalidate();
-
-  opcode_ = op.opcode_;
-  type_ = op.type_;
-  if (is_constant()) {
-    switch (opcode_) {
-    case ConstantInt:
-    case ConstantNumbered:
-      new (&iconst_) llvm::APInt(op.iconst_);
-      break;
-    case ConstantFloat:
-      new (&fconst_) llvm::APFloat(op.fconst_);
-      break;
-    case ConstantNamed:
-      new (&name_) std::string(op.name_);
-      break;
-    case Undef:
-      break;
-    default:
-      CAFFEINE_UNREACHABLE();
-    }
-  } else {
-    new (&operands_[0]) ref<Operation>(op.operands_[0]);
-    new (&operands_[1]) ref<Operation>(op.operands_[1]);
-    new (&operands_[2]) ref<Operation>(op.operands_[2]);
-  }
-
-  return *this;
-}
-Operation& Operation::operator=(Operation&& op) noexcept {
-  invalidate();
-
-  opcode_ = op.opcode_;
-  type_ = op.type_;
-  if (is_constant()) {
-    switch (opcode_) {
-    case ConstantInt:
-    case ConstantNumbered:
-      new (&iconst_) llvm::APInt(std::move(op.iconst_));
-      break;
-    case ConstantFloat:
-      new (&fconst_) llvm::APFloat(std::move(op.fconst_));
-      break;
-    case ConstantNamed:
-      new (&name_) std::string(std::move(op.name_));
-      break;
-    case Undef:
-      break;
-    default:
-      CAFFEINE_UNREACHABLE();
-    }
-  } else {
-    new (&operands_[0]) ref<Operation>(std::move(op.operands_[0]));
-    new (&operands_[1]) ref<Operation>(std::move(op.operands_[1]));
-    new (&operands_[2]) ref<Operation>(std::move(op.operands_[2]));
-  }
-
-  return *this;
-}
-
-Operation::~Operation() {
-  invalidate();
 }
 
 bool Operation::operator==(const Operation& op) const {
   if (opcode_ != op.opcode_ || type_ != op.type_)
     return false;
 
-  const size_t nops = num_operands();
-  if (nops != 0) {
-    for (size_t i = 0; i < nops; ++i) {
-      if (operands_[i] != op.operands_[i])
-        return false;
-    }
-  } else {
-    switch (opcode_) {
-    case ConstantInt:
-    case ConstantNumbered:
-      return iconst_ == op.iconst_;
-    case ConstantFloat:
-      // TODO: It might be better to use semantic equality here?
-      //       Would have to figure out how to deal with NaNs in that case.
-      return fconst_.bitwiseIsEqual(op.fconst_);
-    case ConstantNamed:
-      return name_ == op.name_;
-    default:
-      CAFFEINE_UNREACHABLE();
-    }
-  }
-
-  return true;
+  return std::visit(
+      [](const auto& a, const auto& b) {
+        if constexpr (!std::is_same_v<std::decay_t<decltype(a)>,
+                                      std::decay_t<decltype(b)>>) {
+          return false;
+        } else if constexpr (std::is_same_v<std::decay_t<decltype(a)>,
+                                            llvm::APFloat>) {
+          return a.bitwiseIsEqual(b);
+        } else {
+          return a == b;
+        }
+      },
+      inner_, op.inner_);
 }
 bool Operation::operator!=(const Operation& op) const {
   return !(*this == op);
-}
-
-void Operation::invalidate() noexcept {
-  if (is_constant()) {
-    switch (opcode_) {
-    case ConstantInt:
-    case ConstantNumbered:
-      iconst_.~APInt();
-      break;
-    case ConstantFloat:
-      fconst_.~APFloat();
-      break;
-    case ConstantNamed:
-      name_.~basic_string();
-      break;
-    case Undef:
-      break;
-    default:
-      CAFFEINE_UNREACHABLE();
-    }
-  } else {
-    operands_[0].~ref();
-    operands_[1].~ref();
-    operands_[2].~ref();
-  }
-
-  opcode_ = Invalid;
 }
 
 const char* Operation::opcode_name() const {
@@ -912,10 +754,10 @@ ref<Operation> AllocOp::Create(const ref<Operation>& size,
                                const ref<Operation>& defaultval) {
   CAFFEINE_ASSERT(size, "size was null");
   CAFFEINE_ASSERT(defaultval, "defaultval was null");
-  // To be fully correct, this should be validating that the bitwidth of size is
-  // the correct one for the architecture model. Unfortunately we don't have
-  // enough information here to validate that so instead we just ensure that
-  // size is an integer.
+  // To be fully correct, this should be validating that the bitwidth of size
+  // is the correct one for the architecture model. Unfortunately we don't
+  // have enough information here to validate that so instead we just ensure
+  // that size is an integer.
   CAFFEINE_ASSERT(size->type().is_int(), "Array size must be an integer type");
   CAFFEINE_ASSERT(defaultval->type() == Type::int_ty(8));
   return ref<Operation>(new AllocOp(size, defaultval));
@@ -969,30 +811,27 @@ ref<Operation> Undef::Create(const Type& t) {
 /***************************************************
  * hashing implementations                         *
  ***************************************************/
+static llvm::hash_code hash_value(const ref<Operation>& op) {
+  return std::hash<ref<Operation>>()(op);
+}
+
 llvm::hash_code hash_value(const Operation& op) {
   std::size_t hash = llvm::hash_combine(op.opcode(), op.type());
 
-  if (op.num_operands() == 0) {
-    switch (op.opcode()) {
-    case Operation::ConstantNamed:
-      hash = llvm::hash_combine(hash, op.name_);
-      break;
-    case Operation::ConstantInt:
-    case Operation::ConstantNumbered:
-      hash = llvm::hash_combine(hash, op.iconst_);
-      break;
-    case Operation::ConstantFloat:
-      hash = llvm::hash_combine(hash, op.fconst_);
-      break;
-    default:
-      CAFFEINE_UNREACHABLE();
-    }
-  } else {
-    for (const auto& operand : op.operands())
-      hash = llvm::hash_combine(hash, operand);
-  }
+  return std::visit(
+      [&](const auto& v) {
+        using type = std::decay_t<decltype(v)>;
 
-  return llvm::hash_code(hash);
+        if constexpr (std::is_same_v<type, Operation::opvec>) {
+          return llvm::hash_combine(
+              hash, llvm::hash_combine_range(v.begin(), v.end()));
+        } else if constexpr (std::is_same_v<type, std::monostate>) {
+          return llvm::hash_combine(hash, std::hash<type>()(v));
+        } else {
+          return llvm::hash_combine(hash, v);
+        }
+      },
+      op.inner_);
 }
 
 } // namespace caffeine
