@@ -3,7 +3,9 @@
 
 #include <cstdint>
 #include <string>
+#include <variant>
 
+#include <boost/container/static_vector.hpp>
 #include <llvm/ADT/APFloat.h>
 #include <llvm/ADT/APInt.h>
 #include <llvm/ADT/iterator_range.h>
@@ -226,6 +228,8 @@ public:
   };
 
 protected:
+  using opvec = boost::container::static_vector<ref<Operation>, 3>;
+
   uint16_t opcode_;
   uint16_t dummy_ = 0; // Unused, used for padding
   // When multithreading is implemented this will need to become atomic.
@@ -234,12 +238,9 @@ protected:
   mutable uint32_t refcount = 0;
   Type type_;
 
-  union { // TODO: Pointers? Might need a ConstantPointer type
-    ref<Operation> operands_[3];
-    llvm::APInt iconst_;
-    llvm::APFloat fconst_;
-    std::string name_;
-  };
+  std::variant<std::monostate, opvec, llvm::APInt, llvm::APFloat, uint64_t,
+               std::string>
+      inner_;
 
   // So ref can get at the refcount field.
   //
@@ -333,13 +334,13 @@ public:
   }
 
   // Need to manually define these since we have an internal union.
-  Operation(const Operation& op) noexcept;
-  Operation(Operation&& op) noexcept;
+  Operation(const Operation& op) noexcept = default;
+  Operation(Operation&& op) noexcept = default;
 
-  Operation& operator=(const Operation& op) noexcept;
-  Operation& operator=(Operation&& op) noexcept;
+  Operation& operator=(const Operation& op) noexcept = default;
+  Operation& operator=(Operation&& op) noexcept = default;
 
-  ~Operation();
+  ~Operation() = default;
 
 protected:
   /**
@@ -349,8 +350,11 @@ protected:
    */
   uint16_t aux_data() const;
 
-private:
-  void invalidate() noexcept;
+  /**
+   * Accessors to operand references.
+   */
+  ref<Operation>& operand_at(size_t idx);
+  const ref<Operation>& operand_at(size_t idx) const;
 };
 
 /**

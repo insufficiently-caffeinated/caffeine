@@ -211,7 +211,7 @@ namespace std {
 template <typename T, typename Deleter>
 struct hash<caffeine::ref<T, Deleter>> {
   std::size_t operator()(const caffeine::ref<T, Deleter>& ref) const noexcept {
-    return std::hash<T*>{}(ref.get());
+    return std::hash<const T*>{}(ref.get());
   }
 };
 
