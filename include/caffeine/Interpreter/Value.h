@@ -8,13 +8,21 @@
 
 #include <variant>
 #include <vector>
+#include <iosfwd>
 
 namespace caffeine {
 
 /**
  * An LLVM value as represented within a stack frame.
+ *
+ * Can be either
+ * - a single value (scalar), or
+ * - a recursive array of values (vector)
  */
 class ContextValue {
+public:
+  enum Kind { Scalar, Vector };
+
 private:
   struct slice {
     const ContextValue* data;
@@ -46,12 +54,28 @@ public:
   bool is_vector() const;
   bool is_scalar() const;
 
+  Kind kind() const;
+
   const ref<Operation>& scalar() const;
   llvm::ArrayRef<ContextValue> vector() const;
 };
 
-template<typename F, typename... Vs>
-inline ContextValue transform(F&& func, const Vs&... values);
+/**
+ * Map the ref<Operation> elements of any number of ContextValues
+ * to form a new ContextValue with the same shape.
+ *
+ * For this to work all ContextValues must have the same "shape"
+ * (i.e. scalars cannot be combined with vectors, vectors must have
+ * the same size) recursively.
+ *
+ * This generally is meant to match the semantics needed when implementing
+ * LLVM opcodes.
+ */
+template <typename F, typename... Vs>
+ContextValue transform(F&& func, const Vs&... values);
+
+std::ostream& operator<<(std::ostream& os, const ContextValue& value);
+
 
 } // namespace caffeine
 

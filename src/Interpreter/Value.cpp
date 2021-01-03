@@ -1,8 +1,11 @@
 #include "caffeine/Interpreter/Value.h"
 
+#include <fmt/format.h>
 #include <llvm/IR/Constants.h>
+#include <llvm/Support/raw_ostream.h>
 
 #include <type_traits>
+#include <iostream>
 
 namespace caffeine {
 
@@ -53,7 +56,46 @@ static ContextValue evaluate_constant(llvm::Constant* constant) {
     return ContextValue(std::move(result));
   }
 
-  CAFFEINE_UNIMPLEMENTED();
+  if (auto* zero = llvm::dyn_cast<llvm::ConstantAggregateZero>(constant)) {
+    auto type = zero->getType();
+
+    if (type->isVectorTy()) {
+      CAFFEINE_ASSERT(!type->getVectorIsScalable(),
+                      "scalable vectors are not supported");
+
+      size_t count = type->getVectorNumElements();
+      std::vector<ContextValue> result;
+      result.reserve(count);
+
+      for (size_t i = 0; i < count; ++i)
+        result.push_back(evaluate_constant(zero->getElementValue(i)));
+
+      return ContextValue(std::move(result));
+    }
+  }
+
+  if (auto* vec = llvm::dyn_cast<llvm::ConstantVector>(constant)) {
+    auto type = vec->getType();
+
+    CAFFEINE_ASSERT(!type->getVectorIsScalable(),
+                    "scalable vectors are not supported");
+
+    size_t count = type->getVectorNumElements();
+    std::vector<ContextValue> result;
+    result.reserve(count);
+
+    for (size_t i = 0; i < count; ++i)
+      result.push_back(evaluate_constant(vec->getOperand(i)));
+
+    return ContextValue(std::move(result));
+  }
+
+  std::string s;
+  llvm::raw_string_ostream os(s);
+  constant->print(os, true);
+  os.flush();
+
+  CAFFEINE_UNIMPLEMENTED(fmt::format("Unsupported constant operand: {}", s));
 }
 
 ContextValue::ContextValue(llvm::Constant* constant)
@@ -68,6 +110,18 @@ ContextValue::ContextValue(std::vector<ContextValue>&& data)
 
 ContextValue::ContextValue(const ContextValue* data, size_t size)
     : inner_(slice(data, size)) {}
+
+ContextValue::Kind ContextValue::kind() const {
+  switch (inner_.index()) {
+  case 0:
+    return Scalar;
+  case 1:
+  case 2:
+    return Vector;
+  default:
+    CAFFEINE_UNREACHABLE();
+  }
+}
 
 ContextValue ContextValue::to_ref() const {
   if (const auto* vec = std::get_if<std::vector<ContextValue>>(&inner_))
@@ -89,21 +143,39 @@ const ref<Operation>& ContextValue::scalar() const {
 }
 llvm::ArrayRef<ContextValue> ContextValue::vector() const {
   auto [data, size] = std::visit(
-      [&](const auto& val) {
-        using type =
-            std::remove_reference_t<std::remove_const_t<decltype(val)>>;
+      [&](const auto& val) -> std::pair<const ContextValue*, size_t> {
+        using type = std::decay_t<decltype(val)>;
 
         if constexpr (std::is_same_v<type, slice>) {
           return std::make_pair(val.data, val.size);
         } else if constexpr (std::is_same_v<type, std::vector<ContextValue>>) {
           return std::make_pair(val.data(), val.size());
         } else {
-          return std::make_pair<const ContextValue*, size_t>(this, 1);
+          CAFFEINE_ABORT("ContextValue was not a vector");
         }
       },
       inner_);
 
   return llvm::ArrayRef<ContextValue>(data, size);
+}
+
+std::ostream& operator<<(std::ostream& os, const ContextValue& value) {
+  if (value.is_scalar())
+    return os << *value.scalar();
+
+  os << "<";
+  bool is_first = true;
+
+  for (const auto& val : value.vector()) {
+    if (is_first)
+      is_first = false;
+    else
+      os << ",\n ";
+
+    os << val;
+  }
+
+  return os << ">";
 }
 
 } // namespace caffeine

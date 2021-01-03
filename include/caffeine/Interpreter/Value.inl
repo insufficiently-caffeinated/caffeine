@@ -8,18 +8,10 @@
 namespace caffeine {
 
 inline bool ContextValue::is_vector() const {
-  switch (inner_.index()) {
-  case 0:
-    return false;
-  case 1:
-  case 2:
-    return true;
-  default:
-    CAFFEINE_UNREACHABLE();
-  }
+  return kind() == Vector;
 }
 inline bool ContextValue::is_scalar() const {
-  return !is_vector();
+  return kind() == Scalar;
 }
 
 namespace detail {
@@ -64,16 +56,25 @@ namespace detail {
 template <typename F, typename... Vs>
 inline ContextValue transform(F&& func, const Vs&... values) {
   static_assert((... && std::is_same_v<Vs, ContextValue>),
-                "Transform may only be called with ContextValues");
+                "transform may only be called with ContextValues");
 
   const ContextValue& v1 = detail::first(values...);
 
-  CAFFEINE_ASSERT((... && (v1.is_scalar() == values.is_scalar())));
+  CAFFEINE_ASSERT((... && (v1.kind() == values.kind())));
 
   if (v1.is_scalar())
     return ContextValue(func(values.scalar()...));
 
   auto vecs = std::make_tuple(values.vector()...);
+
+  CAFFEINE_ASSERT(std::apply(
+                      [&](const auto&... values) -> bool {
+                        const auto& v1 = detail::first(values...);
+                        return (... && (v1.size() == values.size()));
+                      },
+                      vecs),
+                  "transform arguments must all have the same size");
+
   auto its =
       detail::tuple_foreach([](const auto& v) { return std::begin(v); }, vecs);
   auto ends =
@@ -82,7 +83,7 @@ inline ContextValue transform(F&& func, const Vs&... values) {
   std::vector<ContextValue> result;
   result.reserve(std::get<0>(vecs).size());
 
-  while (!std::apply(
+  while (std::apply(
       [](auto... v) { return (... && v); },
       detail::tuple_combine([](const auto& a, const auto& b) { return a != b; },
                             its, ends))) {
@@ -90,12 +91,7 @@ inline ContextValue transform(F&& func, const Vs&... values) {
         [&](const auto&... values) { return transform(func, values...); },
         detail::tuple_foreach([](const auto& it) { return *it; }, its)));
 
-    detail::tuple_foreach(
-        [](auto& it) {
-          ++it;
-          return 0;
-        },
-        its);
+    detail::tuple_foreach([](auto& it) { return ++it, 0; }, its);
   }
 
   return ContextValue(std::move(result));
