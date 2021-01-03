@@ -1,6 +1,6 @@
 
-#include <stdint.h>
 #include <limits.h>
+#include <stdint.h>
 
 #include "caffeine.h"
 
