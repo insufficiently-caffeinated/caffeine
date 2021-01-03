@@ -135,14 +135,20 @@ int main(int argc, char** argv) {
     errs() << argv[0] << ": ";
     WithColor::error() << " loading file '" << input_filename.getValue()
                        << "'\n";
-    return 1;
+    // TODO: this is done to make cmake run-fail unit tests fail properly. We
+    //       should really be detecting based on return status.
+    std::abort();
+    return 2;
   }
 
   auto function = module->getFunction(target_method.getValue());
   if (!function) {
     errs() << argv[0] << ": ";
     WithColor::error() << " no method '" << target_method.getValue() << "'";
-    return 1;
+    // TODO: this is done to make cmake run-fail unit tests fail properly. We
+    //       should really be detecting based on return status.
+    std::abort();
+    return 2;
   }
 
   // Print out exception messages in std::terminate
