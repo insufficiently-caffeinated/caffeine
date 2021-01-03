@@ -1,5 +1,7 @@
 #include "caffeine/IR/Operation.h"
 
+#include "Operation.h"
+
 #include <llvm/ADT/Hashing.h>
 
 namespace caffeine {
@@ -434,13 +436,141 @@ ref<Operation> BinaryOp::Create(Opcode op, const ref<Operation>& lhs,
   }                                                                            \
   static_assert(true)
 
-DECL_BINOP_CREATE(Add, ASSERT_INT);
-DECL_BINOP_CREATE(Sub, ASSERT_INT);
-DECL_BINOP_CREATE(Mul, ASSERT_INT);
-DECL_BINOP_CREATE(UDiv, ASSERT_INT);
-DECL_BINOP_CREATE(SDiv, ASSERT_INT);
-DECL_BINOP_CREATE(URem, ASSERT_INT);
-DECL_BINOP_CREATE(SRem, ASSERT_INT);
+ref<Operation> BinaryOp::CreateAdd(const ref<Operation>& lhs,
+                                   const ref<Operation>& rhs) {
+  CAFFEINE_ASSERT(lhs, "lhs was null");
+  CAFFEINE_ASSERT(rhs, "rhs was null");
+  ASSERT_INT(lhs);
+  ASSERT_INT(rhs);
+
+  if (lhs->is<caffeine::Undef>() || rhs->is<caffeine::Undef>())
+    return Undef::Create(lhs->type());
+
+  if (is_constant_int(*lhs, 0))
+    return rhs;
+  if (is_constant_int(*rhs, 0))
+    return lhs;
+
+  const auto* lhs_int = llvm::dyn_cast<caffeine::ConstantInt>(lhs.get());
+  const auto* rhs_int = llvm::dyn_cast<caffeine::ConstantInt>(rhs.get());
+  if (lhs_int && rhs_int)
+    return ConstantInt::Create(lhs_int->value() + rhs_int->value());
+
+  return Create(Opcode::Add, lhs, rhs);
+}
+ref<Operation> BinaryOp::CreateSub(const ref<Operation>& lhs,
+                                   const ref<Operation>& rhs) {
+  CAFFEINE_ASSERT(lhs, "lhs was null");
+  CAFFEINE_ASSERT(rhs, "rhs was null");
+  ASSERT_INT(lhs);
+  ASSERT_INT(rhs);
+
+  if (lhs->is<caffeine::Undef>() || rhs->is<caffeine::Undef>())
+    return Undef::Create(lhs->type());
+
+  if (is_constant_int(*rhs, 0))
+    return lhs;
+
+  const auto* lhs_int = llvm::dyn_cast<caffeine::ConstantInt>(lhs.get());
+  const auto* rhs_int = llvm::dyn_cast<caffeine::ConstantInt>(rhs.get());
+  if (lhs_int && rhs_int)
+    return ConstantInt::Create(lhs_int->value() - rhs_int->value());
+
+  return Create(Opcode::Sub, lhs, rhs);
+}
+ref<Operation> BinaryOp::CreateMul(const ref<Operation>& lhs,
+                                   const ref<Operation>& rhs) {
+  CAFFEINE_ASSERT(lhs, "lhs was null");
+  CAFFEINE_ASSERT(rhs, "rhs was null");
+  ASSERT_INT(lhs);
+  ASSERT_INT(rhs);
+
+  if (is_constant_int(*lhs, 0))
+    return lhs;
+  if (is_constant_int(*rhs, 0))
+    return rhs;
+
+  const auto* lhs_int = llvm::dyn_cast<caffeine::ConstantInt>(lhs.get());
+  const auto* rhs_int = llvm::dyn_cast<caffeine::ConstantInt>(rhs.get());
+  if (lhs_int && rhs_int)
+    return ConstantInt::Create(lhs_int->value() * rhs_int->value());
+
+  return Create(Opcode::Mul, lhs, rhs);
+}
+ref<Operation> BinaryOp::CreateUDiv(const ref<Operation>& lhs,
+                                    const ref<Operation>& rhs) {
+  CAFFEINE_ASSERT(lhs, "lhs was null");
+  CAFFEINE_ASSERT(rhs, "rhs was null");
+  ASSERT_INT(lhs);
+  ASSERT_INT(rhs);
+
+  if (is_constant_int(*lhs, 0) || is_constant_int(*rhs, 1))
+    return lhs;
+
+  const auto* lhs_int = llvm::dyn_cast<caffeine::ConstantInt>(lhs.get());
+  const auto* rhs_int = llvm::dyn_cast<caffeine::ConstantInt>(rhs.get());
+  if (lhs_int && rhs_int)
+    return ConstantInt::Create(lhs_int->value().udiv(rhs_int->value()));
+
+  return Create(Opcode::UDiv, lhs, rhs);
+}
+ref<Operation> BinaryOp::CreateSDiv(const ref<Operation>& lhs,
+                                    const ref<Operation>& rhs) {
+  CAFFEINE_ASSERT(lhs, "lhs was null");
+  CAFFEINE_ASSERT(rhs, "rhs was null");
+  ASSERT_INT(lhs);
+  ASSERT_INT(rhs);
+
+  if (is_constant_int(*lhs, 0))
+    return lhs;
+  if (is_constant_int(*rhs, 1) && rhs->type().bitwidth() > 1)
+    return lhs;
+
+  const auto* lhs_int = llvm::dyn_cast<caffeine::ConstantInt>(lhs.get());
+  const auto* rhs_int = llvm::dyn_cast<caffeine::ConstantInt>(rhs.get());
+  if (lhs_int && rhs_int)
+    return ConstantInt::Create(lhs_int->value().sdiv(rhs_int->value()));
+
+  return Create(Opcode::SDiv, lhs, rhs);
+}
+ref<Operation> BinaryOp::CreateURem(const ref<Operation>& lhs,
+                                    const ref<Operation>& rhs) {
+  CAFFEINE_ASSERT(lhs, "lhs was null");
+  CAFFEINE_ASSERT(rhs, "rhs was null");
+  ASSERT_INT(lhs);
+  ASSERT_INT(rhs);
+
+  if (is_constant_int(*lhs, 0))
+    return lhs;
+  if (is_constant_int(*rhs, 1))
+    return ConstantInt::Create(llvm::APInt(lhs->type().bitwidth(), 0));
+
+  const auto* lhs_int = llvm::dyn_cast<caffeine::ConstantInt>(lhs.get());
+  const auto* rhs_int = llvm::dyn_cast<caffeine::ConstantInt>(rhs.get());
+  if (lhs_int && rhs_int)
+    return ConstantInt::Create(lhs_int->value().urem(rhs_int->value()));
+
+  return Create(Opcode::URem, lhs, rhs);
+}
+ref<Operation> BinaryOp::CreateSRem(const ref<Operation>& lhs,
+                                    const ref<Operation>& rhs) {
+  CAFFEINE_ASSERT(lhs, "lhs was null");
+  CAFFEINE_ASSERT(rhs, "rhs was null");
+  ASSERT_INT(lhs);
+  ASSERT_INT(rhs);
+
+  if (is_constant_int(*lhs, 0))
+    return lhs;
+  if (is_constant_int(*rhs, 1) && rhs->type().bitwidth() > 1)
+    return ConstantInt::Create(llvm::APInt(lhs->type().bitwidth(), 0));
+
+  const auto* lhs_int = llvm::dyn_cast<caffeine::ConstantInt>(lhs.get());
+  const auto* rhs_int = llvm::dyn_cast<caffeine::ConstantInt>(rhs.get());
+  if (lhs_int && rhs_int)
+    return ConstantInt::Create(lhs_int->value().srem(rhs_int->value()));
+
+  return Create(Opcode::SRem, lhs, rhs);
+}
 
 DECL_BINOP_CREATE(And, ASSERT_INT);
 DECL_BINOP_CREATE(Or, ASSERT_INT);
