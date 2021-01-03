@@ -120,6 +120,13 @@ public:
     ConstantInt = detail::opcode(1, 0, 5),
     ConstantFloat = detail::opcode(1, 0, 6),
     ConstantArray = detail::opcode(1, 0, 7),
+    /**
+     * An unnamed symbolic constant that can have any value whenever it is
+     * used. Has the same semantics as LLVM's undef.
+     *
+     * It is valid for solvers to have any value for the undef constant.
+     */
+    Undef = detail::opcode(1, 0, 15),
 
     /* Binary Opcodes */
     Add = detail::opcode(2, 2, 0),
@@ -268,6 +275,7 @@ protected:
             const ref<Operation>& op1, const ref<Operation>& op2);
 
   Operation();
+  Operation(Opcode op, Type t);
 
 public:
   /**
@@ -661,6 +669,23 @@ public:
   static ref<Operation> Create(const ref<Operation>& data,
                                const ref<Operation>& offset,
                                const ref<Operation>& value);
+
+  static bool classof(const Operation* op);
+};
+
+/**
+ * Undefined value.
+ *
+ * Each time this is used it can correspond to any possible bitpattern of
+ * it's corresponding type. The resolved value does not have to be consistent
+ * between uses of the same value.
+ */
+class Undef : public Operation {
+private:
+  Undef(const Type& t);
+
+public:
+  static ref<Operation> Create(const Type& t);
 
   static bool classof(const Operation* op);
 };

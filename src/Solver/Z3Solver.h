@@ -45,9 +45,15 @@ public:
 private:
   z3::context* ctx;
   Z3Model::ConstMap& constMap;
+  std::unordered_map<const Operation*, z3::expr> cache;
 
 public:
   Z3OpVisitor(z3::context* ctx, Z3Model::ConstMap& constMap);
+
+  z3::expr visit(const Operation& op);
+  z3::expr visit(const Operation* op) {
+    return visit(*op);
+  }
 
   z3::expr visitOperation(const Operation& op);
 
@@ -55,6 +61,7 @@ public:
   z3::expr visitConstant     (const Constant& op);
   z3::expr visitConstantInt  (const ConstantInt& op);
   z3::expr visitConstantFloat(const ConstantFloat& op);
+  z3::expr visitUndef        (const Undef& op);
 
   // Binary operations
   z3::expr visitAdd (const BinaryOp& op);

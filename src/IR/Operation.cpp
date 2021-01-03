@@ -6,6 +6,9 @@ namespace caffeine {
 
 Operation::Operation() : opcode_(Invalid), type_(Type::void_ty()) {}
 
+Operation::Operation(Opcode op, Type t)
+    : opcode_(static_cast<uint16_t>(op)), type_(t) {}
+
 // clang-format off
 Operation::Operation(Opcode op, Type t, ref<Operation>* operands)
     : opcode_(static_cast<uint16_t>(op)),
@@ -66,6 +69,8 @@ Operation::Operation(const Operation& op) noexcept
     case ConstantNamed:
       new (&name_) std::string(op.name_);
       break;
+    case Undef:
+      break;
     default:
       CAFFEINE_UNREACHABLE();
     }
@@ -88,6 +93,8 @@ Operation::Operation(Operation&& op) noexcept
       break;
     case ConstantNamed:
       new (&name_) std::string(op.name_);
+      break;
+    case Undef:
       break;
     default:
       CAFFEINE_UNREACHABLE();
@@ -139,6 +146,8 @@ Operation& Operation::operator=(const Operation& op) noexcept {
     case ConstantNamed:
       new (&name_) std::string(op.name_);
       break;
+    case Undef:
+      break;
     default:
       CAFFEINE_UNREACHABLE();
     }
@@ -166,6 +175,8 @@ Operation& Operation::operator=(Operation&& op) noexcept {
       break;
     case ConstantNamed:
       new (&name_) std::string(std::move(op.name_));
+      break;
+    case Undef:
       break;
     default:
       CAFFEINE_UNREACHABLE();
@@ -228,6 +239,8 @@ void Operation::invalidate() noexcept {
     case ConstantNamed:
       name_.~basic_string();
       break;
+    case Undef:
+      break;
     default:
       CAFFEINE_UNREACHABLE();
     }
@@ -252,6 +265,7 @@ const char* Operation::opcode_name(Opcode op) {
   case ConstantInt:   return "ConstantInt";
   case ConstantFloat: return "ConstantFloat";
   case ConstantArray: return "ConstantArray";
+  case Undef:         return "Undef";
 
   case Add:   return "Add";
   case Sub:   return "Sub";
@@ -674,6 +688,15 @@ ref<Operation> StoreOp::Create(const ref<Operation>& data,
   CAFFEINE_ASSERT(value->type() == Type::int_ty(8), "Value must be of type i8");
 
   return ref<Operation>(new StoreOp(data, offset, value));
+}
+
+/***************************************************
+ * Undef                                           *
+ ***************************************************/
+Undef::Undef(const Type& t) : Operation(Opcode::Undef, t) {}
+
+ref<Operation> Undef::Create(const Type& t) {
+  return ref<Operation>(new Undef(t));
 }
 
 /***************************************************
