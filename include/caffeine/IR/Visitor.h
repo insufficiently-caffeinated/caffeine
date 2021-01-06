@@ -91,6 +91,7 @@ public:
   RetTy visitConstant     (transform_t<Constant>     & O) { return CAFFEINE_OP_DELEGATE(Operation); }
   RetTy visitConstantInt  (transform_t<ConstantInt>  & O) { return CAFFEINE_OP_DELEGATE(Operation); }
   RetTy visitConstantFloat(transform_t<ConstantFloat>& O) { return CAFFEINE_OP_DELEGATE(Operation); }
+  RetTy visitConstantArray(transform_t<ConstantArray>& O) { return CAFFEINE_OP_DELEGATE(Operation); }
   RetTy visitUndef        (transform_t<Undef>        & O) { return CAFFEINE_OP_DELEGATE(Operation); }
 
   RetTy visitBinaryOp(transform_t<BinaryOp>& O) { return CAFFEINE_OP_DELEGATE(Operation); }
