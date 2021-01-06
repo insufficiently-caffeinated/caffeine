@@ -416,6 +416,20 @@ public:
 };
 
 /**
+ *
+ */
+class ConstantArray : public Operation {
+private:
+
+public:
+  llvm::ArrayRef<char> data() const;
+
+  static ref<Operation> Create(const char* data, size_t size);
+
+  static bool classof(const Operation* op);
+};
+
+/**
  * Floating point constant.
  *
  * This represents a constant floating point value in an expression.
