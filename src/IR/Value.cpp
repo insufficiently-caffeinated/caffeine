@@ -13,108 +13,23 @@ using llvm::APInt;
 
 namespace caffeine {
 
-Value::Value() : kind_(Empty) {}
+Value::Value(const APInt& apint) : inner_(apint) {}
+Value::Value(APInt&& apint) : inner_(std::move(apint)) {}
 
-Value::Value(const APInt& apint) : kind_(Int), apint_(apint) {}
-Value::Value(APInt&& apint) : kind_(Int), apint_(std::move(apint)) {}
-
-Value::Value(const APFloat& apfloat) : kind_(Float), apfloat_(apfloat) {}
-Value::Value(APFloat&& apfloat) : kind_(Float), apfloat_(apfloat) {}
+Value::Value(const APFloat& apfloat) : inner_(apfloat) {}
+Value::Value(APFloat&& apfloat) : inner_(std::move(apfloat)) {}
 
 Value::Value(const ConstantInt& constant) : Value(constant.value()) {}
 Value::Value(const ConstantFloat& constant) : Value(constant.value()) {}
-
-Value::Value(const Value& v) : kind_(Empty) {
-  switch (v.kind()) {
-  case Empty:
-    break;
-  case Int:
-    new (&apint_) APInt(v.apint_);
-    break;
-  case Float:
-    new (&apfloat_) APFloat(v.apfloat_);
-    break;
-  }
-
-  kind_ = v.kind();
-}
-Value::Value(Value&& v) : kind_(Empty) {
-  switch (v.kind()) {
-  case Empty:
-    break;
-  case Int:
-    new (&apint_) APInt(std::move(v.apint_));
-    break;
-  case Float:
-    new (&apfloat_) APFloat(std::move(v.apfloat_));
-    break;
-  }
-
-  kind_ = v.kind();
-}
-Value& Value::operator=(const Value& v) {
-  invalidate();
-
-  switch (v.kind()) {
-  case Empty:
-    break;
-  case Int:
-    new (&apint_) APInt(v.apint_);
-    break;
-  case Float:
-    new (&apfloat_) APFloat(v.apfloat_);
-    break;
-  }
-
-  kind_ = v.kind();
-  return *this;
-}
-Value& Value::operator=(Value&& v) {
-  invalidate();
-
-  switch (v.kind()) {
-  case Empty:
-    break;
-  case Int:
-    new (&apint_) APInt(std::move(v.apint_));
-    break;
-  case Float:
-    new (&apfloat_) APFloat(std::move(v.apfloat_));
-    break;
-  }
-
-  kind_ = v.kind();
-  return *this;
-}
-
-Value::~Value() {
-  invalidate();
-}
-
-void Value::invalidate() {
-  auto kind = kind_;
-  kind_ = Empty;
-
-  switch (kind) {
-  case Empty:
-    break;
-  case Int:
-    apint_.~APInt();
-    break;
-  case Float:
-    apfloat_.~APFloat();
-    break;
-  }
-}
 
 Type Value::type() const {
   switch (kind()) {
   case Empty:
     return Type::void_ty();
   case Int:
-    return Type::type_of(apint_);
+    return Type::type_of(apint());
   case Float:
-    return Type::type_of(apfloat_);
+    return Type::type_of(apfloat());
   }
 
   CAFFEINE_UNREACHABLE();
@@ -122,20 +37,20 @@ Type Value::type() const {
 
 APInt& Value::apint() {
   CAFFEINE_ASSERT(is_int());
-  return apint_;
+  return std::get<llvm::APInt>(inner_);
 }
 const APInt& Value::apint() const {
   CAFFEINE_ASSERT(is_int());
-  return apint_;
+  return std::get<llvm::APInt>(inner_);
 }
 
 APFloat& Value::apfloat() {
   CAFFEINE_ASSERT(is_float());
-  return apfloat_;
+  return std::get<llvm::APFloat>(inner_);
 }
 const APFloat& Value::apfloat() const {
   CAFFEINE_ASSERT(is_float());
-  return apfloat_;
+  return std::get<llvm::APFloat>(inner_);
 }
 
 bool Value::operator==(const Value& v) const {
@@ -158,126 +73,70 @@ bool Value::operator!=(const Value& v) const {
 }
 
 Value Value::bvadd(const Value& lhs, const Value& rhs) {
-  CAFFEINE_ASSERT(lhs.is_int());
-  CAFFEINE_ASSERT(rhs.is_int());
-
-  return lhs.apint_ + rhs.apint_;
+  return lhs.apint() + rhs.apint();
 }
 Value Value::bvsub(const Value& lhs, const Value& rhs) {
-  CAFFEINE_ASSERT(lhs.is_int());
-  CAFFEINE_ASSERT(rhs.is_int());
-
-  return lhs.apint_ - rhs.apint_;
+  return lhs.apint() - rhs.apint();
 }
 Value Value::bvmul(const Value& lhs, const Value& rhs) {
-  CAFFEINE_ASSERT(lhs.is_int());
-  CAFFEINE_ASSERT(rhs.is_int());
-
-  return lhs.apint_ * rhs.apint_;
+  return lhs.apint() * rhs.apint();
 }
 Value Value::bvudiv(const Value& lhs, const Value& rhs) {
-  CAFFEINE_ASSERT(lhs.is_int());
-  CAFFEINE_ASSERT(rhs.is_int());
-
-  return lhs.apint_.udiv(rhs.apint_);
+  return lhs.apint().udiv(rhs.apint());
 }
 Value Value::bvsdiv(const Value& lhs, const Value& rhs) {
-  CAFFEINE_ASSERT(lhs.is_int());
-  CAFFEINE_ASSERT(rhs.is_int());
-
-  return lhs.apint_.sdiv(rhs.apint_);
+  return lhs.apint().sdiv(rhs.apint());
 }
 Value Value::bvurem(const Value& lhs, const Value& rhs) {
-  CAFFEINE_ASSERT(lhs.is_int());
-  CAFFEINE_ASSERT(rhs.is_int());
-
-  return lhs.apint_.urem(rhs.apint_);
+  return lhs.apint().urem(rhs.apint());
 }
 Value Value::bvsrem(const Value& lhs, const Value& rhs) {
-  CAFFEINE_ASSERT(lhs.is_int());
-  CAFFEINE_ASSERT(rhs.is_int());
-
-  return lhs.apint_.srem(rhs.apint_);
+  return lhs.apint().srem(rhs.apint());
 }
 
 Value Value::bvand(const Value& lhs, const Value& rhs) {
-  CAFFEINE_ASSERT(lhs.is_int());
-  CAFFEINE_ASSERT(rhs.is_int());
-
-  return lhs.apint_ & rhs.apint_;
+  return lhs.apint() & rhs.apint();
 }
 Value Value::bvor(const Value& lhs, const Value& rhs) {
-  CAFFEINE_ASSERT(lhs.is_int());
-  CAFFEINE_ASSERT(rhs.is_int());
-
-  return lhs.apint_ | rhs.apint_;
+  return lhs.apint() | rhs.apint();
 }
 Value Value::bvxor(const Value& lhs, const Value& rhs) {
-  CAFFEINE_ASSERT(lhs.is_int());
-  CAFFEINE_ASSERT(rhs.is_int());
-
-  return lhs.apint_ ^ rhs.apint_;
+  return lhs.apint() ^ rhs.apint();
 }
 Value Value::bvshl(const Value& lhs, const Value& rhs) {
-  CAFFEINE_ASSERT(lhs.is_int());
-  CAFFEINE_ASSERT(rhs.is_int());
-
-  return lhs.apint_ << rhs.apint_;
+  return lhs.apint() << rhs.apint();
 }
 Value Value::bvlshr(const Value& lhs, const Value& rhs) {
-  CAFFEINE_ASSERT(lhs.is_int());
-  CAFFEINE_ASSERT(rhs.is_int());
-
-  return lhs.apint_.lshr(rhs.apint_);
+  return lhs.apint().lshr(rhs.apint());
 }
 Value Value::bvashr(const Value& lhs, const Value& rhs) {
-  CAFFEINE_ASSERT(lhs.is_int());
-  CAFFEINE_ASSERT(rhs.is_int());
-
-  return lhs.apint_.ashr(rhs.apint_);
+  return lhs.apint().ashr(rhs.apint());
 }
 Value Value::bvnot(const Value& v) {
-  CAFFEINE_ASSERT(v.is_int());
-
-  return ~v.apint_;
+  return ~v.apint();
 }
 
 Value Value::fadd(const Value& lhs, const Value& rhs) {
-  CAFFEINE_ASSERT(lhs.is_float());
-  CAFFEINE_ASSERT(rhs.is_float());
-
-  return lhs.apfloat_ + rhs.apfloat_;
+  return lhs.apfloat() + rhs.apfloat();
 }
 Value Value::fsub(const Value& lhs, const Value& rhs) {
-  CAFFEINE_ASSERT(lhs.is_float());
-  CAFFEINE_ASSERT(rhs.is_float());
-
-  return lhs.apfloat_ - rhs.apfloat_;
+  return lhs.apfloat() - rhs.apfloat();
 }
 Value Value::fmul(const Value& lhs, const Value& rhs) {
-  CAFFEINE_ASSERT(lhs.is_float());
-  CAFFEINE_ASSERT(rhs.is_float());
-
-  return lhs.apfloat_ * rhs.apfloat_;
+  return lhs.apfloat() * rhs.apfloat();
 }
 Value Value::fdiv(const Value& lhs, const Value& rhs) {
-  CAFFEINE_ASSERT(lhs.is_float());
-  CAFFEINE_ASSERT(rhs.is_float());
-
-  return lhs.apfloat_ / rhs.apfloat_;
+  return lhs.apfloat() / rhs.apfloat();
 }
 Value Value::frem(const Value& lhs, const Value& rhs) {
-  CAFFEINE_ASSERT(lhs.is_float());
-  CAFFEINE_ASSERT(rhs.is_float());
-
-  auto value = lhs.apfloat_;
-  value.remainder(rhs.apfloat_);
+  auto value = lhs.apfloat();
+  value.remainder(rhs.apfloat());
   return value;
 }
 Value Value::fneg(const Value& v) {
   CAFFEINE_ASSERT(v.is_float());
 
-  return APFloat::getZero(v.apfloat_.getSemantics()) - v.apfloat_;
+  return APFloat::getZero(v.apfloat().getSemantics()) - v.apfloat();
 }
 
 Value Value::select(const Value& cond, const Value& t, const Value& f) {
