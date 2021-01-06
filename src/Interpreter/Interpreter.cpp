@@ -14,19 +14,17 @@
 
 namespace caffeine {
 
-namespace detail {
-  template <typename T, typename U>
-  std::pair<T, U> tuple_to_pair(const boost::tuple<T, U>& tuple) {
-    return std::make_pair(tuple.template get<0>(), tuple.template get<1>());
-  }
-} // namespace detail
-
+/**
+ * Combine the two provided iterators into a single one which
+ * yields std::pair.
+ */
 template <typename R1, typename R2>
 auto zip(R1& range1, R2& range2) {
   return boost::combine(range1, range2) |
-         boost::adaptors::transformed(
-             detail::tuple_to_pair<std::decay_t<decltype(*range1.begin())>,
-                                   std::decay_t<decltype(*range2.begin())>>);
+         boost::adaptors::transformed([](const auto& tuple) {
+           return std::make_pair(tuple.template get<0>(),
+                                 tuple.template get<1>());
+         });
 }
 
 Interpreter::Interpreter(Executor* queue, Context* ctx, FailureLogger* logger)
