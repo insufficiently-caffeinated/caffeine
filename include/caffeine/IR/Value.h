@@ -5,6 +5,7 @@
 #include <llvm/ADT/APInt.h>
 
 #include <iosfwd>
+#include <variant>
 
 namespace caffeine {
 
@@ -31,17 +32,16 @@ class ConstantFloat;
  */
 class Value {
 public:
+  // Note: These correspond to the variant indices.
   enum Kind { Empty, Int, Float };
 
 private:
-  Kind kind_;
-  union {
-    llvm::APInt apint_;
-    llvm::APFloat apfloat_;
-  };
+  using Inner = std::variant<std::monostate, llvm::APInt, llvm::APFloat>;
+
+  Inner inner_;
 
 public:
-  Value();
+  Value() = default;
 
   Value(const llvm::APInt& apint);
   Value(llvm::APInt&& apint);
@@ -53,11 +53,11 @@ public:
   Value(const ConstantFloat& constant);
 
   // clang-format off
-  bool is_int()   const { return kind_ == Int;   }
-  bool is_float() const { return kind_ == Float; }
-  bool is_empty() const { return kind_ == Empty; }
+  bool is_int()   const { return inner_.index() == Int;   }
+  bool is_float() const { return inner_.index() == Float; }
+  bool is_empty() const { return inner_.index() == Empty; }
 
-  Kind kind() const { return kind_; }
+  Kind kind() const { return static_cast<Kind>(inner_.index()); }
   Type type() const;
   // clang-format on
 
@@ -103,16 +103,12 @@ public:
   static Value zext(const Value& v, uint32_t bitwidth);
   static Value bitcast(const Value& v, const Type& tgt);
 
-  // These need to be defined since Value has an internal union
-  Value(const Value&);
-  Value(Value&&);
-  Value& operator=(const Value&);
-  Value& operator=(Value&&);
+  Value(const Value&) = default;
+  Value(Value&&) = default;
+  Value& operator=(const Value&) = default;
+  Value& operator=(Value&&) = default;
 
-  ~Value();
-
-private:
-  void invalidate();
+  ~Value() = default;
 
   friend std::ostream& operator<<(std::ostream& os, const Value& v);
 };
