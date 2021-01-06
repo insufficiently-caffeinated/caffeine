@@ -428,8 +428,8 @@ ExecutionResult Interpreter::visitPHINode(llvm::PHINode& node) {
   // PHI nodes in the entry block is invalid.
   CAFFEINE_ASSERT(frame.prev_block != nullptr);
 
-  frame.insert(&node,
-               frame.lookup(node.getIncomingValueForBlock(frame.prev_block)));
+  auto value = frame.lookup(node.getIncomingValueForBlock(frame.prev_block));
+  frame.insert(&node, value);
 
   return ExecutionResult::Continue;
 }
