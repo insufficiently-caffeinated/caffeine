@@ -4,8 +4,8 @@
 #include <llvm/IR/Constants.h>
 #include <llvm/Support/raw_ostream.h>
 
-#include <type_traits>
 #include <iostream>
+#include <type_traits>
 
 namespace caffeine {
 

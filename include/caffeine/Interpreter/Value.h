@@ -6,9 +6,9 @@
 #include <llvm/ADT/ArrayRef.h>
 #include <llvm/IR/Constant.h>
 
+#include <iosfwd>
 #include <variant>
 #include <vector>
-#include <iosfwd>
 
 namespace caffeine {
 
@@ -75,7 +75,6 @@ template <typename F, typename... Vs>
 ContextValue transform(F&& func, const Vs&... values);
 
 std::ostream& operator<<(std::ostream& os, const ContextValue& value);
-
 
 } // namespace caffeine
 
