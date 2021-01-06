@@ -107,7 +107,7 @@ private:
 
     entry_inner(const entry_inner& e) noexcept(
         std::is_nothrow_copy_constructible_v<T>)
-        : gen(e.gen), has_value(false) {
+        : has_value(false), gen(e.gen) {
       if (e.has_value) {
         new (value()) T(*e.value());
         has_value = true;
