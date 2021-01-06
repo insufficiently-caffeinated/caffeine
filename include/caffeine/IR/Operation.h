@@ -229,7 +229,9 @@ public:
   };
 
 protected:
-  using opvec = boost::container::static_vector<ref<Operation>, 3>;
+  using OpVec = boost::container::static_vector<ref<Operation>, 3>;
+  using Inner = std::variant<std::monostate, OpVec, llvm::APInt, llvm::APFloat,
+                             uint64_t, std::string>;
 
   uint16_t opcode_;
   uint16_t dummy_ = 0; // Unused, used for padding
@@ -238,10 +240,7 @@ protected:
   // Needs to be mutable so that const refs (ref<const Operation>) work.
   mutable uint32_t refcount = 0;
   Type type_;
-
-  std::variant<std::monostate, opvec, llvm::APInt, llvm::APFloat, uint64_t,
-               std::string>
-      inner_;
+  Inner inner_;
 
   // So ref can get at the refcount field.
   //
@@ -255,6 +254,9 @@ protected:
   friend llvm::hash_code hash_value(const Operation& op);
 
 protected:
+  Operation(Opcode op, Type t, const Inner& inner);
+  Operation(Opcode op, Type t, Inner&& inner);
+
   // Specialization that provides some sanity checking when
   // the caller is using a fixed-size array.
   template <size_t N>
@@ -430,6 +432,21 @@ public:
 
   static ref<Operation> Create(const llvm::APFloat& fconst);
   static ref<Operation> Create(llvm::APFloat&& fconst);
+
+  static bool classof(const Operation* op);
+};
+
+/**
+ * Constant byte array.
+ */
+class ConstantArray : public Operation {
+private:
+  ConstantArray(Type t, const char* data, size_t size);
+
+public:
+  llvm::ArrayRef<char> data() const;
+
+  static ref<Operation> Create(Type index_ty, const char* data, size_t size);
 
   static bool classof(const Operation* op);
 };

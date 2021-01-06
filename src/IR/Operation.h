@@ -2,6 +2,8 @@
 
 #include "caffeine/IR/Operation.h"
 
+#include <llvm/Support/MathExtras.h>
+
 /**
  * This header has a bunch of utility methods for constant folding.
  */
@@ -39,6 +41,11 @@ inline bool constant_int_compare(ICmpOpcode cmp, const llvm::APInt& lhs,
     return lhs.ult(rhs);
   }
   CAFFEINE_UNREACHABLE("unknown ICmpOpcode");
+}
+
+inline uint64_t ilog2(uint64_t x) {
+  bool ispow2 = (x & (x - 1)) == 0;
+  return sizeof(x) * CHAR_BIT - llvm::countLeadingZeros(x) - (ispow2 ? 1 : 0);
 }
 
 } // namespace caffeine

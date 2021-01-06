@@ -27,6 +27,7 @@ namespace caffeine {
 // All derived operation types should be the same size
 static_assert(sizeof(ConstantInt) == sizeof(Operation));
 static_assert(sizeof(ConstantFloat) == sizeof(Operation));
+static_assert(sizeof(ConstantArray) == sizeof(Operation));
 static_assert(sizeof(Constant) == sizeof(Operation));
 static_assert(sizeof(BinaryOp) == sizeof(Operation));
 static_assert(sizeof(UnaryOp) == sizeof(Operation));
@@ -169,7 +170,7 @@ inline ref<const Operation> Operation::as_ref() const {
 }
 
 inline llvm::iterator_range<Operation::operand_iterator> Operation::operands() {
-  if (auto* vec = std::get_if<opvec>(&inner_))
+  if (auto* vec = std::get_if<OpVec>(&inner_))
     return llvm::iterator_range<Operation::operand_iterator>{
         operand_iterator(vec->data()),
         operand_iterator(vec->data() + num_operands())};
@@ -179,7 +180,7 @@ inline llvm::iterator_range<Operation::operand_iterator> Operation::operands() {
 }
 inline llvm::iterator_range<Operation::const_operand_iterator>
 Operation::operands() const {
-  if (const auto* vec = std::get_if<opvec>(&inner_))
+  if (const auto* vec = std::get_if<OpVec>(&inner_))
     return llvm::iterator_range<Operation::const_operand_iterator>{
         const_operand_iterator(vec->data()),
         const_operand_iterator(vec->data() + num_operands())};
@@ -214,10 +215,10 @@ inline const Operation& Operation::operator[](size_t idx) const {
 }
 
 inline ref<Operation>& Operation::operand_at(size_t idx) {
-  return std::get<opvec>(inner_)[idx];
+  return std::get<OpVec>(inner_)[idx];
 }
 inline const ref<Operation>& Operation::operand_at(size_t idx) const {
-  return std::get<opvec>(inner_)[idx];
+  return std::get<OpVec>(inner_)[idx];
 }
 
 /***************************************************
@@ -257,6 +258,14 @@ inline llvm::APFloat& ConstantFloat::value() {
 }
 inline const llvm::APFloat& ConstantFloat::value() const {
   return std::get<llvm::APFloat>(inner_);
+}
+
+/***************************************************
+ * ConstantArray                                   *
+ ***************************************************/
+inline llvm::ArrayRef<char> ConstantArray::data() const {
+  const std::string& str = std::get<std::string>(inner_);
+  return llvm::ArrayRef<char>(str.data(), str.size());
 }
 
 /***************************************************
@@ -408,6 +417,7 @@ inline const ref<Operation>& StoreOp::value() const {
 
 CAFFEINE_OP_DECL_CLASSOF(ConstantInt, ConstantInt);
 CAFFEINE_OP_DECL_CLASSOF(ConstantFloat, ConstantFloat);
+CAFFEINE_OP_DECL_CLASSOF(ConstantArray, ConstantArray);
 CAFFEINE_OP_DECL_CLASSOF(SelectOp, Select);
 CAFFEINE_OP_DECL_CLASSOF(AllocOp, Alloc);
 CAFFEINE_OP_DECL_CLASSOF(LoadOp, Load);
