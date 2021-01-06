@@ -11,12 +11,17 @@ namespace caffeine {
 
 Operation::Operation() : opcode_(Invalid), type_(Type::void_ty()) {}
 
+Operation::Operation(Opcode op, Type t, const Inner& inner)
+    : opcode_(static_cast<uint16_t>(op)), type_(t), inner_(inner) {}
+Operation::Operation(Opcode op, Type t, Inner&& inner)
+    : opcode_(static_cast<uint16_t>(op)), type_(t), inner_(std::move(inner)) {}
+
 Operation::Operation(Opcode op, Type t)
     : opcode_(static_cast<uint16_t>(op)), type_(t) {}
 
 Operation::Operation(Opcode op, Type t, ref<Operation>* operands)
     : opcode_(static_cast<uint16_t>(op)), type_(t),
-      inner_(opvec(operands, operands + (opcode_ & 0x3))) {
+      inner_(OpVec(operands, operands + (opcode_ & 0x3))) {
   CAFFEINE_ASSERT((opcode_ >> 6) != 1,
                   "Tried to create a constant with operands");
   // Don't use this constructor to create an invalid opcode.
@@ -56,14 +61,14 @@ Operation::Operation(Opcode op, Type t, uint64_t number)
 }
 
 Operation::Operation(Opcode op, Type t, const ref<Operation>& op0)
-    : opcode_(static_cast<uint16_t>(op)), type_(t), inner_(opvec{op0}) {
+    : opcode_(static_cast<uint16_t>(op)), type_(t), inner_(OpVec{op0}) {
   CAFFEINE_ASSERT((opcode_ >> 6) != 1,
                   "Tried to create a constant with operands");
   CAFFEINE_ASSERT(num_operands() == 1);
 }
 Operation::Operation(Opcode op, Type t, const ref<Operation>& op0,
                      const ref<Operation>& op1)
-    : opcode_(static_cast<uint16_t>(op)), type_(t), inner_(opvec{op0, op1}) {
+    : opcode_(static_cast<uint16_t>(op)), type_(t), inner_(OpVec{op0, op1}) {
   CAFFEINE_ASSERT((opcode_ >> 6) != 1,
                   "Tried to create a constant with operands");
   CAFFEINE_ASSERT(num_operands() == 2);
@@ -71,7 +76,7 @@ Operation::Operation(Opcode op, Type t, const ref<Operation>& op0,
 Operation::Operation(Opcode op, Type t, const ref<Operation>& op0,
                      const ref<Operation>& op1, const ref<Operation>& op2)
     : opcode_(static_cast<uint16_t>(op)), type_(t),
-      inner_(opvec{op0, op1, op2}) {
+      inner_(OpVec{op0, op1, op2}) {
   CAFFEINE_ASSERT((opcode_ >> 6) != 1,
                   "Tried to create a constant with operands");
   CAFFEINE_ASSERT(num_operands() == 3);
@@ -346,6 +351,25 @@ ref<Operation> ConstantFloat::Create(const llvm::APFloat& fconst) {
 }
 ref<Operation> ConstantFloat::Create(llvm::APFloat&& fconst) {
   return ref<Operation>(new ConstantFloat(fconst));
+}
+
+/***************************************************
+ * ConstantArray                                   *
+ ***************************************************/
+ConstantArray::ConstantArray(Type t, const char* data, size_t size)
+    : Operation(Opcode::ConstantArray, t,
+                Inner(std::string(data, data + size))) {}
+
+ref<Operation> ConstantArray::Create(Type index_ty, const char* data,
+                                     size_t size) {
+  CAFFEINE_ASSERT(index_ty.is_int(),
+                  "Arrays cannot be indexed by non-integer types");
+  CAFFEINE_ASSERT(
+      index_ty.bitwidth() >= ilog2(size),
+      "Index bitwidth is not large enough to address entire constant array");
+
+  return ref<Operation>(
+      new ConstantArray(Type::array_ty(index_ty.bitwidth()), data, size));
 }
 
 /***************************************************
@@ -856,7 +880,8 @@ ref<Operation> FCmpOp::CreateFCmp(FCmpOpcode cmp, const ref<Operation>& lhs,
  * AllocOp                                         *
  ***************************************************/
 AllocOp::AllocOp(const ref<Operation>& size, const ref<Operation>& defaultval)
-    : Operation(Opcode::Alloc, Type::array_ty(), size, defaultval) {}
+    : Operation(Opcode::Alloc, Type::array_ty(size->type().bitwidth()), size,
+                defaultval) {}
 
 ref<Operation> AllocOp::Create(const ref<Operation>& size,
                                const ref<Operation>& defaultval) {
@@ -891,7 +916,7 @@ ref<Operation> LoadOp::Create(const ref<Operation>& data,
  ***************************************************/
 StoreOp::StoreOp(const ref<Operation>& data, const ref<Operation>& offset,
                  const ref<Operation>& value)
-    : Operation(Opcode::Store, Type::array_ty(), data, offset, value) {}
+    : Operation(Opcode::Store, data->type(), data, offset, value) {}
 
 ref<Operation> StoreOp::Create(const ref<Operation>& data,
                                const ref<Operation>& offset,
@@ -930,7 +955,7 @@ llvm::hash_code hash_value(const Operation& op) {
       [&](const auto& v) {
         using type = std::decay_t<decltype(v)>;
 
-        if constexpr (std::is_same_v<type, Operation::opvec>) {
+        if constexpr (std::is_same_v<type, Operation::OpVec>) {
           return llvm::hash_combine(
               hash, llvm::hash_combine_range(v.begin(), v.end()));
         } else if constexpr (std::is_same_v<type, std::monostate>) {

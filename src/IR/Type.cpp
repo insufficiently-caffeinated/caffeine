@@ -49,8 +49,8 @@ Type Type::pointer_ty() {
   return Type(Pointer, 0);
 }
 
-Type Type::array_ty() {
-  return Type(Array, 0);
+Type Type::array_ty(uint32_t bitwidth) {
+  return Type(Array, bitwidth);
 }
 
 llvm::FunctionType* Type::signature() const {
