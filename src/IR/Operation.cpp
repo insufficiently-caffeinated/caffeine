@@ -2,10 +2,10 @@
 #include "Operation.h"
 
 #include <boost/container_hash/hash.hpp>
+#include <fmt/format.h>
+#include <fmt/ostream.h>
 #include <llvm/ADT/Hashing.h>
 #include <llvm/Support/raw_ostream.h>
-
-#include <iostream>
 
 namespace caffeine {
 
@@ -360,8 +360,12 @@ ref<Operation> BinaryOp::Create(Opcode op, const ref<Operation>& lhs,
   CAFFEINE_ASSERT((op & 0x3) == 2, "Opcode doesn't have 2 operands");
   CAFFEINE_ASSERT(lhs, "lhs was null");
   CAFFEINE_ASSERT(rhs, "rhs was null");
-  CAFFEINE_ASSERT(lhs->type() == rhs->type(),
-                  "BinaryOp created from operands with different types");
+  CAFFEINE_ASSERT(
+      lhs->type() == rhs->type(),
+      fmt::format(
+          FMT_STRING(
+              "BinaryOp created from operands with different types: {} != {}"),
+          lhs->type(), rhs->type()));
 
   return ref<Operation>(new BinaryOp(op, lhs->type(), lhs, rhs));
 }
