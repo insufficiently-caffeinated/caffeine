@@ -21,13 +21,13 @@ void StackFrame::jump_to(llvm::BasicBlock* block) {
 }
 
 void StackFrame::insert(llvm::Value* value, const ref<Operation>& expr) {
-  insert(value, VarType{expr});
+  insert(value, ContextValue{expr});
 }
-void StackFrame::insert(llvm::Value* value, const VarType& exprs) {
+void StackFrame::insert(llvm::Value* value, const ContextValue& exprs) {
   variables.insert_or_assign(value, exprs);
 }
 
-StackFrame::VarType StackFrame::lookup(llvm::Value* value) const {
+ContextValue StackFrame::lookup(llvm::Value* value) const {
   if (auto* constant = llvm::dyn_cast_or_null<llvm::Constant>(value))
     return ContextValue(constant);
 

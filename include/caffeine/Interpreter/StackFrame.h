@@ -14,9 +14,6 @@ namespace caffeine {
 class Context;
 
 class StackFrame {
-public:
-  using VarType = ContextValue;
-
 private:
   llvm::Function* function;
   std::unordered_map<llvm::Value*, ContextValue> variables;
@@ -44,8 +41,7 @@ public:
    * is already in the current stack frame then it overwrites it.
    */
   void insert(llvm::Value* value, const ref<Operation>& expr);
-
-  void insert(llvm::Value* value, const VarType& exprs);
+  void insert(llvm::Value* value, const ContextValue& exprs);
 
   /**
    * Lookup a value within the current stack frame.
@@ -61,7 +57,7 @@ public:
    * This method should be preferred over directly interacting with
    * `variables` as it correctly handles constants.
    */
-  VarType lookup(llvm::Value* value) const;
+  ContextValue lookup(llvm::Value* value) const;
 };
 
 } // namespace caffeine

@@ -14,8 +14,6 @@
 
 namespace caffeine {
 
-using VarType = StackFrame::VarType;
-
 namespace detail {
   template <typename T, typename U>
   std::pair<T, U> tuple_to_pair(const boost::tuple<T, U>& tuple) {
