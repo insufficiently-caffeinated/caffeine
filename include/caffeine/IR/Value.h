@@ -1,9 +1,12 @@
 #ifndef CAFFEINE_IR_VALUE_H
 #define CAFFEINE_IR_VALUE_H
 
+#include "caffeine/ADT/SharedArray.h"
+
 #include <llvm/ADT/APFloat.h>
 #include <llvm/ADT/APInt.h>
 
+#include <cstdint>
 #include <iosfwd>
 #include <variant>
 
@@ -23,6 +26,7 @@ class ConstantFloat;
  * A value can either be
  * - A fixed-width (with arbitrary width) integer (via llvm::APInt)
  * - A floating-point type (via llvm::APFloat)
+ * - A byte array (via SharedArray)
  * - An empty value
  *
  * Each of these representations have a set of operations that are valid on them
@@ -33,10 +37,19 @@ class ConstantFloat;
 class Value {
 public:
   // Note: These correspond to the variant indices.
-  enum Kind { Empty, Int, Float };
+  enum Kind { Empty, Int, Float, Array };
 
 private:
-  using Inner = std::variant<std::monostate, llvm::APInt, llvm::APFloat>;
+  struct ArrayData {
+    SharedArray data;
+    uint32_t index_bitwidth;
+
+    ArrayData(const SharedArray& data, uint32_t idx_width);
+    ArrayData(SharedArray&& data, uint32_t idx_width);
+  };
+
+  using Inner =
+      std::variant<std::monostate, llvm::APInt, llvm::APFloat, ArrayData>;
 
   Inner inner_;
 
@@ -49,6 +62,9 @@ public:
   Value(const llvm::APFloat& apfloat);
   Value(llvm::APFloat&& apfloat);
 
+  Value(const SharedArray& array, Type index_ty);
+  Value(SharedArray&& array, Type index_ty);
+
   Value(const ConstantInt& constant);
   Value(const ConstantFloat& constant);
 
@@ -56,6 +72,7 @@ public:
   bool is_int()   const { return inner_.index() == Int;   }
   bool is_float() const { return inner_.index() == Float; }
   bool is_empty() const { return inner_.index() == Empty; }
+  bool is_array() const { return inner_.index() == Array; }
 
   Kind kind() const { return static_cast<Kind>(inner_.index()); }
   Type type() const;
@@ -71,6 +88,9 @@ public:
 
   llvm::APFloat& apfloat();
   const llvm::APFloat& apfloat() const;
+
+  SharedArray& array();
+  const SharedArray& array() const;
 
   // Value operations
   static Value bvadd(const Value& lhs, const Value& rhs);
