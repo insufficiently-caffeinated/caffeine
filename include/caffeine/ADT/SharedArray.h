@@ -159,6 +159,9 @@ public:
   char* data();
 };
 
+bool operator==(const SharedArray& lhs, const SharedArray& rhs);
+bool operator!=(const SharedArray& lhs, const SharedArray& rhs);
+
 } // namespace caffeine
 
 #endif

@@ -108,6 +108,10 @@ void SharedArray::flatten() {
 
   data_ = std::move(newdata);
 }
+char* SharedArray::data() {
+  flatten();
+  return std::get<std::vector<char>>(data_).data();
+}
 
 char SharedArray::operator[](size_t idx) const {
   return load(idx);
@@ -115,6 +119,21 @@ char SharedArray::operator[](size_t idx) const {
 SharedArray::IndexAccessor SharedArray::operator[](size_t idx) {
   CAFFEINE_ASSERT(idx < size(), "index out of bounds");
   return IndexAccessor(this, idx);
+}
+
+bool operator==(const SharedArray& lhs, const SharedArray& rhs) {
+  if (lhs.size() != rhs.size())
+    return false;
+
+  for (size_t i = 0; i < lhs.size(); ++i) {
+    if (lhs[i] != rhs[i])
+      return false;
+  }
+
+  return true;
+}
+bool operator!=(const SharedArray& lhs, const SharedArray& rhs) {
+  return !(lhs == rhs);
 }
 
 } // namespace caffeine
