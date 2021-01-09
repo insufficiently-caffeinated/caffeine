@@ -221,6 +221,30 @@ Value Value::bitcast(const Value& v, const Type& tgt) {
   }
 }
 
+Value Value::load(const Value& data, const Value& index) {
+  CAFFEINE_ASSERT(data.is_array());
+  CAFFEINE_ASSERT(index.is_int());
+  CAFFEINE_ASSERT(data.type().bitwidth() == index.type().bitwidth());
+  CAFFEINE_ASSERT(index.apint().ult(data.array().size()),
+                  "attempted to load from out of bounds index");
+
+  return Value(
+      llvm::APInt(8, (uint8_t)data.array()[index.apint().getLimitedValue()]));
+}
+Value Value::store(const Value& data, const Value& index, const Value& byte) {
+  CAFFEINE_ASSERT(data.is_array());
+  CAFFEINE_ASSERT(index.is_int());
+  CAFFEINE_ASSERT(data.type().bitwidth() == index.type().bitwidth());
+  CAFFEINE_ASSERT(byte.type() == Type::int_ty(8));
+  CAFFEINE_ASSERT(index.apint().ult(data.array().size()),
+                  "attempted to load from out of bounds index");
+
+  auto array = data.array();
+  array.store(index.apint().getLimitedValue(),
+              (char)byte.apint().getLimitedValue());
+  return Value(std::move(array), index.type());
+}
+
 std::ostream& operator<<(std::ostream& os, const Value& v) {
   if (v.is_int())
     return os << v.apint().toString(10, false);

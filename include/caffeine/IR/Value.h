@@ -123,6 +123,9 @@ public:
   static Value zext(const Value& v, uint32_t bitwidth);
   static Value bitcast(const Value& v, const Type& tgt);
 
+  static Value load(const Value& data, const Value& index);
+  static Value store(const Value& data, const Value& index, const Value& byte);
+
   Value(const Value&) = default;
   Value(Value&&) = default;
   Value& operator=(const Value&) = default;
