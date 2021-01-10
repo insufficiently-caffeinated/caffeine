@@ -96,6 +96,7 @@ public:
   // Unary operations
   z3::expr visitNot (const UnaryOp& op);
   z3::expr visitFNeg(const UnaryOp& op);
+  z3::expr visitFIsNaN(const UnaryOp& op);
   // clang-format on
 };
 

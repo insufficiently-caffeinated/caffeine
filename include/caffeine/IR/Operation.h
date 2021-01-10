@@ -191,6 +191,7 @@ public:
     /* Unary Opcodes */
     Not = detail::opcode(10, 1, 0),
     FNeg = detail::opcode(10, 1, 1),
+    FIsNaN = detail::opcode(10, 1, 2),
 
     // Conversion opcodes
     Trunc = detail::opcode(11, 1, 0),
@@ -516,6 +517,7 @@ public:
   static ref<Operation> Create(Opcode op, const ref<Operation>& operand);
   static ref<Operation> CreateNot(const ref<Operation>& operand);
   static ref<Operation> CreateFNeg(const ref<Operation>& operand);
+  static ref<Operation> CreateFIsNaN(const ref<Operation>& operand);
 
   static ref<Operation> CreateTrunc(Type tgt, const ref<Operation>& operand);
   static ref<Operation> CreateZExt(Type tgt, const ref<Operation>& operand);

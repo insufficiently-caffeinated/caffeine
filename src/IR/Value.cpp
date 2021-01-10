@@ -167,6 +167,11 @@ Value Value::fneg(const Value& v) {
 
   return APFloat::getZero(v.apfloat().getSemantics()) - v.apfloat();
 }
+Value Value::FIsNaN(const Value& v) {
+  CAFFEINE_ASSERT(v.is_float());
+
+  return Value(llvm::APInt(1, v.apfloat().isNaN()));
+}
 
 Value Value::select(const Value& cond, const Value& t, const Value& f) {
   CAFFEINE_ASSERT(cond.type() == Type::bool_ty());
