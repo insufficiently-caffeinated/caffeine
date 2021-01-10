@@ -6,6 +6,8 @@
 #include <variant>
 #include <vector>
 
+#include <llvm/ADT/Hashing.h>
+
 namespace caffeine {
 
 /**
@@ -86,6 +88,8 @@ private:
   size_t modcnt_ = 0;
   size_t size_ = 0;
 
+  friend llvm::hash_code hash_value(const SharedArray& array);
+
 public:
   // Proxy class for non-const element access
   class IndexAccessor {
@@ -157,10 +161,61 @@ public:
    * an array it is preferable to use the indexing accessors.
    */
   char* data();
+
+public:
+  class const_iterator {
+  private:
+    const SharedArray* array;
+    size_t idx;
+
+  public:
+    const_iterator(const SharedArray* array, size_t idx)
+        : array(array), idx(idx) {}
+
+    char operator*() const {
+      return array->load(idx);
+    }
+
+    const_iterator operator++() {
+      ++idx;
+      return *this;
+    }
+    const_iterator operator++(int) {
+      auto x = *this;
+      ++*this;
+      return x;
+    }
+
+    const_iterator operator--() {
+      --idx;
+      return *this;
+    }
+    const_iterator operator--(int) {
+      auto x = *this;
+      --*this;
+      return x;
+    }
+
+    bool operator==(const const_iterator& it) const {
+      return idx == it.idx;
+    }
+    bool operator!=(const const_iterator& it) const {
+      return !(*this == it);
+    }
+  };
+
+  const_iterator begin() const {
+    return const_iterator(this, 0);
+  }
+  const_iterator end() const {
+    return const_iterator(this, size());
+  }
 };
 
 bool operator==(const SharedArray& lhs, const SharedArray& rhs);
 bool operator!=(const SharedArray& lhs, const SharedArray& rhs);
+
+llvm::hash_code hash_value(const SharedArray& array);
 
 } // namespace caffeine
 
