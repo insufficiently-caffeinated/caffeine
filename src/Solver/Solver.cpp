@@ -58,6 +58,9 @@ public:
   Value visitFNeg(const UnaryOp& op) {
     return Value::fneg(visit(op[0]));
   }
+  Value visitFIsNaN(const UnaryOp& op) {
+    return Value::FIsNaN(visit(op[0]));
+  }
 
   Value visitSelectOp(const SelectOp& select) {
     return Value::select(visit(select[0]), visit(select[1]), visit(select[2]));

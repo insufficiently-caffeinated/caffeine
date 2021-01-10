@@ -509,6 +509,10 @@ z3::expr Z3OpVisitor::visitFNeg(const UnaryOp& op) {
   return -visit(*op.operand());
 }
 
+z3::expr Z3OpVisitor::visitFIsNaN(const UnaryOp& op) {
+  return is_nan(visit(*op.operand()));
+}
+
 z3::expr Z3OpVisitor::visitSelectOp(const SelectOp& op) {
   auto selectCond = visit(*op.condition());
   auto trueVal = visit(*op.true_value());
