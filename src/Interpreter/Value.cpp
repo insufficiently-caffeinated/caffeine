@@ -102,6 +102,7 @@ ContextValue::ContextValue(llvm::Constant* constant)
     : ContextValue(evaluate_constant(constant)) {}
 
 ContextValue::ContextValue(const ref<Operation>& op) : inner_(op) {}
+ContextValue::ContextValue(const Pointer& ptr) : inner_(ptr) {}
 
 ContextValue::ContextValue(const std::vector<ContextValue>& data)
     : inner_(data) {}
@@ -118,6 +119,8 @@ ContextValue::Kind ContextValue::kind() const {
   case 1:
   case 2:
     return Vector;
+  case 3:
+    return Ptr;
   default:
     CAFFEINE_UNREACHABLE();
   }
@@ -157,6 +160,11 @@ llvm::ArrayRef<ContextValue> ContextValue::vector() const {
       inner_);
 
   return llvm::ArrayRef<ContextValue>(data, size);
+}
+const Pointer& ContextValue::pointer() const {
+  const auto* val = std::get_if<Pointer>(&inner_);
+  CAFFEINE_ASSERT(val, "ContextValue was not a pointer");
+  return *val;
 }
 
 std::ostream& operator<<(std::ostream& os, const ContextValue& value) {
