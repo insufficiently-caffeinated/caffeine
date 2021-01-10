@@ -175,7 +175,7 @@ public:
    * This will add the corresponding assertions to the context as well.
    */
   AllocId allocate(const ref<Operation>& size, const ref<Operation>& alignment,
-                   Context& ctx);
+                   const ref<Operation>& data, Context& ctx);
 
   /**
    * Deallocate an existing allocation.

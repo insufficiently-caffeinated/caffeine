@@ -47,7 +47,10 @@ TEST_F(MemHeapTests, resolve_pointer_single) {
   unsigned index_size = layout.getIndexSizeInBits(0);
   auto align = MakeInt(16);
   auto size = Constant::Create(Type::int_ty(index_size), "size");
-  auto alloc = heap.allocate(size, align, context);
+  auto alloc = heap.allocate(
+      size, align,
+      AllocOp::Create(size, ConstantInt::Create(llvm::APInt(8, 0xDD))),
+      context);
   auto offset = Constant::Create(Type::int_ty(index_size), "offset");
 
   context.add(ICmpOp::CreateICmp(ICmpOpcode::ULT, offset, size));

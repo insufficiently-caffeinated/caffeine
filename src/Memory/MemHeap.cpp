@@ -171,13 +171,15 @@ const Allocation& MemHeap::operator[](const AllocId& alloc) const {
 }
 
 AllocId MemHeap::allocate(const ref<Operation>& size,
-                          const ref<Operation>& alignment, Context& ctx) {
+                          const ref<Operation>& alignment,
+                          const ref<Operation>& data, Context& ctx) {
   CAFFEINE_ASSERT(size->type() == alignment->type());
   CAFFEINE_ASSERT(size->type().is_int());
+  CAFFEINE_ASSERT(data->type().is_array());
+  CAFFEINE_ASSERT(data->type().bitwidth() == size->type().bitwidth());
 
   auto allocation = Allocation(
-      Constant::Create(size->type(), ctx.next_constant()), size,
-      AllocOp::Create(size, ConstantInt::Create(llvm::APInt(8, 0xDC))));
+      Constant::Create(size->type(), ctx.next_constant()), size, data);
 
   // Ensure that the allocation is properly aligned
   ctx.add(ICmpOp::CreateICmp(
