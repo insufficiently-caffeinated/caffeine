@@ -13,6 +13,7 @@
 #include <llvm/Support/Casting.h>
 
 #include "caffeine/ADT/Ref.h"
+#include "caffeine/ADT/SharedArray.h"
 #include "caffeine/IR/Type.h"
 #include "caffeine/Support/Assert.h"
 
@@ -232,7 +233,7 @@ public:
 protected:
   using OpVec = boost::container::static_vector<ref<Operation>, 3>;
   using Inner = std::variant<std::monostate, OpVec, llvm::APInt, llvm::APFloat,
-                             uint64_t, std::string>;
+                             uint64_t, std::string, SharedArray>;
 
   uint16_t opcode_;
   uint16_t dummy_ = 0; // Unused, used for padding
@@ -429,12 +430,14 @@ public:
  */
 class ConstantArray : public Operation {
 private:
-  ConstantArray(Type t, const char* data, size_t size);
+  ConstantArray(Type t, const SharedArray& array);
+  ConstantArray(Type t, SharedArray&& array);
 
 public:
-  llvm::ArrayRef<char> data() const;
+  const SharedArray& data() const;
 
-  static ref<Operation> Create(Type index_ty, const char* data, size_t size);
+  static ref<Operation> Create(Type index_ty, const SharedArray& array);
+  static ref<Operation> Create(Type index_ty, SharedArray&& array);
 
   static bool classof(const Operation* op);
 };

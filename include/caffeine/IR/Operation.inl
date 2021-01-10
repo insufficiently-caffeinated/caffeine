@@ -253,9 +253,8 @@ inline const llvm::APFloat& ConstantFloat::value() const {
 /***************************************************
  * ConstantArray                                   *
  ***************************************************/
-inline llvm::ArrayRef<char> ConstantArray::data() const {
-  const std::string& str = std::get<std::string>(inner_);
-  return llvm::ArrayRef<char>(str.data(), str.size());
+inline const SharedArray& ConstantArray::data() const {
+  return std::get<SharedArray>(inner_);
 }
 
 /***************************************************
