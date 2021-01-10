@@ -3,7 +3,7 @@
 namespace caffeine {
 
 void Executor::add_context(Context&& ctx) {
-  contexts.push_back(ctx);
+  contexts.push_back(std::move(ctx));
 }
 
 Context Executor::next_context() {

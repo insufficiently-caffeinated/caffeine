@@ -1,6 +1,7 @@
 #include "caffeine/Interpreter/Context.h"
 #include "caffeine/IR/Operation.h"
 #include "caffeine/IR/Type.h"
+#include "caffeine/Interpreter/StackFrame.h"
 
 #include <fmt/format.h>
 #include <llvm/Support/raw_ostream.h>
