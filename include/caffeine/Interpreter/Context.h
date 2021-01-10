@@ -1,13 +1,13 @@
 #ifndef CAFFEINE_INTERP_CONTEXT_H
 #define CAFFEINE_INTERP_CONTEXT_H
 
-#include <memory>
-
-#include <llvm/IR/Function.h>
-
 #include "caffeine/IR/Assertion.h"
 #include "caffeine/Interpreter/StackFrame.h"
 #include "caffeine/Solver/Solver.h"
+
+#include <llvm/IR/Function.h>
+
+#include <memory>
 
 namespace caffeine {
 
