@@ -32,7 +32,7 @@ inline bool Type::is_array() const {
 }
 
 inline uint32_t Type::bitwidth() const {
-  CAFFEINE_ASSERT(is_int());
+  CAFFEINE_ASSERT(is_int() || is_array());
   return desc_;
 }
 inline uint32_t Type::mantissa_bits() const {
