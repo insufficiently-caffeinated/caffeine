@@ -257,20 +257,7 @@ protected:
   Operation(Opcode op, Type t, const Inner& inner);
   Operation(Opcode op, Type t, Inner&& inner);
 
-  // Specialization that provides some sanity checking when
-  // the caller is using a fixed-size array.
-  template <size_t N>
-  Operation(Opcode op, Type t, ref<Operation> (&operands)[N]);
   Operation(Opcode op, Type t, ref<Operation>* operands);
-
-  Operation(Opcode op, const llvm::APInt& iconst);
-  Operation(Opcode op, llvm::APInt&& iconst);
-
-  Operation(Opcode op, const llvm::APFloat& fconst);
-  Operation(Opcode op, llvm::APFloat&& fconst);
-
-  Operation(Opcode op, Type t, const std::string& name);
-  Operation(Opcode op, Type t, uint64_t number);
 
   Operation(Opcode op, Type t, const ref<Operation>& op0);
   Operation(Opcode op, Type t, const ref<Operation>& op0,
@@ -336,12 +323,12 @@ public:
     return llvm::isa<T>(*this);
   }
 
-  // Need to manually define these since we have an internal union.
-  Operation(const Operation& op) = default;
-  Operation(Operation&& op) noexcept = default;
+  // Need to define this since refcount shouldn't be copied/moved.
+  Operation(const Operation& op);
+  Operation(Operation&& op) noexcept;
 
-  Operation& operator=(const Operation& op) = default;
-  Operation& operator=(Operation&& op) noexcept = default;
+  Operation& operator=(const Operation& op);
+  Operation& operator=(Operation&& op) noexcept;
 
   ~Operation() = default;
 
