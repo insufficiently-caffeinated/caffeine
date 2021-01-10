@@ -115,6 +115,7 @@ public:
   static Value fdiv(const Value& lhs, const Value& rhs);
   static Value frem(const Value& lhs, const Value& rhs);
   static Value fneg(const Value& v);
+  static Value FIsNaN(const Value& v);
 
   static Value select(const Value& cond, const Value& t, const Value& f);
 

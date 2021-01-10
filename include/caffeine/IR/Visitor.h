@@ -128,6 +128,7 @@ public:
   // Unary operations
   RetTy visitNot (transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }
   RetTy visitFNeg(transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }
+  RetTy visitFIsNaN(transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }
 
   RetTy visitTrunc  (transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }
   RetTy visitZExt   (transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }

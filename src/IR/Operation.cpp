@@ -126,12 +126,13 @@ const char* Operation::opcode_name(Opcode op) {
   case AShr:  return "AShr";
   case Not:   return "Not";
 
-  case FAdd:  return "FAdd";
-  case FSub:  return "FSub";
-  case FMul:  return "FMul";
-  case FDiv:  return "FDiv";
-  case FRem:  return "FRem";
-  case FNeg:  return "FNeg";
+  case FAdd:    return "FAdd";
+  case FSub:    return "FSub";
+  case FMul:    return "FMul";
+  case FDiv:    return "FDiv";
+  case FRem:    return "FRem";
+  case FNeg:    return "FNeg";
+  case FIsNaN:  return "FIsNaN";
 
   case Trunc:   return "Trunc";
   case SExt:    return "SExt";
@@ -690,6 +691,7 @@ ref<Operation> UnaryOp::CreateNot(const ref<Operation>& operand) {
 }
 
 DECL_UNOP_CREATE(FNeg, ASSERT_FP);
+DECL_UNOP_CREATE(FIsNaN, ASSERT_FP);
 
 ref<Operation> UnaryOp::CreateTrunc(Type tgt, const ref<Operation>& operand) {
   CAFFEINE_ASSERT(tgt.is_int());
