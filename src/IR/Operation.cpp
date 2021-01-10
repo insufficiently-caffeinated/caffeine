@@ -17,7 +17,7 @@ Operation::Operation(Opcode op, Type t, Inner&& inner)
     : opcode_(static_cast<uint16_t>(op)), type_(t), inner_(std::move(inner)) {}
 
 Operation::Operation(Opcode op, Type t)
-    : opcode_(static_cast<uint16_t>(op)), type_(t) {}
+    : opcode_(static_cast<uint16_t>(op)), type_(t), inner_(std::monostate()) {}
 
 Operation::Operation(Opcode op, Type t, ref<Operation>* operands)
     : opcode_(static_cast<uint16_t>(op)), type_(t),
@@ -29,35 +29,6 @@ Operation::Operation(Opcode op, Type t, ref<Operation>* operands)
   CAFFEINE_ASSERT(op != Invalid);
   // No opcodes have > 3 operands
   CAFFEINE_ASSERT(num_operands() <= 3, "Invalid opcode");
-}
-
-Operation::Operation(Opcode op, const llvm::APInt& iconst)
-    : opcode_(op), type_(Type::type_of(iconst)), inner_(iconst) {
-  // Currently only ConstantInt is valid here
-  CAFFEINE_ASSERT(op == ConstantInt);
-}
-Operation::Operation(Opcode op, llvm::APInt&& iconst)
-    : opcode_(op), type_(Type::type_of(iconst)), inner_(iconst) {
-  // Currently only ConstantInt is valid here
-  CAFFEINE_ASSERT(op == ConstantInt);
-}
-
-Operation::Operation(Opcode op, const llvm::APFloat& fconst)
-    : opcode_(op), type_(Type::type_of(fconst)), inner_(fconst) {
-  CAFFEINE_ASSERT(op == ConstantFloat);
-}
-Operation::Operation(Opcode op, llvm::APFloat&& fconst)
-    : opcode_(op), type_(Type::type_of(fconst)), inner_(fconst) {
-  CAFFEINE_ASSERT(op == ConstantFloat);
-}
-
-Operation::Operation(Opcode op, Type t, const std::string& name)
-    : opcode_(op), type_(t), inner_(name) {
-  CAFFEINE_ASSERT(op == ConstantNamed);
-}
-Operation::Operation(Opcode op, Type t, uint64_t number)
-    : opcode_(op), type_(t), inner_(number) {
-  CAFFEINE_ASSERT(op == ConstantNumbered);
 }
 
 Operation::Operation(Opcode op, Type t, const ref<Operation>& op0)
@@ -80,6 +51,28 @@ Operation::Operation(Opcode op, Type t, const ref<Operation>& op0,
   CAFFEINE_ASSERT((opcode_ >> 6) != 1,
                   "Tried to create a constant with operands");
   CAFFEINE_ASSERT(num_operands() == 3);
+}
+
+Operation::Operation(const Operation& op)
+    : opcode_(op.opcode_), refcount(0), type_(op.type_), inner_(op.inner_) {}
+Operation::Operation(Operation&& op) noexcept
+    : opcode_(op.opcode_), refcount(0), type_(op.type_),
+      inner_(std::move(op.inner_)) {}
+
+Operation& Operation::operator=(const Operation& op) {
+  // Do inner first for exception safety.
+  inner_ = op.inner_;
+  type_ = op.type_;
+  opcode_ = op.opcode_;
+
+  return *this;
+}
+Operation& Operation::operator=(Operation&& op) noexcept {
+  inner_ = std::move(op.inner_);
+  type_ = op.type_;
+  opcode_ = op.opcode_;
+
+  return *this;
 }
 
 bool Operation::operator==(const Operation& op) const {
@@ -324,9 +317,10 @@ ref<Operation> Constant::Create(Type t, uint64_t number) {
  * ConstantInt                                     *
  ***************************************************/
 ConstantInt::ConstantInt(const llvm::APInt& iconst)
-    : Operation(Operation::ConstantInt, iconst) {}
+    : Operation(Opcode::ConstantInt, Type::type_of(iconst), iconst) {}
 ConstantInt::ConstantInt(llvm::APInt&& iconst)
-    : Operation(Operation::ConstantInt, iconst) {}
+    : Operation(Opcode::ConstantInt, Type::type_of(iconst), std::move(iconst)) {
+}
 
 ref<Operation> ConstantInt::Create(const llvm::APInt& iconst) {
   return ref<Operation>(new ConstantInt(iconst));
@@ -342,9 +336,10 @@ ref<Operation> ConstantInt::Create(bool value) {
  * ConstantFloat                                   *
  ***************************************************/
 ConstantFloat::ConstantFloat(const llvm::APFloat& fconst)
-    : Operation(Operation::ConstantFloat, fconst) {}
+    : Operation(Operation::ConstantFloat, Type::type_of(fconst), fconst) {}
 ConstantFloat::ConstantFloat(llvm::APFloat&& fconst)
-    : Operation(Operation::ConstantFloat, fconst) {}
+    : Operation(Operation::ConstantFloat, Type::type_of(fconst),
+                std::move(fconst)) {}
 
 ref<Operation> ConstantFloat::Create(const llvm::APFloat& fconst) {
   return ref<Operation>(new ConstantFloat(fconst));
