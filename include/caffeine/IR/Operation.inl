@@ -132,16 +132,6 @@ namespace detail {
   }
 } // namespace detail
 
-template <size_t N>
-Operation::Operation(Opcode op, Type t, ref<Operation> (&operands)[N])
-    : Operation(([&] {
-                  // Need the lambda so that this is evaluated before the
-                  // delegated constructor runs.
-                  CAFFEINE_ASSERT(((uint16_t)op & 0x3) <= N);
-                  return op;
-                })(),
-                t, (ref<Opcode>*)operands) {}
-
 inline bool Operation::valid() const {
   return opcode_ != 0;
 }
