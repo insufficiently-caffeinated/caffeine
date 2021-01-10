@@ -1,10 +1,14 @@
 #ifndef CAFFEINE_IR_VALUE_H
 #define CAFFEINE_IR_VALUE_H
 
+#include "caffeine/ADT/SharedArray.h"
+
 #include <llvm/ADT/APFloat.h>
 #include <llvm/ADT/APInt.h>
 
+#include <cstdint>
 #include <iosfwd>
+#include <variant>
 
 namespace caffeine {
 
@@ -22,6 +26,7 @@ class ConstantFloat;
  * A value can either be
  * - A fixed-width (with arbitrary width) integer (via llvm::APInt)
  * - A floating-point type (via llvm::APFloat)
+ * - A byte array (via SharedArray)
  * - An empty value
  *
  * Each of these representations have a set of operations that are valid on them
@@ -31,17 +36,25 @@ class ConstantFloat;
  */
 class Value {
 public:
-  enum Kind { Empty, Int, Float };
+  // Note: These correspond to the variant indices.
+  enum Kind { Empty, Int, Float, Array };
 
 private:
-  Kind kind_;
-  union {
-    llvm::APInt apint_;
-    llvm::APFloat apfloat_;
+  struct ArrayData {
+    SharedArray data;
+    uint32_t index_bitwidth;
+
+    ArrayData(const SharedArray& data, uint32_t idx_width);
+    ArrayData(SharedArray&& data, uint32_t idx_width);
   };
 
+  using Inner =
+      std::variant<std::monostate, llvm::APInt, llvm::APFloat, ArrayData>;
+
+  Inner inner_;
+
 public:
-  Value();
+  Value() = default;
 
   Value(const llvm::APInt& apint);
   Value(llvm::APInt&& apint);
@@ -49,15 +62,19 @@ public:
   Value(const llvm::APFloat& apfloat);
   Value(llvm::APFloat&& apfloat);
 
+  Value(const SharedArray& array, Type index_ty);
+  Value(SharedArray&& array, Type index_ty);
+
   Value(const ConstantInt& constant);
   Value(const ConstantFloat& constant);
 
   // clang-format off
-  bool is_int()   const { return kind_ == Int;   }
-  bool is_float() const { return kind_ == Float; }
-  bool is_empty() const { return kind_ == Empty; }
+  bool is_int()   const { return inner_.index() == Int;   }
+  bool is_float() const { return inner_.index() == Float; }
+  bool is_empty() const { return inner_.index() == Empty; }
+  bool is_array() const { return inner_.index() == Array; }
 
-  Kind kind() const { return kind_; }
+  Kind kind() const { return static_cast<Kind>(inner_.index()); }
   Type type() const;
   // clang-format on
 
@@ -71,6 +88,9 @@ public:
 
   llvm::APFloat& apfloat();
   const llvm::APFloat& apfloat() const;
+
+  SharedArray& array();
+  const SharedArray& array() const;
 
   // Value operations
   static Value bvadd(const Value& lhs, const Value& rhs);
@@ -98,16 +118,20 @@ public:
 
   static Value select(const Value& cond, const Value& t, const Value& f);
 
-  // These need to be defined since Value has an internal union
-  Value(const Value&);
-  Value(Value&&);
-  Value& operator=(const Value&);
-  Value& operator=(Value&&);
+  static Value trunc(const Value& v, uint32_t bitwidth);
+  static Value sext(const Value& v, uint32_t bitwidth);
+  static Value zext(const Value& v, uint32_t bitwidth);
+  static Value bitcast(const Value& v, const Type& tgt);
 
-  ~Value();
+  static Value load(const Value& data, const Value& index);
+  static Value store(const Value& data, const Value& index, const Value& byte);
 
-private:
-  void invalidate();
+  Value(const Value&) = default;
+  Value(Value&&) = default;
+  Value& operator=(const Value&) = default;
+  Value& operator=(Value&&) = default;
+
+  ~Value() = default;
 
   friend std::ostream& operator<<(std::ostream& os, const Value& v);
 };

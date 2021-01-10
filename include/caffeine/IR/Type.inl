@@ -4,6 +4,8 @@
 #include "caffeine/IR/Type.h"
 #include "caffeine/Support/Assert.h"
 
+#include <climits>
+
 namespace caffeine {
 
 inline Type::Kind Type::kind() const {
@@ -52,6 +54,49 @@ inline bool Type::operator!=(const Type& b) const {
 inline llvm::hash_code hash_value(const Type& type) {
   return llvm::hash_combine(type.llvm_, type.kind_, type.desc_);
 }
+
+#define CAFFEINE_TYPE_TYPEOF_INT(ty)                                           \
+  template <>                                                                  \
+  inline Type Type::type_of<ty>() {                                            \
+    return Type::int_ty(sizeof(ty) * CHAR_BIT);                                \
+  }                                                                            \
+  static_assert(true)
+
+CAFFEINE_TYPE_TYPEOF_INT(unsigned char);
+CAFFEINE_TYPE_TYPEOF_INT(unsigned short);
+CAFFEINE_TYPE_TYPEOF_INT(unsigned int);
+CAFFEINE_TYPE_TYPEOF_INT(unsigned long);
+CAFFEINE_TYPE_TYPEOF_INT(unsigned long long);
+
+CAFFEINE_TYPE_TYPEOF_INT(signed char);
+CAFFEINE_TYPE_TYPEOF_INT(signed short);
+CAFFEINE_TYPE_TYPEOF_INT(signed int);
+CAFFEINE_TYPE_TYPEOF_INT(signed long);
+CAFFEINE_TYPE_TYPEOF_INT(signed long long);
+
+CAFFEINE_TYPE_TYPEOF_INT(char);
+
+template <>
+inline Type Type::type_of<double>() {
+  return Type::float_ty(11, 53);
+}
+
+template <>
+inline Type Type::type_of<float>() {
+  return Type::float_ty(8, 24);
+}
+
+template <>
+inline Type Type::type_of<void>() {
+  return Type::void_ty();
+}
+
+template <>
+inline Type Type::type_of<bool>() {
+  return Type::int_ty(1);
+}
+
+#undef CAFFEINE_TYPE_TYPEOF_INT
 
 } // namespace caffeine
 

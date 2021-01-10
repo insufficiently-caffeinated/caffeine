@@ -8,6 +8,8 @@
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Type.h>
 
+#include <iostream>
+
 using llvm::LLVMContext;
 
 namespace caffeine {
@@ -47,8 +49,8 @@ Type Type::pointer_ty() {
   return Type(Pointer, 0);
 }
 
-Type Type::array_ty() {
-  return Type(Array, 0);
+Type Type::array_ty(uint32_t bitwidth) {
+  return Type(Array, bitwidth);
 }
 
 llvm::FunctionType* Type::signature() const {
@@ -144,6 +146,28 @@ Type Type::from_llvm(llvm::Type* type) {
   }
 
   CAFFEINE_UNIMPLEMENTED();
+}
+
+std::ostream& operator<<(std::ostream& os, const Type& t) {
+  if (t.is_void())
+    return os << "void";
+
+  if (t.is_int())
+    return os << "i" << t.bitwidth();
+
+  if (t.is_float())
+    // TODO: Need a way to distinguish between same-size floats
+    //       for now this should work.
+    return os << "f" << (t.mantissa_bits() + t.exponent_bits());
+
+  if (t.is_pointer())
+    return os << "void*";
+
+  if (t.is_array())
+    return os << "array";
+
+  // TODO: Properly implement printing for any missing types
+  return os << "<unimplemented>";
 }
 
 } // namespace caffeine

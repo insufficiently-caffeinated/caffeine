@@ -47,7 +47,13 @@ public:
   ExecutionResult visitXor(llvm::BinaryOperator& op);
   ExecutionResult visitNot(llvm::BinaryOperator& op);
 
+  ExecutionResult visitFAdd(llvm::BinaryOperator& op);
+  ExecutionResult visitFSub(llvm::BinaryOperator& op);
+  ExecutionResult visitFMul(llvm::BinaryOperator& op);
+  ExecutionResult visitFDiv(llvm::BinaryOperator& op);
+
   ExecutionResult visitICmpInst(llvm::ICmpInst& icmp);
+  ExecutionResult visitFCmpInst(llvm::FCmpInst& fcmp);
 
   ExecutionResult visitTrunc(llvm::TruncInst& trunc);
 
@@ -59,6 +65,10 @@ public:
   ExecutionResult visitReturnInst(llvm::ReturnInst& inst);
   ExecutionResult visitCallInst(llvm::CallInst& inst);
   ExecutionResult visitSelectInst(llvm::SelectInst& inst);
+
+  ExecutionResult visitInsertElementInst(llvm::InsertElementInst& inst);
+  ExecutionResult visitExtractElementInst(llvm::ExtractElementInst& inst);
+  ExecutionResult visitShuffleVectorInst(llvm::ShuffleVectorInst& inst);
 
 private:
   ExecutionResult visitExternFunc(llvm::CallInst& inst);

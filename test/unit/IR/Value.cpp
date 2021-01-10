@@ -1,4 +1,5 @@
 #include "caffeine/IR/Value.h"
+#include "caffeine/IR/Type.h"
 
 #include <gtest/gtest.h>
 
@@ -22,3 +23,13 @@ DECL_TEST(bvand, &, 0xFF0, 0x0FF);
 DECL_TEST(bvor, |, 0xFF0, 0x0FF);
 DECL_TEST(bvxor, ^, 0xFF0, 0x0FF);
 DECL_TEST(bvshl, <<, 0xFF, 3);
+
+// This should really be a property-based test
+// Ideally we'd use caffeine itself to perform these tests
+TEST(ir_value, bitcast_roundtrip) {
+  Value a{llvm::APInt(64, ~UINT64_C(0))};
+  Value b =
+      Value::bitcast(Value::bitcast(a, Type::type_of<double>()), a.type());
+
+  ASSERT_EQ(a, b);
+}

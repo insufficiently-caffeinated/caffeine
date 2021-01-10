@@ -2,8 +2,11 @@
 #define CAFFEINE_IR_OPERATION_H
 
 #include <cstdint>
+#include <iosfwd>
 #include <string>
+#include <variant>
 
+#include <boost/container/static_vector.hpp>
 #include <llvm/ADT/APFloat.h>
 #include <llvm/ADT/APInt.h>
 #include <llvm/ADT/iterator_range.h>
@@ -120,6 +123,13 @@ public:
     ConstantInt = detail::opcode(1, 0, 5),
     ConstantFloat = detail::opcode(1, 0, 6),
     ConstantArray = detail::opcode(1, 0, 7),
+    /**
+     * An unnamed symbolic constant that can have any value whenever it is
+     * used. Has the same semantics as LLVM's undef.
+     *
+     * It is valid for solvers to have any value for the undef constant.
+     */
+    Undef = detail::opcode(1, 0, 15),
 
     /* Binary Opcodes */
     Add = detail::opcode(2, 2, 0),
@@ -219,6 +229,10 @@ public:
   };
 
 protected:
+  using OpVec = boost::container::static_vector<ref<Operation>, 3>;
+  using Inner = std::variant<std::monostate, OpVec, llvm::APInt, llvm::APFloat,
+                             uint64_t, std::string>;
+
   uint16_t opcode_;
   uint16_t dummy_ = 0; // Unused, used for padding
   // When multithreading is implemented this will need to become atomic.
@@ -226,13 +240,7 @@ protected:
   // Needs to be mutable so that const refs (ref<const Operation>) work.
   mutable uint32_t refcount = 0;
   Type type_;
-
-  union { // TODO: Pointers? Might need a ConstantPointer type
-    ref<Operation> operands_[3];
-    llvm::APInt iconst_;
-    llvm::APFloat fconst_;
-    std::string name_;
-  };
+  Inner inner_;
 
   // So ref can get at the refcount field.
   //
@@ -246,20 +254,10 @@ protected:
   friend llvm::hash_code hash_value(const Operation& op);
 
 protected:
-  // Specialization that provides some sanity checking when
-  // the caller is using a fixed-size array.
-  template <size_t N>
-  Operation(Opcode op, Type t, ref<Operation> (&operands)[N]);
+  Operation(Opcode op, Type t, const Inner& inner);
+  Operation(Opcode op, Type t, Inner&& inner);
+
   Operation(Opcode op, Type t, ref<Operation>* operands);
-
-  Operation(Opcode op, const llvm::APInt& iconst);
-  Operation(Opcode op, llvm::APInt&& iconst);
-
-  Operation(Opcode op, const llvm::APFloat& fconst);
-  Operation(Opcode op, llvm::APFloat&& fconst);
-
-  Operation(Opcode op, Type t, const std::string& name);
-  Operation(Opcode op, Type t, uint64_t number);
 
   Operation(Opcode op, Type t, const ref<Operation>& op0);
   Operation(Opcode op, Type t, const ref<Operation>& op0,
@@ -268,6 +266,7 @@ protected:
             const ref<Operation>& op1, const ref<Operation>& op2);
 
   Operation();
+  Operation(Opcode op, Type t);
 
 public:
   /**
@@ -319,14 +318,19 @@ public:
 
   bool is_constant() const;
 
-  // Need to manually define these since we have an internal union.
-  Operation(const Operation& op) noexcept;
+  template <typename T>
+  bool is() const {
+    return llvm::isa<T>(*this);
+  }
+
+  // Need to define this since refcount shouldn't be copied/moved.
+  Operation(const Operation& op);
   Operation(Operation&& op) noexcept;
 
-  Operation& operator=(const Operation& op) noexcept;
+  Operation& operator=(const Operation& op);
   Operation& operator=(Operation&& op) noexcept;
 
-  ~Operation();
+  ~Operation() = default;
 
 protected:
   /**
@@ -336,9 +340,14 @@ protected:
    */
   uint16_t aux_data() const;
 
-private:
-  void invalidate() noexcept;
+  /**
+   * Accessors to operand references.
+   */
+  ref<Operation>& operand_at(size_t idx);
+  const ref<Operation>& operand_at(size_t idx) const;
 };
+
+std::ostream& operator<<(std::ostream& os, const Operation& op);
 
 /**
  * Symbolic constant.
@@ -410,6 +419,21 @@ public:
 
   static ref<Operation> Create(const llvm::APFloat& fconst);
   static ref<Operation> Create(llvm::APFloat&& fconst);
+
+  static bool classof(const Operation* op);
+};
+
+/**
+ * Constant byte array.
+ */
+class ConstantArray : public Operation {
+private:
+  ConstantArray(Type t, const char* data, size_t size);
+
+public:
+  llvm::ArrayRef<char> data() const;
+
+  static ref<Operation> Create(Type index_ty, const char* data, size_t size);
 
   static bool classof(const Operation* op);
 };
@@ -661,6 +685,23 @@ public:
   static ref<Operation> Create(const ref<Operation>& data,
                                const ref<Operation>& offset,
                                const ref<Operation>& value);
+
+  static bool classof(const Operation* op);
+};
+
+/**
+ * Undefined value.
+ *
+ * Each time this is used it can correspond to any possible bitpattern of
+ * it's corresponding type. The resolved value does not have to be consistent
+ * between uses of the same value.
+ */
+class Undef : public Operation {
+private:
+  Undef(const Type& t);
+
+public:
+  static ref<Operation> Create(const Type& t);
 
   static bool classof(const Operation* op);
 };

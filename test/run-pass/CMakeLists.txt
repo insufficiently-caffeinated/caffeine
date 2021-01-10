@@ -1,9 +1,9 @@
 
-file(GLOB c_tests   CONFIGURE_DEPENDS *.c)
-file(GLOB cpp_tests CONFIGURE_DEPENDS *.cpp *.cc)
-file(GLOB ir_tests  CONFIGURE_DEPENDS *.ll)
+file(GLOB_RECURSE c_tests   CONFIGURE_DEPENDS *.c)
+file(GLOB_RECURSE cpp_tests CONFIGURE_DEPENDS *.cpp *.cc)
+file(GLOB_RECURSE ir_tests  CONFIGURE_DEPENDS *.ll)
 
-set(CLANG_FLAGS -S -emit-llvm -O3 -fcolor-diagnostics)
+set(CLANG_FLAGS -S -emit-llvm -O3 -fcolor-diagnostics "-I${CMAKE_SOURCE_DIR}/interface")
 
 include(testutils)
 
@@ -35,6 +35,9 @@ if (NOT "${CLANG}" STREQUAL "CLANG-NOTFOUND")
     file(RELATIVE_PATH test_file "${CMAKE_CURRENT_SOURCE_DIR}" "${test}")
     set(TEST_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${test_file}.ll")
     should_skip_test(should_skip "${test}")
+
+    get_filename_component(output_dir "${TEST_OUTPUT}" DIRECTORY)
+    file(MAKE_DIRECTORY "${output_dir}")
 
     add_custom_command(
       OUTPUT "${TEST_OUTPUT}"
@@ -69,6 +72,9 @@ if (NOT "${CLANGXX}" STREQUAL "CLANGXX-NOTFOUND")
     file(RELATIVE_PATH test_file "${CMAKE_CURRENT_SOURCE_DIR}" "${test}")
     set(TEST_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${test_file}.ll")
     should_skip_test(should_skip "${test}")
+
+    get_filename_component(output_dir "${TEST_OUTPUT}" DIRECTORY)
+    file(MAKE_DIRECTORY "${output_dir}")
 
     add_custom_command(
       OUTPUT "${TEST_OUTPUT}"

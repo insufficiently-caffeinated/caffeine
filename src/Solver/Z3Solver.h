@@ -26,7 +26,8 @@ private:
   ConstMap constants;
 
 public:
-  Z3Model(SolverResult result, z3::model model, const ConstMap& map);
+  Z3Model(SolverResult result, const z3::model& model, const ConstMap& map);
+  Z3Model(SolverResult result, const z3::model& model, ConstMap&& map);
 
   /**
    * Look up the value of a symbolic constant in this model. Returns an
@@ -44,9 +45,15 @@ public:
 private:
   z3::context* ctx;
   Z3Model::ConstMap& constMap;
+  std::unordered_map<const Operation*, z3::expr> cache;
 
 public:
   Z3OpVisitor(z3::context* ctx, Z3Model::ConstMap& constMap);
+
+  z3::expr visit(const Operation& op);
+  z3::expr visit(const Operation* op) {
+    return visit(*op);
+  }
 
   z3::expr visitOperation(const Operation& op);
 
@@ -54,6 +61,7 @@ public:
   z3::expr visitConstant     (const Constant& op);
   z3::expr visitConstantInt  (const ConstantInt& op);
   z3::expr visitConstantFloat(const ConstantFloat& op);
+  z3::expr visitUndef        (const Undef& op);
 
   // Binary operations
   z3::expr visitAdd (const BinaryOp& op);
@@ -90,5 +98,11 @@ public:
   z3::expr visitFNeg(const UnaryOp& op);
   // clang-format on
 };
+
+// Convert a Z3 expression to an APInt
+llvm::APInt z3_to_apint(const z3::expr& expr);
+
+// Convert a Z3 expression to an APFloat
+llvm::APFloat z3_to_apfloat(const z3::expr& expr);
 
 } // namespace caffeine

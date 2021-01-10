@@ -27,10 +27,17 @@ namespace caffeine {
 // All derived operation types should be the same size
 static_assert(sizeof(ConstantInt) == sizeof(Operation));
 static_assert(sizeof(ConstantFloat) == sizeof(Operation));
+static_assert(sizeof(ConstantArray) == sizeof(Operation));
 static_assert(sizeof(Constant) == sizeof(Operation));
 static_assert(sizeof(BinaryOp) == sizeof(Operation));
 static_assert(sizeof(UnaryOp) == sizeof(Operation));
 static_assert(sizeof(SelectOp) == sizeof(Operation));
+static_assert(sizeof(ICmpOp) == sizeof(Operation));
+static_assert(sizeof(FCmpOp) == sizeof(Operation));
+static_assert(sizeof(AllocOp) == sizeof(Operation));
+static_assert(sizeof(LoadOp) == sizeof(Operation));
+static_assert(sizeof(StoreOp) == sizeof(Operation));
+static_assert(sizeof(Undef) == sizeof(Operation));
 
 namespace detail {
   template <typename T>
@@ -125,16 +132,6 @@ namespace detail {
   }
 } // namespace detail
 
-template <size_t N>
-Operation::Operation(Opcode op, Type t, ref<Operation> (&operands)[N])
-    : Operation(([&] {
-                  // Need the lambda so that this is evaluated before the
-                  // delegated constructor runs.
-                  CAFFEINE_ASSERT(((uint16_t)op & 0x3) <= N);
-                  return op;
-                })(),
-                t, (ref<Opcode>*)operands) {}
-
 inline bool Operation::valid() const {
   return opcode_ != 0;
 }
@@ -163,15 +160,23 @@ inline ref<const Operation> Operation::as_ref() const {
 }
 
 inline llvm::iterator_range<Operation::operand_iterator> Operation::operands() {
+  if (auto* vec = std::get_if<OpVec>(&inner_))
+    return llvm::iterator_range<Operation::operand_iterator>{
+        operand_iterator(vec->data()),
+        operand_iterator(vec->data() + num_operands())};
+
   return llvm::iterator_range<Operation::operand_iterator>{
-      operand_iterator(operands_),
-      operand_iterator(operands_ + num_operands())};
+      operand_iterator(nullptr), operand_iterator(nullptr)};
 }
 inline llvm::iterator_range<Operation::const_operand_iterator>
 Operation::operands() const {
+  if (const auto* vec = std::get_if<OpVec>(&inner_))
+    return llvm::iterator_range<Operation::const_operand_iterator>{
+        const_operand_iterator(vec->data()),
+        const_operand_iterator(vec->data() + num_operands())};
+
   return llvm::iterator_range<Operation::const_operand_iterator>{
-      const_operand_iterator(operands_),
-      const_operand_iterator(operands_ + num_operands())};
+      const_operand_iterator(nullptr), const_operand_iterator(nullptr)};
 }
 
 inline uint16_t Operation::aux_data() const {
@@ -191,12 +196,19 @@ inline bool Operation::is_constant() const {
 inline Operation& Operation::operator[](size_t idx) {
   CAFFEINE_ASSERT(idx < num_operands(),
                   "Tried to access out-of-bounds operand");
-  return *operands_[idx];
+  return *operand_at(idx);
 }
 inline const Operation& Operation::operator[](size_t idx) const {
   CAFFEINE_ASSERT(idx < num_operands(),
                   "Tried to access out-of-bounds operand");
-  return *operands_[idx];
+  return *operand_at(idx);
+}
+
+inline ref<Operation>& Operation::operand_at(size_t idx) {
+  return std::get<OpVec>(inner_)[idx];
+}
+inline const ref<Operation>& Operation::operand_at(size_t idx) const {
+  return std::get<OpVec>(inner_)[idx];
 }
 
 /***************************************************
@@ -204,11 +216,11 @@ inline const Operation& Operation::operator[](size_t idx) const {
  ***************************************************/
 inline std::string_view Constant::name() const {
   CAFFEINE_ASSERT(is_named(), "tried to access name of unnamed constant");
-  return name_;
+  return std::get<std::string>(inner_);
 }
 inline uint64_t Constant::number() const {
   CAFFEINE_ASSERT(is_numbered(), "tried to access number of named constant");
-  return iconst_.getLimitedValue();
+  return std::get<uint64_t>(inner_);
 }
 
 inline bool Constant::is_numbered() const {
@@ -222,70 +234,78 @@ inline bool Constant::is_named() const {
  * ConstantInt                                     *
  ***************************************************/
 inline llvm::APInt& ConstantInt::value() {
-  return iconst_;
+  return std::get<llvm::APInt>(inner_);
 }
 inline const llvm::APInt& ConstantInt::value() const {
-  return iconst_;
+  return std::get<llvm::APInt>(inner_);
 }
 
 /***************************************************
  * ConstantFloat                                   *
  ***************************************************/
 inline llvm::APFloat& ConstantFloat::value() {
-  return fconst_;
+  return std::get<llvm::APFloat>(inner_);
 }
 inline const llvm::APFloat& ConstantFloat::value() const {
-  return fconst_;
+  return std::get<llvm::APFloat>(inner_);
+}
+
+/***************************************************
+ * ConstantArray                                   *
+ ***************************************************/
+inline llvm::ArrayRef<char> ConstantArray::data() const {
+  const std::string& str = std::get<std::string>(inner_);
+  return llvm::ArrayRef<char>(str.data(), str.size());
 }
 
 /***************************************************
  * BinaryOp                                        *
  ***************************************************/
 inline const ref<Operation>& BinaryOp::lhs() const {
-  return operands_[0];
+  return operand_at(0);
 }
 inline const ref<Operation>& BinaryOp::rhs() const {
-  return operands_[1];
+  return operand_at(1);
 }
 
 inline ref<Operation>& BinaryOp::lhs() {
-  return operands_[0];
+  return operand_at(0);
 }
 inline ref<Operation>& BinaryOp::rhs() {
-  return operands_[1];
+  return operand_at(1);
 }
 
 /***************************************************
  * UnaryOp                                         *
  ***************************************************/
 inline ref<Operation>& UnaryOp::operand() {
-  return operands_[0];
+  return operand_at(0);
 }
 inline const ref<Operation>& UnaryOp::operand() const {
-  return operands_[0];
+  return operand_at(0);
 }
 
 /***************************************************
  * SelectOp                                        *
  ***************************************************/
 inline ref<Operation>& SelectOp::condition() {
-  return operands_[0];
+  return operand_at(0);
 }
 inline ref<Operation>& SelectOp::true_value() {
-  return operands_[1];
+  return operand_at(1);
 }
 inline ref<Operation>& SelectOp::false_value() {
-  return operands_[2];
+  return operand_at(2);
 }
 
 inline const ref<Operation>& SelectOp::condition() const {
-  return operands_[0];
+  return operand_at(0);
 }
 inline const ref<Operation>& SelectOp::true_value() const {
-  return operands_[1];
+  return operand_at(1);
 }
 inline const ref<Operation>& SelectOp::false_value() const {
-  return operands_[2];
+  return operand_at(2);
 }
 
 /***************************************************
@@ -322,58 +342,58 @@ inline bool FCmpOp::is_unordered() const {
  * AllocOp                                         *
  ***************************************************/
 inline ref<Operation>& AllocOp::size() {
-  return operands_[0];
+  return operand_at(0);
 }
 inline const ref<Operation>& AllocOp::size() const {
-  return operands_[0];
+  return operand_at(0);
 }
 
 inline ref<Operation>& AllocOp::default_value() {
-  return operands_[1];
+  return operand_at(1);
 }
 inline const ref<Operation>& AllocOp::default_value() const {
-  return operands_[1];
+  return operand_at(1);
 }
 
 /***************************************************
  * LoadOp                                          *
  ***************************************************/
 inline ref<Operation>& LoadOp::data() {
-  return operands_[0];
+  return operand_at(0);
 }
 inline const ref<Operation>& LoadOp::data() const {
-  return operands_[0];
+  return operand_at(0);
 }
 
 inline ref<Operation>& LoadOp::offset() {
-  return operands_[1];
+  return operand_at(1);
 }
 inline const ref<Operation>& LoadOp::offset() const {
-  return operands_[1];
+  return operand_at(1);
 }
 
 /***************************************************
  * StoreOp                                         *
  ***************************************************/
 inline ref<Operation>& StoreOp::data() {
-  return operands_[0];
+  return operand_at(0);
 }
 inline const ref<Operation>& StoreOp::data() const {
-  return operands_[0];
+  return operand_at(0);
 }
 
 inline ref<Operation>& StoreOp::offset() {
-  return operands_[1];
+  return operand_at(1);
 }
 inline const ref<Operation>& StoreOp::offset() const {
-  return operands_[1];
+  return operand_at(1);
 }
 
 inline ref<Operation>& StoreOp::value() {
-  return operands_[2];
+  return operand_at(2);
 }
 inline const ref<Operation>& StoreOp::value() const {
-  return operands_[2];
+  return operand_at(2);
 }
 
 /***************************************************
@@ -387,10 +407,12 @@ inline const ref<Operation>& StoreOp::value() const {
 
 CAFFEINE_OP_DECL_CLASSOF(ConstantInt, ConstantInt);
 CAFFEINE_OP_DECL_CLASSOF(ConstantFloat, ConstantFloat);
+CAFFEINE_OP_DECL_CLASSOF(ConstantArray, ConstantArray);
 CAFFEINE_OP_DECL_CLASSOF(SelectOp, Select);
 CAFFEINE_OP_DECL_CLASSOF(AllocOp, Alloc);
 CAFFEINE_OP_DECL_CLASSOF(LoadOp, Load);
 CAFFEINE_OP_DECL_CLASSOF(StoreOp, Store);
+CAFFEINE_OP_DECL_CLASSOF(Undef, Undef);
 
 inline bool Constant::classof(const Operation* op) {
   return op->opcode() == ConstantNamed || op->opcode() == ConstantNumbered;

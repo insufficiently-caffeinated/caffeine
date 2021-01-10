@@ -2,6 +2,7 @@
 #define CAFFEINE_IR_TYPE_H
 
 #include <cstdint>
+#include <iosfwd>
 #include <optional>
 
 #include <llvm/ADT/Hashing.h>
@@ -33,7 +34,8 @@ namespace caffeine {
  * - Pointer: An untyped pointer. This is effectively an integer with a
  *   target-defined width.
  * - Function Pointer.
- * - Byte array. This is the raw type of a memory allocation.
+ * - Byte array. This is the raw type of a memory allocation. It has a bitwidth
+ *   which is the width of the integer used to index into the array.
  */
 class Type {
 public:
@@ -87,12 +89,17 @@ public:
   static Type bool_ty();
   // TODO: Address spaces? Not sure if we want to model them
   static Type pointer_ty();
-  static Type array_ty();
+  // Note: Bitwidth is the bitwidth of the integer used to
+  //       index into the byte array.
+  static Type array_ty(uint32_t bitwidth);
 
   static Type from_llvm(llvm::Type* type);
 
   static Type type_of(const llvm::APInt& apint);
   static Type type_of(const llvm::APFloat& apfloat);
+
+  template <typename T>
+  static Type type_of();
 
   bool operator==(const Type& b) const;
   bool operator!=(const Type& b) const;
@@ -103,6 +110,8 @@ public:
   Type& operator=(const Type&) = default;
   Type& operator=(Type&&) = default;
 };
+
+std::ostream& operator<<(std::ostream& os, const Type& t);
 
 } // namespace caffeine
 

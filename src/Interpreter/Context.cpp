@@ -1,14 +1,15 @@
 #include "caffeine/Interpreter/Context.h"
 #include "caffeine/IR/Operation.h"
 #include "caffeine/IR/Type.h"
+#include "caffeine/Interpreter/StackFrame.h"
 
 #include <fmt/format.h>
 #include <llvm/Support/raw_ostream.h>
 
 namespace caffeine {
 
-void assert_int(llvm::Type* type) {
-  if (type->isIntegerTy()) {
+static void assert_valid_arg(llvm::Type* type) {
+  if (type->isIntegerTy() || type->isFloatingPointTy()) {
     return;
   }
 
@@ -27,16 +28,14 @@ Context::Context(llvm::Function* function, std::shared_ptr<Solver> solver)
 
   size_t i = 0;
   for (auto& arg : function->args()) {
-    assert_int(arg.getType());
+    assert_valid_arg(arg.getType());
 
     std::string name = arg.getName().str();
 
     if (name.empty())
       name = fmt::format("arg{}", i);
 
-    frame.insert(&arg,
-                 Constant::Create(
-                     Type::int_ty(arg.getType()->getIntegerBitWidth()), name));
+    frame.insert(&arg, Constant::Create(Type::from_llvm(arg.getType()), name));
 
     i += 1;
   }
