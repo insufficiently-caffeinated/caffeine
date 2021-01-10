@@ -3,11 +3,20 @@
 
 #include "caffeine/IR/Assertion.h"
 #include "caffeine/Interpreter/StackFrame.h"
+#include "caffeine/Memory/MemHeap.h"
 #include "caffeine/Solver/Solver.h"
 
+#include <llvm/IR/Constant.h>
 #include <llvm/IR/Function.h>
 
 #include <memory>
+#include <unordered_map>
+
+namespace llvm {
+class UndefValue;
+class ConstantVector;
+class GlobalVariable;
+} // namespace llvm
 
 namespace caffeine {
 
@@ -16,8 +25,11 @@ private:
   std::vector<StackFrame> stack;
   // The current set of invariants for this context
   std::vector<Assertion> assertions_;
+  std::unordered_map<llvm::GlobalVariable*, ContextValue> globals_;
   std::shared_ptr<Solver> solver_;
   uint64_t constant_num_ = 0;
+  MemHeap heap_;
+  llvm::Module* module_;
 
 public:
   Context(llvm::Function* func, std::shared_ptr<Solver> solver);
@@ -60,10 +72,36 @@ public:
   uint64_t next_constant();
 
   /**
+   * Access the context heap.
+   */
+  MemHeap& heap() {
+    return heap_;
+  }
+  const MemHeap& heap() const {
+    return heap_;
+  }
+
+  /**
    * Add a new assertion to this context.
    */
   void add(const Assertion& assertion);
   void add(Assertion&& assertion);
+
+  /**
+   * Lookup a value within the top stack frame.
+   *
+   * There are two main cases here:
+   * 1. `value` is an existing variable, or
+   * 2. `value` is a constant.
+   *
+   * In the first place we look up the variable within the context at the top of
+   * the stack. In the second case we build an expression that represents the
+   * constant and return that.
+   *
+   * This method should be preferred over directly looking up variables in the
+   * stack frame as it properly handles global constants.
+   */
+  ContextValue lookup(llvm::Value* value);
 
   /**
    * Validate whether the set of assertions combined with the extra assertion is
@@ -81,6 +119,24 @@ public:
    */
   std::unique_ptr<Model>
   resolve(const Assertion& extra = Assertion::constant(true));
+
+private:
+  /**
+   * Evaluate a constant to the corresponding ContextValue.
+   *
+   * Not a constant method since it may have to create allocations and
+   * modify the registered globals table.
+   */
+  ContextValue evaluate_constant(llvm::Constant* constant);
+
+  ContextValue evaluate_undef(llvm::UndefValue* undef);
+  ContextValue evaluate_vector(llvm::ConstantVector* vec);
+  ContextValue evaluate_global(llvm::GlobalVariable* global);
+
+  /**
+   * Evaluate the initializer of a global variable to a byte array.
+   */
+  ref<Operation> evaluate_global_data(llvm::Constant* constant);
 };
 
 } // namespace caffeine

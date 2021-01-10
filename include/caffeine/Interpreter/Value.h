@@ -5,7 +5,6 @@
 #include "caffeine/Memory/MemHeap.h"
 
 #include <llvm/ADT/ArrayRef.h>
-#include <llvm/IR/Constant.h>
 
 #include <iosfwd>
 #include <variant>
@@ -38,7 +37,6 @@ private:
       inner_;
 
 public:
-  explicit ContextValue(llvm::Constant* constant);
   explicit ContextValue(const ref<Operation>& op);
   explicit ContextValue(const std::vector<ContextValue>& data);
   explicit ContextValue(std::vector<ContextValue>&& data);
