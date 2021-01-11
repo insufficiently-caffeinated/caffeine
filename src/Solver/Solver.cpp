@@ -55,6 +55,8 @@ public:
   DECL_BINOP(FDiv, fdiv);
   DECL_BINOP(FRem, frem);
 
+  DECL_BINOP(Load, load);
+
   Value visitNot(const UnaryOp& op) {
     return Value::bvnot(visit(op[0]));
   }

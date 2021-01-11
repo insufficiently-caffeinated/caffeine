@@ -101,6 +101,8 @@ public:
   z3::expr visitZExt(const UnaryOp& op);
   z3::expr visitSExt(const UnaryOp& op);
 
+  z3::expr visitLoadOp(const LoadOp& op);
+
   // Unary operations
   z3::expr visitNot (const UnaryOp& op);
   z3::expr visitFNeg(const UnaryOp& op);

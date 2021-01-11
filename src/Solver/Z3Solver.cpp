@@ -555,4 +555,8 @@ z3::expr Z3OpVisitor::visitSExt(const UnaryOp& op) {
   return z3::sext(src, op.type().bitwidth() - operand.get_sort().bv_size());
 }
 
+z3::expr Z3OpVisitor::visitLoadOp(const LoadOp& op) {
+  return z3::select(visit(op[0]), visit(op[1]));
+}
+
 } // namespace caffeine
