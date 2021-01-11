@@ -46,7 +46,7 @@ Assertion Allocation::check_inbounds(const ref<Operation>& offset,
   auto upper = ICmpOp::CreateICmp(
       ICmpOpcode::ULT,
       BinaryOp::CreateAdd(offset, ConstantInt::Create(llvm::APInt(
-                                      width, Type::pointer_ty().bitwidth()))),
+                                      width, offset->type().bitwidth()))),
       size());
 
   return Assertion(BinaryOp::CreateAnd(std::move(upper), std::move(lower)));
@@ -246,7 +246,9 @@ Assertion MemHeap::check_valid(const Pointer& ptr) {
     result = BinaryOp::CreateOr(result, BinaryOp::CreateAnd(cmp1, cmp2));
   }
 
-  return result;
+  // Note: NULL pointers are never valid.
+  return BinaryOp::CreateAnd(ICmpOp::CreateICmp(ICmpOpcode::NE, value, 0),
+                             result);
 }
 
 llvm::SmallVector<Pointer, 1> MemHeap::resolve(const Pointer& ptr,
