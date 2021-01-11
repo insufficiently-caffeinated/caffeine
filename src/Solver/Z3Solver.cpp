@@ -203,7 +203,7 @@ std::unique_ptr<Model> Z3Solver::resolve(std::vector<Assertion>& assertions,
   z3::solver solver = z3::tactic(*ctx, "default").mk_solver();
   Z3Model::ConstMap constMap;
 
-  Z3OpVisitor visitor{ctx.get(), constMap};
+  Z3OpVisitor visitor{&solver, constMap};
   for (Assertion assertion : assertions) {
     if (assertion.is_empty()) {
       continue;
@@ -236,8 +236,8 @@ std::unique_ptr<Model> Z3Solver::resolve(std::vector<Assertion>& assertions,
 /***************************************************
  * Z3OpVisitor                                     *
  ***************************************************/
-Z3OpVisitor::Z3OpVisitor(z3::context* ctx, Z3Model::ConstMap& constMap)
-    : ctx(ctx), constMap(constMap) {}
+Z3OpVisitor::Z3OpVisitor(z3::solver* solver, Z3Model::ConstMap& constMap)
+    : ctx(&solver->ctx()), solver(solver), constMap(constMap) {}
 
 z3::expr Z3OpVisitor::visit(const Operation& op) {
   // Memoize visited expressions to avoid combinatorial explosion
@@ -271,7 +271,6 @@ z3::expr Z3OpVisitor::visitConstant(const Constant& op) {
   constMap.insert({name, expr});
   return expr;
 }
-
 z3::expr Z3OpVisitor::visitConstantInt(const ConstantInt& op) {
   if (op.value().getBitWidth() <= 64) {
     return ctx->bv_val(op.value().getLimitedValue(), op.value().getBitWidth());
@@ -290,7 +289,6 @@ z3::expr Z3OpVisitor::visitConstantInt(const ConstantInt& op) {
 
   return ctx->bv_val(str.c_str(), op.value().getBitWidth());
 }
-
 z3::expr Z3OpVisitor::visitConstantFloat(const ConstantFloat& op) {
   // TODO: Reimplement this correctly
   auto expr = z3::expr(
