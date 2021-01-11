@@ -26,6 +26,9 @@ public:
   Value visitConstantFloat(const ConstantFloat& op) {
     return op.value();
   }
+  Value visitConstantArray(const ConstantArray& op) {
+    return Value(op.data(), Type::int_ty(op.type().bitwidth()));
+  }
 
 #define DECL_BINOP(opcode, func)                                               \
   Value visit##opcode(const BinaryOp& op) {                                    \
