@@ -136,4 +136,12 @@ bool operator!=(const SharedArray& lhs, const SharedArray& rhs) {
   return !(lhs == rhs);
 }
 
+llvm::hash_code hash_value(const SharedArray& array) {
+  if (const auto* vec = std::get_if<std::vector<char>>(&array.data_)) {
+    return llvm::hash_combine_range(vec->begin(), vec->end());
+  } else {
+    return llvm::hash_combine_range(array.begin(), array.end());
+  }
+}
+
 } // namespace caffeine
