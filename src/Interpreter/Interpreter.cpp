@@ -721,8 +721,15 @@ ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
 
   auto assertion = ctx->heap().check_valid(pointer);
   auto model = ctx->resolve(!assertion);
-  if (model->result() == SolverResult::SAT)
+  if (model->result() == SolverResult::SAT) {
     logger->log_failure(*model, *ctx, Failure(!assertion));
+
+    // If we're getting an out-of-bounds access then there's a pretty good
+    // chance that we'll find that we can overlap with just about any other
+    // allocation. This isn't likely to produce useful bugs so we'll kill the
+    // context here.
+    return ExecutionResult::Stop;
+  }
 
   ctx->add(assertion);
 
