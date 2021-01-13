@@ -7,6 +7,7 @@
 #include <boost/range/combine.hpp>
 #include <boost/range/iterator_range.hpp>
 #include <fmt/format.h>
+#include <llvm/IR/GetElementPtrTypeIterator.h>
 #include <llvm/Support/raw_ostream.h>
 
 #include <iostream>
@@ -648,6 +649,70 @@ Interpreter::visitShuffleVectorInst(llvm::ShuffleVectorInst& inst) {
   }
 
   frame.insert(&inst, ContextValue(std::move(result)));
+
+  return ExecutionResult::Continue;
+}
+
+static llvm::Type* vector_inner_type(llvm::Type* type) {
+  while (type->isVectorTy())
+    type = type->getVectorElementType();
+  return type;
+}
+
+ExecutionResult
+Interpreter::visitGetElementPtrInst(llvm::GetElementPtrInst& inst) {
+  auto& frame = ctx->stack_top();
+
+  const llvm::DataLayout& layout = inst.getModule()->getDataLayout();
+  llvm::Value* ptr_op = inst.getOperand(0);
+  llvm::Type* ptr_ty = vector_inner_type(ptr_op->getType());
+
+  auto offset_width =
+      layout.getPointerSizeInBits(ptr_ty->getPointerAddressSpace());
+  auto offset = ConstantInt::Create(llvm::APInt(offset_width, 0));
+
+  auto end = llvm::gep_type_end(&inst);
+  for (auto it = llvm::gep_type_begin(&inst); it != end; ++it) {
+    if (llvm::StructType* sty = it.getStructTypeOrNull()) {
+      auto slo = layout.getStructLayout(sty);
+      unsigned index =
+          llvm::cast<llvm::ConstantInt>(it.getOperand())->getZExtValue();
+
+      offset = BinaryOp::CreateAdd(offset, ConstantInt::Create(llvm::APInt(
+                                               offset->type().bitwidth(),
+                                               slo->getElementOffset(index))));
+    } else {
+      auto value = ctx->lookup(it.getOperand()).scalar();
+      unsigned bitwidth = value->type().bitwidth();
+
+      if (bitwidth < offset_width)
+        value = UnaryOp::CreateSExt(Type::int_ty(offset_width), value);
+      else if (bitwidth > offset_width)
+        value = UnaryOp::CreateTrunc(Type::int_ty(offset_width), value);
+
+      auto itemoffset = BinaryOp::CreateMul(
+          value, ConstantInt::Create(llvm::APInt(
+                     bitwidth, layout.getTypeAllocSize(it.getIndexedType()))));
+
+      offset = BinaryOp::CreateAdd(offset, itemoffset);
+    }
+  }
+
+  auto result = transform_value(
+      [&](const ContextValue& value) {
+        const auto& ptr = value.pointer();
+
+        if (inst.isInBounds() && ptr.is_resolved()) {
+          return ContextValue(
+              Pointer(ptr.alloc(), BinaryOp::CreateAdd(ptr.offset(), offset)));
+        } else {
+          return ContextValue(
+              Pointer(BinaryOp::CreateAdd(ptr.value(ctx->heap()), offset)));
+        }
+      },
+      ctx->lookup(ptr_op));
+
+  frame.insert(&inst, result);
 
   return ExecutionResult::Continue;
 }
