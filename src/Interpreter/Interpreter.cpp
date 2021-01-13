@@ -312,14 +312,24 @@ ExecutionResult Interpreter::visitICmpInst(llvm::ICmpInst& icmp) {
   auto lhs = ctx->lookup(icmp.getOperand(0));
   auto rhs = ctx->lookup(icmp.getOperand(1));
 
+  // Normalize the ContextValue to a comparable value
+  auto to_scalar = [&](const ContextValue& value) {
+    if (value.is_scalar())
+      return value.scalar();
+    if (value.is_pointer())
+      return value.pointer().value(ctx->heap());
+    CAFFEINE_UNREACHABLE();
+  };
+
 #define ICMP_CASE(op)                                                          \
   case ICmpInst::ICMP_##op:                                                    \
-    frame.insert(&icmp, transform(                                             \
-                            [](const auto& lhs, const auto& rhs) {             \
-                              return ICmpOp::CreateICmp(ICmpOpcode::op, lhs,   \
-                                                        rhs);                  \
-                            },                                                 \
-                            lhs, rhs));                                        \
+    frame.insert(&icmp,                                                        \
+                 transform_value(                                              \
+                     [&](const auto& lhs, const auto& rhs) {                   \
+                       return ContextValue(ICmpOp::CreateICmp(                 \
+                           ICmpOpcode::op, to_scalar(lhs), to_scalar(rhs)));   \
+                     },                                                        \
+                     lhs, rhs));                                               \
     return ExecutionResult::Continue
 
   switch (icmp.getPredicate()) {
