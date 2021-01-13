@@ -46,7 +46,7 @@ Assertion Allocation::check_inbounds(const ref<Operation>& offset,
   auto upper = ICmpOp::CreateICmp(
       ICmpOpcode::ULT,
       BinaryOp::CreateAdd(offset, ConstantInt::Create(llvm::APInt(
-                                      width, Type::pointer_ty().bitwidth()))),
+                                      width, offset->type().bitwidth()))),
       size());
 
   return Assertion(BinaryOp::CreateAnd(std::move(upper), std::move(lower)));
@@ -171,13 +171,15 @@ const Allocation& MemHeap::operator[](const AllocId& alloc) const {
 }
 
 AllocId MemHeap::allocate(const ref<Operation>& size,
-                          const ref<Operation>& alignment, Context& ctx) {
+                          const ref<Operation>& alignment,
+                          const ref<Operation>& data, Context& ctx) {
   CAFFEINE_ASSERT(size->type() == alignment->type());
   CAFFEINE_ASSERT(size->type().is_int());
+  CAFFEINE_ASSERT(data->type().is_array());
+  CAFFEINE_ASSERT(data->type().bitwidth() == size->type().bitwidth());
 
   auto allocation = Allocation(
-      Constant::Create(size->type(), ctx.next_constant()), size,
-      AllocOp::Create(size, ConstantInt::Create(llvm::APInt(8, 0xDC))));
+      Constant::Create(size->type(), ctx.next_constant()), size, data);
 
   // Ensure that the allocation is properly aligned
   ctx.add(ICmpOp::CreateICmp(
@@ -244,7 +246,9 @@ Assertion MemHeap::check_valid(const Pointer& ptr) {
     result = BinaryOp::CreateOr(result, BinaryOp::CreateAnd(cmp1, cmp2));
   }
 
-  return result;
+  // Note: NULL pointers are never valid.
+  return BinaryOp::CreateAnd(ICmpOp::CreateICmp(ICmpOpcode::NE, value, 0),
+                             result);
 }
 
 llvm::SmallVector<Pointer, 1> MemHeap::resolve(const Pointer& ptr,

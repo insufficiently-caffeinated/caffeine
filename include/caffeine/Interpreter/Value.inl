@@ -13,6 +13,9 @@ inline bool ContextValue::is_vector() const {
 inline bool ContextValue::is_scalar() const {
   return kind() == Scalar;
 }
+inline bool ContextValue::is_pointer() const {
+  return kind() == Ptr;
+}
 
 namespace detail {
   template <typename F, typename... Ts, size_t... Idxs>
@@ -54,7 +57,7 @@ namespace detail {
 } // namespace detail
 
 template <typename F, typename... Vs>
-inline ContextValue transform(F&& func, const Vs&... values) {
+inline ContextValue transform_value(F&& func, const Vs&... values) {
   static_assert((... && std::is_same_v<Vs, ContextValue>),
                 "transform may only be called with ContextValues");
 
@@ -62,8 +65,8 @@ inline ContextValue transform(F&& func, const Vs&... values) {
 
   CAFFEINE_ASSERT((... && (v1.kind() == values.kind())));
 
-  if (v1.is_scalar())
-    return ContextValue(func(values.scalar()...));
+  if (!v1.is_vector())
+    return func(values...);
 
   auto vecs = std::make_tuple(values.vector()...);
 
@@ -88,13 +91,22 @@ inline ContextValue transform(F&& func, const Vs&... values) {
       detail::tuple_combine([](const auto& a, const auto& b) { return a != b; },
                             its, ends))) {
     result.push_back(std::apply(
-        [&](const auto&... values) { return transform(func, values...); },
+        [&](const auto&... values) { return transform_value(func, values...); },
         detail::tuple_foreach([](const auto& it) { return *it; }, its)));
 
     detail::tuple_foreach([](auto& it) { return ++it, 0; }, its);
   }
 
   return ContextValue(std::move(result));
+}
+
+template <typename F, typename... Vs>
+inline ContextValue transform(F&& func, const Vs&... values) {
+  return transform_value(
+      [&](const auto&... vals) -> ContextValue {
+        return ContextValue(func(vals.scalar()...));
+      },
+      values...);
 }
 
 } // namespace caffeine

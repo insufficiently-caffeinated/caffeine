@@ -26,9 +26,6 @@ void StackFrame::insert(llvm::Value* value, const ContextValue& exprs) {
 }
 
 ContextValue StackFrame::lookup(llvm::Value* value) const {
-  if (auto* constant = llvm::dyn_cast_or_null<llvm::Constant>(value))
-    return ContextValue(constant);
-
   auto it = variables.find(value);
   CAFFEINE_ASSERT(it != variables.end(), "Tried to access unknown variable");
   return it->second;
