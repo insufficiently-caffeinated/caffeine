@@ -352,20 +352,30 @@ ref<Operation> ConstantFloat::Create(llvm::APFloat&& fconst) {
 /***************************************************
  * ConstantArray                                   *
  ***************************************************/
-ConstantArray::ConstantArray(Type t, const char* data, size_t size)
-    : Operation(Opcode::ConstantArray, t,
-                Inner(std::string(data, data + size))) {}
+ConstantArray::ConstantArray(Type t, const SharedArray& array)
+    : Operation(Opcode::ConstantArray, t, array) {}
+ConstantArray::ConstantArray(Type t, SharedArray&& array)
+    : Operation(Opcode::ConstantArray, t, std::move(array)) {}
 
-ref<Operation> ConstantArray::Create(Type index_ty, const char* data,
-                                     size_t size) {
+ref<Operation> ConstantArray::Create(Type index_ty, const SharedArray& array) {
   CAFFEINE_ASSERT(index_ty.is_int(),
                   "Arrays cannot be indexed by non-integer types");
   CAFFEINE_ASSERT(
-      index_ty.bitwidth() >= ilog2(size),
+      index_ty.bitwidth() >= ilog2(array.size()),
       "Index bitwidth is not large enough to address entire constant array");
 
   return ref<Operation>(
-      new ConstantArray(Type::array_ty(index_ty.bitwidth()), data, size));
+      new ConstantArray(Type::array_ty(index_ty.bitwidth()), array));
+}
+ref<Operation> ConstantArray::Create(Type index_ty, SharedArray&& array) {
+  CAFFEINE_ASSERT(index_ty.is_int(),
+                  "Arrays cannot be indexed by non-integer types");
+  CAFFEINE_ASSERT(
+      index_ty.bitwidth() >= ilog2(array.size()),
+      "Index bitwidth is not large enough to address entire constant array");
+
+  return ref<Operation>(
+      new ConstantArray(Type::array_ty(index_ty.bitwidth()), std::move(array)));
 }
 
 /***************************************************
