@@ -66,6 +66,8 @@ public:
   ExecutionResult visitCallInst(llvm::CallInst& inst);
   ExecutionResult visitSelectInst(llvm::SelectInst& inst);
 
+  ExecutionResult visitGetElementPtrInst(llvm::GetElementPtrInst& inst);
+
   ExecutionResult visitInsertElementInst(llvm::InsertElementInst& inst);
   ExecutionResult visitExtractElementInst(llvm::ExtractElementInst& inst);
   ExecutionResult visitShuffleVectorInst(llvm::ShuffleVectorInst& inst);
