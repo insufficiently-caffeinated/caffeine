@@ -518,6 +518,8 @@ public:
   const ref<Operation>& operand() const;
 
   static ref<Operation> Create(Opcode op, const ref<Operation>& operand);
+  static ref<Operation> Create(Opcode op, const ref<Operation>& operand,
+                               Type returnType);
   static ref<Operation> CreateNot(const ref<Operation>& operand);
   static ref<Operation> CreateFNeg(const ref<Operation>& operand);
   static ref<Operation> CreateFIsNaN(const ref<Operation>& operand);

@@ -345,14 +345,25 @@ ExecutionResult Interpreter::visitFCmpInst(llvm::FCmpInst& fcmp) {
   auto lhs = ctx->lookup(fcmp.getOperand(0));
   auto rhs = ctx->lookup(fcmp.getOperand(1));
 
-#define FCMP_CASE(op)                                                          \
+// `default` should be a bool
+#define FCMP_CASE_DEF(op, default_val)                                         \
   case FCmpInst::FCMP_##op:                                                    \
-    frame.insert(                                                              \
-        &fcmp,                                                                 \
-        transform(std::bind(FCmpOp::CreateFCmp, FCmpOpcode::op,                \
-                            std::placeholders::_1, std::placeholders::_2),     \
-                  lhs, rhs));                                                  \
-    return ExecutionResult::Continue
+    frame.insert(&fcmp,                                                        \
+                 transform(                                                    \
+                     [](const auto& lhs, const auto& rhs) {                    \
+                       ref<Operation> def = ConstantInt::Create(default_val);  \
+                       ref<Operation> thenFcmp =                               \
+                           FCmpOp::CreateFCmp(FCmpOpcode::op, lhs, rhs);       \
+                       ref<Operation> neitherIsNaN = SelectOp::Create(         \
+                           UnaryOp::CreateFIsNaN(lhs), def,                    \
+                           SelectOp::Create(UnaryOp::CreateFIsNaN(rhs), def,   \
+                                            thenFcmp));                        \
+                       return neitherIsNaN;                                    \
+                     },                                                        \
+                     lhs, rhs));                                               \
+    return ExecutionResult::Continue;
+
+#define FCMP_CASE(op) FCMP_CASE_DEF(op, false)
 
   switch (fcmp.getPredicate()) {
     FCMP_CASE(OEQ);
@@ -367,7 +378,7 @@ ExecutionResult Interpreter::visitFCmpInst(llvm::FCmpInst& fcmp) {
     FCMP_CASE(UGE);
     FCMP_CASE(ULT);
     FCMP_CASE(ULE);
-    FCMP_CASE(UNE);
+    FCMP_CASE_DEF(UNE, true);
     FCMP_CASE(UNO);
 
   case FCmpInst::FCMP_TRUE:
@@ -382,6 +393,7 @@ ExecutionResult Interpreter::visitFCmpInst(llvm::FCmpInst& fcmp) {
   }
 
 #undef FCMP_CASE
+#undef FCMP_CASE_DEF
 }
 
 ExecutionResult Interpreter::visitTrunc(llvm::TruncInst& trunc) {

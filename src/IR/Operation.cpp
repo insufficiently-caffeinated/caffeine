@@ -1,5 +1,6 @@
 #include "caffeine/IR/Operation.h"
 #include "Operation.h"
+#include "caffeine/IR/Type.h"
 
 #include <boost/container_hash/hash.hpp>
 #include <fmt/format.h>
@@ -677,17 +678,22 @@ UnaryOp::UnaryOp(Opcode op, Type t, const ref<Operation>& operand)
     : Operation(op, t, operand) {}
 
 ref<Operation> UnaryOp::Create(Opcode op, const ref<Operation>& operand) {
+  return Create(op, operand, operand->type());
+}
+
+ref<Operation> UnaryOp::Create(Opcode op, const ref<Operation>& operand,
+                               Type returnType) {
   CAFFEINE_ASSERT(operand, "operand was null");
   CAFFEINE_ASSERT((op & 0x3) == 1, "Opcode doesn't have 2 operands");
 
-  return ref<Operation>(new UnaryOp(op, operand->type(), operand));
+  return ref<Operation>(new UnaryOp(op, returnType, operand));
 }
 
-#define DECL_UNOP_CREATE(opcode, assert)                                       \
+#define DECL_UNOP_CREATE(opcode, assert, return_type)                          \
   ref<Operation> UnaryOp::Create##opcode(const ref<Operation>& operand) {      \
     assert(operand);                                                           \
                                                                                \
-    return Create(Opcode::opcode, operand);                                    \
+    return Create(Opcode::opcode, operand, return_type);                       \
   }                                                                            \
   static_assert(true)
 
@@ -700,8 +706,8 @@ ref<Operation> UnaryOp::CreateNot(const ref<Operation>& operand) {
   return Create(Opcode::Not, operand);
 }
 
-DECL_UNOP_CREATE(FNeg, ASSERT_FP);
-DECL_UNOP_CREATE(FIsNaN, ASSERT_FP);
+DECL_UNOP_CREATE(FNeg, ASSERT_FP, Type::float_ty(11, 53));
+DECL_UNOP_CREATE(FIsNaN, ASSERT_FP, Type::int_ty(1));
 
 ref<Operation> UnaryOp::CreateTrunc(Type tgt, const ref<Operation>& operand) {
   CAFFEINE_ASSERT(tgt.is_int());
@@ -801,8 +807,12 @@ ref<Operation> SelectOp::Create(const ref<Operation>& cond,
   CAFFEINE_ASSERT(true_value, "true_value was null");
   CAFFEINE_ASSERT(false_value, "false_value was null");
 
-  CAFFEINE_ASSERT(cond->type() == Type::int_ty(1),
-                  "select condition was not an i1");
+  if (cond->type() != Type::int_ty(1)) {
+    std::stringstream s;
+    s << "select condition was not an i1, it was " << cond->type();
+    CAFFEINE_ASSERT(cond->type() == Type::int_ty(1), s.str());
+  }
+
   CAFFEINE_ASSERT(true_value->type() == false_value->type(),
                   "select values had different types");
 
