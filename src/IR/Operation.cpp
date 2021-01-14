@@ -158,20 +158,12 @@ const char* Operation::opcode_name(Opcode op) {
   case ICmpSle:
     return "ICmp";
 
-  case FCmpOeq:
-  case FCmpOgt:
-  case FCmpOge:
-  case FCmpOlt:
-  case FCmpOle:
-  case FCmpOne:
-  case FCmpOrd:
-  case FCmpUno:
-  case FCmpUeq:
-  case FCmpUgt:
-  case FCmpUge:
-  case FCmpUlt:
-  case FCmpUle:
-  case FCmpUne:
+  case FCmpEq:
+  case FCmpGt:
+  case FCmpGe:
+  case FCmpLt:
+  case FCmpLe:
+  case FCmpNe:
     return "FCmp";
 
   case Select: return "Select";
@@ -256,20 +248,12 @@ std::ostream& operator<<(std::ostream& os, const Operation& op) {
     const char* cmp = "<unknown>";
     switch (fcmp->comparison()) {
     // clang-format off
-    case FCmpOpcode::OEQ: cmp = "oeq"; break;
-    case FCmpOpcode::OGT: cmp = "ogt"; break;
-    case FCmpOpcode::OGE: cmp = "oge"; break;
-    case FCmpOpcode::OLT: cmp = "olt"; break;
-    case FCmpOpcode::OLE: cmp = "ole"; break;
-    case FCmpOpcode::ONE: cmp = "one"; break;
-    case FCmpOpcode::ORD: cmp = "ord"; break;
-    case FCmpOpcode::UNO: cmp = "uno"; break;
-    case FCmpOpcode::UEQ: cmp = "ueq"; break;
-    case FCmpOpcode::UGT: cmp = "ugt"; break;
-    case FCmpOpcode::UGE: cmp = "uge"; break;
-    case FCmpOpcode::ULT: cmp = "ult"; break;
-    case FCmpOpcode::ULE: cmp = "ule"; break;
-    case FCmpOpcode::UNE: cmp = "une"; break;
+    case FCmpOpcode::EQ: cmp = "oeq"; break;
+    case FCmpOpcode::GT: cmp = "ogt"; break;
+    case FCmpOpcode::GE: cmp = "oge"; break;
+    case FCmpOpcode::LT: cmp = "olt"; break;
+    case FCmpOpcode::LE: cmp = "ole"; break;
+    case FCmpOpcode::NE: cmp = "one"; break;
       // clang-format on
     }
 

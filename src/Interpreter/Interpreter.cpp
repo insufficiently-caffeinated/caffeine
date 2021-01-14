@@ -347,14 +347,14 @@ ExecutionResult Interpreter::visitFCmpInst(llvm::FCmpInst& fcmp) {
   auto rhs = ctx->lookup(fcmp.getOperand(1));
 
 // `result` is the boolean value to return if either the lhs or rhs is a NaN
-#define FCMP_CASE(op, result)                                                  \
+#define FCMP_CASE(op, ourOp, result)                                           \
   case FCmpInst::FCMP_##op:                                                    \
     frame.insert(&fcmp,                                                        \
                  transform(                                                    \
                      [](const auto& lhs, const auto& rhs) {                    \
                        ref<Operation> def = ConstantInt::Create(result);       \
                        ref<Operation> thenFcmp =                               \
-                           FCmpOp::CreateFCmp(FCmpOpcode::op, lhs, rhs);       \
+                           FCmpOp::CreateFCmp(FCmpOpcode::ourOp, lhs, rhs);    \
                        ref<Operation> neitherIsNaN = SelectOp::Create(         \
                            UnaryOp::CreateFIsNaN(lhs), def,                    \
                            SelectOp::Create(UnaryOp::CreateFIsNaN(rhs), def,   \
@@ -365,19 +365,19 @@ ExecutionResult Interpreter::visitFCmpInst(llvm::FCmpInst& fcmp) {
     return ExecutionResult::Continue;
 
   switch (fcmp.getPredicate()) {
-    FCMP_CASE(OEQ, false);
-    FCMP_CASE(OGT, false);
-    FCMP_CASE(OGE, false);
-    FCMP_CASE(OLT, false);
-    FCMP_CASE(OLE, false);
-    FCMP_CASE(ONE, false);
+    FCMP_CASE(OEQ, EQ, false);
+    FCMP_CASE(OGT, GT, false);
+    FCMP_CASE(OGE, GE, false);
+    FCMP_CASE(OLT, LT, false);
+    FCMP_CASE(OLE, LE, false);
+    FCMP_CASE(ONE, NE, false);
     // The 'unordered' instructions return true if either arg is NaN
-    FCMP_CASE(UEQ, true);
-    FCMP_CASE(UGT, true);
-    FCMP_CASE(UGE, true);
-    FCMP_CASE(ULT, true);
-    FCMP_CASE(ULE, true);
-    FCMP_CASE(UNE, true);
+    FCMP_CASE(UEQ, EQ, true);
+    FCMP_CASE(UGT, GT, true);
+    FCMP_CASE(UGE, GE, true);
+    FCMP_CASE(ULT, LT, true);
+    FCMP_CASE(ULE, LE, true);
+    FCMP_CASE(UNE, NE, true);
 
   case FCmpInst::FCMP_UNO:
     frame.insert(&fcmp,
