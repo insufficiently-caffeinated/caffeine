@@ -3,12 +3,10 @@
 
 #include <stdint.h>
 
-uint32_t global_array[4] = { 1, 2, 3, 4 };
+volatile uint32_t global_array[1] = {1};
 
-void test(uint32_t x) {
-  caffeine_assume(x < 4);
+void test() {
+  global_array[0] = 0xABCD;
 
-  global_array[3] = 0;
-
-  caffeine_assert(global_array[x] < 3);
+  caffeine_assert(global_array[0] == 0xABCD);
 }
