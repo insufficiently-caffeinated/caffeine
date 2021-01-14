@@ -346,31 +346,59 @@ ExecutionResult Interpreter::visitFCmpInst(llvm::FCmpInst& fcmp) {
   auto lhs = ctx->lookup(fcmp.getOperand(0));
   auto rhs = ctx->lookup(fcmp.getOperand(1));
 
-#define FCMP_CASE(op)                                                          \
+// `result` is the boolean value to return if either the lhs or rhs is a NaN
+#define FCMP_CASE(op, ourOp, result)                                           \
   case FCmpInst::FCMP_##op:                                                    \
-    frame.insert(                                                              \
-        &fcmp,                                                                 \
-        transform(std::bind(FCmpOp::CreateFCmp, FCmpOpcode::op,                \
-                            std::placeholders::_1, std::placeholders::_2),     \
-                  lhs, rhs));                                                  \
-    return ExecutionResult::Continue
+    frame.insert(&fcmp,                                                        \
+                 transform(                                                    \
+                     [](const auto& lhs, const auto& rhs) {                    \
+                       ref<Operation> def = ConstantInt::Create(result);       \
+                       ref<Operation> thenFcmp =                               \
+                           FCmpOp::CreateFCmp(FCmpOpcode::ourOp, lhs, rhs);    \
+                       ref<Operation> neitherIsNaN = SelectOp::Create(         \
+                           UnaryOp::CreateFIsNaN(lhs), def,                    \
+                           SelectOp::Create(UnaryOp::CreateFIsNaN(rhs), def,   \
+                                            thenFcmp));                        \
+                       return neitherIsNaN;                                    \
+                     },                                                        \
+                     lhs, rhs));                                               \
+    return ExecutionResult::Continue;
 
   switch (fcmp.getPredicate()) {
-    FCMP_CASE(OEQ);
-    FCMP_CASE(OGT);
-    FCMP_CASE(OGE);
-    FCMP_CASE(OLT);
-    FCMP_CASE(OLE);
-    FCMP_CASE(ONE);
-    FCMP_CASE(ORD);
-    FCMP_CASE(UEQ);
-    FCMP_CASE(UGT);
-    FCMP_CASE(UGE);
-    FCMP_CASE(ULT);
-    FCMP_CASE(ULE);
-    FCMP_CASE(UNE);
-    FCMP_CASE(UNO);
+    FCMP_CASE(OEQ, EQ, false);
+    FCMP_CASE(OGT, GT, false);
+    FCMP_CASE(OGE, GE, false);
+    FCMP_CASE(OLT, LT, false);
+    FCMP_CASE(OLE, LE, false);
+    FCMP_CASE(ONE, NE, false);
+    // The 'unordered' instructions return true if either arg is NaN
+    FCMP_CASE(UEQ, EQ, true);
+    FCMP_CASE(UGT, GT, true);
+    FCMP_CASE(UGE, GE, true);
+    FCMP_CASE(ULT, LT, true);
+    FCMP_CASE(ULE, LE, true);
+    FCMP_CASE(UNE, NE, true);
 
+  case FCmpInst::FCMP_UNO:
+    frame.insert(&fcmp,
+                 transform(
+                     [](const auto& lhs, const auto& rhs) {
+                       // isnan(lhs) || isnan(rhs)
+                       return BinaryOp::CreateOr(UnaryOp::CreateFIsNaN(lhs),
+                                                 UnaryOp::CreateFIsNaN(rhs));
+                     },
+                     rhs, lhs));
+    return ExecutionResult::Continue;
+  case FCmpInst::FCMP_ORD:
+    frame.insert(&fcmp, transform(
+                            [](const auto& lhs, const auto& rhs) {
+                              // ! ( isnan(lhs) || isnan(rhs) )
+                              return UnaryOp::CreateNot(BinaryOp::CreateOr(
+                                  UnaryOp::CreateFIsNaN(lhs),
+                                  UnaryOp::CreateFIsNaN(rhs)));
+                            },
+                            rhs, lhs));
+    return ExecutionResult::Continue;
   case FCmpInst::FCMP_TRUE:
     frame.insert(&fcmp, ConstantInt::Create(true));
     return ExecutionResult::Continue;
@@ -383,6 +411,7 @@ ExecutionResult Interpreter::visitFCmpInst(llvm::FCmpInst& fcmp) {
   }
 
 #undef FCMP_CASE
+#undef FCMP_CASE_DEF
 }
 
 ExecutionResult Interpreter::visitTrunc(llvm::TruncInst& trunc) {

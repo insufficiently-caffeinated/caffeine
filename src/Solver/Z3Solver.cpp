@@ -448,47 +448,23 @@ z3::expr Z3OpVisitor::visitFCmp(const FCmpOp& op) {
 
   z3::expr expr = z3::expr(lhs.ctx(), nullptr);
   switch (op.comparison()) {
-  case FCmpOpcode::OEQ:
-    expr = lhs == rhs && !is_nan(lhs) && !is_nan(rhs);
+  case FCmpOpcode::EQ:
+    expr = lhs == rhs;
     break;
-  case FCmpOpcode::OGT:
-    expr = fpa_gt(lhs, rhs) && !is_nan(lhs) && !is_nan(rhs);
+  case FCmpOpcode::GT:
+    expr = fpa_gt(lhs, rhs);
     break;
-  case FCmpOpcode::OGE:
-    expr = fpa_geq(lhs, rhs) && !is_nan(lhs) && !is_nan(rhs);
+  case FCmpOpcode::GE:
+    expr = fpa_geq(lhs, rhs);
     break;
-  case FCmpOpcode::OLT:
-    expr = fpa_lt(lhs, rhs) && !is_nan(lhs) && !is_nan(rhs);
+  case FCmpOpcode::LT:
+    expr = fpa_lt(lhs, rhs);
     break;
-  case FCmpOpcode::OLE:
-    expr = fpa_leq(lhs, rhs) && !is_nan(lhs) && !is_nan(rhs);
+  case FCmpOpcode::LE:
+    expr = fpa_leq(lhs, rhs);
     break;
-  case FCmpOpcode::ONE:
-    expr = lhs != rhs && !is_nan(lhs) && !is_nan(rhs);
-    break;
-  case FCmpOpcode::ORD:
-    expr = !is_nan(lhs) && !is_nan(rhs);
-    break;
-  case FCmpOpcode::UEQ:
-    expr = lhs == rhs || is_nan(lhs) || is_nan(rhs);
-    break;
-  case FCmpOpcode::UGT:
-    expr = fpa_gt(lhs, rhs) || is_nan(lhs) || is_nan(rhs);
-    break;
-  case FCmpOpcode::UGE:
-    expr = fpa_geq(lhs, rhs) || is_nan(lhs) || is_nan(rhs);
-    break;
-  case FCmpOpcode::ULT:
-    expr = fpa_lt(lhs, rhs) || is_nan(lhs) || is_nan(rhs);
-    break;
-  case FCmpOpcode::ULE:
-    expr = fpa_leq(lhs, rhs) || is_nan(lhs) || is_nan(rhs);
-    break;
-  case FCmpOpcode::UNE:
-    expr = lhs != rhs || is_nan(lhs) || is_nan(rhs);
-    break;
-  case FCmpOpcode::UNO:
-    expr = is_nan(lhs) || is_nan(rhs);
+  case FCmpOpcode::NE:
+    expr = lhs != rhs;
     break;
   default:
     CAFFEINE_ABORT("Unknown FCmpOpcode");

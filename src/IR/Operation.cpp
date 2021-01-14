@@ -1,5 +1,6 @@
 #include "caffeine/IR/Operation.h"
 #include "Operation.h"
+#include "caffeine/IR/Type.h"
 
 #include <boost/container_hash/hash.hpp>
 #include <fmt/format.h>
@@ -157,20 +158,12 @@ const char* Operation::opcode_name(Opcode op) {
   case ICmpSle:
     return "ICmp";
 
-  case FCmpOeq:
-  case FCmpOgt:
-  case FCmpOge:
-  case FCmpOlt:
-  case FCmpOle:
-  case FCmpOne:
-  case FCmpOrd:
-  case FCmpUno:
-  case FCmpUeq:
-  case FCmpUgt:
-  case FCmpUge:
-  case FCmpUlt:
-  case FCmpUle:
-  case FCmpUne:
+  case FCmpEq:
+  case FCmpGt:
+  case FCmpGe:
+  case FCmpLt:
+  case FCmpLe:
+  case FCmpNe:
     return "FCmp";
 
   case Select: return "Select";
@@ -255,20 +248,12 @@ std::ostream& operator<<(std::ostream& os, const Operation& op) {
     const char* cmp = "<unknown>";
     switch (fcmp->comparison()) {
     // clang-format off
-    case FCmpOpcode::OEQ: cmp = "oeq"; break;
-    case FCmpOpcode::OGT: cmp = "ogt"; break;
-    case FCmpOpcode::OGE: cmp = "oge"; break;
-    case FCmpOpcode::OLT: cmp = "olt"; break;
-    case FCmpOpcode::OLE: cmp = "ole"; break;
-    case FCmpOpcode::ONE: cmp = "one"; break;
-    case FCmpOpcode::ORD: cmp = "ord"; break;
-    case FCmpOpcode::UNO: cmp = "uno"; break;
-    case FCmpOpcode::UEQ: cmp = "ueq"; break;
-    case FCmpOpcode::UGT: cmp = "ugt"; break;
-    case FCmpOpcode::UGE: cmp = "uge"; break;
-    case FCmpOpcode::ULT: cmp = "ult"; break;
-    case FCmpOpcode::ULE: cmp = "ule"; break;
-    case FCmpOpcode::UNE: cmp = "une"; break;
+    case FCmpOpcode::EQ: cmp = "oeq"; break;
+    case FCmpOpcode::GT: cmp = "ogt"; break;
+    case FCmpOpcode::GE: cmp = "oge"; break;
+    case FCmpOpcode::LT: cmp = "olt"; break;
+    case FCmpOpcode::LE: cmp = "ole"; break;
+    case FCmpOpcode::NE: cmp = "one"; break;
       // clang-format on
     }
 
@@ -677,19 +662,23 @@ UnaryOp::UnaryOp(Opcode op, Type t, const ref<Operation>& operand)
     : Operation(op, t, operand) {}
 
 ref<Operation> UnaryOp::Create(Opcode op, const ref<Operation>& operand) {
+  return Create(op, operand, operand->type());
+}
+
+ref<Operation> UnaryOp::Create(Opcode op, const ref<Operation>& operand,
+                               Type returnType) {
   CAFFEINE_ASSERT(operand, "operand was null");
   CAFFEINE_ASSERT((op & 0x3) == 1, "Opcode doesn't have 2 operands");
 
-  return ref<Operation>(new UnaryOp(op, operand->type(), operand));
+  return ref<Operation>(new UnaryOp(op, returnType, operand));
 }
 
-#define DECL_UNOP_CREATE(opcode, assert)                                       \
+#define DECL_UNOP_CREATE(opcode, assert, return_type)                          \
   ref<Operation> UnaryOp::Create##opcode(const ref<Operation>& operand) {      \
     assert(operand);                                                           \
                                                                                \
-    return Create(Opcode::opcode, operand);                                    \
-  }                                                                            \
-  static_assert(true)
+    return Create(Opcode::opcode, operand, return_type);                       \
+  }
 
 ref<Operation> UnaryOp::CreateNot(const ref<Operation>& operand) {
   ASSERT_INT(operand);
@@ -700,8 +689,8 @@ ref<Operation> UnaryOp::CreateNot(const ref<Operation>& operand) {
   return Create(Opcode::Not, operand);
 }
 
-DECL_UNOP_CREATE(FNeg, ASSERT_FP);
-DECL_UNOP_CREATE(FIsNaN, ASSERT_FP);
+DECL_UNOP_CREATE(FNeg, ASSERT_FP, operand->type());
+DECL_UNOP_CREATE(FIsNaN, ASSERT_FP, Type::int_ty(1));
 
 ref<Operation> UnaryOp::CreateTrunc(Type tgt, const ref<Operation>& operand) {
   CAFFEINE_ASSERT(tgt.is_int());
@@ -801,8 +790,10 @@ ref<Operation> SelectOp::Create(const ref<Operation>& cond,
   CAFFEINE_ASSERT(true_value, "true_value was null");
   CAFFEINE_ASSERT(false_value, "false_value was null");
 
-  CAFFEINE_ASSERT(cond->type() == Type::int_ty(1),
-                  "select condition was not an i1");
+  CAFFEINE_ASSERT(
+      cond->type() == Type::int_ty(1),
+      fmt::format("select condition was not an i1, it was {}", cond->type()));
+
   CAFFEINE_ASSERT(true_value->type() == false_value->type(),
                   "select values had different types");
 

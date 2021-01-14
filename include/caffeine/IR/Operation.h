@@ -47,20 +47,12 @@ enum class ICmpOpcode : uint8_t {
 };
 
 enum class FCmpOpcode : uint8_t {
-  OEQ = 000,
-  OGT = 001,
-  OGE = 002,
-  OLT = 003,
-  OLE = 004,
-  ONE = 005,
-  ORD = 006,
-  UEQ = 010,
-  UGT = 011,
-  UGE = 012,
-  ULT = 013,
-  ULE = 014,
-  UNE = 015,
-  UNO = 016,
+  EQ = 000,
+  GT = 001,
+  GE = 002,
+  LT = 003,
+  LE = 004,
+  NE = 005,
 };
 
 /**
@@ -171,20 +163,12 @@ public:
     // See the corresponding predicates in llvm's CmpInst to understand
     // what each of these mean.
     // TODO: Should these be broken down?
-    FCmpOeq = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::OEQ),
-    FCmpOgt = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::OGT),
-    FCmpOge = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::OGE),
-    FCmpOlt = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::OLT),
-    FCmpOle = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::OLE),
-    FCmpOne = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::ONE),
-    FCmpOrd = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::ORD),
-    FCmpUno = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::UNO),
-    FCmpUeq = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::UEQ),
-    FCmpUgt = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::UGT),
-    FCmpUge = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::UGE),
-    FCmpUlt = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::ULT),
-    FCmpUle = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::ULE),
-    FCmpUne = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::UNE),
+    FCmpEq = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::EQ),
+    FCmpGt = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::GT),
+    FCmpGe = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::GE),
+    FCmpLt = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::LT),
+    FCmpLe = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::LE),
+    FCmpNe = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::NE),
 
     BinaryOpLast,
     BinaryOpFirst = Add,
@@ -518,6 +502,8 @@ public:
   const ref<Operation>& operand() const;
 
   static ref<Operation> Create(Opcode op, const ref<Operation>& operand);
+  static ref<Operation> Create(Opcode op, const ref<Operation>& operand,
+                               Type returnType);
   static ref<Operation> CreateNot(const ref<Operation>& operand);
   static ref<Operation> CreateFNeg(const ref<Operation>& operand);
   static ref<Operation> CreateFIsNaN(const ref<Operation>& operand);
