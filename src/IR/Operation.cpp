@@ -694,8 +694,7 @@ ref<Operation> UnaryOp::Create(Opcode op, const ref<Operation>& operand,
     assert(operand);                                                           \
                                                                                \
     return Create(Opcode::opcode, operand, return_type);                       \
-  }                                                                            \
-  static_assert(true)
+  }
 
 ref<Operation> UnaryOp::CreateNot(const ref<Operation>& operand) {
   ASSERT_INT(operand);
@@ -706,7 +705,7 @@ ref<Operation> UnaryOp::CreateNot(const ref<Operation>& operand) {
   return Create(Opcode::Not, operand);
 }
 
-DECL_UNOP_CREATE(FNeg, ASSERT_FP, Type::float_ty(11, 53));
+DECL_UNOP_CREATE(FNeg, ASSERT_FP, operand->type());
 DECL_UNOP_CREATE(FIsNaN, ASSERT_FP, Type::int_ty(1));
 
 ref<Operation> UnaryOp::CreateTrunc(Type tgt, const ref<Operation>& operand) {
@@ -807,11 +806,9 @@ ref<Operation> SelectOp::Create(const ref<Operation>& cond,
   CAFFEINE_ASSERT(true_value, "true_value was null");
   CAFFEINE_ASSERT(false_value, "false_value was null");
 
-  if (cond->type() != Type::int_ty(1)) {
-    std::stringstream s;
-    s << "select condition was not an i1, it was " << cond->type();
-    CAFFEINE_ASSERT(cond->type() == Type::int_ty(1), s.str());
-  }
+  CAFFEINE_ASSERT(
+      cond->type() == Type::int_ty(1),
+      fmt::format("select condition was not an i1, it was {}", cond->type()));
 
   CAFFEINE_ASSERT(true_value->type() == false_value->type(),
                   "select values had different types");

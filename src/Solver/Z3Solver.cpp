@@ -466,10 +466,6 @@ z3::expr Z3OpVisitor::visitFCmp(const FCmpOp& op) {
   case FCmpOpcode::ONE:
     expr = lhs != rhs;
     break;
-  case FCmpOpcode::ORD:
-    // We don't need to worry about NaNs in the solver
-    expr = ctx->bv_val(1, 1);
-    break;
   case FCmpOpcode::UEQ:
     expr = lhs == rhs;
     break;
@@ -487,9 +483,6 @@ z3::expr Z3OpVisitor::visitFCmp(const FCmpOp& op) {
     break;
   case FCmpOpcode::UNE:
     expr = lhs != rhs;
-    break;
-  case FCmpOpcode::UNO:
-    expr = ctx->bv_val(0, 1);
     break;
   default:
     CAFFEINE_ABORT("Unknown FCmpOpcode");

@@ -346,13 +346,13 @@ ExecutionResult Interpreter::visitFCmpInst(llvm::FCmpInst& fcmp) {
   auto lhs = ctx->lookup(fcmp.getOperand(0));
   auto rhs = ctx->lookup(fcmp.getOperand(1));
 
-// `default` should be a bool
-#define FCMP_CASE_DEF(op, default_val)                                         \
+// `result` is the boolean value to return if either the lhs or rhs is a NaN
+#define FCMP_CASE(op, result)                                                  \
   case FCmpInst::FCMP_##op:                                                    \
     frame.insert(&fcmp,                                                        \
                  transform(                                                    \
                      [](const auto& lhs, const auto& rhs) {                    \
-                       ref<Operation> def = ConstantInt::Create(default_val);  \
+                       ref<Operation> def = ConstantInt::Create(result);       \
                        ref<Operation> thenFcmp =                               \
                            FCmpOp::CreateFCmp(FCmpOpcode::op, lhs, rhs);       \
                        ref<Operation> neitherIsNaN = SelectOp::Create(         \
@@ -364,24 +364,41 @@ ExecutionResult Interpreter::visitFCmpInst(llvm::FCmpInst& fcmp) {
                      lhs, rhs));                                               \
     return ExecutionResult::Continue;
 
-#define FCMP_CASE(op) FCMP_CASE_DEF(op, false)
-
   switch (fcmp.getPredicate()) {
-    FCMP_CASE(OEQ);
-    FCMP_CASE(OGT);
-    FCMP_CASE(OGE);
-    FCMP_CASE(OLT);
-    FCMP_CASE(OLE);
-    FCMP_CASE(ONE);
-    FCMP_CASE(ORD);
-    FCMP_CASE(UEQ);
-    FCMP_CASE(UGT);
-    FCMP_CASE(UGE);
-    FCMP_CASE(ULT);
-    FCMP_CASE(ULE);
-    FCMP_CASE_DEF(UNE, true);
-    FCMP_CASE(UNO);
+    FCMP_CASE(OEQ, false);
+    FCMP_CASE(OGT, false);
+    FCMP_CASE(OGE, false);
+    FCMP_CASE(OLT, false);
+    FCMP_CASE(OLE, false);
+    FCMP_CASE(ONE, false);
+    // The 'unordered' instructions return true if either arg is NaN
+    FCMP_CASE(UEQ, true);
+    FCMP_CASE(UGT, true);
+    FCMP_CASE(UGE, true);
+    FCMP_CASE(ULT, true);
+    FCMP_CASE(ULE, true);
+    FCMP_CASE(UNE, true);
 
+  case FCmpInst::FCMP_UNO:
+    frame.insert(&fcmp,
+                 transform(
+                     [](const auto& lhs, const auto& rhs) {
+                       // isnan(lhs) || isnan(rhs)
+                       return BinaryOp::CreateOr(UnaryOp::CreateFIsNaN(lhs),
+                                                 UnaryOp::CreateFIsNaN(rhs));
+                     },
+                     rhs, lhs));
+    return ExecutionResult::Continue;
+  case FCmpInst::FCMP_ORD:
+    frame.insert(&fcmp, transform(
+                            [](const auto& lhs, const auto& rhs) {
+                              // ! ( isnan(lhs) || isnan(rhs) )
+                              return UnaryOp::CreateNot(BinaryOp::CreateOr(
+                                  UnaryOp::CreateFIsNaN(lhs),
+                                  UnaryOp::CreateFIsNaN(rhs)));
+                            },
+                            rhs, lhs));
+    return ExecutionResult::Continue;
   case FCmpInst::FCMP_TRUE:
     frame.insert(&fcmp, ConstantInt::Create(true));
     return ExecutionResult::Continue;
