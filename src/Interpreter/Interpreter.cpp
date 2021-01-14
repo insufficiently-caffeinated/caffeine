@@ -795,6 +795,58 @@ ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
 
 #undef DO_LOAD_OP
 }
+ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
+  CAFFEINE_ASSERT(!inst.getType()->isVectorTy(),
+                  "Load/store of vector types are not supported yet");
+
+  auto dest = ctx->lookup(inst.getOperand(1));
+  auto value = [&] {
+    auto value = ctx->lookup(inst.getOperand(0));
+
+    if (value.is_scalar())
+      return value.scalar();
+    if (value.is_pointer())
+      return value.pointer().value(ctx->heap());
+
+    CAFFEINE_ABORT("Load/store of vector types are not supported yet");
+  }();
+  auto val_ty = value->type();
+
+  const llvm::DataLayout& layout = inst.getModule()->getDataLayout();
+  const Pointer& pointer = dest.pointer();
+
+  auto assertion = ctx->heap().check_valid(pointer);
+  auto model = ctx->resolve(!assertion);
+  if (model->result() == SolverResult::SAT) {
+    logger->log_failure(*model, *ctx, Failure(!assertion));
+
+    // If we're getting an out-of-bounds access then there's a pretty good
+    // chance that we'll find that we can overlap with just about any other
+    // allocation. This isn't likely to produce useful bugs so we'll kill the
+    // context here.
+    return ExecutionResult::Stop;
+  }
+
+  ctx->add(assertion);
+
+  auto resolved = ctx->heap().resolve(pointer, *ctx);
+  CAFFEINE_ASSERT(!resolved.empty());
+  for (size_t i = 1; i < resolved.size(); ++i) {
+    Context forked = ctx->fork();
+
+    Allocation& alloc = forked.heap()[resolved[i].alloc()];
+    forked.add(
+        alloc.check_inbounds(resolved[i].offset(), val_ty.byte_size(layout)));
+    alloc.write(resolved[i].offset(), value, layout);
+  }
+
+  Allocation& alloc = ctx->heap()[resolved[0].alloc()];
+  ctx->add(
+      alloc.check_inbounds(resolved[0].offset(), val_ty.byte_size(layout)));
+  alloc.write(resolved[0].offset(), value, layout);
+
+  return ExecutionResult::Continue;
+}
 
 /***************************************************
  * External function                               *
