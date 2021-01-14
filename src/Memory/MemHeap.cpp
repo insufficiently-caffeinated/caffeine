@@ -114,7 +114,9 @@ void Allocation::write(const ref<Operation>& offset,
 
   auto value = value_;
   Type t = value->type();
-  uint32_t width = t.byte_size(layout);
+
+  uint32_t byte_width = t.byte_size(layout);
+  uint32_t bitwidth = byte_width * 8;
 
   if (t.is_int()) {
     if (t.bitwidth() == 8) {
@@ -122,19 +124,19 @@ void Allocation::write(const ref<Operation>& offset,
       return;
     }
 
-    if (t.bitwidth() != width * 8)
-      value = UnaryOp::CreateZExt(Type::int_ty(width * 8), value);
+    if (t.bitwidth() != bitwidth)
+      value = UnaryOp::CreateZExt(Type::int_ty(bitwidth), value);
   } else {
-    value = UnaryOp::CreateBitcast(Type::int_ty(width * 8), value);
+    value = UnaryOp::CreateBitcast(Type::int_ty(bitwidth), value);
   }
 
-  for (uint32_t i = 0; i < width; ++i) {
+  for (uint32_t i = 0; i < byte_width; ++i) {
     auto byte = UnaryOp::CreateTrunc(
         Type::int_ty(8),
-        BinaryOp::CreateLShr(value, ConstantInt::Create(llvm::APInt(
-                                        i * 8, (uint64_t)width * 8))));
+        BinaryOp::CreateLShr(
+            value, ConstantInt::Create(llvm::APInt(bitwidth, i * 8))));
     auto index = BinaryOp::CreateAdd(
-        offset, ConstantInt::Create(llvm::APInt(i, (uint64_t)width * 8)));
+        offset, ConstantInt::Create(llvm::APInt(offset->type().bitwidth(), i)));
 
     overwrite(StoreOp::Create(data(), index, byte));
   }
