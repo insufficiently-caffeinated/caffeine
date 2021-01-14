@@ -13,8 +13,6 @@
 #include <unordered_map>
 
 namespace llvm {
-class UndefValue;
-class ConstantVector;
 class GlobalVariable;
 } // namespace llvm
 
@@ -81,6 +79,10 @@ public:
     return heap_;
   }
 
+  llvm::Module* llvm_module() const {
+    return module_;
+  }
+
   /**
    * Add a new assertion to this context.
    */
@@ -129,14 +131,7 @@ private:
    */
   ContextValue evaluate_constant(llvm::Constant* constant);
 
-  ContextValue evaluate_undef(llvm::UndefValue* undef);
-  ContextValue evaluate_vector(llvm::ConstantVector* vec);
-  ContextValue evaluate_global(llvm::GlobalVariable* global);
-
-  /**
-   * Evaluate the initializer of a global variable to a byte array.
-   */
-  ref<Operation> evaluate_global_data(llvm::Constant* constant);
+  friend ContextValue evaluate_global(Context*, llvm::GlobalVariable*);
 };
 
 } // namespace caffeine
