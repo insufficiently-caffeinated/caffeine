@@ -831,19 +831,22 @@ ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
 
   auto resolved = ctx->heap().resolve(pointer, *ctx);
   CAFFEINE_ASSERT(!resolved.empty());
+
+#define DO_STORE(ctx)                                                          \
+  do {                                                                         \
+    Allocation& alloc = (ctx)->heap()[resolved[0].alloc()];                    \
+    (ctx)->add(                                                                \
+        alloc.check_inbounds(resolved[0].offset(), val_ty.byte_size(layout))); \
+    alloc.write(resolved[0].offset(), value, layout);                          \
+  } while (0)
+
   for (size_t i = 1; i < resolved.size(); ++i) {
     Context forked = ctx->fork();
-
-    Allocation& alloc = forked.heap()[resolved[i].alloc()];
-    forked.add(
-        alloc.check_inbounds(resolved[i].offset(), val_ty.byte_size(layout)));
-    alloc.write(resolved[i].offset(), value, layout);
+    DO_STORE(&forked);
+    queue->add_context(std::move(forked));
   }
 
-  Allocation& alloc = ctx->heap()[resolved[0].alloc()];
-  ctx->add(
-      alloc.check_inbounds(resolved[0].offset(), val_ty.byte_size(layout)));
-  alloc.write(resolved[0].offset(), value, layout);
+  DO_STORE(ctx);
 
   return ExecutionResult::Continue;
 }
