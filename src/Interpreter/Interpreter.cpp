@@ -733,26 +733,27 @@ ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
 
   ctx->add(assertion);
 
+#define DO_LOAD_OP(ctx)                                                        \
+  do {                                                                         \
+    Allocation& alloc = (ctx)->heap()[resolved[0].alloc()];                    \
+    (ctx)->add(alloc.check_inbounds(resolved[0].offset(),                      \
+                                    load_ty.byte_size(layout)));               \
+                                                                               \
+    auto value = alloc.read(resolved[0].offset(), load_ty, layout);            \
+    (ctx)->stack_top().insert(&inst, value);                                   \
+  } while (0)
+
   auto resolved = ctx->heap().resolve(pointer, *ctx);
   for (size_t i = 1; i < resolved.size(); ++i) {
     Context forked = ctx->fork();
-
-    Allocation& alloc = forked.heap()[resolved[i].alloc()];
-    forked.add(
-        alloc.check_inbounds(resolved[i].offset(), load_ty.byte_size(layout)));
-
-    auto value = alloc.read(resolved[i].offset(), load_ty, layout);
-    forked.stack_top().insert(&inst, value);
+    DO_LOAD_OP(&forked);
   }
 
-  Allocation& alloc = ctx->heap()[resolved[0].alloc()];
-  ctx->add(
-      alloc.check_inbounds(resolved[0].offset(), load_ty.byte_size(layout)));
-
-  auto value = alloc.read(resolved[0].offset(), load_ty, layout);
-  ctx->stack_top().insert(&inst, value);
+  DO_LOAD_OP(ctx);
 
   return ExecutionResult::Continue;
+
+#undef DO_LOAD_OP
 }
 
 /***************************************************
