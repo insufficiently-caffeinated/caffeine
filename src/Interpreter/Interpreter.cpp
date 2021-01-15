@@ -747,6 +747,7 @@ ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
   for (size_t i = 1; i < resolved.size(); ++i) {
     Context forked = ctx->fork();
     DO_LOAD_OP(&forked);
+    queue->add_context(std::move(forked));
   }
 
   DO_LOAD_OP(ctx);
