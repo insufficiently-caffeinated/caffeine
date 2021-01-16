@@ -257,6 +257,24 @@ Assertion MemHeap::check_valid(const Pointer& ptr) {
                              result);
 }
 
+Assertion MemHeap::check_starts_allocation(const Pointer& ptr) {
+  if (ptr.is_resolved()) {
+    return ICmpOp::CreateICmp(ICmpOpcode::EQ, ptr.offset(), 0);
+  }
+
+  auto result = ConstantInt::Create(false);
+  auto value = ptr.value(*this);
+
+  for (const auto& alloc : allocs_) {
+    result = BinaryOp::CreateOr(
+        result, ICmpOp::CreateICmp(ICmpOpcode::EQ, value, alloc.address()));
+  }
+
+  // Note: NULL pointers are never valid.
+  return BinaryOp::CreateAnd(ICmpOp::CreateICmp(ICmpOpcode::NE, value, 0),
+                             result);
+}
+
 llvm::SmallVector<Pointer, 1> MemHeap::resolve(const Pointer& ptr,
                                                Context& ctx) const {
   llvm::SmallVector<Pointer, 1> results;

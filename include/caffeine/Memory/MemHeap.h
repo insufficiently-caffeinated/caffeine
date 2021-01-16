@@ -202,6 +202,16 @@ public:
   Assertion check_valid(const Pointer& value);
 
   /**
+   * Get an assertion that checks whether the provided pointer points to the
+   * start of any existing allocation.
+   *
+   * If the pointer has already been resolved then this just checks that the
+   * offset is equal to 0. Otherwise, it compares the absolute value with those
+   * of all extant allocations.
+   */
+  Assertion check_starts_allocation(const Pointer& value);
+
+  /**
    * Resolve all the allocations that a pointer could point to.
    *
    * This returns a resolved pointer for each allocation. Although it takes a
