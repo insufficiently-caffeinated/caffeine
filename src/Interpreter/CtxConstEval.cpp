@@ -110,20 +110,27 @@ static ContextValue evaluate_expr(Context* ctx, llvm::ConstantExpr* expr) {
   case Instruction::FPToSI:   return CAST_OP(UnaryOp::CreateFpToSI(type, value));
     // clang-format on
 
-  case Instruction::IntToPtr:
+  case Instruction::IntToPtr: {
+    auto layout = ctx->llvm_module()->getDataLayout();
     return transform_value(
         [=](const auto& value) {
-          return ContextValue(Pointer(value.scalar()));
+          return ContextValue(Pointer(UnaryOp::CreateTruncOrZExt(
+              Type::int_ty(layout.getPointerSizeInBits(
+                  expr->getType()->getPointerAddressSpace())),
+              value.scalar())));
         },
         OPERAND(expr, 0));
-
-  case Instruction::PtrToInt:
+  }
+  case Instruction::PtrToInt: {
+    auto layout = ctx->llvm_module()->getDataLayout();
     return transform_value(
         [=](const auto& value) {
-          return ContextValue(value.pointer().value(ctx->heap()));
+          return ContextValue(
+              UnaryOp::CreateTruncOrZExt(Type::from_llvm(expr->getType()),
+                                         value.pointer().value(ctx->heap())));
         },
         OPERAND(expr, 0));
-
+  }
   case Instruction::BitCast:
     return OPERAND(expr, 0);
 
