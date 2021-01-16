@@ -519,6 +519,15 @@ public:
   static ref<Operation> CreateSIToFp(Type tgt, const ref<Operation>& operand);
   static ref<Operation> CreateBitcast(Type tgt, const ref<Operation>& operand);
 
+  /// Create a trunc operation or a zext operation as needed to convert operand
+  /// to the required bitwidth. If the bitwidths are the same then does nothing.
+  static ref<Operation> CreateTruncOrZExt(Type tgt,
+                                          const ref<Operation>& operand);
+  /// Create a trunc operation or a sext operation as needed to convert operand
+  /// to the required bitwidth. If the bitwidths are the same then does nothing.
+  static ref<Operation> CreateTruncOrSExt(Type tgt,
+                                          const ref<Operation>& operand);
+
   static bool classof(const Operation* op);
 };
 
