@@ -24,11 +24,15 @@ if (NOT CAFFEINE_FMTONLY)
   # C++17 has a bunch of nice stuff, seems like a good level to target.
   set(CMAKE_CXX_STANDARD 17)
   set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+  set(CMAKE_C_STANDARD 99)
+  set(CMAKE_C_STANDARD_REQUIRED TRUE)
 
   include(setup-warnings)
+  include(LLVMIRUtils)
 
   add_subdirectory(src)
   add_subdirectory(test)
+  add_subdirectory(interface)
 
 else()
   if (CLANG_FORMAT STREQUAL "CLANG_FORMAT-NOTFOUND")
