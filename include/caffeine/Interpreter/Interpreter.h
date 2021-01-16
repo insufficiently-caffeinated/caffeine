@@ -60,6 +60,8 @@ public:
   ExecutionResult visitSExt(llvm::SExtInst& sext);
   ExecutionResult visitZExt(llvm::ZExtInst& zext);
 
+  ExecutionResult visitBitCastInst(llvm::BitCastInst& bitcast);
+
   ExecutionResult visitPHINode(llvm::PHINode& node);
   ExecutionResult visitBranchInst(llvm::BranchInst& inst);
   ExecutionResult visitReturnInst(llvm::ReturnInst& inst);

@@ -462,6 +462,17 @@ ExecutionResult Interpreter::visitZExt(llvm::ZExtInst& zext) {
   return ExecutionResult::Continue;
 }
 
+ExecutionResult Interpreter::visitBitCastInst(llvm::BitCastInst& bitcast) {
+  auto& frame = ctx->stack_top();
+
+  CAFFEINE_ASSERT(bitcast.getType()->isPointerTy(),
+                  "non-pointer bitcasts are not yet supported");
+
+  frame.insert(&bitcast, ctx->lookup(bitcast.getOperand(0)));
+
+  return ExecutionResult::Continue;
+}
+
 ExecutionResult Interpreter::visitPHINode(llvm::PHINode& node) {
   auto& frame = ctx->stack_top();
 
