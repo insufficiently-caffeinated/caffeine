@@ -9,8 +9,8 @@
 namespace caffeine {
 
 StackFrame::StackFrame(llvm::Function* function)
-    : function(function), current_block(&function->getEntryBlock()),
-      prev_block(nullptr), current(current_block->begin()) {}
+    : current_block(&function->getEntryBlock()), prev_block(nullptr),
+      current(current_block->begin()) {}
 
 void StackFrame::jump_to(llvm::BasicBlock* block) {
   prev_block = current_block;
