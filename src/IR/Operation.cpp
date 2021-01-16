@@ -829,6 +829,29 @@ ref<Operation> UnaryOp::CreateBitcast(Type tgt, const ref<Operation>& operand) {
   return ref<Operation>(new UnaryOp(Opcode::Bitcast, tgt, operand));
 }
 
+ref<Operation> UnaryOp::CreateTruncOrZExt(Type tgt,
+                                          const ref<Operation>& operand) {
+  CAFFEINE_ASSERT(operand->type().is_int());
+  CAFFEINE_ASSERT(tgt.is_int());
+
+  if (tgt.bitwidth() < operand->type().bitwidth())
+    return CreateTrunc(tgt, operand);
+  if (tgt.bitwidth() > operand->type().bitwidth())
+    return CreateZExt(tgt, operand);
+  return operand;
+}
+ref<Operation> UnaryOp::CreateTruncOrSExt(Type tgt,
+                                          const ref<Operation>& operand) {
+  CAFFEINE_ASSERT(operand->type().is_int());
+  CAFFEINE_ASSERT(tgt.is_int());
+
+  if (tgt.bitwidth() < operand->type().bitwidth())
+    return CreateTrunc(tgt, operand);
+  if (tgt.bitwidth() > operand->type().bitwidth())
+    return CreateSExt(tgt, operand);
+  return operand;
+}
+
 /***************************************************
  * SelectOp                                        *
  ***************************************************/
