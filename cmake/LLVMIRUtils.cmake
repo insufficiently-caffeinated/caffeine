@@ -72,42 +72,18 @@ function(add_llvm_ir_library TARGET_NAME)
     get_filename_component(source_ext "${source}" LAST_EXT)
 
     if(source_language STREQUAL "C")
-      set_property(
-        SOURCE "${source}"
-        PROPERTY
-        LANGUAGE LLVM_C
-      )
+      set_property(SOURCE "${source}" PROPERTY LANGUAGE LLVM_C)
 
       # If the script gets modified then we want to rebuild
-      set_property(
-        SOURCE "${source}"
-        PROPERTY
-        OBJECT_DEPENDS "${CLANG_BUILD_SCRIPT}"
-      )
+      set_property(SOURCE "${source}" PROPERTY OBJECT_DEPENDS "${CLANG_BUILD_SCRIPT}")
     elseif(source_language STREQUAL "CXX")
-      set_property(
-        SOURCE "${source}"
-        PROPERTY
-        LANGUAGE LLVM_CXX
-      )
+      set_property(SOURCE "${source}" PROPERTY LANGUAGE LLVM_CXX)
 
       # If the script gets modified then we want to rebuild
-      set_property(
-        SOURCE "${source}"
-        PROPERTY
-        OBJECT_DEPENDS "${CLANG_BUILD_SCRIPT}"
-      )
+      set_property(SOURCE "${source}" PROPERTY OBJECT_DEPENDS "${CLANG_BUILD_SCRIPT}")
     elseif(source_ext STREQUAL .ll OR source_ext STREQUAL .bc)
-      set_property(
-        SOURCE "${source}"
-        PROPERTY
-        LANGUAGE BITCODE
-      )
-      set_property(
-        SOURCE "${source}"
-        PROPERTY
-        EXTERNAL_OBJECT TRUE
-      )
+      set_property(SOURCE "${source}" PROPERTY LANGUAGE BITCODE)
+      set_property(SOURCE "${source}" PROPERTY EXTERNAL_OBJECT TRUE)
     endif()
   endforeach()
 
