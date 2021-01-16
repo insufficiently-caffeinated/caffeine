@@ -88,6 +88,7 @@ private:
   ExecutionResult visitAssert(llvm::CallInst& inst);
 
   ExecutionResult visitMalloc(llvm::CallInst& inst);
+  ExecutionResult visitFree(llvm::CallInst& inst);
 };
 
 } // namespace caffeine

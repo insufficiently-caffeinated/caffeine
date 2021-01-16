@@ -896,6 +896,8 @@ ExecutionResult Interpreter::visitExternFunc(llvm::CallInst& call) {
 
   if (name == "caffeine_malloc")
     return visitMalloc(call);
+  if (name == "caffeine_free")
+    return visitFree(call);
 
   CAFFEINE_ABORT(
       fmt::format("external function '{}' not implemented", name.str()));
@@ -965,6 +967,41 @@ ExecutionResult Interpreter::visitMalloc(llvm::CallInst& call) {
   ctx->stack_top().insert(
       &call, ContextValue(Pointer(
                  alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
+
+  return ExecutionResult::Continue;
+}
+/**
+ * caffeine_free is a more limited version of free that doesn't expect the input
+ * to be a null pointer.
+ */
+ExecutionResult Interpreter::visitFree(llvm::CallInst& call) {
+  CAFFEINE_ASSERT(call.getNumOperands() == 1, "Invalid free signature");
+  CAFFEINE_ASSERT(call.getType()->isVoidTy(), "Invalid free signature");
+  CAFFEINE_ASSERT(call.getOperand(0)->getType()->isPointerTy(),
+                  "Invalid free signature");
+
+  auto& heap = ctx->heap();
+  auto memptr = ctx->lookup(call.getOperand(0)).pointer();
+
+  auto is_valid_ptr = heap.check_starts_allocation(memptr);
+  auto model = ctx->resolve(!is_valid_ptr);
+  if (model->result() == SolverResult::SAT) {
+    logger->log_failure(
+        *model, *ctx,
+        Failure(is_valid_ptr, "Attempted to free an invalid pointer"));
+    return ExecutionResult::Stop;
+  }
+
+  auto resolved = heap.resolve(memptr, *ctx);
+  CAFFEINE_ASSERT(!resolved.empty());
+
+  for (size_t i = 1; i < resolved.size(); ++i) {
+    Context forked = ctx->fork();
+    forked.heap().deallocate(resolved[i].alloc());
+    queue->add_context(std::move(forked));
+  }
+
+  heap.deallocate(resolved[0].alloc());
 
   return ExecutionResult::Continue;
 }
