@@ -975,13 +975,13 @@ ExecutionResult Interpreter::visitMalloc(llvm::CallInst& call) {
  * to be a null pointer.
  */
 ExecutionResult Interpreter::visitFree(llvm::CallInst& call) {
-  CAFFEINE_ASSERT(call.getNumOperands() == 1, "Invalid free signature");
+  CAFFEINE_ASSERT(call.getNumArgOperands() == 1, "Invalid free signature");
   CAFFEINE_ASSERT(call.getType()->isVoidTy(), "Invalid free signature");
-  CAFFEINE_ASSERT(call.getOperand(0)->getType()->isPointerTy(),
+  CAFFEINE_ASSERT(call.getArgOperand(1)->getType()->isPointerTy(),
                   "Invalid free signature");
 
   auto& heap = ctx->heap();
-  auto memptr = ctx->lookup(call.getOperand(0)).pointer();
+  auto memptr = ctx->lookup(call.getArgOperand(1)).pointer();
 
   auto is_valid_ptr = heap.check_starts_allocation(memptr);
   auto model = ctx->resolve(!is_valid_ptr);
