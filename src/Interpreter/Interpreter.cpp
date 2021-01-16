@@ -733,6 +733,58 @@ Interpreter::visitGetElementPtrInst(llvm::GetElementPtrInst& inst) {
 
   return ExecutionResult::Continue;
 }
+ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
+  // Note: This treats atomic loads as regular ones since we only model
+  //       single-threaded code. If that ever changes then this will need to be
+  //       revisited.
+
+  CAFFEINE_ASSERT(!inst.getType()->isVectorTy(),
+                  "Load/store of vector types are not supported yet");
+
+  auto operand = ctx->lookup(inst.getOperand(0));
+  auto load_ty = Type::from_llvm(inst.getType());
+  const llvm::DataLayout& layout = inst.getModule()->getDataLayout();
+
+  // TODO: What are the vector semantics for loads?
+  const Pointer& pointer = operand.pointer();
+
+  auto assertion = ctx->heap().check_valid(pointer);
+  auto model = ctx->resolve(!assertion);
+  if (model->result() == SolverResult::SAT) {
+    logger->log_failure(*model, *ctx, Failure(!assertion));
+
+    // If we're getting an out-of-bounds access then there's a pretty good
+    // chance that we'll find that we can overlap with just about any other
+    // allocation. This isn't likely to produce useful bugs so we'll kill the
+    // context here.
+    return ExecutionResult::Stop;
+  }
+
+  ctx->add(assertion);
+
+#define DO_LOAD_OP(ctx)                                                        \
+  do {                                                                         \
+    Allocation& alloc = (ctx)->heap()[resolved[0].alloc()];                    \
+    (ctx)->add(alloc.check_inbounds(resolved[0].offset(),                      \
+                                    load_ty.byte_size(layout)));               \
+                                                                               \
+    auto value = alloc.read(resolved[0].offset(), load_ty, layout);            \
+    (ctx)->stack_top().insert(&inst, value);                                   \
+  } while (0)
+
+  auto resolved = ctx->heap().resolve(pointer, *ctx);
+  for (size_t i = 1; i < resolved.size(); ++i) {
+    Context forked = ctx->fork();
+    DO_LOAD_OP(&forked);
+    queue->add_context(std::move(forked));
+  }
+
+  DO_LOAD_OP(ctx);
+
+  return ExecutionResult::Continue;
+
+#undef DO_LOAD_OP
+}
 
 /***************************************************
  * External function                               *

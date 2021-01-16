@@ -10,6 +10,7 @@
 
 #include <z3++.h>
 
+#include <limits>
 #include <string>
 #include <unordered_map>
 #include <variant>
@@ -44,11 +45,17 @@ class Z3OpVisitor : public ConstOpVisitor<Z3OpVisitor, z3::expr> {
 public:
 private:
   z3::context* ctx;
+  z3::solver* solver;
   Z3Model::ConstMap& constMap;
   std::unordered_map<const Operation*, z3::expr> cache;
+  // Used for temporary constants that are needed as an implementation detail
+  // but aren't otherwise exposed to clients.
+  unsigned tmpConstNum = (1u << 30) / 2;
+
+  static constexpr unsigned tmpConstMax = (1u << 30) - 1;
 
 public:
-  Z3OpVisitor(z3::context* ctx, Z3Model::ConstMap& constMap);
+  Z3OpVisitor(z3::solver* ctx, Z3Model::ConstMap& constMap);
 
   z3::expr visit(const Operation& op);
   z3::expr visit(const Operation* op) {
@@ -61,6 +68,7 @@ public:
   z3::expr visitConstant     (const Constant& op);
   z3::expr visitConstantInt  (const ConstantInt& op);
   z3::expr visitConstantFloat(const ConstantFloat& op);
+  z3::expr visitConstantArray(const ConstantArray& op);
   z3::expr visitUndef        (const Undef& op);
 
   // Binary operations
@@ -93,11 +101,27 @@ public:
   z3::expr visitZExt(const UnaryOp& op);
   z3::expr visitSExt(const UnaryOp& op);
 
+  z3::expr visitLoadOp(const LoadOp& op);
+
   // Unary operations
   z3::expr visitNot (const UnaryOp& op);
   z3::expr visitFNeg(const UnaryOp& op);
   z3::expr visitFIsNaN(const UnaryOp& op);
   // clang-format on
+
+  /**
+   * When a temporary constant is needed then use this function.
+   *
+   * It explicitly creates constants with high-integer names that won't collide
+   * unless the running program creates more than 2^29 constant names.
+   */
+  z3::expr next_const(const z3::sort& sort) {
+    CAFFEINE_ASSERT(tmpConstNum != tmpConstMax,
+                    "ran out of temporary constant names");
+
+    unsigned const_num = tmpConstNum++;
+    return ctx->constant(ctx->int_symbol(const_num), sort);
+  }
 };
 
 // Convert a Z3 expression to an APInt

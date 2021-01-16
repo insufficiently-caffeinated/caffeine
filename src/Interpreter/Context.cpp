@@ -97,6 +97,11 @@ std::unique_ptr<Model> Context::resolve(const Assertion& extra) {
 }
 
 uint64_t Context::next_constant() {
+  // Constant numbers greater than 2^29-1 are reserved for the solvers
+  // themselves to create internal constants. If this assertion fires
+  // then we'll have to revisit the naming allocations.
+  CAFFEINE_ASSERT(constant_num_ < (1 << 29),
+                  "ran out of temporary constant names");
   return constant_num_++;
 }
 
