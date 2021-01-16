@@ -934,10 +934,10 @@ ExecutionResult Interpreter::visitAssert(llvm::CallInst& call) {
  * size to never be 0.
  */
 ExecutionResult Interpreter::visitMalloc(llvm::CallInst& call) {
-  CAFFEINE_ASSERT(call.getNumOperands() == 1, "Invalid malloc signature");
+  CAFFEINE_ASSERT(call.getNumArgOperands() == 1, "Invalid malloc signature");
   CAFFEINE_ASSERT(call.getType()->isPointerTy(), "Invalid malloc signature");
 
-  auto size = ctx->lookup(call.getOperand(0)).scalar();
+  auto size = ctx->lookup(call.getArgOperand(0)).scalar();
   const llvm::DataLayout& layout = call.getModule()->getDataLayout();
 
   CAFFEINE_ASSERT(size->type().is_int(), "Invalid malloc signature");
