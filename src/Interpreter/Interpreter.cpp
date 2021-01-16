@@ -28,8 +28,9 @@ auto zip(R1& range1, R2& range2) {
          });
 }
 
-Interpreter::Interpreter(Executor* queue, Context* ctx, FailureLogger* logger)
-    : ctx{ctx}, queue{queue}, logger{logger} {}
+Interpreter::Interpreter(Executor* queue, Context* ctx, FailureLogger* logger,
+                         const InterpreterOptions& options)
+    : ctx{ctx}, queue{queue}, logger{logger}, options(options) {}
 
 void Interpreter::execute() {
   ExecutionResult exec;
