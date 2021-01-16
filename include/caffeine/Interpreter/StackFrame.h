@@ -15,7 +15,6 @@ class Context;
 
 class StackFrame {
 private:
-  llvm::Function* function;
   std::unordered_map<llvm::Value*, ContextValue> variables;
 
 public:
