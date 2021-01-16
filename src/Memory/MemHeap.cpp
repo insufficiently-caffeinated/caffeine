@@ -145,9 +145,13 @@ void Allocation::write(const ref<Operation>& offset,
  ***************************************************/
 
 Pointer::Pointer(const ref<Operation>& value)
-    : Pointer({SIZE_MAX, SIZE_MAX}, value) {}
+    : Pointer({SIZE_MAX, SIZE_MAX}, value) {
+  CAFFEINE_ASSERT(value->type().is_int());
+}
 Pointer::Pointer(const AllocId& alloc, const ref<Operation>& offset)
-    : alloc_(alloc), offset_(offset) {}
+    : alloc_(alloc), offset_(offset) {
+  CAFFEINE_ASSERT(offset->type().is_int());
+}
 
 ref<Operation> Pointer::value(const MemHeap& heap) const {
   if (is_resolved())
