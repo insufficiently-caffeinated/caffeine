@@ -894,6 +894,9 @@ ExecutionResult Interpreter::visitExternFunc(llvm::CallInst& call) {
   if (name == "caffeine_assume")
     return visitAssume(call);
 
+  if (name == "caffeine_malloc")
+    return visitMalloc(call);
+
   CAFFEINE_ABORT(
       fmt::format("external function '{}' not implemented", name.str()));
 }
@@ -920,6 +923,48 @@ ExecutionResult Interpreter::visitAssert(llvm::CallInst& call) {
     logger->log_failure(*model, *ctx, Failure(!assertion));
 
   ctx->add(assertion);
+
+  return ExecutionResult::Continue;
+}
+
+/**
+ * caffeine_malloc is a more limited version of malloc that expects the input
+ * size to never be 0.
+ */
+ExecutionResult Interpreter::visitMalloc(llvm::CallInst& call) {
+  CAFFEINE_ASSERT(call.getNumOperands() == 1, "Invalid malloc signature");
+  CAFFEINE_ASSERT(call.getType()->isPointerTy(), "Invalid malloc signature");
+
+  auto size = ctx->lookup(call.getOperand(0)).scalar();
+  const llvm::DataLayout& layout = call.getModule()->getDataLayout();
+
+  CAFFEINE_ASSERT(size->type().is_int(), "Invalid malloc signature");
+  CAFFEINE_ASSERT(
+      size->type().bitwidth() ==
+          layout.getIndexSizeInBits(call.getType()->getPointerAddressSpace()),
+      "Invalid malloc signature");
+
+  auto ptr_width =
+      layout.getPointerSizeInBits(call.getType()->getPointerAddressSpace());
+
+  if (options.malloc_can_return_null) {
+    Context forked = ctx->fork();
+    forked.stack_top().insert(
+        &call,
+        ContextValue(Pointer(ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
+    queue->add_context(std::move(forked));
+  }
+
+  auto size_op = UnaryOp::CreateTruncOrZExt(Type::int_ty(ptr_width), size);
+  auto alloc = ctx->heap().allocate(
+      size_op,
+      ConstantInt::Create(llvm::APInt(ptr_width, options.malloc_alignment)),
+      AllocOp::Create(size_op, ConstantInt::Create(llvm::APInt(8, 0xDD))),
+      *ctx);
+
+  ctx->stack_top().insert(
+      &call, ContextValue(Pointer(
+                 alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
 
   return ExecutionResult::Continue;
 }
