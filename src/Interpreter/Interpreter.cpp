@@ -461,6 +461,36 @@ ExecutionResult Interpreter::visitZExt(llvm::ZExtInst& zext) {
 
   return ExecutionResult::Continue;
 }
+ExecutionResult Interpreter::visitIntToPtrInst(llvm::IntToPtrInst& inttoptr) {
+  auto& frame = ctx->stack_top();
+  auto operand = ctx->lookup(inttoptr.getOperand(0));
+  const llvm::DataLayout& layout = inttoptr.getModule()->getDataLayout();
+
+  auto func = [&](const ContextValue& operand) {
+    return ContextValue(Pointer(UnaryOp::CreateTruncOrZExt(
+        Type::int_ty(layout.getPointerSizeInBits(
+            inttoptr.getType()->getPointerAddressSpace())),
+        operand.scalar())));
+  };
+  frame.insert(&inttoptr, transform_value(func, operand));
+
+  return ExecutionResult::Continue;
+}
+ExecutionResult Interpreter::visitPtrToIntInst(llvm::PtrToIntInst& ptrtoint) {
+  auto& frame = ctx->stack_top();
+  auto type = Type::from_llvm(ptrtoint.getType());
+  auto operand = ctx->lookup(ptrtoint.getOperand(0));
+
+  auto func = [&](const ContextValue& operand) {
+    const Pointer& ptr = operand.pointer();
+
+    return ContextValue(
+        UnaryOp::CreateTruncOrZExt(type, ptr.value(ctx->heap())));
+  };
+  frame.insert(&ptrtoint, transform_value(func, operand));
+
+  return ExecutionResult::Continue;
+}
 
 ExecutionResult Interpreter::visitBitCastInst(llvm::BitCastInst& bitcast) {
   auto& frame = ctx->stack_top();

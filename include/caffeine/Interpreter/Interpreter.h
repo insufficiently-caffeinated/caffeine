@@ -59,6 +59,8 @@ public:
 
   ExecutionResult visitSExt(llvm::SExtInst& sext);
   ExecutionResult visitZExt(llvm::ZExtInst& zext);
+  ExecutionResult visitIntToPtrInst(llvm::IntToPtrInst& inttoptr);
+  ExecutionResult visitPtrToIntInst(llvm::PtrToIntInst& ptrtoint);
 
   ExecutionResult visitBitCastInst(llvm::BitCastInst& bitcast);
 
