@@ -9,7 +9,7 @@ void test(size_t x) {
   caffeine_assume(x >= 1);
 
   uint32_t* mem = malloc(x * sizeof(uint32_t));
-  
+
   for (uint32_t i = 0; i < x; ++i) {
     mem[i] = i * 2;
   }
