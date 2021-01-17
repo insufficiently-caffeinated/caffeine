@@ -16,6 +16,12 @@ inline bool is_constant_int(const Operation& op, uint64_t value) {
   return false;
 }
 
+inline bool is_constant_ones(const Operation& op) {
+  if (const auto* constant = llvm::dyn_cast<ConstantInt>(&op))
+    return constant->value().isAllOnesValue();
+  return false;
+}
+
 inline bool constant_int_compare(ICmpOpcode cmp, const llvm::APInt& lhs,
                                  const llvm::APInt& rhs) {
   switch (cmp) {

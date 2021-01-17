@@ -10,6 +10,11 @@
 
 namespace caffeine {
 
+#define ASSERT_SAME_TYPES(v1, v2)                                              \
+  CAFFEINE_ASSERT((v1)->type() == (v2)->type(),                                \
+                  fmt::format("arguments had different types: {} != {}",       \
+                              (v1)->type(), (v2)->type()))
+
 Operation::Operation() : opcode_(Invalid), type_(Type::void_ty()) {}
 
 Operation::Operation(Opcode op, Type t, const Inner& inner)
@@ -429,12 +434,16 @@ ref<Operation> BinaryOp::CreateSub(const ref<Operation>& lhs,
   CAFFEINE_ASSERT(rhs, "rhs was null");
   ASSERT_INT(lhs);
   ASSERT_INT(rhs);
+  ASSERT_SAME_TYPES(lhs, rhs);
 
   if (lhs->is<caffeine::Undef>() || rhs->is<caffeine::Undef>())
     return Undef::Create(lhs->type());
 
   if (is_constant_int(*rhs, 0))
     return lhs;
+
+  if (rhs.get() == lhs.get())
+    return ConstantInt::Create(llvm::APInt(lhs->type().bitwidth(), 0));
 
   const auto* lhs_int = llvm::dyn_cast<caffeine::ConstantInt>(lhs.get());
   const auto* rhs_int = llvm::dyn_cast<caffeine::ConstantInt>(rhs.get());
@@ -549,6 +558,11 @@ ref<Operation> BinaryOp::CreateAnd(const ref<Operation>& lhs,
   if (is_constant_int(*rhs, 0))
     return rhs;
 
+  if (is_constant_ones(*lhs))
+    return rhs;
+  if (is_constant_ones(*rhs))
+    return lhs;
+
   const auto* lhs_int = llvm::dyn_cast<caffeine::ConstantInt>(lhs.get());
   const auto* rhs_int = llvm::dyn_cast<caffeine::ConstantInt>(rhs.get());
   if (lhs_int && rhs_int)
@@ -567,6 +581,11 @@ ref<Operation> BinaryOp::CreateOr(const ref<Operation>& lhs,
     return rhs;
   if (is_constant_int(*rhs, 0))
     return lhs;
+
+  if (is_constant_ones(*lhs))
+    return lhs;
+  if (is_constant_ones(*rhs))
+    return rhs;
 
   const auto* lhs_int = llvm::dyn_cast<caffeine::ConstantInt>(lhs.get());
   const auto* rhs_int = llvm::dyn_cast<caffeine::ConstantInt>(rhs.get());
@@ -817,8 +836,10 @@ ref<Operation> ICmpOp::CreateICmp(ICmpOpcode cmp, const ref<Operation>& lhs,
                                   const ref<Operation>& rhs) {
   CAFFEINE_ASSERT(rhs, "rhs was null");
   CAFFEINE_ASSERT(lhs, "lhs was null");
-  CAFFEINE_ASSERT(rhs->type() == lhs->type(),
-                  "cannot compare icmp operands with different types");
+  CAFFEINE_ASSERT(
+      rhs->type() == lhs->type(),
+      fmt::format("cannot compare icmp operands with different types: {} != {}",
+                  rhs->type(), lhs->type()));
   CAFFEINE_ASSERT(lhs->type().is_int(),
                   "icmp can only be created with integer operands");
 
@@ -827,6 +848,26 @@ ref<Operation> ICmpOp::CreateICmp(ICmpOpcode cmp, const ref<Operation>& lhs,
   if (lhs_int && rhs_int)
     return ConstantInt::Create(
         constant_int_compare(cmp, lhs_int->value(), rhs_int->value()));
+
+  if (lhs.get() == rhs.get()) {
+    if (lhs->is<caffeine::Undef>())
+      return Undef::Create(Type::int_ty(1));
+
+    switch (cmp) {
+    case ICmpOpcode::EQ:
+    case ICmpOpcode::ULE:
+    case ICmpOpcode::SLE:
+    case ICmpOpcode::UGE:
+    case ICmpOpcode::SGE:
+      return ConstantInt::Create(true);
+    case ICmpOpcode::NE:
+    case ICmpOpcode::ULT:
+    case ICmpOpcode::SLT:
+    case ICmpOpcode::UGT:
+    case ICmpOpcode::SGT:
+      return ConstantInt::Create(false);
+    }
+  }
 
   return ref<Operation>(new ICmpOp(cmp, Type::int_ty(1), lhs, rhs));
 }
@@ -906,6 +947,14 @@ ref<Operation> LoadOp::Create(const ref<Operation>& data,
   CAFFEINE_ASSERT(offset, "offset was null");
   CAFFEINE_ASSERT(offset->type().is_int(),
                   "Load offset must be a pointer-sized integer type");
+
+  const auto* data_arr = llvm::dyn_cast<caffeine::ConstantArray>(data.get());
+  const auto* offset_int = llvm::dyn_cast<caffeine::ConstantInt>(offset.get());
+  if (data_arr && offset_int &&
+      offset->type().bitwidth() <= sizeof(size_t) * CHAR_BIT)
+    return ConstantInt::Create(llvm::APInt(
+        8, data_arr->data()[offset_int->value().getLimitedValue()]));
+
   return ref<Operation>(new LoadOp(data, offset));
 }
 
