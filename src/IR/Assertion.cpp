@@ -2,6 +2,8 @@
 #include "caffeine/IR/Assertion.h"
 #include "caffeine/Support/Assert.h"
 
+#include <iostream>
+
 namespace caffeine {
 
 Assertion::Assertion() : Assertion(constant(true)) {}
@@ -23,6 +25,10 @@ Assertion Assertion::operator!() const {
 Assertion Assertion::constant(bool value) {
   return Assertion(
       ConstantInt::Create(llvm::APInt(1, static_cast<uint64_t>(value))));
+}
+
+std::ostream& operator<<(std::ostream& os, const Assertion& assertion) {
+  return os << "(assert " << *assertion.value() << ")";
 }
 
 } // namespace caffeine

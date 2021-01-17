@@ -32,6 +32,8 @@ public:
   static Assertion constant(bool value);
 };
 
+std::ostream& operator<<(std::ostream& os, const Assertion& assertion);
+
 } // namespace caffeine
 
 #include "caffeine/IR/Assertion.inl"
