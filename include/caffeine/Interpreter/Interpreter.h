@@ -68,6 +68,7 @@ public:
 
   ExecutionResult visitGetElementPtrInst(llvm::GetElementPtrInst& inst);
   ExecutionResult visitLoadInst(llvm::LoadInst& inst);
+  ExecutionResult visitStoreInst(llvm::StoreInst& inst);
 
   ExecutionResult visitInsertElementInst(llvm::InsertElementInst& inst);
   ExecutionResult visitExtractElementInst(llvm::ExtractElementInst& inst);

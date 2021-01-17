@@ -534,5 +534,8 @@ z3::expr Z3OpVisitor::visitSExt(const UnaryOp& op) {
 z3::expr Z3OpVisitor::visitLoadOp(const LoadOp& op) {
   return z3::select(visit(op[0]), visit(op[1]));
 }
+z3::expr Z3OpVisitor::visitStoreOp(const StoreOp& op) {
+  return z3::store(visit(op[0]), visit(op[1]), visit(op[2]));
+}
 
 } // namespace caffeine

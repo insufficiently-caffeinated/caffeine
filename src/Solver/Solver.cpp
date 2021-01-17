@@ -68,7 +68,7 @@ public:
   }
 
   Value visitSelectOp(const SelectOp& select) {
-    return Value::select(visit(select[0]), visit(select[1]), visit(select[2]));
+    return visit(select[0]).apint() == 1 ? visit(select[1]) : visit(select[2]);
   }
 
   Value visitTrunc(const UnaryOp& op) {
@@ -83,6 +83,13 @@ public:
 
   Value visitBitcast(const UnaryOp& op) {
     return Value::bitcast(visit(op[0]), op.type());
+  }
+
+  Value visitLoad(const LoadOp& op) {
+    return Value::load(visit(op[0]), visit(op[1]));
+  }
+  Value visitStore(const StoreOp& op) {
+    return Value::store(visit(op[0]), visit(op[1]), visit(op[2]));
   }
 
 private:
