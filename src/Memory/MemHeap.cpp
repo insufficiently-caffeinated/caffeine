@@ -44,9 +44,9 @@ Assertion Allocation::check_inbounds(const ref<Operation>& offset,
 
   auto lower = ICmpOp::CreateICmp(ICmpOpcode::ULT, offset, size());
   auto upper = ICmpOp::CreateICmp(
-      ICmpOpcode::ULT,
+      ICmpOpcode::ULE,
       BinaryOp::CreateAdd(offset, ConstantInt::Create(llvm::APInt(
-                                      width, offset->type().bitwidth()))),
+                                      offset->type().bitwidth(), width))),
       size());
 
   return Assertion(BinaryOp::CreateAnd(std::move(upper), std::move(lower)));
@@ -259,10 +259,19 @@ Assertion MemHeap::check_valid(const Pointer& ptr) {
 
 llvm::SmallVector<Pointer, 1> MemHeap::resolve(const Pointer& ptr,
                                                Context& ctx) const {
-  if (ptr.is_resolved())
-    return llvm::SmallVector<Pointer, 1>{ptr};
-
   llvm::SmallVector<Pointer, 1> results;
+
+  if (ptr.is_resolved()) {
+    if (!check_live(ptr.alloc()))
+      return results;
+    const Allocation& alloc = (*this)[ptr.alloc()];
+    if (ctx.check(alloc.check_inbounds(ptr.offset(), 0)) == SolverResult::UNSAT)
+      return results;
+
+    results.push_back(ptr);
+    return results;
+  }
+
   auto value = ptr.value(*this);
 
   auto end = allocs_.end();
