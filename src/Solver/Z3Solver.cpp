@@ -537,5 +537,11 @@ z3::expr Z3OpVisitor::visitLoadOp(const LoadOp& op) {
 z3::expr Z3OpVisitor::visitStoreOp(const StoreOp& op) {
   return z3::store(visit(op[0]), visit(op[1]), visit(op[2]));
 }
+z3::expr Z3OpVisitor::visitAllocOp(const AllocOp& op) {
+  auto value = visit(*op.default_value());
+  auto index_width = op.size()->type().bitwidth();
+
+  return z3::const_array(ctx->bv_sort(index_width), value);
+}
 
 } // namespace caffeine
