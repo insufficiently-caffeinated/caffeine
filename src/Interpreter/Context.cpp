@@ -3,6 +3,7 @@
 #include "caffeine/IR/Type.h"
 #include "caffeine/Interpreter/StackFrame.h"
 
+#include <boost/algorithm/string.hpp>
 #include <fmt/format.h>
 #include <llvm/IR/Module.h>
 #include <llvm/Support/raw_ostream.h>
@@ -32,6 +33,7 @@ Context::Context(llvm::Function* function, std::shared_ptr<Solver> solver)
     assert_valid_arg(arg.getType());
 
     std::string name = arg.getName().str();
+    boost::trim(name);
 
     if (name.empty())
       name = fmt::format("arg{}", i);
