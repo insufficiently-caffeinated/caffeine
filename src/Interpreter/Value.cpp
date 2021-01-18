@@ -74,6 +74,14 @@ std::ostream& operator<<(std::ostream& os, const ContextValue& value) {
   if (value.is_scalar())
     return os << *value.scalar();
 
+  if (value.is_pointer()) {
+    auto ptr = value.pointer();
+
+    if (ptr.is_resolved())
+      return os << "[" << ptr.alloc().first << ", " << ptr.offset() << "]";
+    return os << ptr.offset();
+  }
+
   os << "<";
   bool is_first = true;
 
