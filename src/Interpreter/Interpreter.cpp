@@ -783,28 +783,21 @@ ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
 
   ctx->add(assertion);
 
-#define DO_LOAD_OP(ctx)                                                        \
-  do {                                                                         \
-    Allocation& alloc = (ctx)->heap()[resolved[0].alloc()];                    \
-    (ctx)->add(alloc.check_inbounds(resolved[0].offset(),                      \
-                                    load_ty.byte_size(layout)));               \
-                                                                               \
-    auto value = alloc.read(resolved[0].offset(), load_ty, layout);            \
-    (ctx)->stack_top().insert(&inst, value);                                   \
-  } while (0)
-
   auto resolved = ctx->heap().resolve(pointer, *ctx);
-  for (size_t i = 1; i < resolved.size(); ++i) {
+
+  for (const Pointer& ptr : resolved) {
     Context forked = ctx->fork();
-    DO_LOAD_OP(&forked);
+
+    Allocation& alloc = ctx->heap()[ptr.alloc()];
+    forked.add(alloc.check_inbounds(ptr.offset(), load_ty.byte_size(layout)));
+
+    auto value = alloc.read(ptr.offset(), load_ty, layout);
+    forked.stack_top().insert(&inst, value);
+
     queue->add_context(std::move(forked));
   }
 
-  DO_LOAD_OP(ctx);
-
-  return ExecutionResult::Continue;
-
-#undef DO_LOAD_OP
+  return ExecutionResult::Stop;
 }
 ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
   CAFFEINE_ASSERT(!inst.getType()->isVectorTy(),
@@ -841,25 +834,17 @@ ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
   ctx->add(assertion);
 
   auto resolved = ctx->heap().resolve(pointer, *ctx);
-  CAFFEINE_ASSERT(!resolved.empty());
-
-#define DO_STORE(ctx)                                                          \
-  do {                                                                         \
-    Allocation& alloc = (ctx)->heap()[resolved[0].alloc()];                    \
-    (ctx)->add(                                                                \
-        alloc.check_inbounds(resolved[0].offset(), val_ty.byte_size(layout))); \
-    alloc.write(resolved[0].offset(), value, layout);                          \
-  } while (0)
-
-  for (size_t i = 1; i < resolved.size(); ++i) {
+  for (const Pointer& ptr : resolved) {
     Context forked = ctx->fork();
-    DO_STORE(&forked);
+
+    Allocation& alloc = forked.heap()[ptr.alloc()];
+    forked.add(alloc.check_inbounds(ptr.offset(), val_ty.byte_size(layout)));
+    alloc.write(ptr.offset(), value, layout);
+
     queue->add_context(std::move(forked));
   }
 
-  DO_STORE(ctx);
-
-  return ExecutionResult::Continue;
+  return ExecutionResult::Stop;
 }
 
 /***************************************************
