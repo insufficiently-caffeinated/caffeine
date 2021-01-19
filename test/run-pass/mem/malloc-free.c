@@ -21,4 +21,6 @@ void test(size_t x) {
   for (uint32_t i = 0; i < x; ++i) {
     caffeine_assert(mem[i] == i * 2);
   }
+
+  free(mem);
 }
