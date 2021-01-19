@@ -6,6 +6,7 @@
 #include "caffeine/IR/Assertion.h"
 #include "caffeine/Interpreter/Executor.h"
 #include "caffeine/Interpreter/FailureLogger.h"
+#include "caffeine/Interpreter/Options.h"
 #include "caffeine/Support/Assert.h"
 
 #include <llvm/IR/InstVisitor.h>
@@ -19,13 +20,15 @@ private:
   Context* ctx;
   Executor* queue;
   FailureLogger* logger;
+  InterpreterOptions options;
 
 public:
   /**
    * The interpreter constructor needs an executor and context as well as a way
    * to log assertion failures.
    */
-  Interpreter(Executor* queue, Context* ctx, FailureLogger* logger);
+  Interpreter(Executor* queue, Context* ctx, FailureLogger* logger,
+              const InterpreterOptions& options = InterpreterOptions());
 
   void execute();
 
@@ -83,6 +86,9 @@ private:
 
   ExecutionResult visitAssume(llvm::CallInst& inst);
   ExecutionResult visitAssert(llvm::CallInst& inst);
+
+  ExecutionResult visitMalloc(llvm::CallInst& inst);
+  ExecutionResult visitFree(llvm::CallInst& inst);
 };
 
 } // namespace caffeine

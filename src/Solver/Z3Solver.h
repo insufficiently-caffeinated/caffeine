@@ -103,6 +103,7 @@ public:
 
   z3::expr visitLoadOp(const LoadOp& op);
   z3::expr visitStoreOp(const StoreOp& op);
+  z3::expr visitAllocOp(const AllocOp& op);
 
   // Unary operations
   z3::expr visitNot (const UnaryOp& op);
