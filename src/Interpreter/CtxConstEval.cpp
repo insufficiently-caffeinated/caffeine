@@ -261,6 +261,15 @@ static ContextValue evaluate(Context* ctx, llvm::Constant* constant) {
   if (auto* cnst = llvm::dyn_cast<llvm::ConstantFP>(constant))
     return ContextValue(ConstantFloat::Create(cnst->getValueAPF()));
 
+  if (auto* null = llvm::dyn_cast<llvm::ConstantPointerNull>(constant)) {
+    auto pointer_bitwidth =
+        ctx->llvm_module()->getDataLayout().getPointerSizeInBits(
+            null->getType()->getPointerAddressSpace());
+
+    return ContextValue(
+        Pointer(ConstantInt::Create(llvm::APInt(pointer_bitwidth, 0))));
+  }
+
   if (auto* vec = llvm::dyn_cast<llvm::ConstantVector>(constant))
     return evaluate_const_vector(ctx, vec);
 
