@@ -10,6 +10,7 @@
 #include "caffeine/IR/Operation.h"
 #include "caffeine/Interpreter/Value.h"
 #include "caffeine/Memory/MemHeap.h"
+
 namespace caffeine {
 
 class Context;

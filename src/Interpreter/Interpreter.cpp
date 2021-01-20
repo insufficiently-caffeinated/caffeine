@@ -907,9 +907,9 @@ ExecutionResult Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {
       AllocOp::Create(size_op, ConstantInt::Create(llvm::APInt(8, 0xDD))),
       AllocationKind::Alloca, *ctx);
 
-  frame.insert(
-      &inst, ContextValue(Pointer(
-                 alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
+  frame.insert(&inst,
+               ContextValue(Pointer(
+                   alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
   frame.allocations.push_back(alloc);
 
   return ExecutionResult::Continue;
