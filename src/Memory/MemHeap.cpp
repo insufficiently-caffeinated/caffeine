@@ -236,6 +236,9 @@ bool MemHeap::check_live(const AllocId& alloc) const {
 
 Assertion MemHeap::check_valid(const Pointer& ptr) {
   if (ptr.is_resolved()) {
+    if (!check_live(ptr.alloc()))
+      return ConstantInt::Create(false);
+
     return ICmpOp::CreateICmp(ICmpOpcode::ULE, ptr.offset(),
                               (*this)[ptr.alloc()].size());
   }
@@ -259,6 +262,9 @@ Assertion MemHeap::check_valid(const Pointer& ptr) {
 
 Assertion MemHeap::check_starts_allocation(const Pointer& ptr) {
   if (ptr.is_resolved()) {
+    if (!check_live(ptr.alloc()))
+      return ConstantInt::Create(false);
+
     return ICmpOp::CreateICmp(ICmpOpcode::EQ, ptr.offset(), 0);
   }
 
@@ -282,6 +288,7 @@ llvm::SmallVector<Pointer, 1> MemHeap::resolve(const Pointer& ptr,
   if (ptr.is_resolved()) {
     if (!check_live(ptr.alloc()))
       return results;
+
     const Allocation& alloc = (*this)[ptr.alloc()];
     if (ctx.check(alloc.check_inbounds(ptr.offset(), 0)) == SolverResult::UNSAT)
       return results;
