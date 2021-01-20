@@ -20,7 +20,6 @@ function(set_if_unset FLAGNAME)
   endif()
 endfunction()
 
-set(CLANG_BUILD_SCRIPT "${CMAKE_SOURCE_DIR}/cmake/clang-build.cmake")
 set(CLANG_LINK_SCRIPT "${CMAKE_SOURCE_DIR}/cmake/clang-link.cmake")
 
 set_if_unset(CLANG     "${LLVM_TOOLS_BINARY_DIR}/clang")
@@ -32,26 +31,26 @@ set_if_unset(LLVM_LINK "${LLVM_TOOLS_BINARY_DIR}/llvm-link")
 # - LLVM_CXX: Compile a C++ source file to a bitcode file
 # - BITCODE: A linker language that we use to link all the bitcode files together.
 #
-# Note that since these languages are no longer C and C++ cmake won't
-# set up the arguments as expected (includes will just be bare paths,
-# etc.) so we use a cmake script to preprocess the arguments beforehand.
+# Note that since these languages are no longer C and C++ cmake won't set up
+# the arguments as expected (includes will just be bare paths, etc.) we use
+# some generator expressions to paste the proper include directories into the
+# target flags. This probably won't interact properly with SYSTEM cmake
+# includes but we'll cross that bridge when we get to it. On the plus side,
+# this means that any sort of autocompletion that uses the compile_commands.json
+# output (e.g. the vscode c++ extension) should work correctly.
 #
 # NOTE: The output extension of the object file is the same as the output
 #       extension of the input file. I don't know how to change this 
 #       within cmake so instead the linker is a script that copies them
 #       to have the right extension before linking.
 
-set_if_unset(CMAKE_LLVM_C_DEFINES             "${CMAKE_C_DEFINES}")
-set_if_unset(CMAKE_LLVM_C_FLAGS               "${CMAKE_C_FLAGS}")
-set(CMAKE_LLVM_C_COMPILE_OBJECT
-  "${CMAKE_COMMAND} \"-DCOMPILER=${CLANG}\" \"-DOBJECT=<OBJECT>\" \"-DSOURCE=<SOURCE>\" \"-DDEFINES=<DEFINES>\" \"-DFLAGS=-S -emit-llvm <FLAGS>\" \"-DINCLUDES=<INCLUDES>\" -P \"${CLANG_BUILD_SCRIPT}\""
-)
+set_if_unset(CMAKE_LLVM_C_DEFINES   "${CMAKE_C_DEFINES}")
+set_if_unset(CMAKE_LLVM_C_FLAGS     "${CMAKE_C_FLAGS}")
+set(CMAKE_LLVM_C_COMPILE_OBJECT     "${CLANG} -S -emit-llvm <FLAGS> <DEFINES> -o \"<OBJECT>\" \"<SOURCE>\"")
 
-set_if_unset(CMAKE_LLVM_CXX_DEFINES           "${CMAKE_CXX_DEFINES}")
-set_if_unset(CMAKE_LLVM_CXX_FLAGS             "${CMAKE_CXX_FLAGS}")
-set(CMAKE_LLVM_CXX_COMPILE_OBJECT
-  "${CMAKE_COMMAND} \"-DCOMPILER=${CLANGXX}\" \"-DOBJECT=<OBJECT>\" \"-DSOURCE=<SOURCE>\" \"-DDEFINES=<DEFINES>\" \"-DFLAGS=-S -emit-llvm <FLAGS>\" \"-DINCLUDES=<INCLUDES>\" -P \"${CLANG_BUILD_SCRIPT}\""
-)
+set_if_unset(CMAKE_LLVM_CXX_DEFINES "${CMAKE_CXX_DEFINES}")
+set_if_unset(CMAKE_LLVM_CXX_FLAGS   "${CMAKE_CXX_FLAGS}")
+set(CMAKE_LLVM_CXX_COMPILE_OBJECT   "${CLANG} -S -emit-llvm <FLAGS> <DEFINES> -o \"<OBJECT>\" \"<SOURCE>\"")
 
 set(
   CMAKE_BITCODE_CREATE_SHARED_LIBRARY
@@ -99,6 +98,10 @@ function(add_llvm_ir_library TARGET_NAME)
     PROPERTY
     LINK_DEPENDS "${CLANG_LINK_SCRIPT}"
   )
+
+  # Manually add include directories to the target flags since cmake
+  # won't prepend them with -I by itself.
+  target_compile_options(${TARGET_NAME} PUBLIC "-I$<JOIN:$<TARGET_PROPERTY:INCLUDE_DIRECTORIES>,;-I>")
 endfunction()
 
 
