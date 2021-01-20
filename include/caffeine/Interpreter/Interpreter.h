@@ -72,6 +72,7 @@ public:
   ExecutionResult visitReturnInst(llvm::ReturnInst& inst);
   ExecutionResult visitCallInst(llvm::CallInst& inst);
   ExecutionResult visitSelectInst(llvm::SelectInst& inst);
+  ExecutionResult visitIntrinsicInst(llvm::IntrinsicInst& inst);
 
   ExecutionResult visitGetElementPtrInst(llvm::GetElementPtrInst& inst);
   ExecutionResult visitLoadInst(llvm::LoadInst& inst);

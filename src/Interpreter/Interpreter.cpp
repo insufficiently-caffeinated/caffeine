@@ -580,11 +580,9 @@ ExecutionResult Interpreter::visitReturnInst(llvm::ReturnInst& inst) {
 ExecutionResult Interpreter::visitCallInst(llvm::CallInst& call) {
   auto func = call.getCalledFunction();
 
-  if (func->isIntrinsic()) {
-    CAFFEINE_ABORT(fmt::format("Intrinsic function '{}' is not supported",
-                               func->getName().str()));
-  }
-
+  CAFFEINE_ASSERT(
+      !func->isIntrinsic(),
+      "intrinsics function calls should be handled by visitIntrinsic");
   CAFFEINE_ASSERT(!call.isIndirectCall(),
                   "Indirect function calls are not supported yet");
 
@@ -610,6 +608,21 @@ ExecutionResult Interpreter::visitSelectInst(llvm::SelectInst& inst) {
   frame.insert(&inst, transform(SelectOp::Create, cond, trueVal, falseVal));
 
   return ExecutionResult::Continue;
+}
+ExecutionResult Interpreter::visitIntrinsicInst(llvm::IntrinsicInst& intrin) {
+  namespace Intrinsic = llvm::Intrinsic;
+
+  switch (intrin.getIntrinsicID()) {
+  // These are just markers for when lifetimes are supposed to end.
+  case Intrinsic::lifetime_start:
+  case Intrinsic::lifetime_end:
+    return ExecutionResult::Continue;
+  default:
+    break;
+  }
+
+  CAFFEINE_ABORT(fmt::format("Intrinsic function '{}' is not supported",
+                             intrin.getCalledFunction()->getName().str()));
 }
 
 ExecutionResult
