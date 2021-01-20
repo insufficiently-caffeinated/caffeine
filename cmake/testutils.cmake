@@ -34,7 +34,7 @@ function(declare_test TEST_NAME_OUT test)
   
   get_filename_component(test_ext "${test_name}" LAST_EXT)
   
-  if("${test_ext}" STREQUAL ".ll" OR "${test_ext}" STREQUAL ".bc")
+  if("${test_ext}" STREQUAL ".ll")
     set(test_output "${CMAKE_BINARY_DIR}/test/${test_name}")
   else()
     set(test_output "${CMAKE_BINARY_DIR}/test/${test_name}.ll")
