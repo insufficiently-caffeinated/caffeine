@@ -71,11 +71,12 @@ static ContextValue evaluate_expr(Context* ctx, llvm::ConstantExpr* expr) {
           const ref<Operation>& value) -> ref<Operation> { return (expr_); },  \
       OPERAND(expr, 0))
 
-#define UNARY_NAN_PROPAGATE(expr_, num) \
-  if ((expr_)->getOperand(num)->isNaN()) return OPERAND(expr_, num);
+#define UNARY_NAN_PROPAGATE(expr_, num)                                        \
+  if ((expr_)->getOperand(num)->isNaN())                                       \
+    return OPERAND(expr_, num);
 
-#define BINARY_NAN_PROPAGATE(expr_)         \
-  UNARY_NAN_PROPAGATE(expr_, 0)             \
+#define BINARY_NAN_PROPAGATE(expr_)                                            \
+  UNARY_NAN_PROPAGATE(expr_, 0)                                                \
   UNARY_NAN_PROPAGATE(expr_, 1)
 
   switch (expr->getOpcode()) {
@@ -269,6 +270,12 @@ static ContextValue evaluate_expr(Context* ctx, llvm::ConstantExpr* expr) {
   os.flush();
 
   CAFFEINE_UNIMPLEMENTED(s);
+
+#undef UNARY_OP
+#undef BINARY_OP
+#undef CAST_OP
+#undef UNARY_NAN_PROPAGATE
+#undef BINARY_NAN_PROPAGATE
 }
 
 // Note: This method should always return a pointer. (At least I think that's
