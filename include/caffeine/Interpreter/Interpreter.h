@@ -80,6 +80,7 @@ public:
   ExecutionResult visitInsertElementInst(llvm::InsertElementInst& inst);
   ExecutionResult visitExtractElementInst(llvm::ExtractElementInst& inst);
   ExecutionResult visitShuffleVectorInst(llvm::ShuffleVectorInst& inst);
+  ExecutionResult visitAllocaInst(llvm::AllocaInst& inst);
 
 private:
   ExecutionResult visitExternFunc(llvm::CallInst& inst);

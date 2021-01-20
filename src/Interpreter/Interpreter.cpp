@@ -877,6 +877,28 @@ ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
 
   return ExecutionResult::Stop;
 }
+ExecutionResult Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {
+  const auto& layout = inst.getModule()->getDataLayout();
+
+  uint64_t size =
+      layout.getTypeAllocSize(inst.getAllocatedType()).getFixedSize();
+  uint64_t align = std::max<uint64_t>(inst.getAlignment(), 1);
+
+  unsigned ptr_width =
+      layout.getPointerSizeInBits(inst.getType()->getPointerAddressSpace());
+
+  auto size_op = ConstantInt::Create(llvm::APInt(ptr_width, size));
+  auto alloc = ctx->heap().allocate(
+      size_op, ConstantInt::Create(llvm::APInt(ptr_width, align)),
+      AllocOp::Create(size_op, ConstantInt::Create(llvm::APInt(8, 0xDD))),
+      *ctx);
+
+  ctx->stack_top().insert(
+      &inst, ContextValue(Pointer(
+                 alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
+
+  return ExecutionResult::Continue;
+}
 
 /***************************************************
  * External function                               *
