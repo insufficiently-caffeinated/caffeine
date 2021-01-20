@@ -44,3 +44,8 @@ if (NOT CLANG_FORMAT STREQUAL "CLANG_FORMAT-NOTFOUND")
   include(formatting)
 endif()
 
+# This is only supported for cmake >= 3.17
+if("${CMAKE_VERSION}" VERSION_GREATER_EQUAL "3.17")
+  list(APPEND CMAKE_CTEST_ARGUMENTS "--output-on-failure")
+endif()
+
