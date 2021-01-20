@@ -71,6 +71,13 @@ static ContextValue evaluate_expr(Context* ctx, llvm::ConstantExpr* expr) {
           const ref<Operation>& value) -> ref<Operation> { return (expr_); },  \
       OPERAND(expr, 0))
 
+#define UNARY_NAN_PROPAGATE(expr_, num) \
+  if ((expr_)->getOperand(num)->isNaN()) return OPERAND(expr_, num);
+
+#define BINARY_NAN_PROPAGATE(expr_)         \
+  UNARY_NAN_PROPAGATE(expr_, 0)             \
+  UNARY_NAN_PROPAGATE(expr_, 1)
+
   switch (expr->getOpcode()) {
   // clang-format off
   // Unary Operations
@@ -92,11 +99,74 @@ static ContextValue evaluate_expr(Context* ctx, llvm::ConstantExpr* expr) {
   case Instruction::LShr: return BINARY_OP(BinaryOp::CreateLShr);
   case Instruction::AShr: return BINARY_OP(BinaryOp::CreateAShr);
 
-  case Instruction::FAdd: return BINARY_OP(BinaryOp::CreateFAdd);
-  case Instruction::FSub: return BINARY_OP(BinaryOp::CreateFSub);
-  case Instruction::FMul: return BINARY_OP(BinaryOp::CreateFMul);
-  case Instruction::FDiv: return BINARY_OP(BinaryOp::CreateFDiv);
-  case Instruction::FRem: return BINARY_OP(BinaryOp::CreateFRem);
+  case Instruction::FAdd: {
+    BINARY_NAN_PROPAGATE(expr)
+
+    auto lhs = llvm::cast<llvm::ConstantFP>(expr->getOperand(0));
+    auto rhs = llvm::cast<llvm::ConstantFP>(expr->getOperand(1));
+
+    bool lhs_sign = !lhs->isNegative();
+    bool rhs_sign = !rhs->isNegative();
+
+    // Additive identities
+    if (lhs->isZero()) {
+      return OPERAND(expr, 1);
+    }
+
+    if (rhs->isZero()) {
+      return OPERAND(expr, 0);
+    }
+
+    // Infinities plus anything is still infinity, unless it is another infinity.
+    // In which case their signs must be the same, otherwise we get a NaN
+    if (lhs->isInfinity() && (!rhs->isInfinity() || lhs_sign == rhs_sign)) {
+      return OPERAND(expr, 0);
+    }
+
+    if (rhs->isInfinity() && (!lhs->isInfinity() || lhs_sign == rhs_sign)) {
+      return OPERAND(expr, 1);
+    }
+
+    return BINARY_OP(BinaryOp::CreateFAdd);
+  }
+  case Instruction::FSub: {
+    BINARY_NAN_PROPAGATE(expr)
+
+    auto lhs = llvm::cast<llvm::ConstantFP>(expr->getOperand(0));
+    auto rhs = llvm::cast<llvm::ConstantFP>(expr->getOperand(1));
+
+    bool lhs_sign = !lhs->isNegative();
+    bool rhs_sign = !rhs->isNegative();
+
+    // We do not process the rhs if the lhs is 0 since we would need to negate it
+    if (rhs->isZero()) {
+      return OPERAND(expr, 0);
+    }
+
+    // Infinities minus anything is still infinity, unless it is another infinity.
+    // In which case their signs must be different, otherwise we get a NaN
+    if (lhs->isInfinity() && (!rhs->isInfinity() || lhs_sign != rhs_sign)) {
+      return OPERAND(expr, 0);
+    }
+
+    if (rhs->isInfinity() && (!lhs->isInfinity() || lhs_sign != rhs_sign)) {
+      return OPERAND(expr, 1);
+    }
+
+    return BINARY_OP(BinaryOp::CreateFSub);
+  }
+  case Instruction::FMul: {
+    BINARY_NAN_PROPAGATE(expr)
+    return BINARY_OP(BinaryOp::CreateFMul);
+  }
+  case Instruction::FDiv: {
+    BINARY_NAN_PROPAGATE(expr)
+    return BINARY_OP(BinaryOp::CreateFDiv);
+  }
+  case Instruction::FRem: {
+    BINARY_NAN_PROPAGATE(expr)
+    return BINARY_OP(BinaryOp::CreateFRem);
+  }
 
   // Conversion operations
   case Instruction::Trunc:    return CAST_OP(UnaryOp::CreateTrunc(type, value));
