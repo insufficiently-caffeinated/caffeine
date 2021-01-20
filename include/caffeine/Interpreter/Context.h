@@ -48,6 +48,10 @@ public:
   StackFrame& stack_top();
 
   // Utility methods for adding/removing stack frames
+  /**
+   * Note: This method also deallocates all stack-allocated allocations within
+   *       the current frame.
+   */
   void pop();
   void push(StackFrame&& frame);
   void push(const StackFrame& frame);

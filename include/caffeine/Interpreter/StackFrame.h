@@ -5,10 +5,11 @@
 #include <llvm/IR/BasicBlock.h>
 
 #include <unordered_map>
+#include <vector>
 
 #include "caffeine/IR/Operation.h"
 #include "caffeine/Interpreter/Value.h"
-
+#include "caffeine/Memory/MemHeap.h"
 namespace caffeine {
 
 class Context;
@@ -24,6 +25,9 @@ public:
   llvm::BasicBlock* current_block;
   llvm::BasicBlock* prev_block;
   llvm::BasicBlock::iterator current;
+
+  // Allocations within the current frame.
+  std::vector<AllocId> allocations;
 
   StackFrame(llvm::Function* function);
 

@@ -891,6 +891,7 @@ ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
   return ExecutionResult::Stop;
 }
 ExecutionResult Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {
+  auto& frame = ctx->stack_top();
   const auto& layout = inst.getModule()->getDataLayout();
 
   uint64_t size =
@@ -906,9 +907,10 @@ ExecutionResult Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {
       AllocOp::Create(size_op, ConstantInt::Create(llvm::APInt(8, 0xDD))),
       AllocationKind::Alloca, *ctx);
 
-  ctx->stack_top().insert(
+  frame.insert(
       &inst, ContextValue(Pointer(
                  alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
+  frame.allocations.push_back(alloc);
 
   return ExecutionResult::Continue;
 }
