@@ -12,3 +12,5 @@ foreach(test ${tests})
     WILL_FAIL TRUE
   )
 endforeach()
+
+target_compile_options(run-fail_mem_alloca-escaped.c PRIVATE -Wno-return-stack-address)
