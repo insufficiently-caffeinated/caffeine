@@ -904,7 +904,7 @@ ExecutionResult Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {
   auto alloc = ctx->heap().allocate(
       size_op, ConstantInt::Create(llvm::APInt(ptr_width, align)),
       AllocOp::Create(size_op, ConstantInt::Create(llvm::APInt(8, 0xDD))),
-      *ctx);
+      AllocationKind::Alloca, *ctx);
 
   ctx->stack_top().insert(
       &inst, ContextValue(Pointer(
@@ -997,7 +997,7 @@ ExecutionResult Interpreter::visitMalloc(llvm::CallInst& call) {
       size_op,
       ConstantInt::Create(llvm::APInt(ptr_width, options.malloc_alignment)),
       AllocOp::Create(size_op, ConstantInt::Create(llvm::APInt(8, 0xDD))),
-      *ctx);
+      AllocationKind::Malloc, *ctx);
 
   ctx->stack_top().insert(
       &call, ContextValue(Pointer(
@@ -1032,6 +1032,24 @@ ExecutionResult Interpreter::visitFree(llvm::CallInst& call) {
 
   for (size_t i = 1; i < resolved.size(); ++i) {
     Context forked = ctx->fork();
+
+    Allocation& alloc = forked.heap()[resolved[i].alloc()];
+
+    forked.add(ICmpOp::CreateICmp(
+        ICmpOpcode::EQ, resolved[i].value(forked.heap()), alloc.address()));
+
+    if (alloc.kind() != AllocationKind::Malloc) {
+      auto model = ctx->resolve();
+
+      if (model->result() == SolverResult::SAT)
+        logger->log_failure(*model, forked,
+                            Failure(Assertion::constant(true),
+                                    "Attempted to free a pointer that was not "
+                                    "allocated by malloc"));
+
+      continue;
+    }
+
     forked.heap().deallocate(resolved[i].alloc());
     queue->add_context(std::move(forked));
   }

@@ -15,15 +15,16 @@ namespace caffeine {
  ***************************************************/
 
 Allocation::Allocation(const ref<Operation>& address,
-                       const ref<Operation>& size, const ref<Operation>& data)
-    : address_(address), size_(size), data_(data) {
+                       const ref<Operation>& size, const ref<Operation>& data,
+                       AllocationKind kind)
+    : address_(address), size_(size), data_(data), kind_(kind) {
   CAFFEINE_ASSERT(address->type().is_int());
   CAFFEINE_ASSERT(size->type().is_int());
   CAFFEINE_ASSERT(address->type().bitwidth() == size->type().bitwidth());
 }
 Allocation::Allocation(const ref<Operation>& address, const ConstantInt& size,
-                       const ref<Operation>& data)
-    : Allocation(address, make_ref<Operation>(size), data) {}
+                       const ref<Operation>& data, AllocationKind kind)
+    : Allocation(address, make_ref<Operation>(size), data, kind) {}
 
 void Allocation::overwrite(const ref<Operation>& newdata) {
   data_ = newdata;
@@ -178,14 +179,15 @@ const Allocation& MemHeap::operator[](const AllocId& alloc) const {
 
 AllocId MemHeap::allocate(const ref<Operation>& size,
                           const ref<Operation>& alignment,
-                          const ref<Operation>& data, Context& ctx) {
+                          const ref<Operation>& data, AllocationKind kind,
+                          Context& ctx) {
   CAFFEINE_ASSERT(size->type() == alignment->type());
   CAFFEINE_ASSERT(size->type().is_int());
   CAFFEINE_ASSERT(data->type().is_array());
   CAFFEINE_ASSERT(data->type().bitwidth() == size->type().bitwidth());
 
   auto allocation = Allocation(
-      Constant::Create(size->type(), ctx.next_constant()), size, data);
+      Constant::Create(size->type(), ctx.next_constant()), size, data, kind);
 
   // Ensure that the allocation is properly aligned
   ctx.add(ICmpOp::CreateICmp(
