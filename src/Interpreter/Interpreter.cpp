@@ -580,11 +580,9 @@ ExecutionResult Interpreter::visitReturnInst(llvm::ReturnInst& inst) {
 ExecutionResult Interpreter::visitCallInst(llvm::CallInst& call) {
   auto func = call.getCalledFunction();
 
-  if (func->isIntrinsic()) {
-    CAFFEINE_ABORT(fmt::format("Intrinsic function '{}' is not supported",
-                               func->getName().str()));
-  }
-
+  CAFFEINE_ASSERT(
+      !func->isIntrinsic(),
+      "intrinsics function calls should be handled by visitIntrinsic");
   CAFFEINE_ASSERT(!call.isIndirectCall(),
                   "Indirect function calls are not supported yet");
 
@@ -610,6 +608,21 @@ ExecutionResult Interpreter::visitSelectInst(llvm::SelectInst& inst) {
   frame.insert(&inst, transform(SelectOp::Create, cond, trueVal, falseVal));
 
   return ExecutionResult::Continue;
+}
+ExecutionResult Interpreter::visitIntrinsicInst(llvm::IntrinsicInst& intrin) {
+  namespace Intrinsic = llvm::Intrinsic;
+
+  switch (intrin.getIntrinsicID()) {
+  // These are just markers for when lifetimes are supposed to end.
+  case Intrinsic::lifetime_start:
+  case Intrinsic::lifetime_end:
+    return ExecutionResult::Continue;
+  default:
+    break;
+  }
+
+  CAFFEINE_ABORT(fmt::format("Intrinsic function '{}' is not supported",
+                             intrin.getCalledFunction()->getName().str()));
 }
 
 ExecutionResult
@@ -877,6 +890,30 @@ ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
 
   return ExecutionResult::Stop;
 }
+ExecutionResult Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {
+  auto& frame = ctx->stack_top();
+  const auto& layout = inst.getModule()->getDataLayout();
+
+  uint64_t size =
+      layout.getTypeAllocSize(inst.getAllocatedType()).getFixedSize();
+  uint64_t align = std::max<uint64_t>(inst.getAlignment(), 1);
+
+  unsigned ptr_width =
+      layout.getPointerSizeInBits(inst.getType()->getPointerAddressSpace());
+
+  auto size_op = ConstantInt::Create(llvm::APInt(ptr_width, size));
+  auto alloc = ctx->heap().allocate(
+      size_op, ConstantInt::Create(llvm::APInt(ptr_width, align)),
+      AllocOp::Create(size_op, ConstantInt::Create(llvm::APInt(8, 0xDD))),
+      AllocationKind::Alloca, *ctx);
+
+  frame.insert(&inst,
+               ContextValue(Pointer(
+                   alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
+  frame.allocations.push_back(alloc);
+
+  return ExecutionResult::Continue;
+}
 
 /***************************************************
  * External function                               *
@@ -962,7 +999,7 @@ ExecutionResult Interpreter::visitMalloc(llvm::CallInst& call) {
       size_op,
       ConstantInt::Create(llvm::APInt(ptr_width, options.malloc_alignment)),
       AllocOp::Create(size_op, ConstantInt::Create(llvm::APInt(8, 0xDD))),
-      *ctx);
+      AllocationKind::Malloc, *ctx);
 
   ctx->stack_top().insert(
       &call, ContextValue(Pointer(
@@ -997,6 +1034,24 @@ ExecutionResult Interpreter::visitFree(llvm::CallInst& call) {
 
   for (size_t i = 1; i < resolved.size(); ++i) {
     Context forked = ctx->fork();
+
+    Allocation& alloc = forked.heap()[resolved[i].alloc()];
+
+    forked.add(ICmpOp::CreateICmp(
+        ICmpOpcode::EQ, resolved[i].value(forked.heap()), alloc.address()));
+
+    if (alloc.kind() != AllocationKind::Malloc) {
+      auto model = ctx->resolve();
+
+      if (model->result() == SolverResult::SAT)
+        logger->log_failure(*model, forked,
+                            Failure(Assertion::constant(true),
+                                    "Attempted to free a pointer that was not "
+                                    "allocated by malloc"));
+
+      continue;
+    }
+
     forked.heap().deallocate(resolved[i].alloc());
     queue->add_context(std::move(forked));
   }

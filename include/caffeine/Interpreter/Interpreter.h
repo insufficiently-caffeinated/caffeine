@@ -72,6 +72,7 @@ public:
   ExecutionResult visitReturnInst(llvm::ReturnInst& inst);
   ExecutionResult visitCallInst(llvm::CallInst& inst);
   ExecutionResult visitSelectInst(llvm::SelectInst& inst);
+  ExecutionResult visitIntrinsicInst(llvm::IntrinsicInst& inst);
 
   ExecutionResult visitGetElementPtrInst(llvm::GetElementPtrInst& inst);
   ExecutionResult visitLoadInst(llvm::LoadInst& inst);
@@ -80,6 +81,7 @@ public:
   ExecutionResult visitInsertElementInst(llvm::InsertElementInst& inst);
   ExecutionResult visitExtractElementInst(llvm::ExtractElementInst& inst);
   ExecutionResult visitShuffleVectorInst(llvm::ShuffleVectorInst& inst);
+  ExecutionResult visitAllocaInst(llvm::AllocaInst& inst);
 
 private:
   ExecutionResult visitExternFunc(llvm::CallInst& inst);

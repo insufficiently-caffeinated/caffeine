@@ -222,7 +222,8 @@ ContextValue evaluate_global(Context* ctx, llvm::GlobalVariable* global) {
 
   auto alloc = ctx->heap_.allocate(
       ConstantInt::Create(llvm::APInt(bitwidth, array.data().size())),
-      ConstantInt::Create(llvm::APInt(bitwidth, alignment)), data, *ctx);
+      ConstantInt::Create(llvm::APInt(bitwidth, alignment)), data,
+      AllocationKind::Global, *ctx);
 
   auto pointer = ContextValue(
       Pointer(alloc, ConstantInt::Create(llvm::APInt(bitwidth, 0))));

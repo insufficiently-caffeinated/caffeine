@@ -32,6 +32,10 @@ inline ref<Operation>& Allocation::address() {
   return address_;
 }
 
+inline AllocationKind Allocation::kind() const {
+  return kind_;
+}
+
 /***************************************************
  * Pointer                                         *
  ***************************************************/
