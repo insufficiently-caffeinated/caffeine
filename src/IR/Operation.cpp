@@ -695,11 +695,69 @@ ref<Operation> BinaryOp::CreateAShr(const ref<Operation>& lhs,
   return Create(Opcode::AShr, lhs, rhs);
 }
 
-DECL_BINOP_CREATE(FAdd, ASSERT_FP);
-DECL_BINOP_CREATE(FSub, ASSERT_FP);
-DECL_BINOP_CREATE(FMul, ASSERT_FP);
-DECL_BINOP_CREATE(FDiv, ASSERT_FP);
-DECL_BINOP_CREATE(FRem, ASSERT_FP);
+#define PROPAGATE_NANS(lhs, rhs)                                               \
+  if (EXTRACT_FLOAT_TO(*lhs, constant)) {                                      \
+    if (constant->isNaN()) {                                                   \
+      return lhs;                                                              \
+    }                                                                          \
+  }
+
+ref<Operation> BinaryOp::CreateFAdd(const ref<Operation>& lhs,
+                                    const ref<Operation>& rhs) {
+  CAFFEINE_ASSERT(lhs, "lhs was null");
+  CAFFEINE_ASSERT(rhs, "rhs was null");
+  ASSERT_FP(lhs);
+  ASSERT_FP(rhs);
+
+  if (const auto* var_name =
+          llvm::dyn_cast<caffeine::ConstantFloat>(lhs.get())) {}
+
+  // PROPAGATE_NANS(lhs, rhs);
+
+#ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
+  // if () {
+
+  // }
+#endif
+
+  return Create(Opcode::FAdd, lhs, rhs);
+}
+
+ref<Operation> BinaryOp::CreateFSub(const ref<Operation>& lhs,
+                                    const ref<Operation>& rhs) {
+  CAFFEINE_ASSERT(lhs, "lhs was null");
+  CAFFEINE_ASSERT(rhs, "rhs was null");
+  ASSERT_FP(lhs);
+  ASSERT_FP(rhs);
+  return Create(Opcode::FSub, lhs, rhs);
+}
+
+ref<Operation> BinaryOp::CreateFMul(const ref<Operation>& lhs,
+                                    const ref<Operation>& rhs) {
+  CAFFEINE_ASSERT(lhs, "lhs was null");
+  CAFFEINE_ASSERT(rhs, "rhs was null");
+  ASSERT_FP(lhs);
+  ASSERT_FP(rhs);
+  return Create(Opcode::FMul, lhs, rhs);
+}
+
+ref<Operation> BinaryOp::CreateFDiv(const ref<Operation>& lhs,
+                                    const ref<Operation>& rhs) {
+  CAFFEINE_ASSERT(lhs, "lhs was null");
+  CAFFEINE_ASSERT(rhs, "rhs was null");
+  ASSERT_FP(lhs);
+  ASSERT_FP(rhs);
+  return Create(Opcode::FDiv, lhs, rhs);
+}
+
+ref<Operation> BinaryOp::CreateFRem(const ref<Operation>& lhs,
+                                    const ref<Operation>& rhs) {
+  CAFFEINE_ASSERT(lhs, "lhs was null");
+  CAFFEINE_ASSERT(rhs, "rhs was null");
+  ASSERT_FP(lhs);
+  ASSERT_FP(rhs);
+  return Create(Opcode::FRem, lhs, rhs);
+}
 
 /***************************************************
  * UnaryOp                                         *
