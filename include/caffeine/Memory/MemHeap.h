@@ -208,7 +208,7 @@ public:
    * the absolute value with those of all existant allocations and returns an
    * assertion that the pointer points within one of them.
    */
-  Assertion check_valid(const Pointer& value);
+  Assertion check_valid(const Pointer& value, uint32_t width);
 
   /**
    * Get an assertion that checks whether the provided pointer points to the

@@ -57,7 +57,7 @@ TEST_F(MemHeapTests, resolve_pointer_single) {
 
   auto ptr = Pointer(BinaryOp::CreateAdd(heap[alloc].address(), offset));
 
-  ASSERT_EQ(context.check(!heap.check_valid(ptr)), SolverResult::UNSAT);
+  ASSERT_EQ(context.check(!heap.check_valid(ptr, 0)), SolverResult::UNSAT);
 
   auto res = heap.resolve(ptr, context);
 
