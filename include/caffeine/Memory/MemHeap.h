@@ -16,6 +16,15 @@ class Assertion;
 class MemHeap;
 
 /**
+ * An allocation category.
+ *
+ * This is used to verify that, when a deallocation is being done, that the
+ * allocation was allocated by a compatible function. As an example, free
+ * cannot be used to deallocate an allocation created by alloca.
+ */
+enum class AllocationKind { Alloca, Malloc, Global };
+
+/**
  * A memory allocation (either alive or dead).
  *
  * In general, an allocation is a tuple (address, size, data, dead) where
@@ -38,19 +47,18 @@ private:
   ref<Operation> size_;
   ref<Operation> data_;
 
-  mutable size_t refcount = 0;
-
-  template <typename T, typename Deleter>
-  friend class ref;
+  AllocationKind kind_;
 
 public:
   Allocation(const ref<Operation>& address, const ref<Operation>& size,
-             const ref<Operation>& data);
+             const ref<Operation>& data, AllocationKind kind);
   Allocation(const ref<Operation>& address, const ConstantInt& size,
-             const ref<Operation>& data);
+             const ref<Operation>& data, AllocationKind kind);
 
   const ref<Operation>& size() const;
   ref<Operation>& size();
+
+  AllocationKind kind() const;
 
   const ref<Operation>& data() const;
   ref<Operation>& data();
@@ -175,7 +183,8 @@ public:
    * This will add the corresponding assertions to the context as well.
    */
   AllocId allocate(const ref<Operation>& size, const ref<Operation>& alignment,
-                   const ref<Operation>& data, Context& ctx);
+                   const ref<Operation>& data, AllocationKind kind,
+                   Context& ctx);
 
   /**
    * Deallocate an existing allocation.
@@ -199,7 +208,7 @@ public:
    * the absolute value with those of all existant allocations and returns an
    * assertion that the pointer points within one of them.
    */
-  Assertion check_valid(const Pointer& value);
+  Assertion check_valid(const Pointer& value, uint32_t width);
 
   /**
    * Get an assertion that checks whether the provided pointer points to the

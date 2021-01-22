@@ -759,6 +759,51 @@ ref<Operation> BinaryOp::CreateFRem(const ref<Operation>& lhs,
   return Create(Opcode::FRem, lhs, rhs);
 }
 
+#define DEF_INT_BINOP_CONST_CREATE_DETAIL(opcode, ty, signed)                  \
+  ref<Operation> BinaryOp::Create##opcode(const ref<Operation>& lhs, ty rhs) { \
+    CAFFEINE_ASSERT(lhs, "lhs is null");                                       \
+    CAFFEINE_ASSERT(lhs->type().is_int());                                     \
+                                                                               \
+    return BinaryOp::Create##opcode(                                           \
+        lhs, ConstantInt::Create(                                              \
+                 llvm::APInt(lhs->type().bitwidth(), rhs, signed)));           \
+  }                                                                            \
+  ref<Operation> BinaryOp::Create##opcode(ty lhs, const ref<Operation>& rhs) { \
+    CAFFEINE_ASSERT(rhs, "rhs is null");                                       \
+    CAFFEINE_ASSERT(rhs->type().is_int());                                     \
+                                                                               \
+    return BinaryOp::Create##opcode(                                           \
+        ConstantInt::Create(llvm::APInt(rhs->type().bitwidth(), lhs, signed)), \
+        rhs);                                                                  \
+  }                                                                            \
+  static_assert(true)
+
+// Note: if we want to add more overloads here then it'll be necessary to
+// overload for all integer types as once you've got 2 then C++ can no longer
+// figure out which to coerce to.
+//
+// I'm leaving this here so we can easily add such methods if we decide to.
+#define DEF_INT_BINOP_CONST_CREATE(opcode)                                     \
+  DEF_INT_BINOP_CONST_CREATE_DETAIL(opcode, int64_t, true)
+
+DEF_INT_BINOP_CONST_CREATE(Add);
+DEF_INT_BINOP_CONST_CREATE(Sub);
+DEF_INT_BINOP_CONST_CREATE(Mul);
+DEF_INT_BINOP_CONST_CREATE(UDiv);
+DEF_INT_BINOP_CONST_CREATE(SDiv);
+DEF_INT_BINOP_CONST_CREATE(URem);
+DEF_INT_BINOP_CONST_CREATE(SRem);
+
+DEF_INT_BINOP_CONST_CREATE(And);
+DEF_INT_BINOP_CONST_CREATE(Or);
+DEF_INT_BINOP_CONST_CREATE(Xor);
+DEF_INT_BINOP_CONST_CREATE(Shl);
+DEF_INT_BINOP_CONST_CREATE(LShr);
+DEF_INT_BINOP_CONST_CREATE(AShr);
+
+#undef DEF_INT_BINOP_CONST_CREATE
+#undef DEF_INT_BINOP_CONST_CREATE_DETAIL
+
 /***************************************************
  * UnaryOp                                         *
  ***************************************************/

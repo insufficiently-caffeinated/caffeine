@@ -50,14 +50,14 @@ TEST_F(MemHeapTests, resolve_pointer_single) {
   auto alloc = heap.allocate(
       size, align,
       AllocOp::Create(size, ConstantInt::Create(llvm::APInt(8, 0xDD))),
-      context);
+      AllocationKind::Alloca, context);
   auto offset = Constant::Create(Type::int_ty(index_size), "offset");
 
   context.add(ICmpOp::CreateICmp(ICmpOpcode::ULT, offset, size));
 
   auto ptr = Pointer(BinaryOp::CreateAdd(heap[alloc].address(), offset));
 
-  ASSERT_EQ(context.check(!heap.check_valid(ptr)), SolverResult::UNSAT);
+  ASSERT_EQ(context.check(!heap.check_valid(ptr, 0)), SolverResult::UNSAT);
 
   auto res = heap.resolve(ptr, context);
 

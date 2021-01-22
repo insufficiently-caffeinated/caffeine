@@ -28,6 +28,8 @@ auto zip(R1& range1, R2& range2) {
          });
 }
 
+#define WRAP_FUNC(func) [](const auto&... args) { return (func)(args...); }
+
 Interpreter::Interpreter(Executor* queue, Context* ctx, FailureLogger* logger,
                          const InterpreterOptions& options)
     : ctx{ctx}, queue{queue}, logger{logger}, options(options) {}
@@ -63,7 +65,7 @@ ExecutionResult Interpreter::visitAdd(llvm::BinaryOperator& op) {
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
 
-  frame.insert(&op, transform(BinaryOp::CreateAdd, lhs, rhs));
+  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateAdd), lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -73,7 +75,7 @@ ExecutionResult Interpreter::visitSub(llvm::BinaryOperator& op) {
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
 
-  frame.insert(&op, transform(BinaryOp::CreateSub, lhs, rhs));
+  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateSub), lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -83,7 +85,7 @@ ExecutionResult Interpreter::visitMul(llvm::BinaryOperator& op) {
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
 
-  frame.insert(&op, transform(BinaryOp::CreateMul, lhs, rhs));
+  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateMul), lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -200,7 +202,7 @@ ExecutionResult Interpreter::visitShl(llvm::BinaryOperator& op) {
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
 
-  frame.insert(&op, transform(BinaryOp::CreateShl, lhs, rhs));
+  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateShl), lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -210,7 +212,7 @@ ExecutionResult Interpreter::visitLShr(llvm::BinaryOperator& op) {
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
 
-  frame.insert(&op, transform(BinaryOp::CreateLShr, lhs, rhs));
+  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateLShr), lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -220,7 +222,7 @@ ExecutionResult Interpreter::visitAShr(llvm::BinaryOperator& op) {
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
 
-  frame.insert(&op, transform(BinaryOp::CreateAShr, lhs, rhs));
+  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateAShr), lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -230,7 +232,7 @@ ExecutionResult Interpreter::visitAnd(llvm::BinaryOperator& op) {
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
 
-  frame.insert(&op, transform(BinaryOp::CreateAnd, lhs, rhs));
+  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateAnd), lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -240,7 +242,7 @@ ExecutionResult Interpreter::visitOr(llvm::BinaryOperator& op) {
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
 
-  frame.insert(&op, transform(BinaryOp::CreateOr, lhs, rhs));
+  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateOr), lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -250,7 +252,7 @@ ExecutionResult Interpreter::visitXor(llvm::BinaryOperator& op) {
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
 
-  frame.insert(&op, transform(BinaryOp::CreateXor, lhs, rhs));
+  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateXor), lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -259,7 +261,7 @@ ExecutionResult Interpreter::visitNot(llvm::BinaryOperator& op) {
 
   auto operand = ctx->lookup(op.getOperand(0));
 
-  frame.insert(&op, transform(UnaryOp::CreateNot, operand));
+  frame.insert(&op, transform(WRAP_FUNC(UnaryOp::CreateNot), operand));
 
   return ExecutionResult::Continue;
 }
@@ -270,7 +272,7 @@ ExecutionResult Interpreter::visitFAdd(llvm::BinaryOperator& op) {
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
 
-  frame.insert(&op, transform(BinaryOp::CreateFAdd, lhs, rhs));
+  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateFAdd), lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -280,7 +282,7 @@ ExecutionResult Interpreter::visitFSub(llvm::BinaryOperator& op) {
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
 
-  frame.insert(&op, transform(BinaryOp::CreateFSub, lhs, rhs));
+  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateFSub), lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -290,7 +292,7 @@ ExecutionResult Interpreter::visitFMul(llvm::BinaryOperator& op) {
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
 
-  frame.insert(&op, transform(BinaryOp::CreateFMul, lhs, rhs));
+  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateFMul), lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -300,7 +302,7 @@ ExecutionResult Interpreter::visitFDiv(llvm::BinaryOperator& op) {
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
 
-  frame.insert(&op, transform(BinaryOp::CreateFAdd, lhs, rhs));
+  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateFAdd), lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -524,7 +526,6 @@ ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst& inst) {
   auto cond_ = ctx->lookup(inst.getCondition());
   auto cond = cond_.scalar();
 
-  auto zero = ConstantInt::Create(llvm::APInt(cond->type().bitwidth(), 0));
   auto assertion = Assertion(cond);
   auto is_t = ctx->check(assertion);
   auto is_f = ctx->check(!assertion);
@@ -580,11 +581,9 @@ ExecutionResult Interpreter::visitReturnInst(llvm::ReturnInst& inst) {
 ExecutionResult Interpreter::visitCallInst(llvm::CallInst& call) {
   auto func = call.getCalledFunction();
 
-  if (func->isIntrinsic()) {
-    CAFFEINE_ABORT(fmt::format("Intrinsic function '{}' is not supported",
-                               func->getName().str()));
-  }
-
+  CAFFEINE_ASSERT(
+      !func->isIntrinsic(),
+      "intrinsics function calls should be handled by visitIntrinsic");
   CAFFEINE_ASSERT(!call.isIndirectCall(),
                   "Indirect function calls are not supported yet");
 
@@ -610,6 +609,21 @@ ExecutionResult Interpreter::visitSelectInst(llvm::SelectInst& inst) {
   frame.insert(&inst, transform(SelectOp::Create, cond, trueVal, falseVal));
 
   return ExecutionResult::Continue;
+}
+ExecutionResult Interpreter::visitIntrinsicInst(llvm::IntrinsicInst& intrin) {
+  namespace Intrinsic = llvm::Intrinsic;
+
+  switch (intrin.getIntrinsicID()) {
+  // These are just markers for when lifetimes are supposed to end.
+  case Intrinsic::lifetime_start:
+  case Intrinsic::lifetime_end:
+    return ExecutionResult::Continue;
+  default:
+    break;
+  }
+
+  CAFFEINE_ABORT(fmt::format("Intrinsic function '{}' is not supported",
+                             intrin.getCalledFunction()->getName().str()));
 }
 
 ExecutionResult
@@ -747,21 +761,13 @@ Interpreter::visitGetElementPtrInst(llvm::GetElementPtrInst& inst) {
       unsigned index =
           llvm::cast<llvm::ConstantInt>(it.getOperand())->getZExtValue();
 
-      offset = BinaryOp::CreateAdd(offset, ConstantInt::Create(llvm::APInt(
-                                               offset->type().bitwidth(),
-                                               slo->getElementOffset(index))));
+      offset = BinaryOp::CreateAdd(offset, slo->getElementOffset(index));
     } else {
-      auto value = ctx->lookup(it.getOperand()).scalar();
-      unsigned bitwidth = value->type().bitwidth();
-
-      if (bitwidth < offset_width)
-        value = UnaryOp::CreateSExt(Type::int_ty(offset_width), value);
-      else if (bitwidth > offset_width)
-        value = UnaryOp::CreateTrunc(Type::int_ty(offset_width), value);
+      auto value = UnaryOp::CreateTruncOrSExt(
+          Type::int_ty(offset_width), ctx->lookup(it.getOperand()).scalar());
 
       auto itemoffset = BinaryOp::CreateMul(
-          value, ConstantInt::Create(llvm::APInt(
-                     bitwidth, layout.getTypeAllocSize(it.getIndexedType()))));
+          value, layout.getTypeAllocSize(it.getIndexedType()));
 
       offset = BinaryOp::CreateAdd(offset, itemoffset);
     }
@@ -800,7 +806,8 @@ ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
   // TODO: What are the vector semantics for loads?
   const Pointer& pointer = operand.pointer();
 
-  auto assertion = ctx->heap().check_valid(pointer);
+  auto assertion =
+      ctx->heap().check_valid(pointer, layout.getTypeStoreSize(inst.getType()));
   auto model = ctx->resolve(!assertion);
   if (model->result() == SolverResult::SAT) {
     logger->log_failure(*model, *ctx, Failure(!assertion));
@@ -850,7 +857,8 @@ ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
   const llvm::DataLayout& layout = inst.getModule()->getDataLayout();
   const Pointer& pointer = dest.pointer();
 
-  auto assertion = ctx->heap().check_valid(pointer);
+  auto assertion = ctx->heap().check_valid(
+      pointer, layout.getTypeStoreSize(inst.getOperand(0)->getType()));
   auto model = ctx->resolve(!assertion);
   if (model->result() == SolverResult::SAT) {
     logger->log_failure(*model, *ctx, Failure(!assertion));
@@ -876,6 +884,30 @@ ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
   }
 
   return ExecutionResult::Stop;
+}
+ExecutionResult Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {
+  auto& frame = ctx->stack_top();
+  const auto& layout = inst.getModule()->getDataLayout();
+
+  uint64_t size =
+      layout.getTypeAllocSize(inst.getAllocatedType()).getFixedSize();
+  uint64_t align = std::max<uint64_t>(inst.getAlignment(), 1);
+
+  unsigned ptr_width =
+      layout.getPointerSizeInBits(inst.getType()->getPointerAddressSpace());
+
+  auto size_op = ConstantInt::Create(llvm::APInt(ptr_width, size));
+  auto alloc = ctx->heap().allocate(
+      size_op, ConstantInt::Create(llvm::APInt(ptr_width, align)),
+      AllocOp::Create(size_op, ConstantInt::Create(llvm::APInt(8, 0xDD))),
+      AllocationKind::Alloca, *ctx);
+
+  frame.insert(&inst,
+               ContextValue(Pointer(
+                   alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
+  frame.allocations.push_back(alloc);
+
+  return ExecutionResult::Continue;
 }
 
 /***************************************************
@@ -962,7 +994,7 @@ ExecutionResult Interpreter::visitMalloc(llvm::CallInst& call) {
       size_op,
       ConstantInt::Create(llvm::APInt(ptr_width, options.malloc_alignment)),
       AllocOp::Create(size_op, ConstantInt::Create(llvm::APInt(8, 0xDD))),
-      *ctx);
+      AllocationKind::Malloc, *ctx);
 
   ctx->stack_top().insert(
       &call, ContextValue(Pointer(
@@ -997,6 +1029,24 @@ ExecutionResult Interpreter::visitFree(llvm::CallInst& call) {
 
   for (size_t i = 1; i < resolved.size(); ++i) {
     Context forked = ctx->fork();
+
+    Allocation& alloc = forked.heap()[resolved[i].alloc()];
+
+    forked.add(ICmpOp::CreateICmp(
+        ICmpOpcode::EQ, resolved[i].value(forked.heap()), alloc.address()));
+
+    if (alloc.kind() != AllocationKind::Malloc) {
+      auto model = ctx->resolve();
+
+      if (model->result() == SolverResult::SAT)
+        logger->log_failure(*model, forked,
+                            Failure(Assertion::constant(true),
+                                    "Attempted to free a pointer that was not "
+                                    "allocated by malloc"));
+
+      continue;
+    }
+
     forked.heap().deallocate(resolved[i].alloc());
     queue->add_context(std::move(forked));
   }

@@ -15,15 +15,16 @@ namespace caffeine {
  ***************************************************/
 
 Allocation::Allocation(const ref<Operation>& address,
-                       const ref<Operation>& size, const ref<Operation>& data)
-    : address_(address), size_(size), data_(data) {
+                       const ref<Operation>& size, const ref<Operation>& data,
+                       AllocationKind kind)
+    : address_(address), size_(size), data_(data), kind_(kind) {
   CAFFEINE_ASSERT(address->type().is_int());
   CAFFEINE_ASSERT(size->type().is_int());
   CAFFEINE_ASSERT(address->type().bitwidth() == size->type().bitwidth());
 }
 Allocation::Allocation(const ref<Operation>& address, const ConstantInt& size,
-                       const ref<Operation>& data)
-    : Allocation(address, make_ref<Operation>(size), data) {}
+                       const ref<Operation>& data, AllocationKind kind)
+    : Allocation(address, make_ref<Operation>(size), data, kind) {}
 
 void Allocation::overwrite(const ref<Operation>& newdata) {
   data_ = newdata;
@@ -43,11 +44,8 @@ Assertion Allocation::check_inbounds(const ref<Operation>& offset,
   // TODO: Should we check for wraparound, probably not worth it for now.
 
   auto lower = ICmpOp::CreateICmp(ICmpOpcode::ULT, offset, size());
-  auto upper = ICmpOp::CreateICmp(
-      ICmpOpcode::ULE,
-      BinaryOp::CreateAdd(offset, ConstantInt::Create(llvm::APInt(
-                                      offset->type().bitwidth(), width))),
-      size());
+  auto upper = ICmpOp::CreateICmp(ICmpOpcode::ULE,
+                                  BinaryOp::CreateAdd(offset, width), size());
 
   return Assertion(BinaryOp::CreateAnd(std::move(upper), std::move(lower)));
 }
@@ -68,10 +66,7 @@ ref<Operation> Allocation::read(const ref<Operation>& offset, const Type& t,
   bytes.reserve(width);
 
   for (uint32_t i = 0; i < width; ++i) {
-    auto index = BinaryOp::CreateAdd(
-        offset, ConstantInt::Create(llvm::APInt(offset->type().bitwidth(), i)));
-
-    bytes.push_back(LoadOp::Create(data(), index));
+    bytes.push_back(LoadOp::Create(data(), BinaryOp::CreateAdd(offset, i)));
   }
 
   if (width == 1)
@@ -83,8 +78,7 @@ ref<Operation> Allocation::read(const ref<Operation>& offset, const Type& t,
   for (uint32_t i = 1; i < width; ++i) {
     // extended = zext(bytes[i], bitwidth) << (i * 8)
     auto extended = BinaryOp::CreateShl(
-        UnaryOp::CreateZExt(Type::int_ty(bitwidth), bytes[i]),
-        ConstantInt::Create(llvm::APInt(bitwidth, (uint64_t)i * 8)));
+        UnaryOp::CreateZExt(Type::int_ty(bitwidth), bytes[i]), (uint64_t)i * 8);
     bitresult = BinaryOp::CreateOr(bitresult, extended);
   }
 
@@ -131,12 +125,9 @@ void Allocation::write(const ref<Operation>& offset,
   }
 
   for (uint32_t i = 0; i < byte_width; ++i) {
-    auto byte = UnaryOp::CreateTrunc(
-        Type::int_ty(8),
-        BinaryOp::CreateLShr(
-            value, ConstantInt::Create(llvm::APInt(bitwidth, i * 8))));
-    auto index = BinaryOp::CreateAdd(
-        offset, ConstantInt::Create(llvm::APInt(offset->type().bitwidth(), i)));
+    auto byte = UnaryOp::CreateTrunc(Type::int_ty(8),
+                                     BinaryOp::CreateLShr(value, i * 8));
+    auto index = BinaryOp::CreateAdd(offset, i);
 
     overwrite(StoreOp::Create(data(), index, byte));
   }
@@ -178,14 +169,15 @@ const Allocation& MemHeap::operator[](const AllocId& alloc) const {
 
 AllocId MemHeap::allocate(const ref<Operation>& size,
                           const ref<Operation>& alignment,
-                          const ref<Operation>& data, Context& ctx) {
+                          const ref<Operation>& data, AllocationKind kind,
+                          Context& ctx) {
   CAFFEINE_ASSERT(size->type() == alignment->type());
   CAFFEINE_ASSERT(size->type().is_int());
   CAFFEINE_ASSERT(data->type().is_array());
   CAFFEINE_ASSERT(data->type().bitwidth() == size->type().bitwidth());
 
   auto allocation = Allocation(
-      Constant::Create(size->type(), ctx.next_constant()), size, data);
+      Constant::Create(size->type(), ctx.next_constant()), size, data, kind);
 
   // Ensure that the allocation is properly aligned
   ctx.add(ICmpOp::CreateICmp(
@@ -234,19 +226,31 @@ bool MemHeap::check_live(const AllocId& alloc) const {
   return allocs_.find(alloc) != allocs_.end();
 }
 
-Assertion MemHeap::check_valid(const Pointer& ptr) {
+Assertion MemHeap::check_valid(const Pointer& ptr, uint32_t width) {
+  /**
+   * Implementation note: When checking that the end of the read is within the
+   * allocation we check ptr < alloc + (size - width) instead of checking ptr +
+   * width < alloc + size since it gives better opportunities for constant
+   * folding.
+   */
+
   if (ptr.is_resolved()) {
-    return ICmpOp::CreateICmp(ICmpOpcode::ULE, ptr.offset(),
-                              (*this)[ptr.alloc()].size());
+    if (!check_live(ptr.alloc()))
+      return ConstantInt::Create(false);
+
+    return ICmpOp::CreateICmp(
+        ICmpOpcode::ULE, ptr.offset(),
+        BinaryOp::CreateSub((*this)[ptr.alloc()].size(), width));
   }
 
   auto result = ConstantInt::Create(false);
   auto value = ptr.value(*this);
 
   for (const auto& alloc : allocs_) {
-    auto end = BinaryOp::CreateAdd(alloc.address(), alloc.size());
+    auto end = BinaryOp::CreateAdd(alloc.address(),
+                                   BinaryOp::CreateSub(alloc.size(), width));
     auto cmp1 = ICmpOp::CreateICmp(ICmpOpcode::ULE, alloc.address(), value);
-    auto cmp2 = ICmpOp::CreateICmp(ICmpOpcode::ULT, value, end);
+    auto cmp2 = ICmpOp::CreateICmp(ICmpOpcode::ULE, value, end);
 
     // result |= (address <= value) && (value < address + size)
     result = BinaryOp::CreateOr(result, BinaryOp::CreateAnd(cmp1, cmp2));
@@ -259,6 +263,9 @@ Assertion MemHeap::check_valid(const Pointer& ptr) {
 
 Assertion MemHeap::check_starts_allocation(const Pointer& ptr) {
   if (ptr.is_resolved()) {
+    if (!check_live(ptr.alloc()))
+      return ConstantInt::Create(false);
+
     return ICmpOp::CreateICmp(ICmpOpcode::EQ, ptr.offset(), 0);
   }
 
@@ -282,6 +289,7 @@ llvm::SmallVector<Pointer, 1> MemHeap::resolve(const Pointer& ptr,
   if (ptr.is_resolved()) {
     if (!check_live(ptr.alloc()))
       return results;
+
     const Allocation& alloc = (*this)[ptr.alloc()];
     if (ctx.check(alloc.check_inbounds(ptr.offset(), 0)) == SolverResult::UNSAT)
       return results;

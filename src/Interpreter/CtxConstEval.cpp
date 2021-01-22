@@ -64,7 +64,9 @@ static ContextValue evaluate_expr(Context* ctx, llvm::ConstantExpr* expr) {
 #define OPERAND(expr, num)                                                     \
   evaluate(ctx, llvm::cast<llvm::Constant>((expr)->getOperand(num)))
 #define UNARY_OP(expr_) transform((expr_), OPERAND(expr, 0))
-#define BINARY_OP(expr_) transform((expr_), OPERAND(expr, 0), OPERAND(expr, 1))
+#define BINARY_OP(expr_)                                                       \
+  transform([=](const auto& a, const auto& b) { return (expr_)(a, b); },       \
+            OPERAND(expr, 0), OPERAND(expr, 1))
 #define CAST_OP(expr_)                                                         \
   transform(                                                                   \
       [=, type = Type::from_llvm(expr->getType())](                            \
@@ -157,24 +159,15 @@ static ContextValue evaluate_expr(Context* ctx, llvm::ConstantExpr* expr) {
         unsigned index =
             llvm::cast<llvm::ConstantInt>(it.getOperand())->getZExtValue();
 
-        offset = BinaryOp::CreateAdd(
-            offset,
-            ConstantInt::Create(llvm::APInt(offset->type().bitwidth(),
-                                            slo->getElementOffset(index))));
+        offset = BinaryOp::CreateAdd(offset, slo->getElementOffset(index));
       } else {
-        auto value =
-            evaluate(ctx, llvm::cast<llvm::Constant>(it.getOperand())).scalar();
-        unsigned bitwidth = value->type().bitwidth();
-
-        if (bitwidth < offset_width)
-          value = UnaryOp::CreateSExt(Type::int_ty(offset_width), value);
-        else if (bitwidth > offset_width)
-          value = UnaryOp::CreateTrunc(Type::int_ty(offset_width), value);
+        auto value = UnaryOp::CreateTruncOrSExt(
+            Type::int_ty(offset_width),
+            evaluate(ctx, llvm::cast<llvm::Constant>(it.getOperand()))
+                .scalar());
 
         auto itemoffset = BinaryOp::CreateMul(
-            value,
-            ConstantInt::Create(llvm::APInt(
-                bitwidth, layout.getTypeAllocSize(it.getIndexedType()))));
+            value, layout.getTypeAllocSize(it.getIndexedType()));
 
         offset = BinaryOp::CreateAdd(offset, itemoffset);
       }
@@ -222,7 +215,8 @@ ContextValue evaluate_global(Context* ctx, llvm::GlobalVariable* global) {
 
   auto alloc = ctx->heap_.allocate(
       ConstantInt::Create(llvm::APInt(bitwidth, array.data().size())),
-      ConstantInt::Create(llvm::APInt(bitwidth, alignment)), data, *ctx);
+      ConstantInt::Create(llvm::APInt(bitwidth, alignment)), data,
+      AllocationKind::Global, *ctx);
 
   auto pointer = ContextValue(
       Pointer(alloc, ConstantInt::Create(llvm::APInt(bitwidth, 0))));
