@@ -226,22 +226,31 @@ bool MemHeap::check_live(const AllocId& alloc) const {
   return allocs_.find(alloc) != allocs_.end();
 }
 
-Assertion MemHeap::check_valid(const Pointer& ptr) {
+Assertion MemHeap::check_valid(const Pointer& ptr, uint32_t width) {
+  /**
+   * Implementation note: When checking that the end of the read is within the
+   * allocation we check ptr < alloc + (size - width) instead of checking ptr +
+   * width < alloc + size since it gives better opportunities for constant
+   * folding.
+   */
+
   if (ptr.is_resolved()) {
     if (!check_live(ptr.alloc()))
       return ConstantInt::Create(false);
 
-    return ICmpOp::CreateICmp(ICmpOpcode::ULE, ptr.offset(),
-                              (*this)[ptr.alloc()].size());
+    return ICmpOp::CreateICmp(
+        ICmpOpcode::ULE, ptr.offset(),
+        BinaryOp::CreateSub((*this)[ptr.alloc()].size(), width));
   }
 
   auto result = ConstantInt::Create(false);
   auto value = ptr.value(*this);
 
   for (const auto& alloc : allocs_) {
-    auto end = BinaryOp::CreateAdd(alloc.address(), alloc.size());
+    auto end = BinaryOp::CreateAdd(alloc.address(),
+                                   BinaryOp::CreateSub(alloc.size(), width));
     auto cmp1 = ICmpOp::CreateICmp(ICmpOpcode::ULE, alloc.address(), value);
-    auto cmp2 = ICmpOp::CreateICmp(ICmpOpcode::ULT, value, end);
+    auto cmp2 = ICmpOp::CreateICmp(ICmpOpcode::ULE, value, end);
 
     // result |= (address <= value) && (value < address + size)
     result = BinaryOp::CreateOr(result, BinaryOp::CreateAnd(cmp1, cmp2));

@@ -806,7 +806,8 @@ ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
   // TODO: What are the vector semantics for loads?
   const Pointer& pointer = operand.pointer();
 
-  auto assertion = ctx->heap().check_valid(pointer);
+  auto assertion =
+      ctx->heap().check_valid(pointer, layout.getTypeStoreSize(inst.getType()));
   auto model = ctx->resolve(!assertion);
   if (model->result() == SolverResult::SAT) {
     logger->log_failure(*model, *ctx, Failure(!assertion));
@@ -856,7 +857,8 @@ ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
   const llvm::DataLayout& layout = inst.getModule()->getDataLayout();
   const Pointer& pointer = dest.pointer();
 
-  auto assertion = ctx->heap().check_valid(pointer);
+  auto assertion = ctx->heap().check_valid(
+      pointer, layout.getTypeStoreSize(inst.getOperand(0)->getType()));
   auto model = ctx->resolve(!assertion);
   if (model->result() == SolverResult::SAT) {
     logger->log_failure(*model, *ctx, Failure(!assertion));
