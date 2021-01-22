@@ -44,11 +44,8 @@ Assertion Allocation::check_inbounds(const ref<Operation>& offset,
   // TODO: Should we check for wraparound, probably not worth it for now.
 
   auto lower = ICmpOp::CreateICmp(ICmpOpcode::ULT, offset, size());
-  auto upper = ICmpOp::CreateICmp(
-      ICmpOpcode::ULE,
-      BinaryOp::CreateAdd(offset, ConstantInt::Create(llvm::APInt(
-                                      offset->type().bitwidth(), width))),
-      size());
+  auto upper = ICmpOp::CreateICmp(ICmpOpcode::ULE,
+                                  BinaryOp::CreateAdd(offset, width), size());
 
   return Assertion(BinaryOp::CreateAnd(std::move(upper), std::move(lower)));
 }
@@ -69,10 +66,7 @@ ref<Operation> Allocation::read(const ref<Operation>& offset, const Type& t,
   bytes.reserve(width);
 
   for (uint32_t i = 0; i < width; ++i) {
-    auto index = BinaryOp::CreateAdd(
-        offset, ConstantInt::Create(llvm::APInt(offset->type().bitwidth(), i)));
-
-    bytes.push_back(LoadOp::Create(data(), index));
+    bytes.push_back(LoadOp::Create(data(), BinaryOp::CreateAdd(offset, i)));
   }
 
   if (width == 1)
@@ -84,8 +78,7 @@ ref<Operation> Allocation::read(const ref<Operation>& offset, const Type& t,
   for (uint32_t i = 1; i < width; ++i) {
     // extended = zext(bytes[i], bitwidth) << (i * 8)
     auto extended = BinaryOp::CreateShl(
-        UnaryOp::CreateZExt(Type::int_ty(bitwidth), bytes[i]),
-        ConstantInt::Create(llvm::APInt(bitwidth, (uint64_t)i * 8)));
+        UnaryOp::CreateZExt(Type::int_ty(bitwidth), bytes[i]), (uint64_t)i * 8);
     bitresult = BinaryOp::CreateOr(bitresult, extended);
   }
 
@@ -132,12 +125,9 @@ void Allocation::write(const ref<Operation>& offset,
   }
 
   for (uint32_t i = 0; i < byte_width; ++i) {
-    auto byte = UnaryOp::CreateTrunc(
-        Type::int_ty(8),
-        BinaryOp::CreateLShr(
-            value, ConstantInt::Create(llvm::APInt(bitwidth, i * 8))));
-    auto index = BinaryOp::CreateAdd(
-        offset, ConstantInt::Create(llvm::APInt(offset->type().bitwidth(), i)));
+    auto byte = UnaryOp::CreateTrunc(Type::int_ty(8),
+                                     BinaryOp::CreateLShr(value, i * 8));
+    auto index = BinaryOp::CreateAdd(offset, i);
 
     overwrite(StoreOp::Create(data(), index, byte));
   }

@@ -28,8 +28,7 @@ auto zip(R1& range1, R2& range2) {
          });
 }
 
-#define WRAP_FUNC(func) \
-  [](const auto&... args) { return (func)(args...); }
+#define WRAP_FUNC(func) [](const auto&... args) { return (func)(args...); }
 
 Interpreter::Interpreter(Executor* queue, Context* ctx, FailureLogger* logger,
                          const InterpreterOptions& options)
@@ -527,7 +526,6 @@ ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst& inst) {
   auto cond_ = ctx->lookup(inst.getCondition());
   auto cond = cond_.scalar();
 
-  auto zero = ConstantInt::Create(llvm::APInt(cond->type().bitwidth(), 0));
   auto assertion = Assertion(cond);
   auto is_t = ctx->check(assertion);
   auto is_f = ctx->check(!assertion);
@@ -763,21 +761,13 @@ Interpreter::visitGetElementPtrInst(llvm::GetElementPtrInst& inst) {
       unsigned index =
           llvm::cast<llvm::ConstantInt>(it.getOperand())->getZExtValue();
 
-      offset = BinaryOp::CreateAdd(offset, ConstantInt::Create(llvm::APInt(
-                                               offset->type().bitwidth(),
-                                               slo->getElementOffset(index))));
+      offset = BinaryOp::CreateAdd(offset, slo->getElementOffset(index));
     } else {
-      auto value = ctx->lookup(it.getOperand()).scalar();
-      unsigned bitwidth = value->type().bitwidth();
-
-      if (bitwidth < offset_width)
-        value = UnaryOp::CreateSExt(Type::int_ty(offset_width), value);
-      else if (bitwidth > offset_width)
-        value = UnaryOp::CreateTrunc(Type::int_ty(offset_width), value);
+      auto value = UnaryOp::CreateTruncOrSExt(
+          Type::int_ty(offset_width), ctx->lookup(it.getOperand()).scalar());
 
       auto itemoffset = BinaryOp::CreateMul(
-          value, ConstantInt::Create(llvm::APInt(
-                     bitwidth, layout.getTypeAllocSize(it.getIndexedType()))));
+          value, layout.getTypeAllocSize(it.getIndexedType()));
 
       offset = BinaryOp::CreateAdd(offset, itemoffset);
     }

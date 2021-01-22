@@ -159,24 +159,15 @@ static ContextValue evaluate_expr(Context* ctx, llvm::ConstantExpr* expr) {
         unsigned index =
             llvm::cast<llvm::ConstantInt>(it.getOperand())->getZExtValue();
 
-        offset = BinaryOp::CreateAdd(
-            offset,
-            ConstantInt::Create(llvm::APInt(offset->type().bitwidth(),
-                                            slo->getElementOffset(index))));
+        offset = BinaryOp::CreateAdd(offset, slo->getElementOffset(index));
       } else {
-        auto value =
-            evaluate(ctx, llvm::cast<llvm::Constant>(it.getOperand())).scalar();
-        unsigned bitwidth = value->type().bitwidth();
-
-        if (bitwidth < offset_width)
-          value = UnaryOp::CreateSExt(Type::int_ty(offset_width), value);
-        else if (bitwidth > offset_width)
-          value = UnaryOp::CreateTrunc(Type::int_ty(offset_width), value);
+        auto value = UnaryOp::CreateTruncOrSExt(
+            Type::int_ty(offset_width),
+            evaluate(ctx, llvm::cast<llvm::Constant>(it.getOperand()))
+                .scalar());
 
         auto itemoffset = BinaryOp::CreateMul(
-            value,
-            ConstantInt::Create(llvm::APInt(
-                bitwidth, layout.getTypeAllocSize(it.getIndexedType()))));
+            value, layout.getTypeAllocSize(it.getIndexedType()));
 
         offset = BinaryOp::CreateAdd(offset, itemoffset);
       }
