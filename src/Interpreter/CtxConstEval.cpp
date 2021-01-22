@@ -64,7 +64,9 @@ static ContextValue evaluate_expr(Context* ctx, llvm::ConstantExpr* expr) {
 #define OPERAND(expr, num)                                                     \
   evaluate(ctx, llvm::cast<llvm::Constant>((expr)->getOperand(num)))
 #define UNARY_OP(expr_) transform((expr_), OPERAND(expr, 0))
-#define BINARY_OP(expr_) transform((expr_), OPERAND(expr, 0), OPERAND(expr, 1))
+#define BINARY_OP(expr_)                                                       \
+  transform([=](const auto& a, const auto& b) { return (expr_)(a, b); },       \
+            OPERAND(expr, 0), OPERAND(expr, 1))
 #define CAST_OP(expr_)                                                         \
   transform(                                                                   \
       [=, type = Type::from_llvm(expr->getType())](                            \

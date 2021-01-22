@@ -485,6 +485,30 @@ public:
   static ref<Operation> CreateFRem(const ref<Operation>& lhs,
                                    const ref<Operation>& rhs);
 
+  // Utility methods for creating integer arithmetic when one of the operations
+  // is a constant.
+
+#define CAFFEINE_DECL_BINOP_INT_CONST(op)                                      \
+  static ref<Operation> Create##op(const ref<Operation>& lhs, int64_t rhs);    \
+  static ref<Operation> Create##op(int64_t lhs, const ref<Operation>& rhs)
+
+  CAFFEINE_DECL_BINOP_INT_CONST(Add);
+  CAFFEINE_DECL_BINOP_INT_CONST(Sub);
+  CAFFEINE_DECL_BINOP_INT_CONST(Mul);
+  CAFFEINE_DECL_BINOP_INT_CONST(UDiv);
+  CAFFEINE_DECL_BINOP_INT_CONST(SDiv);
+  CAFFEINE_DECL_BINOP_INT_CONST(URem);
+  CAFFEINE_DECL_BINOP_INT_CONST(SRem);
+
+  CAFFEINE_DECL_BINOP_INT_CONST(And);
+  CAFFEINE_DECL_BINOP_INT_CONST(Or);
+  CAFFEINE_DECL_BINOP_INT_CONST(Xor);
+  CAFFEINE_DECL_BINOP_INT_CONST(Shl);
+  CAFFEINE_DECL_BINOP_INT_CONST(LShr);
+  CAFFEINE_DECL_BINOP_INT_CONST(AShr);
+
+#undef CAFFEINE_DECL_BINOP_INT_CONST
+
   static bool classof(const Operation* op);
 };
 

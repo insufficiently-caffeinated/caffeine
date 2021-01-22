@@ -28,6 +28,9 @@ auto zip(R1& range1, R2& range2) {
          });
 }
 
+#define WRAP_FUNC(func) \
+  [](const auto&... args) { return (func)(args...); }
+
 Interpreter::Interpreter(Executor* queue, Context* ctx, FailureLogger* logger,
                          const InterpreterOptions& options)
     : ctx{ctx}, queue{queue}, logger{logger}, options(options) {}
@@ -63,7 +66,7 @@ ExecutionResult Interpreter::visitAdd(llvm::BinaryOperator& op) {
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
 
-  frame.insert(&op, transform(BinaryOp::CreateAdd, lhs, rhs));
+  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateAdd), lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -73,7 +76,7 @@ ExecutionResult Interpreter::visitSub(llvm::BinaryOperator& op) {
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
 
-  frame.insert(&op, transform(BinaryOp::CreateSub, lhs, rhs));
+  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateSub), lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -83,7 +86,7 @@ ExecutionResult Interpreter::visitMul(llvm::BinaryOperator& op) {
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
 
-  frame.insert(&op, transform(BinaryOp::CreateMul, lhs, rhs));
+  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateMul), lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -200,7 +203,7 @@ ExecutionResult Interpreter::visitShl(llvm::BinaryOperator& op) {
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
 
-  frame.insert(&op, transform(BinaryOp::CreateShl, lhs, rhs));
+  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateShl), lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -210,7 +213,7 @@ ExecutionResult Interpreter::visitLShr(llvm::BinaryOperator& op) {
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
 
-  frame.insert(&op, transform(BinaryOp::CreateLShr, lhs, rhs));
+  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateLShr), lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -220,7 +223,7 @@ ExecutionResult Interpreter::visitAShr(llvm::BinaryOperator& op) {
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
 
-  frame.insert(&op, transform(BinaryOp::CreateAShr, lhs, rhs));
+  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateAShr), lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -230,7 +233,7 @@ ExecutionResult Interpreter::visitAnd(llvm::BinaryOperator& op) {
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
 
-  frame.insert(&op, transform(BinaryOp::CreateAnd, lhs, rhs));
+  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateAnd), lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -240,7 +243,7 @@ ExecutionResult Interpreter::visitOr(llvm::BinaryOperator& op) {
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
 
-  frame.insert(&op, transform(BinaryOp::CreateOr, lhs, rhs));
+  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateOr), lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -250,7 +253,7 @@ ExecutionResult Interpreter::visitXor(llvm::BinaryOperator& op) {
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
 
-  frame.insert(&op, transform(BinaryOp::CreateXor, lhs, rhs));
+  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateXor), lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -259,7 +262,7 @@ ExecutionResult Interpreter::visitNot(llvm::BinaryOperator& op) {
 
   auto operand = ctx->lookup(op.getOperand(0));
 
-  frame.insert(&op, transform(UnaryOp::CreateNot, operand));
+  frame.insert(&op, transform(WRAP_FUNC(UnaryOp::CreateNot), operand));
 
   return ExecutionResult::Continue;
 }
@@ -270,7 +273,7 @@ ExecutionResult Interpreter::visitFAdd(llvm::BinaryOperator& op) {
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
 
-  frame.insert(&op, transform(BinaryOp::CreateFAdd, lhs, rhs));
+  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateFAdd), lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -280,7 +283,7 @@ ExecutionResult Interpreter::visitFSub(llvm::BinaryOperator& op) {
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
 
-  frame.insert(&op, transform(BinaryOp::CreateFSub, lhs, rhs));
+  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateFSub), lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -290,7 +293,7 @@ ExecutionResult Interpreter::visitFMul(llvm::BinaryOperator& op) {
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
 
-  frame.insert(&op, transform(BinaryOp::CreateFMul, lhs, rhs));
+  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateFMul), lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -300,7 +303,7 @@ ExecutionResult Interpreter::visitFDiv(llvm::BinaryOperator& op) {
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
 
-  frame.insert(&op, transform(BinaryOp::CreateFAdd, lhs, rhs));
+  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateFAdd), lhs, rhs));
 
   return ExecutionResult::Continue;
 }
