@@ -108,13 +108,23 @@ public:
     return size() == 0;
   }
 
+  /// Check whether the current array directly contains the underlying
+  /// std::vector instance.
   bool is_base() const noexcept {
     return data_ && data_->kind() == Node::Base;
   }
+  /// Check whether the current array contains a diff to the underlying
+  /// std::vector instance.
   bool is_diff() const noexcept {
     return data_ && data_->kind() == Node::Diff;
   }
 
+  /**
+   * Construct a value at index i using the provided arguments.
+   *
+   * This will also reroot the underlying representation to be more efficient
+   * for future sets from this PersistentArray instance.
+   */
   template <typename... Us>
   void set(size_t i, Us&&... args) {
     if (i >= size_)
@@ -136,15 +146,49 @@ public:
       slot = T(std::forward<Us>(args)...);
     }
   }
+  /// Like set, except does not modify the underlying representation.
+  template <typename... Us>
+  void set_direct(size_t i, Us&&... args) {
+    if (i >= size_)
+      throw_out_of_range(i);
+
+    if (data_->refcount > 1 || data_->kind() == Node::Diff) {
+      data_ = make_ref<Node>(data_, i, std::forward<Us>(args)...);
+    } else {
+      T& slot = std::get<Node::Base>(data_->data)[i];
+
+      // Specialize to use assignment operator when we have const T& or T&&
+      if constexpr (sizeof...(Us) == 1 &&
+                    std::is_same_v<T,
+                                   std::decay_t<detail::first_of_t<Us...>>>) {
+        slot = std::forward<detail::first_of_t<Us...>>(args...);
+      } else {
+        slot = T(std::forward<Us>(args)...);
+      }
+    }
+  }
+
+  /**
+   * Read the value at index i.
+   *
+   * Note that modifying any PersistentArray that is shared with this one may
+   * end up changing the value behind the reference.
+   */
   const T& get(size_t i) const {
     if (i >= size_)
       throw_out_of_range(i);
     return data_->get(i);
   }
 
+  /// Copy the elements within this PersistenVector to a std::vector.
   std::vector<T> vec() const {
     return std::vector<T>(begin(), end());
   }
+  /// Does the same thing as vec() but will move the vector out of this
+  /// PersistentArray if possible.
+  ///
+  /// If the data is moved out of this PersistentArray then it will be left
+  /// empty, otherwise there will be no change in what it stores.
   std::vector<T> take_vec() {
     using std::swap;
 
