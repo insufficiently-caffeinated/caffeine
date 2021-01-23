@@ -88,7 +88,7 @@ public:
   void visitOperation(transform_t<Operation>&) {}
 
   // clang-format off
-  RetTy visitArray(transform_t<Array>& O) { return CAFFEINE_OP_DELEGATE(Operation); }
+  RetTy visitArrayBase(transform_t<ArrayBase>& O) { return CAFFEINE_OP_DELEGATE(Operation); }
 
   RetTy visitConstant     (transform_t<Constant>     & O) { return CAFFEINE_OP_DELEGATE(Operation); }
   RetTy visitConstantInt  (transform_t<ConstantInt>  & O) { return CAFFEINE_OP_DELEGATE(Operation); }
