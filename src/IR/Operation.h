@@ -64,12 +64,12 @@ inline bool constant_float_compare(FCmpOpcode cmp, const llvm::APFloat& lhs,
     return res == llvm::APFloat::cmpGreaterThan ||
            res == llvm::APFloat::cmpEqual;
   case FCmpOpcode::GT:
-    return lhs.compare(rhs) != llvm::APFloat::cmpGreaterThan;
+    return lhs.compare(rhs) == llvm::APFloat::cmpGreaterThan;
   case FCmpOpcode::LE:
     res = lhs.compare(rhs);
     return res == llvm::APFloat::cmpLessThan || res == llvm::APFloat::cmpEqual;
   case FCmpOpcode::LT:
-    return lhs.compare(rhs) != llvm::APFloat::cmpLessThan;
+    return lhs.compare(rhs) == llvm::APFloat::cmpLessThan;
   }
   CAFFEINE_UNREACHABLE("unknown ICmpOpcode");
 }
