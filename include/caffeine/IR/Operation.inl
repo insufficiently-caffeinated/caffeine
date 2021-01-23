@@ -257,6 +257,10 @@ inline const SharedArray& ConstantArray::data() const {
   return std::get<SharedArray>(inner_);
 }
 
+inline ref<Operation> ConstantArray::size() const {
+  return ConstantInt::Create(llvm::APInt(type().bitwidth(), data().size()));
+}
+
 /***************************************************
  * BinaryOp                                        *
  ***************************************************/
@@ -340,10 +344,7 @@ inline bool FCmpOp::is_unordered() const {
 /***************************************************
  * AllocOp                                         *
  ***************************************************/
-inline ref<Operation>& AllocOp::size() {
-  return operand_at(0);
-}
-inline const ref<Operation>& AllocOp::size() const {
+inline ref<Operation> AllocOp::size() const {
   return operand_at(0);
 }
 
@@ -374,6 +375,10 @@ inline const ref<Operation>& LoadOp::offset() const {
 /***************************************************
  * StoreOp                                         *
  ***************************************************/
+inline ref<Operation> StoreOp::size() const {
+  return llvm::cast<ArrayBase>(*data()).size();
+}
+
 inline ref<Operation>& StoreOp::data() {
   return operand_at(0);
 }
@@ -429,6 +434,11 @@ inline bool ICmpOp::classof(const Operation* op) {
 inline bool FCmpOp::classof(const Operation* op) {
   return detail::opcode(fcmp_base, 0, 0) <= op->opcode() &&
          op->opcode() <= detail::opcode(fcmp_base, 3, 0xF);
+}
+
+inline bool ArrayBase::classof(const Operation* op) {
+  return op->opcode() == ConstantArray || op->opcode() == Alloc ||
+         op->opcode() == Store;
 }
 
 #undef CAFFEINE_OP_DECL_CLASSOF

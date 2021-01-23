@@ -316,7 +316,8 @@ public:
   Operation& operator=(const Operation& op);
   Operation& operator=(Operation&& op) noexcept;
 
-  ~Operation() = default;
+  // Need to force operation to have a vtable
+  virtual ~Operation() = default;
 
 protected:
   /**
@@ -334,6 +335,22 @@ protected:
 };
 
 std::ostream& operator<<(std::ostream& os, const Operation& op);
+
+/**
+ * Base class for all array-typed operations.
+ *
+ * This allows clients to get the size of an array without having to care about
+ * exactly what type of array they are interacting with.
+ */
+class ArrayBase : public Operation {
+protected:
+  using Operation::Operation;
+
+public:
+  virtual ref<Operation> size() const = 0;
+
+  static bool classof(const Operation* op);
+};
 
 /**
  * Symbolic constant.
@@ -413,12 +430,13 @@ public:
 /**
  * Constant byte array.
  */
-class ConstantArray : public Operation {
+class ConstantArray : public ArrayBase {
 private:
   ConstantArray(Type t, const SharedArray& array);
   ConstantArray(Type t, SharedArray&& array);
 
 public:
+  ref<Operation> size() const override;
   const SharedArray& data() const;
 
   static ref<Operation> Create(Type index_ty, const SharedArray& array);
@@ -647,13 +665,12 @@ public:
  * value (of type i8). It is meant to be used for modelling allocations (e.g.
  * malloc or alloca).
  */
-class AllocOp : public Operation {
+class AllocOp : public ArrayBase {
 private:
   AllocOp(const ref<Operation>& size, const ref<Operation>& defaultval);
 
 public:
-  ref<Operation>& size();
-  const ref<Operation>& size() const;
+  ref<Operation> size() const override;
 
   ref<Operation>& default_value();
   const ref<Operation>& default_value() const;
@@ -692,12 +709,14 @@ public:
  * This writes a single byte into a data array and yields the new array with the
  * byte at index offset replaced by value.
  */
-class StoreOp : public Operation {
+class StoreOp : public ArrayBase {
 private:
   StoreOp(const ref<Operation>& data, const ref<Operation>& offset,
           const ref<Operation>& value);
 
 public:
+  ref<Operation> size() const override;
+
   ref<Operation>& data();
   const ref<Operation>& data() const;
 
