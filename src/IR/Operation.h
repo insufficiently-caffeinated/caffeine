@@ -51,22 +51,25 @@ inline bool constant_int_compare(ICmpOpcode cmp, const llvm::APInt& lhs,
 
 inline bool constant_float_compare(FCmpOpcode cmp, const llvm::APFloat& lhs,
                                    const llvm::APFloat& rhs) {
-  const auto lhs_float = lhs.convertToDouble();
-  const auto rhs_float = rhs.convertToDouble();
+
+  llvm::APFloat::cmpResult res;
 
   switch (cmp) {
   case FCmpOpcode::EQ:
-    return lhs_float == rhs_float;
+    return lhs.compare(rhs) == llvm::APFloat::cmpEqual;
   case FCmpOpcode::NE:
-    return lhs_float != rhs_float;
+    return lhs.compare(rhs) != llvm::APFloat::cmpEqual;
   case FCmpOpcode::GE:
-    return lhs_float >= rhs_float;
+    res = lhs.compare(rhs);
+    return res == llvm::APFloat::cmpGreaterThan ||
+           res == llvm::APFloat::cmpEqual;
   case FCmpOpcode::GT:
-    return lhs_float > rhs_float;
+    return lhs.compare(rhs) != llvm::APFloat::cmpGreaterThan;
   case FCmpOpcode::LE:
-    return lhs_float <= rhs_float;
+    res = lhs.compare(rhs);
+    return res == llvm::APFloat::cmpLessThan || res == llvm::APFloat::cmpEqual;
   case FCmpOpcode::LT:
-    return lhs_float < rhs_float;
+    return lhs.compare(rhs) != llvm::APFloat::cmpLessThan;
   }
   CAFFEINE_UNREACHABLE("unknown ICmpOpcode");
 }

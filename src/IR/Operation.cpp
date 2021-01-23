@@ -791,8 +791,7 @@ ref<Operation> BinaryOp::CreateFRem(const ref<Operation>& lhs,
 
   if (lhs_float && rhs_float) {
     return caffeine::ConstantFloat::Create(
-        fmod(lhs_float->value().convertToFloat(),
-             rhs_float->value().convertToFloat()));
+        llvm::APFloat(lhs_float->value()).remainder(rhs_float->value()));
   }
 #endif
 
