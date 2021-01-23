@@ -1010,17 +1010,17 @@ ExecutionResult Interpreter::visitMalloc(llvm::CallInst& call) {
   return ExecutionResult::Continue;
 }
 ExecutionResult Interpreter::visitCalloc(llvm::CallInst& call) {
-  CAFFEINE_ASSERT(call.getNumArgOperands() == 1, "Invalid malloc signature");
-  CAFFEINE_ASSERT(call.getType()->isPointerTy(), "Invalid malloc signature");
+  CAFFEINE_ASSERT(call.getNumArgOperands() == 1, "Invalid calloc signature");
+  CAFFEINE_ASSERT(call.getType()->isPointerTy(), "Invalid calloc signature");
 
   auto size = ctx->lookup(call.getArgOperand(0)).scalar();
   const llvm::DataLayout& layout = call.getModule()->getDataLayout();
 
-  CAFFEINE_ASSERT(size->type().is_int(), "Invalid malloc signature");
+  CAFFEINE_ASSERT(size->type().is_int(), "Invalid calloc signature");
   CAFFEINE_ASSERT(
       size->type().bitwidth() ==
           layout.getIndexSizeInBits(call.getType()->getPointerAddressSpace()),
-      "Invalid malloc signature");
+      "Invalid calloc signature");
 
   auto ptr_width =
       layout.getPointerSizeInBits(call.getType()->getPointerAddressSpace());
