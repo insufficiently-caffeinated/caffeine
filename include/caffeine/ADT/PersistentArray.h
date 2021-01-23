@@ -55,6 +55,8 @@ namespace detail {
  * This data structure is an implementation of the persistant array data
  * structure as described in "A Persistent Union-Find Data Structure" by
  * Conchon, S. and Filliatre, J.
+ * 
+ * The paper itself can be found at https://www.lri.fr/~filliatr/puf/
  *
  * Efficiency Notes
  * ================
