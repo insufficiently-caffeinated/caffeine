@@ -2,8 +2,8 @@
 
 # Change variables here to point to the corresponding programs locally
 
-YARPGEN=yarpgen
-COUNT=10
+YARPGEN=${YARPGEN:-yarpgen}
+COUNT=${COUNT:-10}
 
 #############################################################
 
@@ -34,6 +34,9 @@ for i in $(seq 0 $COUNT); do
   rm -rf "$OUTDIR"
   mkdir "$OUTDIR"
   "$YARPGEN" -o "$OUTDIR"
+
+  sed -i "s/printf/(void)/g" "$OUTDIR/driver.cpp"
+
   cat > "$OUTDIR/CMakeLists.txt" <<- "EOM"
 include(LLVMIRUtils)
 
