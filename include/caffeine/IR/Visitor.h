@@ -88,18 +88,20 @@ public:
   void visitOperation(transform_t<Operation>&) {}
 
   // clang-format off
+  RetTy visitArray(transform_t<Array>& O) { return CAFFEINE_OP_DELEGATE(Operation); }
+
   RetTy visitConstant     (transform_t<Constant>     & O) { return CAFFEINE_OP_DELEGATE(Operation); }
   RetTy visitConstantInt  (transform_t<ConstantInt>  & O) { return CAFFEINE_OP_DELEGATE(Operation); }
   RetTy visitConstantFloat(transform_t<ConstantFloat>& O) { return CAFFEINE_OP_DELEGATE(Operation); }
-  RetTy visitConstantArray(transform_t<ConstantArray>& O) { return CAFFEINE_OP_DELEGATE(Operation); }
+  RetTy visitConstantArray(transform_t<ConstantArray>& O) { return CAFFEINE_OP_DELEGATE(ArrayBase); }
   RetTy visitUndef        (transform_t<Undef>        & O) { return CAFFEINE_OP_DELEGATE(Operation); }
 
   RetTy visitBinaryOp(transform_t<BinaryOp>& O) { return CAFFEINE_OP_DELEGATE(Operation); }
   RetTy visitUnaryOp (transform_t<UnaryOp> & O) { return CAFFEINE_OP_DELEGATE(Operation); }
   RetTy visitSelectOp(transform_t<SelectOp>& O) { return CAFFEINE_OP_DELEGATE(Operation); }
 
-  RetTy visitAllocOp(transform_t<AllocOp>& O) { return CAFFEINE_OP_DELEGATE(Operation); }
-  RetTy visitStoreOp(transform_t<StoreOp>& O) { return CAFFEINE_OP_DELEGATE(Operation); }
+  RetTy visitAllocOp(transform_t<AllocOp>& O) { return CAFFEINE_OP_DELEGATE(ArrayBase); }
+  RetTy visitStoreOp(transform_t<StoreOp>& O) { return CAFFEINE_OP_DELEGATE(ArrayBase); }
   RetTy visitLoadOp (transform_t<LoadOp>&  O) { return CAFFEINE_OP_DELEGATE(Operation); }
 
   // Binary operations
