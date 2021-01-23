@@ -207,15 +207,14 @@ ContextValue evaluate_global(Context* ctx, llvm::GlobalVariable* global) {
                   "tried to evaluate global with no initializer");
 
   auto data = evaluate_global_data(ctx, global->getInitializer());
-  const auto& array = llvm::cast<ConstantArray>(*data);
+  const auto& array = llvm::cast<ArrayBase>(*data);
 
   const llvm::DataLayout& layout = ctx->module_->getDataLayout();
   unsigned bitwidth = layout.getPointerSizeInBits();
   unsigned alignment = global->getAlignment();
 
   auto alloc = ctx->heap_.allocate(
-      ConstantInt::Create(llvm::APInt(bitwidth, array.data().size())),
-      ConstantInt::Create(llvm::APInt(bitwidth, alignment)), data,
+      array.size(), ConstantInt::Create(llvm::APInt(bitwidth, alignment)), data,
       AllocationKind::Global, *ctx);
 
   auto pointer = ContextValue(
@@ -231,12 +230,35 @@ ContextValue evaluate_global(Context* ctx, llvm::GlobalVariable* global) {
  */
 static ref<Operation> evaluate_global_data(Context* ctx,
                                            llvm::Constant* constant) {
+  const llvm::DataLayout& layout = ctx->llvm_module()->getDataLayout();
+
   if (auto* data = llvm::dyn_cast<llvm::ConstantDataSequential>(constant)) {
     auto raw = data->getRawDataValues();
-    auto idxty = Type::int_ty(
-        ctx->llvm_module()->getDataLayout().getPointerSizeInBits());
+    auto idxty = Type::int_ty(layout.getPointerSizeInBits());
 
     return ConstantArray::Create(idxty, SharedArray(raw.data(), raw.size()));
+  }
+
+  auto eval = evaluate(ctx, constant);
+
+  // TODO: Support vectors.
+  if (eval.is_scalar() || eval.is_pointer()) {
+    auto zero =
+        ConstantInt::Create(llvm::APInt(layout.getPointerSizeInBits(), 0));
+    auto size = ConstantInt::Create(
+        llvm::APInt(layout.getPointerSizeInBits(),
+                    layout.getTypeStoreSize(constant->getType())));
+    auto data = AllocOp::Create(size, ConstantInt::Create(llvm::APInt(8, 0)));
+
+    Allocation alloc{zero, size, data, AllocationKind::Global};
+
+    if (eval.is_scalar()) {
+      alloc.write(zero, eval.scalar(), layout);
+    } else {
+      alloc.write(zero, eval.pointer().value(ctx->heap()), layout);
+    }
+
+    return alloc.data();
   }
 
   std::string s = "Unsupported global value initializer: ";
