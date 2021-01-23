@@ -49,6 +49,28 @@ inline bool constant_int_compare(ICmpOpcode cmp, const llvm::APInt& lhs,
   CAFFEINE_UNREACHABLE("unknown ICmpOpcode");
 }
 
+inline bool constant_float_compare(FCmpOpcode cmp, const llvm::APFloat& lhs,
+                                   const llvm::APFloat& rhs) {
+  const auto lhs_float = lhs.convertToDouble();
+  const auto rhs_float = rhs.convertToDouble();
+
+  switch (cmp) {
+  case FCmpOpcode::EQ:
+    return lhs_float == rhs_float;
+  case FCmpOpcode::NE:
+    return lhs_float != rhs_float;
+  case FCmpOpcode::GE:
+    return lhs_float >= rhs_float;
+  case FCmpOpcode::GT:
+    return lhs_float > rhs_float;
+  case FCmpOpcode::LE:
+    return lhs_float <= rhs_float;
+  case FCmpOpcode::LT:
+    return lhs_float < rhs_float;
+  }
+  CAFFEINE_UNREACHABLE("unknown ICmpOpcode");
+}
+
 inline uint64_t ilog2(uint64_t x) {
   bool ispow2 = (x & (x - 1)) == 0;
   return sizeof(x) * CHAR_BIT - llvm::countLeadingZeros(x) - (ispow2 ? 1 : 0);

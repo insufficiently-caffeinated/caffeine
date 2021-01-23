@@ -405,6 +405,7 @@ public:
 
   static ref<Operation> Create(const llvm::APFloat& fconst);
   static ref<Operation> Create(llvm::APFloat&& fconst);
+  static ref<Operation> Create(double value);
 
   static bool classof(const Operation* op);
 };
