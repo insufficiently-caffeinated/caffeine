@@ -49,6 +49,31 @@ inline bool constant_int_compare(ICmpOpcode cmp, const llvm::APInt& lhs,
   CAFFEINE_UNREACHABLE("unknown ICmpOpcode");
 }
 
+inline bool constant_float_compare(FCmpOpcode cmp, const llvm::APFloat& lhs,
+                                   const llvm::APFloat& rhs) {
+
+  llvm::APFloat::cmpResult res;
+
+  switch (cmp) {
+  case FCmpOpcode::EQ:
+    return lhs.compare(rhs) == llvm::APFloat::cmpEqual;
+  case FCmpOpcode::NE:
+    return lhs.compare(rhs) != llvm::APFloat::cmpEqual;
+  case FCmpOpcode::GE:
+    res = lhs.compare(rhs);
+    return res == llvm::APFloat::cmpGreaterThan ||
+           res == llvm::APFloat::cmpEqual;
+  case FCmpOpcode::GT:
+    return lhs.compare(rhs) == llvm::APFloat::cmpGreaterThan;
+  case FCmpOpcode::LE:
+    res = lhs.compare(rhs);
+    return res == llvm::APFloat::cmpLessThan || res == llvm::APFloat::cmpEqual;
+  case FCmpOpcode::LT:
+    return lhs.compare(rhs) == llvm::APFloat::cmpLessThan;
+  }
+  CAFFEINE_UNREACHABLE("unknown ICmpOpcode");
+}
+
 inline uint64_t ilog2(uint64_t x) {
   bool ispow2 = (x & (x - 1)) == 0;
   return sizeof(x) * CHAR_BIT - llvm::countLeadingZeros(x) - (ispow2 ? 1 : 0);
