@@ -22,11 +22,23 @@ namespace caffeine {
 namespace detail {
   // This is meant for internal use within Operation only.
   constexpr uint16_t opcode(uint16_t op, uint16_t nargs, uint16_t aux = 0) {
-    if (nargs >= 4)
+    if (nargs >= 8)
       CAFFEINE_ABORT("invalid number of arguments for opcode");
-    if (nargs >= 0x10)
+    if (aux >= 0x10)
       CAFFEINE_ABORT("aux data was too large");
-    return (op << 6) | (aux << 2) | nargs;
+    return (op << 7) | (aux << 3) | nargs;
+  }
+
+  constexpr uint16_t opcode_nargs(uint16_t op) {
+    return op & 0x7;
+  }
+
+  constexpr uint16_t opcode_aux(uint16_t op) {
+    return (op >> 3) & 0xF;
+  }
+
+  constexpr uint16_t opcode_base(uint16_t op) {
+    return op >> 7;
   }
 
   template <typename T>
