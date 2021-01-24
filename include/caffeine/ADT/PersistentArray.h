@@ -4,6 +4,7 @@
 #include "caffeine/ADT/Ref.h"
 
 #include <llvm/ADT/ArrayRef.h>
+#include <llvm/ADT/Hashing.h>
 
 #include <initializer_list>
 #include <type_traits>
@@ -417,6 +418,11 @@ public:
     }
   };
 };
+
+template <typename T>
+llvm::hash_code hash_value(const PersistentArray<T>& array) {
+  return llvm::hash_combine_range(std::begin(array), std::end(array));
+}
 
 } // namespace caffeine
 
