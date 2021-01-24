@@ -12,6 +12,7 @@
 #include <llvm/ADT/iterator_range.h>
 #include <llvm/Support/Casting.h>
 
+#include "caffeine/ADT/PersistentArray.h"
 #include "caffeine/ADT/Ref.h"
 #include "caffeine/ADT/SharedArray.h"
 #include "caffeine/IR/Type.h"
@@ -207,6 +208,7 @@ public:
 
     // Other instructions
     Select = detail::opcode(20, 3),
+    FixedArray = detail::opcode(21, 0),
 
     // Allocation instructions
     /**
@@ -228,8 +230,9 @@ public:
 
 protected:
   using OpVec = boost::container::static_vector<ref<Operation>, 3>;
-  using Inner = std::variant<std::monostate, OpVec, llvm::APInt, llvm::APFloat,
-                             uint64_t, std::string, SharedArray>;
+  using Inner =
+      std::variant<std::monostate, OpVec, llvm::APInt, llvm::APFloat, uint64_t,
+                   std::string, SharedArray, PersistentArray<ref<Operation>>>;
 
   uint16_t opcode_;
   uint16_t dummy_ = 0; // Unused, used for padding
@@ -758,6 +761,25 @@ private:
 
 public:
   static ref<Operation> Create(const Type& t);
+
+  static bool classof(const Operation* op);
+};
+
+/**
+ * An array with symbolic contents but a fixed size.
+ */
+class FixedArray : public ArrayBase {
+private:
+  FixedArray(Type t, const PersistentArray<ref<Operation>>& data);
+
+public:
+  const PersistentArray<ref<Operation>>& data() const;
+  ref<Operation> size() const override;
+
+  static ref<Operation> Create(Type index_ty,
+                               const PersistentArray<ref<Operation>>& data);
+  static ref<Operation> Create(Type index_ty, const ref<Operation>& value,
+                               size_t size);
 
   static bool classof(const Operation* op);
 };

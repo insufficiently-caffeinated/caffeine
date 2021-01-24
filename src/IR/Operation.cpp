@@ -175,6 +175,7 @@ const char* Operation::opcode_name(Opcode op) {
     return "FCmp";
 
   case Select: return "Select";
+  case FixedArray: return "FixedArray";
 
   case Alloc: return "Alloc";
   case Load:  return "Load";
@@ -1217,6 +1218,26 @@ Undef::Undef(const Type& t) : Operation(Opcode::Undef, t) {}
 
 ref<Operation> Undef::Create(const Type& t) {
   return ref<Operation>(new Undef(t));
+}
+
+/***************************************************
+ * FixedArray                                      *
+ ***************************************************/
+FixedArray::FixedArray(Type t, const PersistentArray<ref<Operation>>& data)
+    : ArrayBase(Operation::FixedArray, t, data) {}
+
+ref<Operation> FixedArray::Create(Type index_ty,
+                                  const PersistentArray<ref<Operation>>& data) {
+  CAFFEINE_ASSERT(index_ty.is_int());
+
+  return ref<Operation>(
+      new FixedArray(Type::array_ty(index_ty.bitwidth()), data));
+}
+ref<Operation> FixedArray::Create(Type index_ty, const ref<Operation>& value,
+                                  size_t size) {
+  return FixedArray::Create(index_ty,
+                            PersistentArray<ref<Operation>>(
+                                std::vector<ref<Operation>>(size, value)));
 }
 
 /***************************************************
