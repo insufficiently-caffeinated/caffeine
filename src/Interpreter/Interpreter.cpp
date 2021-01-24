@@ -50,11 +50,6 @@ void Interpreter::execute() {
     //       modify the current position (e.g. branch, call, etc.)
     ++frame.current;
 
-    std::string str;
-    llvm::raw_string_ostream os{str};
-    inst.print(os);
-    std::cout << str << std::endl;
-
     exec = visit(inst);
   } while (exec == ExecutionResult::Continue);
 }
