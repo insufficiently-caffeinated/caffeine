@@ -23,26 +23,6 @@ namespace detail {
   template <typename... Ts>
   using first_of_t = typename first_of<Ts...>::type;
 
-  /**
-   * Template to check whether the type T has an operator== overload for itself.
-   */
-  template <typename T>
-  class is_comparable {
-  private:
-    template <typename>
-    struct sfinae_true : std::true_type {};
-
-    template <typename U>
-    static auto test_comparable(int)
-        -> sfinae_true<decltype(std::declval<const U&>() ==
-                                std::declval<const U&>())>;
-    template <typename>
-    static auto test_comparable(long) -> std::false_type;
-
-  public:
-    static constexpr bool value = decltype(test_comparable<T>(0))::value;
-  };
-
 } // namespace detail
 
 /**
@@ -61,7 +41,7 @@ namespace detail {
  * Efficiency Notes
  * ================
  * Internally, a persistent array is represented as a base array + a tree of
- * changes to the base array. When a store is doing the tree is rerooted to
+ * changes to the base array. When a store is done the tree is rerooted to
  * bring the underlying array as close as possible to the persistent array
  * handle that made the store. This means that performing lots of work on a
  * single handle at a time will be much more efficient than scattering get and
