@@ -25,12 +25,21 @@ using caffeine::Interpreter;
 class CountingFailureLogger : public caffeine::PrintingFailureLogger {
 public:
   uint64_t num_failures = 0;
+  llvm::Function* func;
 
   using caffeine::PrintingFailureLogger::PrintingFailureLogger;
+
+  CountingFailureLogger(std::ostream& os, llvm::Function* func)
+      : PrintingFailureLogger(os), func{func} {}
 
   void log_failure(const caffeine::Model& model, const caffeine::Context& ctx,
                    const caffeine::Failure& failure) override {
     num_failures += 1;
+
+    for (auto& arg : func->args()) {
+      ctx.lookup(&arg);
+    }
+
     caffeine::PrintingFailureLogger::log_failure(model, ctx, failure);
   }
 };
@@ -156,7 +165,7 @@ int main(int argc, char** argv) {
 
   std::shared_ptr<caffeine::Solver> solver =
       std::make_shared<caffeine::Z3Solver>();
-  auto logger = CountingFailureLogger{std::cout};
+  auto logger = CountingFailureLogger{std::cout, function};
 
   Executor exec;
   exec.add_context(Context{function, solver});

@@ -10,6 +10,7 @@
 #include <llvm/IR/Function.h>
 
 #include <memory>
+#include <optional>
 #include <unordered_map>
 
 namespace llvm {
@@ -45,6 +46,7 @@ public:
    * vector so that it continues to work when more advanced data
    * structures are implemented.
    */
+  const StackFrame& stack_top() const;
   StackFrame& stack_top();
 
   // Utility methods for adding/removing stack frames
@@ -107,6 +109,7 @@ public:
    * This method should be preferred over directly looking up variables in the
    * stack frame as it properly handles global constants.
    */
+  std::optional<ContextValue> lookup(llvm::Value* value) const;
   ContextValue lookup(llvm::Value* value);
 
   /**
@@ -133,8 +136,11 @@ private:
    * Not a constant method since it may have to create allocations and
    * modify the registered globals table.
    */
+  std::optional<ContextValue> evaluate_constant(llvm::Constant* constant) const;
   ContextValue evaluate_constant(llvm::Constant* constant);
 
+  friend std::optional<ContextValue> evaluate_global(const Context*,
+                                                     llvm::GlobalVariable*);
   friend ContextValue evaluate_global(Context*, llvm::GlobalVariable*);
 };
 
