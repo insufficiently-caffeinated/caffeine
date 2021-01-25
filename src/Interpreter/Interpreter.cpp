@@ -819,8 +819,6 @@ ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
     return ExecutionResult::Stop;
   }
 
-  ctx->add(assertion);
-
   auto resolved = ctx->heap().resolve(pointer, *ctx);
 
   for (const Pointer& ptr : resolved) {
@@ -869,8 +867,6 @@ ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
     // context here.
     return ExecutionResult::Stop;
   }
-
-  ctx->add(assertion);
 
   auto resolved = ctx->heap().resolve(pointer, *ctx);
   for (const Pointer& ptr : resolved) {
