@@ -341,7 +341,7 @@ z3::expr Z3OpVisitor::visitFixedArray(const FixedArray& op) {
   for (size_t i = 0; i < data.size(); ++i) {
     z3::expr value = visit(*data[i]);
     solver->add(
-        z3::select(array, ctx->bv_val(i, op.type().bitwidth()) == value));
+        z3::select(array, ctx->bv_val(i, op.type().bitwidth())) == value);
   }
 
   return array;
