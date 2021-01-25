@@ -44,8 +44,8 @@ static ContextValue evaluate_undef(const Context* ctx,
   }
 }
 
-static ContextValue evaluate_const_vector(const Context* ctx,
-                                          llvm::ConstantVector* vec) {
+static std::optional<ContextValue>
+evaluate_const_vector(const Context* ctx, llvm::ConstantVector* vec) {
   auto type = vec->getType();
 
   CAFFEINE_ASSERT(!type->getVectorIsScalable(),
@@ -58,6 +58,8 @@ static ContextValue evaluate_const_vector(const Context* ctx,
   for (size_t i = 0; i < count; ++i) {
     if (auto optional = evaluate<const Context*>(ctx, vec->getOperand(i))) {
       result.push_back(*optional);
+    } else {
+      return std::nullopt;
     }
   }
 
