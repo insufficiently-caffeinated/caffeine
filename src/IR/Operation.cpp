@@ -1191,12 +1191,18 @@ ref<Operation> LoadOp::Create(const ref<Operation>& data,
                   "Load offset must be a pointer-sized integer type");
 
 #ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
-  const auto* data_arr = llvm::dyn_cast<caffeine::ConstantArray>(data.get());
+  const auto* fixedarray = llvm::dyn_cast<caffeine::FixedArray>(data.get());
+  const auto* constarray = llvm::dyn_cast<caffeine::ConstantArray>(data.get());
   const auto* offset_int = llvm::dyn_cast<caffeine::ConstantInt>(offset.get());
-  if (data_arr && offset_int &&
-      offset->type().bitwidth() <= sizeof(size_t) * CHAR_BIT)
+
+  if (constarray && offset_int) {
     return ConstantInt::Create(llvm::APInt(
-        8, data_arr->data()[offset_int->value().getLimitedValue()]));
+        8, constarray->data()[offset_int->value().getLimitedValue()]));
+  }
+
+  if (fixedarray && offset_int) {
+    return fixedarray->data()[offset_int->value().getLimitedValue()];
+  }
 #endif
 
   return ref<Operation>(new LoadOp(data, offset));
