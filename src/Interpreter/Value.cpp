@@ -78,7 +78,7 @@ std::ostream& operator<<(std::ostream& os, const ContextValue& value) {
     auto ptr = value.pointer();
 
     if (ptr.is_resolved())
-      return os << "[" << ptr.alloc().first << ", " << ptr.offset() << "]";
+      return os << "[" << ptr.alloc().first << " offset " << ptr.offset() << "]";
     return os << ptr.offset();
   }
 
