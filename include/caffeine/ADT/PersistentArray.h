@@ -23,6 +23,8 @@ namespace detail {
   template <typename... Ts>
   using first_of_t = typename first_of<Ts...>::type;
 
+  [[noreturn]] void throw_out_of_bounds(size_t n, size_t size);
+
 } // namespace detail
 
 /**
@@ -64,19 +66,19 @@ public:
 private:
   struct Node;
 
-  ref<Node> data_;
   size_t size_ = 0;
+  ref<Node> data_;
 
 public:
   constexpr PersistentArray() = default;
   ~PersistentArray() = default;
 
   PersistentArray(const std::vector<T>& vec)
-      : data_(make_ref<Node>(vec)), size_(vec.size()) {}
+      : size_(vec.size()), data_(make_ref<Node>(vec)) {}
   PersistentArray(std::vector<T>&& vec)
-      : data_(make_ref<Node>(std::move(vec))), size_(vec.size()) {}
+      : size_(vec.size()), data_(make_ref<Node>(std::move(vec))) {}
   PersistentArray(std::initializer_list<T> list)
-      : data_(make_ref<Node>(std::vector<T>(list))), size_(list.size()) {}
+      : size_(list.size()), data_(make_ref<Node>(std::vector<T>(list))) {}
   PersistentArray(llvm::ArrayRef<T> array) : PersistentArray(array.vec()) {}
 
   template <typename It>
@@ -280,9 +282,8 @@ private:
     }
   };
 
-  [[noreturn]] static void throw_out_of_range(size_t i) {
-    std::vector<T>().at(i);
-    llvm_unreachable("Vector didn't throw exception");
+  [[noreturn]] void throw_out_of_range(size_t i) const {
+    detail::throw_out_of_bounds(i, size());
   }
 
   void reroot() {

@@ -57,3 +57,9 @@ TEST(PersistentArray, vec_roundtrip) {
   ASSERT_TRUE(array.empty());
   ASSERT_EQ(vec, original);
 }
+
+TEST(PersistentArray, vec_move_ctor_size_correct) {
+  PersistentArray<uint32_t> array(std::vector<uint32_t>{1, 2, 3, 4});
+
+  ASSERT_EQ(array.size(), 4);
+}
