@@ -332,6 +332,20 @@ z3::expr Z3OpVisitor::visitUndef(const Undef& op) {
   CAFFEINE_UNIMPLEMENTED(
       fmt::format(FMT_STRING("Unsupported undef type {}"), type));
 }
+z3::expr Z3OpVisitor::visitFixedArray(const FixedArray& op) {
+  const auto& data = op.data();
+
+  z3::expr array = next_const(
+      ctx->array_sort(ctx->bv_sort((op.type().bitwidth())), ctx->bv_sort(8)));
+
+  for (size_t i = 0; i < data.size(); ++i) {
+    z3::expr value = visit(*data[i]);
+    solver->add(
+        z3::select(array, ctx->bv_val(i, op.type().bitwidth()) == value));
+  }
+
+  return array;
+}
 
 #define CAFFEINE_BINOP_IMPL(name, op_code)                                     \
   z3::expr Z3OpVisitor::visit##name(const BinaryOp& op) {                      \

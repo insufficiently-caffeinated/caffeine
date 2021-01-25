@@ -70,6 +70,7 @@ public:
   z3::expr visitConstantFloat(const ConstantFloat& op);
   z3::expr visitConstantArray(const ConstantArray& op);
   z3::expr visitUndef        (const Undef& op);
+  z3::expr visitFixedArray   (const FixedArray& op);
 
   // Binary operations
   z3::expr visitAdd (const BinaryOp& op);
