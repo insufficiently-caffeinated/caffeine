@@ -70,6 +70,7 @@ RetTy OpVisitorBase<Transform, SubClass, RetTy>::visit(
     DELEGATE(ConstantFloat, ConstantFloat);
     DELEGATE(ConstantArray, ConstantArray);
     DELEGATE(Undef, Undef);
+    DELEGATE(FixedArray, FixedArray);
 
     DELEGATE(Trunc, UnaryOp);
     DELEGATE(SExt, UnaryOp);
