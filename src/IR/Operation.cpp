@@ -11,6 +11,8 @@
 // TODO: We should put this in a config file
 #define CAFFEINE_IMPLICIT_CONSTANT_FOLDING 1
 
+#define SIZE_BITS (sizeof(size_t) * CHAR_BIT)
+
 namespace caffeine {
 
 #define ASSERT_SAME_TYPES(v1, v2)                                              \
@@ -1162,6 +1164,16 @@ ref<Operation> AllocOp::Create(const ref<Operation>& size,
   // that size is an integer.
   CAFFEINE_ASSERT(size->type().is_int(), "Array size must be an integer type");
   CAFFEINE_ASSERT(defaultval->type() == Type::int_ty(8));
+
+#ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
+  if (const auto* cnst = llvm::dyn_cast<caffeine::ConstantInt>(size.get())) {
+    if (cnst->value().getLimitedValue(SIZE_MAX) < SIZE_MAX) {
+      return FixedArray::Create(cnst->type(), defaultval,
+                                cnst->value().getLimitedValue());
+    }
+  }
+#endif
+
   return ref<Operation>(new AllocOp(size, defaultval));
 }
 
@@ -1207,6 +1219,29 @@ ref<Operation> StoreOp::Create(const ref<Operation>& data,
   CAFFEINE_ASSERT(offset->type().is_int(),
                   "Store offset must be a pointer-size integer type");
   CAFFEINE_ASSERT(value->type() == Type::int_ty(8), "Value must be of type i8");
+
+#ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
+  const auto* offset_cnst = llvm::dyn_cast<caffeine::ConstantInt>(offset.get());
+  const auto* value_cnst = llvm::dyn_cast<caffeine::ConstantInt>(value.get());
+
+  const auto* cnstarray = llvm::dyn_cast<caffeine::ConstantArray>(data.get());
+  const auto* fixedarray = llvm::dyn_cast<caffeine::FixedArray>(data.get());
+
+  if (offset_cnst && value_cnst && cnstarray) {
+    auto data = cnstarray->data();
+    data.store(offset_cnst->value().getLimitedValue(),
+               value_cnst->value().getLimitedValue());
+
+    return ConstantArray::Create(offset->type(), std::move(data));
+  }
+
+  if (offset_cnst && fixedarray) {
+    auto data = fixedarray->data();
+    data.set(offset_cnst->value().getLimitedValue(), value);
+    return FixedArray::Create(offset->type(), data);
+  }
+
+#endif
 
   return ref<Operation>(new StoreOp(data, offset, value));
 }
