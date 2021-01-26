@@ -349,9 +349,9 @@ ref<Operation> ConstantFloat::Create(double value) {
  * ConstantArray                                   *
  ***************************************************/
 ConstantArray::ConstantArray(Type t, const SharedArray& array)
-    : Operation(Opcode::ConstantArray, t, array) {}
+    : ArrayBase(Opcode::ConstantArray, t, array) {}
 ConstantArray::ConstantArray(Type t, SharedArray&& array)
-    : Operation(Opcode::ConstantArray, t, std::move(array)) {}
+    : ArrayBase(Opcode::ConstantArray, t, std::move(array)) {}
 
 ref<Operation> ConstantArray::Create(Type index_ty, const SharedArray& array) {
   CAFFEINE_ASSERT(index_ty.is_int(),
@@ -1148,7 +1148,7 @@ ref<Operation> FCmpOp::CreateFCmp(FCmpOpcode cmp, const ref<Operation>& lhs,
  * AllocOp                                         *
  ***************************************************/
 AllocOp::AllocOp(const ref<Operation>& size, const ref<Operation>& defaultval)
-    : Operation(Opcode::Alloc, Type::array_ty(size->type().bitwidth()), size,
+    : ArrayBase(Opcode::Alloc, Type::array_ty(size->type().bitwidth()), size,
                 defaultval) {}
 
 ref<Operation> AllocOp::Create(const ref<Operation>& size,
@@ -1194,7 +1194,7 @@ ref<Operation> LoadOp::Create(const ref<Operation>& data,
  ***************************************************/
 StoreOp::StoreOp(const ref<Operation>& data, const ref<Operation>& offset,
                  const ref<Operation>& value)
-    : Operation(Opcode::Store, data->type(), data, offset, value) {}
+    : ArrayBase(Opcode::Store, data->type(), data, offset, value) {}
 
 ref<Operation> StoreOp::Create(const ref<Operation>& data,
                                const ref<Operation>& offset,
