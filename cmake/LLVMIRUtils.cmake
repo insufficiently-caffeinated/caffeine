@@ -47,10 +47,14 @@ set_if_unset(LLVM_LINK "${LLVM_TOOLS_BINARY_DIR}/llvm-link")
 set_if_unset(CMAKE_LLVM_C_DEFINES   "${CMAKE_C_DEFINES}")
 set_if_unset(CMAKE_LLVM_C_FLAGS     "${CMAKE_C_FLAGS}")
 set(CMAKE_LLVM_C_COMPILE_OBJECT     "${CLANG} -S -emit-llvm <FLAGS> <DEFINES> -o \"<OBJECT>\" \"<SOURCE>\"")
+set(CMAKE_LLVM_C_IMPLICIT_LINK_LIBRARIES "")
+set(CMAKE_LLVM_C_IMPLICIT_LINK_DIRECTORIES "")
 
 set_if_unset(CMAKE_LLVM_CXX_DEFINES "${CMAKE_CXX_DEFINES}")
 set_if_unset(CMAKE_LLVM_CXX_FLAGS   "${CMAKE_CXX_FLAGS}")
 set(CMAKE_LLVM_CXX_COMPILE_OBJECT   "${CLANG} -S -emit-llvm <FLAGS> <DEFINES> -o \"<OBJECT>\" \"<SOURCE>\"")
+set(CMAKE_LLVM_CXX_IMPLICIT_LINK_LIBRARIES "")
+set(CMAKE_LLVM_CXX_IMPLICIT_LINK_DIRECTORIES "")
 
 set(
   CMAKE_BITCODE_CREATE_SHARED_LIBRARY
@@ -66,20 +70,14 @@ function(add_llvm_ir_library TARGET_NAME)
   # NOTE: Has to be a shared library so that the link libraries are properly passed along
   add_library(${TARGET_NAME} SHARED "${TARGET_SOURCES}")
 
-  foreach(source "${TARGET_SOURCES}")
+  foreach(source ${TARGET_SOURCES})
     get_property(source_language SOURCE "${source}" PROPERTY LANGUAGE)
     get_filename_component(source_ext "${source}" LAST_EXT)
 
     if(source_language STREQUAL "C")
       set_property(SOURCE "${source}" PROPERTY LANGUAGE LLVM_C)
-
-      # If the script gets modified then we want to rebuild
-      set_property(SOURCE "${source}" PROPERTY OBJECT_DEPENDS "${CLANG_BUILD_SCRIPT}")
     elseif(source_language STREQUAL "CXX")
       set_property(SOURCE "${source}" PROPERTY LANGUAGE LLVM_CXX)
-
-      # If the script gets modified then we want to rebuild
-      set_property(SOURCE "${source}" PROPERTY OBJECT_DEPENDS "${CLANG_BUILD_SCRIPT}")
     elseif(source_ext STREQUAL .ll OR source_ext STREQUAL .bc)
       set_property(SOURCE "${source}" PROPERTY LANGUAGE BITCODE)
       set_property(SOURCE "${source}" PROPERTY EXTERNAL_OBJECT TRUE)

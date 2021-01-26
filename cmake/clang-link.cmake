@@ -13,11 +13,11 @@ function(separate_and_strip RETURN_VAR INPUT)
 endfunction()
 
 separate_and_strip(FLAGS "${FLAGS}")
-separate_and_strip(LINK_LIBRARIES "${LINK_LIBRARIES}")
+separate_and_strip(PROC_LINK_LIBRARIES "${LINK_LIBRARIES}")
 separate_and_strip(PROC_OBJECTS "${OBJECTS}")
 
 set(OBJECTS "")
-foreach(OBJ "${PROC_OBJECTS}")
+foreach(OBJ ${PROC_OBJECTS})
   if("${OBJ}" STREQUAL "")
     continue()
   endif()
@@ -37,6 +37,14 @@ foreach(OBJ "${PROC_OBJECTS}")
     if(NOT "${EXITVAL}" EQUAL 0)
       message(FATAL_ERROR "Pre-link copying step failed!")
     endif()
+  endif()
+endforeach()
+
+# Strip away all linker flags
+set(LINK_LIBRARIES "")
+foreach(LIB ${PROC_LINK_LIBRARIES})
+  if(NOT "${LIB}" MATCHES "^-[lL]")
+    list(APPEND LINK_LIBRARIES "${LIB}")
   endif()
 endforeach()
 
