@@ -29,7 +29,7 @@ public:
   Value visitConstantArray(const ConstantArray& op) {
     return Value(op.data(), Type::int_ty(op.type().bitwidth()));
   }
-  Value visitArrayBase(const ArrayBase& op) {
+  Value visitFixedArray(const FixedArray& op) {
     auto size_val = op.size();
     uint64_t size = visit(*size_val).apint().getLimitedValue();
     uint32_t bitwidth = size_val->type().bitwidth();
@@ -38,9 +38,7 @@ public:
     bytes.reserve(size);
 
     for (uint64_t i = 0; i < size; ++i) {
-      auto load = LoadOp::Create(const_cast<ArrayBase&>(op).as_ref(),
-                                 ConstantInt::Create(llvm::APInt(bitwidth, i)));
-      auto val = visit(*load).apint();
+      auto val = visit(*op.data()[i]).apint();
 
       CAFFEINE_ASSERT(val.getBitWidth() == 8);
 
