@@ -12,6 +12,7 @@
 namespace caffeine {
 
 class Context;
+class ContextValue;
 class Assertion;
 class MemHeap;
 
@@ -88,6 +89,9 @@ public:
    */
   ref<Operation> read(const ref<Operation>& offset, const Type& t,
                       const llvm::DataLayout& layout) const;
+  ContextValue read(const ref<Operation>& offset, llvm::Type* type,
+                    const llvm::DataLayout& layout);
+
   /**
    * Write the value to the array at the given offset.
    *
@@ -95,6 +99,9 @@ public:
    * add the assertion first.
    */
   void write(const ref<Operation>& offset, const ref<Operation>& value,
+             const llvm::DataLayout& layout);
+  void write(const ref<Operation>& offset, llvm::Type* type,
+             const ContextValue& value, const MemHeap& heap,
              const llvm::DataLayout& layout);
 };
 

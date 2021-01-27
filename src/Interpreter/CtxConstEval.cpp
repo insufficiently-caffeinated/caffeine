@@ -195,7 +195,7 @@ static std::optional<ContextValue> evaluate_expr(ContextType ctx,
       const auto& ptr = value.pointer();
 
       return ContextValue(
-          Pointer(BinaryOp::CreateAdd(ptr.value(ctx->heap()), offset)));
+          Pointer(ptr.alloc(), BinaryOp::CreateAdd(ptr.offset(), offset)));
     };
     return transform_value(func, ptr);
   }
@@ -269,6 +269,14 @@ static ref<Operation> evaluate_global_data(ContextType ctx,
     auto idxty = Type::int_ty(layout.getPointerSizeInBits());
 
     return ConstantArray::Create(idxty, SharedArray(raw.data(), raw.size()));
+  }
+
+
+  if (auto* data = llvm::dyn_cast<llvm::ConstantAggregateZero>(constant)) {
+    return AllocOp::Create(ConstantInt::Create(llvm::APInt(
+                               layout.getPointerSizeInBits(),
+                               layout.getTypeStoreSize(constant->getType()))),
+                           ConstantInt::Create(llvm::APInt(8, 0)));
   }
 
   auto eval_optional = evaluate(ctx, constant);
