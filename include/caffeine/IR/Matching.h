@@ -7,19 +7,47 @@ namespace caffeine {
 namespace matching {
 
   /**
-   * Matching protocol:
-   *
+   * Writing a Matcher
+   * =================
    * Every matching object exposes two methods:
-   *  - bool matches(<ast node>) const
-   *  - void on_match(<ast node>) const
+   *  - bool matches(const ref<Operation>&) const
+   *    Returns true if the provided operation node satisfies the current
+   *    matcher.
+   *  - void on_match(const ref<Operation>&) const
+   *    Does whatever processing the current matcher decides to do when a match
+   *    occurs. Usually this will be something like saving captured variables.
+   *    This method will always be called with an expression node for which
+   *    matches returned true.
    *
-   * These methods are used to first check whether a match would occur and then
-   * record whatever information is needed by the caller.
+   * For an example of a simple matcher, check out RefOperationMatcher (right
+   * below this comment).
    *
-   * Matchers can assume that on_match will only be passed ast nodes for which
-   * matches returned true. Furthermore, they should
+   * If the matcher doesn't need to be generic (no need for sub-matchers on
+   * internal elements) then just following the above should be enough. However,
+   * if you're implementing one that will be used as part of a tree of matchers
+   * (like BinaryOpMatcher) then there's a few more details to what you need to
+   * do.
+   *
+   * For convenience reasons, we'd like to be able to do
+   *
+   *    ref<Operation> first, second;
+   *    if (matches(<expr>, Add(first, second))) {
+   *       // do things with first and second
+   *    }
+   *
+   * and have first and second be set to the expression nodes that were matched
+   * against. However, ref<Operation> doesn't implement the protocol (and you'd
+   * need a reference anyway). To work around this matchers use the MatcherImpl
+   * type internally. This is a template which resolves to T unless T is a
+   * ref<Operation> in which case it resolves to RefOperationMatcher.
+   *
+   * For an example of how this used check out UnaryOpMatcher. Custom matchers
+   * should be implemented along the same lines.
    */
 
+  /**
+   * Matcher to capture an expression tree node.
+   */
   struct RefOperationMatcher {
   private:
     ref<Operation>* output;

@@ -324,6 +324,12 @@ public:
     return llvm::isa<T>(*this);
   }
 
+  /**
+   * Accessors to operand references.
+   */
+  ref<Operation>& operand_at(size_t idx);
+  const ref<Operation>& operand_at(size_t idx) const;
+
   // Need to define this since refcount shouldn't be copied/moved.
   Operation(const Operation& op);
   Operation(Operation&& op) noexcept;
@@ -341,13 +347,6 @@ protected:
    * however they want.
    */
   uint16_t aux_data() const;
-
-public:
-  /**
-   * Accessors to operand references.
-   */
-  ref<Operation>& operand_at(size_t idx);
-  const ref<Operation>& operand_at(size_t idx) const;
 };
 
 std::ostream& operator<<(std::ostream& os, const Operation& op);
