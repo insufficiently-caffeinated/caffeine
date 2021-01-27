@@ -342,6 +342,7 @@ protected:
    */
   uint16_t aux_data() const;
 
+public:
   /**
    * Accessors to operand references.
    */
