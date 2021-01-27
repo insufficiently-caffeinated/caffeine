@@ -98,9 +98,9 @@ void Context::add(Assertion&& assertion) {
   assertions_.push_back(std::move(assertion));
 }
 
-std::optional<ContextValue> Context::lookup(llvm::Value* value) const {
+std::optional<ContextValue> Context::lookup_const(llvm::Value* value) const {
   if (auto* constant = llvm::dyn_cast_or_null<llvm::Constant>(value))
-    return evaluate_constant(constant);
+    return evaluate_constant_const(constant);
 
   return stack_top().lookup(value);
 }

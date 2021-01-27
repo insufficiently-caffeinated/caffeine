@@ -37,7 +37,7 @@ public:
     num_failures += 1;
 
     for (auto& arg : func->args()) {
-      ctx.lookup(&arg);
+      ctx.lookup_const(&arg);
     }
 
     caffeine::PrintingFailureLogger::log_failure(model, ctx, failure);
