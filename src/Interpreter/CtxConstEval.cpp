@@ -407,7 +407,7 @@ ContextValue Context::evaluate_constant(llvm::Constant* constant) {
 }
 
 std::optional<ContextValue>
-Context::evaluate_constant(llvm::Constant* constant) const {
+Context::evaluate_constant_const(llvm::Constant* constant) const {
   return evaluate(this, constant);
 }
 

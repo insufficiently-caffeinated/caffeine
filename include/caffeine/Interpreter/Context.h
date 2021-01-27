@@ -108,8 +108,11 @@ public:
    *
    * This method should be preferred over directly looking up variables in the
    * stack frame as it properly handles global constants.
+   *
+   * The constant variant of the method will not create allocations and
+   * modify the registered globals table. The non const variant may do so.
    */
-  std::optional<ContextValue> lookup(llvm::Value* value) const;
+  std::optional<ContextValue> lookup_const(llvm::Value* value) const;
   ContextValue lookup(llvm::Value* value);
 
   /**
@@ -133,10 +136,11 @@ private:
   /**
    * Evaluate a constant to the corresponding ContextValue.
    *
-   * Not a constant method since it may have to create allocations and
-   * modify the registered globals table.
+   * The constant variant of the method will not create allocations and
+   * modify the registered globals table. The non const variant may do so.
    */
-  std::optional<ContextValue> evaluate_constant(llvm::Constant* constant) const;
+  std::optional<ContextValue>
+  evaluate_constant_const(llvm::Constant* constant) const;
   ContextValue evaluate_constant(llvm::Constant* constant);
 
   template <typename ContextType>
