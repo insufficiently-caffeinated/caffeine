@@ -177,7 +177,7 @@ static ContextValue evaluate_expr(Context* ctx, llvm::ConstantExpr* expr) {
       const auto& ptr = value.pointer();
 
       return ContextValue(
-          Pointer(BinaryOp::CreateAdd(ptr.value(ctx->heap()), offset)));
+          Pointer(ptr.alloc(), BinaryOp::CreateAdd(ptr.offset(), offset)));
     };
     return transform_value(func, ptr);
   }
