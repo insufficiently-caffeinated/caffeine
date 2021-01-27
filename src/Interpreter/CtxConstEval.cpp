@@ -53,6 +53,11 @@ static ContextValue evaluate_undef(const Context* ctx,
 template <typename ContextType>
 static std::optional<ContextValue>
 evaluate_const_vector(ContextType ctx, llvm::ConstantVector* vec) {
+  static_assert(
+      std::is_same_v<std::remove_const_t<std::remove_pointer_t<ContextType>>,
+                     Context>,
+      "ContextType must be a Context pointer");
+
   auto type = vec->getType();
 
   CAFFEINE_ASSERT(!type->getVectorIsScalable(),
@@ -76,6 +81,11 @@ evaluate_const_vector(ContextType ctx, llvm::ConstantVector* vec) {
 template <typename ContextType>
 static std::optional<ContextValue> evaluate_expr(ContextType ctx,
                                                  llvm::ConstantExpr* expr) {
+  static_assert(
+      std::is_same_v<std::remove_const_t<std::remove_pointer_t<ContextType>>,
+                     Context>,
+      "ContextType must be a Context pointer");
+
 #define OPERAND(expr, num)                                                     \
   *evaluate(ctx, llvm::cast<llvm::Constant>((expr)->getOperand(num)))
 #define UNARY_OP(expr_) transform((expr_), OPERAND(expr, 0))
@@ -262,6 +272,11 @@ std::optional<ContextValue> evaluate_global(ContextType ctx,
 template <typename ContextType>
 static ref<Operation> evaluate_global_data(ContextType ctx,
                                            llvm::Constant* constant) {
+  static_assert(
+      std::is_same_v<std::remove_const_t<std::remove_pointer_t<ContextType>>,
+                     Context>,
+      "ContextType must be a Context pointer");
+
   const llvm::DataLayout& layout = ctx->llvm_module()->getDataLayout();
 
   if (auto* data = llvm::dyn_cast<llvm::ConstantDataSequential>(constant)) {
@@ -316,6 +331,11 @@ static ref<Operation> evaluate_global_data(ContextType ctx,
 template <typename ContextType>
 static std::optional<ContextValue> evaluate(ContextType ctx,
                                             llvm::Constant* constant) {
+
+  static_assert(
+      std::is_same_v<std::remove_const_t<std::remove_pointer_t<ContextType>>,
+                     Context>,
+      "ContextType must be a Context pointer");
 
   if (auto* cnst = llvm::dyn_cast<llvm::ConstantInt>(constant))
     return ContextValue(ConstantInt::Create(cnst->getValue()));
