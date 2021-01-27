@@ -144,8 +144,8 @@ private:
   ContextValue evaluate_constant(llvm::Constant* constant);
 
   template <typename ContextType>
-  friend std::optional<ContextValue>
-  evaluate_global(ContextType ctx, llvm::GlobalVariable* global);
+  friend ContextValue evaluate_global(ContextType ctx,
+                                      llvm::GlobalVariable* global);
 };
 
 } // namespace caffeine

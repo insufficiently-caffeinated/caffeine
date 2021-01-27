@@ -13,15 +13,17 @@
 #include <llvm/IR/Module.h>
 #include <llvm/Support/raw_ostream.h>
 
-#include <optional>
+#include <exception>
 
 using llvm::Instruction;
 
 namespace caffeine {
 
+// Thrown by const methods when they can't evaluate a constant
+struct Unevaluated : public std::exception {};
+
 template <typename ContextType>
-static std::optional<ContextValue> evaluate(ContextType ctx,
-                                            llvm::Constant* constant);
+static ContextValue evaluate(ContextType ctx, llvm::Constant* constant);
 
 template <typename ContextType>
 static ref<Operation> evaluate_global_data(ContextType,
@@ -51,8 +53,8 @@ static ContextValue evaluate_undef(const Context* ctx,
 }
 
 template <typename ContextType>
-static std::optional<ContextValue>
-evaluate_const_vector(ContextType ctx, llvm::ConstantVector* vec) {
+static ContextValue evaluate_const_vector(ContextType ctx,
+                                          llvm::ConstantVector* vec) {
   static_assert(
       std::is_same_v<std::remove_const_t<std::remove_pointer_t<ContextType>>,
                      Context>,
@@ -67,32 +69,14 @@ evaluate_const_vector(ContextType ctx, llvm::ConstantVector* vec) {
   std::vector<ContextValue> result;
   result.reserve(count);
 
-  for (size_t i = 0; i < count; ++i) {
-    auto evaluated_vec_ele = evaluate(ctx, vec->getOperand(i));
-    if (!evaluated_vec_ele.has_value()) {
-      return std::nullopt;
-    }
-    result.push_back(*evaluated_vec_ele);
-  }
+  for (size_t i = 0; i < count; ++i)
+    result.push_back(evaluate(ctx, vec->getOperand(i)));
 
   return ContextValue(std::move(result));
 }
 
-template <typename F, typename... Vs>
-std::optional<ContextValue> transform_optional(F&& func, const Vs&... values) {
-  static_assert(
-      std::conjunction_v<std::is_same<std::optional<ContextValue>, Vs>...>);
-  bool all_have_values = (values.has_value() && ...);
-  if (!all_have_values) {
-    return std::nullopt;
-  }
-
-  return func((*values)...);
-}
-
 template <typename ContextType>
-static std::optional<ContextValue> evaluate_expr(ContextType ctx,
-                                                 llvm::ConstantExpr* expr) {
+static ContextValue evaluate_expr(ContextType ctx, llvm::ConstantExpr* expr) {
   static_assert(
       std::is_same_v<std::remove_const_t<std::remove_pointer_t<ContextType>>,
                      Context>,
@@ -100,31 +84,18 @@ static std::optional<ContextValue> evaluate_expr(ContextType ctx,
 
 #define OPERAND(expr, num)                                                     \
   evaluate(ctx, llvm::cast<llvm::Constant>((expr)->getOperand(num)))
-#define UNARY_OP(expr_)                                                        \
-  transform_optional([=](const auto& a) { return transform(expr_, a); },       \
-                     OPERAND(expr, 0))
+#define UNARY_OP(expr_) transform((expr_), OPERAND(expr, 0))
 #define BINARY_OP(expr_)                                                       \
-  transform_optional(                                                          \
-      [=](const auto& a, const auto& b) {                                      \
-        return transform(                                                      \
-            [=](const auto& a, const auto& b) { return (expr_)(a, b); }, a,    \
-            b);                                                                \
-      },                                                                       \
-      OPERAND(expr, 0), OPERAND(expr, 1))
+  transform([=](const auto& a, const auto& b) { return (expr_)(a, b); },       \
+            OPERAND(expr, 0), OPERAND(expr, 1))
 #define CAST_OP(expr_)                                                         \
-  transform_optional(                                                          \
-      [=](const auto& value) -> std::optional<ContextValue> {                  \
-        return transform(                                                      \
-            [=, type = Type::from_llvm(expr->getType())](                      \
-                const ref<Operation>& value) -> ref<Operation> {               \
-              return (expr_);                                                  \
-            },                                                                 \
-            value);                                                            \
-      },                                                                       \
+  transform(                                                                   \
+      [=, type = Type::from_llvm(expr->getType())](                            \
+          const ref<Operation>& value) -> ref<Operation> { return (expr_); },  \
       OPERAND(expr, 0))
 
   switch (expr->getOpcode()) {
-  // clang-format off
+    // clang-format off
   // Unary Operations
   case Instruction::FNeg: return UNARY_OP(UnaryOp::CreateFNeg);
 
@@ -164,30 +135,22 @@ static std::optional<ContextValue> evaluate_expr(ContextType ctx,
 
   case Instruction::IntToPtr: {
     auto layout = ctx->llvm_module()->getDataLayout();
-    return transform_optional(
-        [=](const auto& a) {
-          return transform_value(
-              [=](const auto& value) {
-                return ContextValue(Pointer(UnaryOp::CreateTruncOrZExt(
-                    Type::int_ty(layout.getPointerSizeInBits(
-                        expr->getType()->getPointerAddressSpace())),
-                    value.scalar())));
-              },
-              a);
+    return transform_value(
+        [=](const auto& value) {
+          return ContextValue(Pointer(UnaryOp::CreateTruncOrZExt(
+              Type::int_ty(layout.getPointerSizeInBits(
+                  expr->getType()->getPointerAddressSpace())),
+              value.scalar())));
         },
         OPERAND(expr, 0));
   }
   case Instruction::PtrToInt: {
     auto layout = ctx->llvm_module()->getDataLayout();
-    return transform_optional(
-        [=](const auto& a) {
-          return transform_value(
-              [=](const auto& value) {
-                return ContextValue(UnaryOp::CreateTruncOrZExt(
-                    Type::from_llvm(expr->getType()),
-                    value.pointer().value(ctx->heap())));
-              },
-              a);
+    return transform_value(
+        [=](const auto& value) {
+          return ContextValue(
+              UnaryOp::CreateTruncOrZExt(Type::from_llvm(expr->getType()),
+                                         value.pointer().value(ctx->heap())));
         },
         OPERAND(expr, 0));
   }
@@ -195,19 +158,13 @@ static std::optional<ContextValue> evaluate_expr(ContextType ctx,
     return OPERAND(expr, 0);
 
   case Instruction::Select:
-    return transform_optional(
-        [=](const auto& a, const auto& b, const auto& c) {
-          return transform(SelectOp::Create, a, b, c);
-        },
-        OPERAND(expr, 0), OPERAND(expr, 1), OPERAND(expr, 2));
+    return transform(SelectOp::Create, OPERAND(expr, 0), OPERAND(expr, 1),
+                     OPERAND(expr, 2));
 
   case Instruction::GetElementPtr: {
     const llvm::DataLayout& layout = ctx->llvm_module()->getDataLayout();
 
-    std::optional<ContextValue> ptr = OPERAND(expr, 0);
-    if (!ptr.has_value()) {
-      return std::nullopt;
-    }
+    ContextValue ptr = OPERAND(expr, 0);
     llvm::Type* ptr_ty = expr->getOperand(0)->getType();
     while (ptr_ty->isVectorTy())
       ptr_ty = ptr_ty->getVectorElementType();
@@ -225,13 +182,10 @@ static std::optional<ContextValue> evaluate_expr(ContextType ctx,
 
         offset = BinaryOp::CreateAdd(offset, slo->getElementOffset(index));
       } else {
-        auto evaluated_it =
-            evaluate(ctx, llvm::cast<llvm::Constant>(it.getOperand()));
-        if (!evaluated_it.has_value()) {
-          return std::nullopt;
-        }
-        auto value = UnaryOp::CreateTruncOrSExt(Type::int_ty(offset_width),
-                                                (*evaluated_it).scalar());
+        auto value = UnaryOp::CreateTruncOrSExt(
+            Type::int_ty(offset_width),
+            evaluate(ctx, llvm::cast<llvm::Constant>(it.getOperand()))
+                .scalar());
 
         auto itemoffset = BinaryOp::CreateMul(
             value, layout.getTypeAllocSize(it.getIndexedType()));
@@ -246,8 +200,7 @@ static std::optional<ContextValue> evaluate_expr(ContextType ctx,
       return ContextValue(
           Pointer(ptr.alloc(), BinaryOp::CreateAdd(ptr.offset(), offset)));
     };
-    return transform_optional(
-        [=](const auto& ptr) { return transform_value(func, ptr); }, ptr);
+    return transform_value(func, ptr);
   }
 
   default:
@@ -267,8 +220,7 @@ static std::optional<ContextValue> evaluate_expr(ContextType ctx,
 // Note: Needs to be non-static so that the friend declaration within Context
 //       applies.
 template <typename ContextType>
-std::optional<ContextValue> evaluate_global(ContextType ctx,
-                                            llvm::GlobalVariable* global) {
+ContextValue evaluate_global(ContextType ctx, llvm::GlobalVariable* global) {
   static_assert(
       std::is_same_v<std::remove_const_t<std::remove_pointer_t<ContextType>>,
                      Context>,
@@ -280,8 +232,8 @@ std::optional<ContextValue> evaluate_global(ContextType ctx,
 
   if constexpr (std::is_const_v<std::remove_pointer_t<ContextType>>) {
     // If we are compiling with a const ContextType, we can just return the
-    // std::nullopt because everything below this won't be const safe
-    return std::nullopt;
+    // throw because everything below this won't be const safe
+    throw Unevaluated{};
   } else {
     CAFFEINE_ASSERT(global->hasInitializer(),
                     "tried to evaluate global with no initializer");
@@ -333,12 +285,7 @@ static ref<Operation> evaluate_global_data(ContextType ctx,
                            ConstantInt::Create(llvm::APInt(8, 0)));
   }
 
-  auto eval_optional = evaluate(ctx, constant);
-
-  CAFFEINE_ASSERT(eval_optional.has_value(),
-                  "evaluate must have succeeded in order to proceed");
-
-  auto eval = *eval_optional;
+  auto eval = evaluate(ctx, constant);
 
   // TODO: Support vectors.
   if (eval.is_scalar() || eval.is_pointer()) {
@@ -369,8 +316,7 @@ static ref<Operation> evaluate_global_data(ContextType ctx,
 }
 
 template <typename ContextType>
-static std::optional<ContextValue> evaluate(ContextType ctx,
-                                            llvm::Constant* constant) {
+static ContextValue evaluate(ContextType ctx, llvm::Constant* constant) {
 
   static_assert(
       std::is_same_v<std::remove_const_t<std::remove_pointer_t<ContextType>>,
@@ -416,13 +362,8 @@ static std::optional<ContextValue> evaluate(ContextType ctx,
 
     // TODO: This is inefficient, should be directly converting for known
     //       element types.
-    for (size_t i = 0; i < count; ++i) {
-      auto evaluated_vec_ele = evaluate(ctx, vec->getElementAsConstant(i));
-      if (!evaluated_vec_ele.has_value()) {
-        return std::nullopt;
-      }
-      result.push_back(*evaluated_vec_ele);
-    }
+    for (size_t i = 0; i < count; ++i)
+      result.push_back(evaluate(ctx, vec->getElementAsConstant(i)));
 
     return ContextValue(std::move(result));
   }
@@ -438,13 +379,8 @@ static std::optional<ContextValue> evaluate(ContextType ctx,
       std::vector<ContextValue> result;
       result.reserve(count);
 
-      for (size_t i = 0; i < count; ++i) {
-        auto evaluated_vec_ele = evaluate(ctx, zero->getElementValue(i));
-        if (!evaluated_vec_ele.has_value()) {
-          return std::nullopt;
-        }
-        result.push_back(*evaluated_vec_ele);
-      }
+      for (size_t i = 0; i < count; ++i)
+        result.push_back(evaluate(ctx, zero->getElementValue(i)));
 
       return ContextValue(std::move(result));
     }
@@ -459,16 +395,14 @@ static std::optional<ContextValue> evaluate(ContextType ctx,
 }
 
 ContextValue Context::evaluate_constant(llvm::Constant* constant) {
-  auto constant_result = evaluate(this, constant);
-  CAFFEINE_ASSERT(constant_result.has_value(),
-                  "evaluating constant must have succeeded in non const method "
-                  "`evaluate_constant`");
-  return *constant_result;
+  return evaluate(this, constant);
 }
 
 std::optional<ContextValue>
 Context::evaluate_constant_const(llvm::Constant* constant) const {
-  return evaluate(this, constant);
+  try {
+    return evaluate(this, constant);
+  } catch (Unevaluated&) { return std::nullopt; }
 }
 
 } // namespace caffeine
