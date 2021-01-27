@@ -78,6 +78,18 @@ evaluate_const_vector(ContextType ctx, llvm::ConstantVector* vec) {
   return ContextValue(std::move(result));
 }
 
+template <typename F, typename... Vs>
+std::optional<ContextValue> transform_optional(F&& func, const Vs&... values) {
+  static_assert(
+      std::conjunction_v<std::is_same<std::optional<ContextValue>, Vs>...>);
+  bool all_have_values = (values.has_value() && ...);
+  if (!all_have_values) {
+    return std::nullopt;
+  }
+
+  return func((*values)...);
+}
+
 template <typename ContextType>
 static std::optional<ContextValue> evaluate_expr(ContextType ctx,
                                                  llvm::ConstantExpr* expr) {
@@ -87,15 +99,28 @@ static std::optional<ContextValue> evaluate_expr(ContextType ctx,
       "ContextType must be a Context pointer");
 
 #define OPERAND(expr, num)                                                     \
-  *evaluate(ctx, llvm::cast<llvm::Constant>((expr)->getOperand(num)))
-#define UNARY_OP(expr_) transform((expr_), OPERAND(expr, 0))
+  evaluate(ctx, llvm::cast<llvm::Constant>((expr)->getOperand(num)))
+#define UNARY_OP(expr_)                                                        \
+  transform_optional([=](const auto& a) { return transform(expr_, a); },       \
+                     OPERAND(expr, 0))
 #define BINARY_OP(expr_)                                                       \
-  transform([=](const auto& a, const auto& b) { return (expr_)(a, b); },       \
-            OPERAND(expr, 0), OPERAND(expr, 1))
+  transform_optional(                                                          \
+      [=](const auto& a, const auto& b) {                                      \
+        return transform(                                                      \
+            [=](const auto& a, const auto& b) { return (expr_)(a, b); }, a,    \
+            b);                                                                \
+      },                                                                       \
+      OPERAND(expr, 0), OPERAND(expr, 1))
 #define CAST_OP(expr_)                                                         \
-  transform(                                                                   \
-      [=, type = Type::from_llvm(expr->getType())](                            \
-          const ref<Operation>& value) -> ref<Operation> { return (expr_); },  \
+  transform_optional(                                                          \
+      [=](const auto& value) -> std::optional<ContextValue> {                  \
+        return transform(                                                      \
+            [=, type = Type::from_llvm(expr->getType())](                      \
+                const ref<Operation>& value) -> ref<Operation> {               \
+              return (expr_);                                                  \
+            },                                                                 \
+            value);                                                            \
+      },                                                                       \
       OPERAND(expr, 0))
 
   switch (expr->getOpcode()) {
@@ -139,22 +164,30 @@ static std::optional<ContextValue> evaluate_expr(ContextType ctx,
 
   case Instruction::IntToPtr: {
     auto layout = ctx->llvm_module()->getDataLayout();
-    return transform_value(
-        [=](const auto& value) {
-          return ContextValue(Pointer(UnaryOp::CreateTruncOrZExt(
-              Type::int_ty(layout.getPointerSizeInBits(
-                  expr->getType()->getPointerAddressSpace())),
-              value.scalar())));
+    return transform_optional(
+        [=](const auto& a) {
+          return transform_value(
+              [=](const auto& value) {
+                return ContextValue(Pointer(UnaryOp::CreateTruncOrZExt(
+                    Type::int_ty(layout.getPointerSizeInBits(
+                        expr->getType()->getPointerAddressSpace())),
+                    value.scalar())));
+              },
+              a);
         },
         OPERAND(expr, 0));
   }
   case Instruction::PtrToInt: {
     auto layout = ctx->llvm_module()->getDataLayout();
-    return transform_value(
-        [=](const auto& value) {
-          return ContextValue(
-              UnaryOp::CreateTruncOrZExt(Type::from_llvm(expr->getType()),
-                                         value.pointer().value(ctx->heap())));
+    return transform_optional(
+        [=](const auto& a) {
+          return transform_value(
+              [=](const auto& value) {
+                return ContextValue(UnaryOp::CreateTruncOrZExt(
+                    Type::from_llvm(expr->getType()),
+                    value.pointer().value(ctx->heap())));
+              },
+              a);
         },
         OPERAND(expr, 0));
   }
@@ -162,13 +195,19 @@ static std::optional<ContextValue> evaluate_expr(ContextType ctx,
     return OPERAND(expr, 0);
 
   case Instruction::Select:
-    return transform(SelectOp::Create, OPERAND(expr, 0), OPERAND(expr, 1),
-                     OPERAND(expr, 2));
+    return transform_optional(
+        [=](const auto& a, const auto& b, const auto& c) {
+          return transform(SelectOp::Create, a, b, c);
+        },
+        OPERAND(expr, 0), OPERAND(expr, 1), OPERAND(expr, 2));
 
   case Instruction::GetElementPtr: {
     const llvm::DataLayout& layout = ctx->llvm_module()->getDataLayout();
 
-    ContextValue ptr = OPERAND(expr, 0);
+    std::optional<ContextValue> ptr = OPERAND(expr, 0);
+    if (!ptr.has_value()) {
+      return std::nullopt;
+    }
     llvm::Type* ptr_ty = expr->getOperand(0)->getType();
     while (ptr_ty->isVectorTy())
       ptr_ty = ptr_ty->getVectorElementType();
@@ -207,7 +246,8 @@ static std::optional<ContextValue> evaluate_expr(ContextType ctx,
       return ContextValue(
           Pointer(ptr.alloc(), BinaryOp::CreateAdd(ptr.offset(), offset)));
     };
-    return transform_value(func, ptr);
+    return transform_optional(
+        [=](const auto& ptr) { return transform_value(func, ptr); }, ptr);
   }
 
   default:
