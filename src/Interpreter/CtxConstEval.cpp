@@ -239,6 +239,13 @@ static ref<Operation> evaluate_global_data(Context* ctx,
     return ConstantArray::Create(idxty, SharedArray(raw.data(), raw.size()));
   }
 
+  if (auto* data = llvm::dyn_cast<llvm::ConstantAggregateZero>(constant)) {
+    return AllocOp::Create(ConstantInt::Create(llvm::APInt(
+                               layout.getPointerSizeInBits(),
+                               layout.getTypeStoreSize(constant->getType()))),
+                           ConstantInt::Create(llvm::APInt(8, 0)));
+  }
+
   auto eval = evaluate(ctx, constant);
 
   // TODO: Support vectors.
