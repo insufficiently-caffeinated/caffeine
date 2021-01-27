@@ -271,7 +271,6 @@ static ref<Operation> evaluate_global_data(ContextType ctx,
     return ConstantArray::Create(idxty, SharedArray(raw.data(), raw.size()));
   }
 
-
   if (auto* data = llvm::dyn_cast<llvm::ConstantAggregateZero>(constant)) {
     return AllocOp::Create(ConstantInt::Create(llvm::APInt(
                                layout.getPointerSizeInBits(),
