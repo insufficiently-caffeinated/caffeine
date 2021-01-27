@@ -225,41 +225,44 @@ AllocId MemHeap::allocate(const ref<Operation>& size,
   CAFFEINE_ASSERT(data->type().is_array());
   CAFFEINE_ASSERT(data->type().bitwidth() == size->type().bitwidth());
 
-  auto allocation = Allocation(
+  auto newalloc = Allocation(
       Constant::Create(size->type(), ctx.next_constant()), size, data, kind);
 
   // Ensure that the allocation is properly aligned
   ctx.add(ICmpOp::CreateICmp(
-      ICmpOpcode::EQ, BinaryOp::CreateURem(allocation.address(), alignment),
-      0));
+      ICmpOpcode::EQ, BinaryOp::CreateURem(newalloc.address(), alignment), 0));
   // The allocation can never wrap around the address space
-  ctx.add(ICmpOp::CreateICmp(ICmpOpcode::ULE, allocation.address(),
-                             BinaryOp::CreateAdd(allocation.address(), size)));
+  ctx.add(ICmpOp::CreateICmp(ICmpOpcode::ULE, newalloc.address(),
+                             BinaryOp::CreateAdd(newalloc.address(), size)));
   // The allocation is not null
-  ctx.add(ICmpOp::CreateICmp(ICmpOpcode::NE, allocation.address(), 0));
+  ctx.add(ICmpOp::CreateICmp(ICmpOpcode::NE, newalloc.address(), 0));
 
   for (const auto& alloc : allocs_) {
     /**
      * Ensure that the new allocation doesn't overlap with any of the existing
      * allocations.
+     *
+     * To explain a bit what's being done here. We know that the ranges don't
+     * overlap if one of them starts after the other one ends. If we express the
+     * ranges as [a, b) and [c, d) then we have
+     *    no_overlap = b <= c || d <= a
+     * Note that this requires that ranges don't wrapt around the address space
+     * but we're already asserting that so we should be good.
      */
 
-    auto new_start = allocation.address();
+    auto new_start = newalloc.address();
     auto old_start = alloc.address();
 
-    auto new_end = BinaryOp::CreateAdd(allocation.address(), allocation.size());
+    auto new_end = BinaryOp::CreateAdd(newalloc.address(), newalloc.size());
     auto old_end = BinaryOp::CreateAdd(alloc.address(), alloc.size());
 
-    auto cmp1 = ICmpOp::CreateICmp(ICmpOpcode::ULE, new_start, old_start);
-    auto cmp2 = ICmpOp::CreateICmp(ICmpOpcode::ULT, old_start, new_end);
-    auto cmp3 = ICmpOp::CreateICmp(ICmpOpcode::ULE, old_start, new_start);
-    auto cmp4 = ICmpOp::CreateICmp(ICmpOpcode::ULT, new_end, old_end);
+    auto cmp1 = ICmpOp::CreateICmp(ICmpOpcode::ULE, old_end, new_start);
+    auto cmp2 = ICmpOp::CreateICmp(ICmpOpcode::ULE, new_end, old_start);
 
-    ctx.add(!Assertion(BinaryOp::CreateOr(BinaryOp::CreateAnd(cmp1, cmp2),
-                                          BinaryOp::CreateAnd(cmp3, cmp4))));
+    ctx.add(Assertion(BinaryOp::CreateOr(cmp1, cmp2)));
   }
 
-  return allocs_.insert(allocation);
+  return allocs_.insert(newalloc);
 }
 
 void MemHeap::deallocate(const AllocId& alloc) {
