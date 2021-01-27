@@ -1,6 +1,7 @@
 #include "caffeine/Memory/MemHeap.h"
 #include "caffeine/IR/Assertion.h"
 #include "caffeine/Interpreter/Context.h"
+#include "caffeine/Interpreter/Value.h"
 #include "caffeine/Solver/Solver.h"
 #include "caffeine/Support/Assert.h"
 
@@ -95,6 +96,30 @@ ref<Operation> Allocation::read(const ref<Operation>& offset, const Type& t,
 
   return UnaryOp::CreateBitcast(t, bitresult);
 }
+ContextValue Allocation::read(const ref<Operation>& offset, llvm::Type* type,
+                              const llvm::DataLayout& layout) {
+  if (type->isPointerTy()) {
+    return ContextValue(Pointer(
+        read(offset, Type::int_ty(layout.getPointerSizeInBits()), layout)));
+  }
+
+  if (!type->isVectorTy()) {
+    return ContextValue(read(offset, Type::from_llvm(type), layout));
+  }
+
+  CAFFEINE_ASSERT(!type->getVectorIsScalable(),
+                  "scalable vectors are not supported yet");
+
+  llvm::Type* elem_ty = type->getVectorElementType();
+  std::vector<ContextValue> values;
+  for (unsigned i = 0; i < type->getVectorNumElements(); ++i) {
+    values.push_back(
+        read(BinaryOp::CreateAdd(offset, layout.getTypeAllocSize(elem_ty) * i),
+             elem_ty, layout));
+  }
+
+  return ContextValue(std::move(values));
+}
 
 void Allocation::write(const ref<Operation>& offset,
                        const ref<Operation>& value_,
@@ -130,6 +155,30 @@ void Allocation::write(const ref<Operation>& offset,
     auto index = BinaryOp::CreateAdd(offset, i);
 
     overwrite(StoreOp::Create(data(), index, byte));
+  }
+}
+void Allocation::write(const ref<Operation>& offset, llvm::Type* type,
+                       const ContextValue& value, const MemHeap& heap,
+                       const llvm::DataLayout& layout) {
+  if (value.is_pointer()) {
+    write(offset, value.pointer().value(heap), layout);
+    return;
+  }
+
+  if (value.is_scalar()) {
+    write(offset, value.scalar(), layout);
+    return;
+  }
+
+  CAFFEINE_ASSERT(value.is_vector());
+  const auto& values = value.vector();
+  llvm::Type* elem_ty = type->getVectorElementType();
+
+  CAFFEINE_ASSERT(values.size() == type->getVectorNumElements());
+
+  for (size_t i = 0; i < values.size(); ++i) {
+    write(BinaryOp::CreateAdd(offset, i * layout.getTypeAllocSize(elem_ty)),
+          elem_ty, values[i], heap, layout);
   }
 }
 

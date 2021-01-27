@@ -796,11 +796,7 @@ ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
   //       single-threaded code. If that ever changes then this will need to be
   //       revisited.
 
-  CAFFEINE_ASSERT(!inst.getType()->isVectorTy(),
-                  "Load/store of vector types are not supported yet");
-
   auto operand = ctx->lookup(inst.getOperand(0));
-  auto load_ty = Type::from_llvm(inst.getType());
   const llvm::DataLayout& layout = inst.getModule()->getDataLayout();
 
   // TODO: What are the vector semantics for loads?
@@ -827,9 +823,10 @@ ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
     Context forked = ctx->fork();
 
     Allocation& alloc = ctx->heap()[ptr.alloc()];
-    forked.add(alloc.check_inbounds(ptr.offset(), load_ty.byte_size(layout)));
+    forked.add(alloc.check_inbounds(ptr.offset(),
+                                    layout.getTypeStoreSize(inst.getType())));
 
-    auto value = alloc.read(ptr.offset(), load_ty, layout);
+    auto value = alloc.read(ptr.offset(), inst.getType(), layout);
     forked.stack_top().insert(&inst, value);
 
     queue->add_context(std::move(forked));
@@ -838,21 +835,9 @@ ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
   return ExecutionResult::Stop;
 }
 ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
-  CAFFEINE_ASSERT(!inst.getType()->isVectorTy(),
-                  "Load/store of vector types are not supported yet");
-
+  auto value = ctx->lookup(inst.getOperand(0));
   auto dest = ctx->lookup(inst.getOperand(1));
-  auto value = [&] {
-    auto value = ctx->lookup(inst.getOperand(0));
-
-    if (value.is_scalar())
-      return value.scalar();
-    if (value.is_pointer())
-      return value.pointer().value(ctx->heap());
-
-    CAFFEINE_ABORT("Load/store of vector types are not supported yet");
-  }();
-  auto val_ty = value->type();
+  auto op_ty = inst.getOperand(0)->getType();
 
   const llvm::DataLayout& layout = inst.getModule()->getDataLayout();
   const Pointer& pointer = dest.pointer();
@@ -877,8 +862,9 @@ ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
     Context forked = ctx->fork();
 
     Allocation& alloc = forked.heap()[ptr.alloc()];
-    forked.add(alloc.check_inbounds(ptr.offset(), val_ty.byte_size(layout)));
-    alloc.write(ptr.offset(), value, layout);
+    forked.add(
+        alloc.check_inbounds(ptr.offset(), layout.getTypeStoreSize(op_ty)));
+    alloc.write(ptr.offset(), op_ty, value, ctx->heap(), layout);
 
     queue->add_context(std::move(forked));
   }
