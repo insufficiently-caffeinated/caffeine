@@ -38,6 +38,7 @@ static_assert(sizeof(AllocOp) == sizeof(Operation));
 static_assert(sizeof(LoadOp) == sizeof(Operation));
 static_assert(sizeof(StoreOp) == sizeof(Operation));
 static_assert(sizeof(Undef) == sizeof(Operation));
+static_assert(sizeof(FixedArray) == sizeof(Operation));
 
 namespace detail {
   template <typename T>
@@ -398,6 +399,17 @@ inline const ref<Operation>& StoreOp::value() const {
 }
 
 /***************************************************
+ * FixedArray                                      *
+ ***************************************************/
+inline const PersistentArray<ref<Operation>>& FixedArray::data() const {
+  return std::get<PersistentArray<ref<Operation>>>(inner_);
+}
+
+inline ref<Operation> FixedArray::size() const {
+  return ConstantInt::Create(llvm::APInt(type().bitwidth(), data().size()));
+}
+
+/***************************************************
  * classof method function impls                   *
  ***************************************************/
 #define CAFFEINE_OP_DECL_CLASSOF(derived, opcode_)                             \
@@ -414,6 +426,7 @@ CAFFEINE_OP_DECL_CLASSOF(AllocOp, Alloc);
 CAFFEINE_OP_DECL_CLASSOF(LoadOp, Load);
 CAFFEINE_OP_DECL_CLASSOF(StoreOp, Store);
 CAFFEINE_OP_DECL_CLASSOF(Undef, Undef);
+CAFFEINE_OP_DECL_CLASSOF(FixedArray, FixedArray);
 
 inline bool Constant::classof(const Operation* op) {
   return op->opcode() == ConstantNamed || op->opcode() == ConstantNumbered;
@@ -435,7 +448,7 @@ inline bool FCmpOp::classof(const Operation* op) {
 
 inline bool ArrayBase::classof(const Operation* op) {
   return op->opcode() == ConstantArray || op->opcode() == Alloc ||
-         op->opcode() == Store;
+         op->opcode() == Store || op->opcode() == FixedArray;
 }
 
 #undef CAFFEINE_OP_DECL_CLASSOF

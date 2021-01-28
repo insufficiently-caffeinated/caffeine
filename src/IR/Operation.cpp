@@ -11,6 +11,8 @@
 // TODO: We should put this in a config file
 #define CAFFEINE_IMPLICIT_CONSTANT_FOLDING 1
 
+#define SIZE_BITS (sizeof(size_t) * CHAR_BIT)
+
 namespace caffeine {
 
 #define ASSERT_SAME_TYPES(v1, v2)                                              \
@@ -175,6 +177,7 @@ const char* Operation::opcode_name(Opcode op) {
     return "FCmp";
 
   case Select: return "Select";
+  case FixedArray: return "FixedArray";
 
   case Alloc: return "Alloc";
   case Load:  return "Load";
@@ -1161,6 +1164,16 @@ ref<Operation> AllocOp::Create(const ref<Operation>& size,
   // that size is an integer.
   CAFFEINE_ASSERT(size->type().is_int(), "Array size must be an integer type");
   CAFFEINE_ASSERT(defaultval->type() == Type::int_ty(8));
+
+#ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
+  if (const auto* cnst = llvm::dyn_cast<caffeine::ConstantInt>(size.get())) {
+    if (cnst->value().getLimitedValue(SIZE_MAX) < SIZE_MAX) {
+      return FixedArray::Create(cnst->type(), defaultval,
+                                cnst->value().getLimitedValue());
+    }
+  }
+#endif
+
   return ref<Operation>(new AllocOp(size, defaultval));
 }
 
@@ -1178,12 +1191,18 @@ ref<Operation> LoadOp::Create(const ref<Operation>& data,
                   "Load offset must be a pointer-sized integer type");
 
 #ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
-  const auto* data_arr = llvm::dyn_cast<caffeine::ConstantArray>(data.get());
+  const auto* fixedarray = llvm::dyn_cast<caffeine::FixedArray>(data.get());
+  const auto* constarray = llvm::dyn_cast<caffeine::ConstantArray>(data.get());
   const auto* offset_int = llvm::dyn_cast<caffeine::ConstantInt>(offset.get());
-  if (data_arr && offset_int &&
-      offset->type().bitwidth() <= sizeof(size_t) * CHAR_BIT)
+
+  if (constarray && offset_int) {
     return ConstantInt::Create(llvm::APInt(
-        8, data_arr->data()[offset_int->value().getLimitedValue()]));
+        8, constarray->data()[offset_int->value().getLimitedValue()]));
+  }
+
+  if (fixedarray && offset_int) {
+    return fixedarray->data()[offset_int->value().getLimitedValue()];
+  }
 #endif
 
   return ref<Operation>(new LoadOp(data, offset));
@@ -1207,6 +1226,29 @@ ref<Operation> StoreOp::Create(const ref<Operation>& data,
                   "Store offset must be a pointer-size integer type");
   CAFFEINE_ASSERT(value->type() == Type::int_ty(8), "Value must be of type i8");
 
+#ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
+  const auto* offset_cnst = llvm::dyn_cast<caffeine::ConstantInt>(offset.get());
+  const auto* value_cnst = llvm::dyn_cast<caffeine::ConstantInt>(value.get());
+
+  const auto* cnstarray = llvm::dyn_cast<caffeine::ConstantArray>(data.get());
+  const auto* fixedarray = llvm::dyn_cast<caffeine::FixedArray>(data.get());
+
+  if (offset_cnst && value_cnst && cnstarray) {
+    auto data = cnstarray->data();
+    data.store(offset_cnst->value().getLimitedValue(),
+               value_cnst->value().getLimitedValue());
+
+    return ConstantArray::Create(offset->type(), std::move(data));
+  }
+
+  if (offset_cnst && fixedarray) {
+    auto data = fixedarray->data();
+    data.set(offset_cnst->value().getLimitedValue(), value);
+    return FixedArray::Create(offset->type(), data);
+  }
+
+#endif
+
   return ref<Operation>(new StoreOp(data, offset, value));
 }
 
@@ -1217,6 +1259,26 @@ Undef::Undef(const Type& t) : Operation(Opcode::Undef, t) {}
 
 ref<Operation> Undef::Create(const Type& t) {
   return ref<Operation>(new Undef(t));
+}
+
+/***************************************************
+ * FixedArray                                      *
+ ***************************************************/
+FixedArray::FixedArray(Type t, const PersistentArray<ref<Operation>>& data)
+    : ArrayBase(Operation::FixedArray, t, data) {}
+
+ref<Operation> FixedArray::Create(Type index_ty,
+                                  const PersistentArray<ref<Operation>>& data) {
+  CAFFEINE_ASSERT(index_ty.is_int());
+
+  return ref<Operation>(
+      new FixedArray(Type::array_ty(index_ty.bitwidth()), data));
+}
+ref<Operation> FixedArray::Create(Type index_ty, const ref<Operation>& value,
+                                  size_t size) {
+  return FixedArray::Create(index_ty,
+                            PersistentArray<ref<Operation>>(
+                                std::vector<ref<Operation>>(size, value)));
 }
 
 /***************************************************

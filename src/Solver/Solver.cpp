@@ -29,6 +29,25 @@ public:
   Value visitConstantArray(const ConstantArray& op) {
     return Value(op.data(), Type::int_ty(op.type().bitwidth()));
   }
+  Value visitFixedArray(const FixedArray& op) {
+    auto size_val = op.size();
+    uint64_t size = visit(*size_val).apint().getLimitedValue();
+    uint32_t bitwidth = size_val->type().bitwidth();
+
+    std::vector<char> bytes;
+    bytes.reserve(size);
+
+    for (uint64_t i = 0; i < size; ++i) {
+      auto val = visit(*op.data()[i]).apint();
+
+      CAFFEINE_ASSERT(val.getBitWidth() == 8);
+
+      bytes.push_back(static_cast<char>(
+          val.getLimitedValue(std::numeric_limits<uint8_t>::max())));
+    }
+
+    return Value(SharedArray(std::move(bytes)), Type::int_ty(bitwidth));
+  }
 
 #define DECL_BINOP(opcode, func)                                               \
   Value visit##opcode(const BinaryOp& op) {                                    \
