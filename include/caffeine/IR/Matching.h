@@ -38,8 +38,11 @@ namespace matching {
    * and have first and second be set to the expression nodes that were matched
    * against. However, ref<Operation> doesn't implement the protocol (and you'd
    * need a reference anyway). To work around this matchers use the MatcherImpl
-   * type internally. This is a template which resolves to T unless T is a
-   * ref<Operation> in which case it resolves to RefOperationMatcher.
+   * type internally. This is a template which resolves to T unless T is one of
+   * a few custom types in which case it resolves to custom matcher.
+   *
+   * Currently the only special case is RefOperationMatcher if T is
+   * ref<Operation> or ref<Operation>*.
    *
    * For an example of how this is used check out UnaryOpMatcher. Custom
    * matchers should be implemented along the same lines.
