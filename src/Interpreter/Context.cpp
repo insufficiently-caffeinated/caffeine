@@ -48,6 +48,11 @@ Context Context::fork() const {
   return Context{*this};
 }
 
+const StackFrame& Context::stack_top() const {
+  CAFFEINE_ASSERT(!stack.empty());
+  return stack.back();
+}
+
 StackFrame& Context::stack_top() {
   CAFFEINE_ASSERT(!stack.empty());
   return stack.back();
@@ -91,6 +96,13 @@ void Context::add(const Assertion& assertion) {
 }
 void Context::add(Assertion&& assertion) {
   assertions_.push_back(std::move(assertion));
+}
+
+std::optional<ContextValue> Context::lookup_const(llvm::Value* value) const {
+  if (auto* constant = llvm::dyn_cast_or_null<llvm::Constant>(value))
+    return evaluate_constant_const(constant);
+
+  return stack_top().lookup(value);
 }
 
 ContextValue Context::lookup(llvm::Value* value) {

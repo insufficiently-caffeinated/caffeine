@@ -13,15 +13,24 @@
 #include <llvm/IR/Module.h>
 #include <llvm/Support/raw_ostream.h>
 
+#include <exception>
+
 using llvm::Instruction;
 
 namespace caffeine {
 
-static ContextValue evaluate(Context* ctx, llvm::Constant* constant);
-static ref<Operation> evaluate_global_data(Context* ctx,
+// Thrown by const methods when they can't evaluate a constant
+struct Unevaluated : public std::exception {};
+
+template <typename ContextType>
+static ContextValue evaluate(ContextType ctx, llvm::Constant* constant);
+
+template <typename ContextType>
+static ref<Operation> evaluate_global_data(ContextType,
                                            llvm::Constant* constant);
 
-static ContextValue evaluate_undef(Context* ctx, llvm::UndefValue* undef) {
+static ContextValue evaluate_undef(const Context* ctx,
+                                   llvm::UndefValue* undef) {
   auto type = undef->getType();
 
   if (type->isVectorTy()) {
@@ -43,8 +52,14 @@ static ContextValue evaluate_undef(Context* ctx, llvm::UndefValue* undef) {
   }
 }
 
-static ContextValue evaluate_const_vector(Context* ctx,
+template <typename ContextType>
+static ContextValue evaluate_const_vector(ContextType ctx,
                                           llvm::ConstantVector* vec) {
+  static_assert(
+      std::is_same_v<std::remove_const_t<std::remove_pointer_t<ContextType>>,
+                     Context>,
+      "ContextType must be a Context pointer");
+
   auto type = vec->getType();
 
   CAFFEINE_ASSERT(!type->getVectorIsScalable(),
@@ -60,7 +75,13 @@ static ContextValue evaluate_const_vector(Context* ctx,
   return ContextValue(std::move(result));
 }
 
-static ContextValue evaluate_expr(Context* ctx, llvm::ConstantExpr* expr) {
+template <typename ContextType>
+static ContextValue evaluate_expr(ContextType ctx, llvm::ConstantExpr* expr) {
+  static_assert(
+      std::is_same_v<std::remove_const_t<std::remove_pointer_t<ContextType>>,
+                     Context>,
+      "ContextType must be a Context pointer");
+
 #define OPERAND(expr, num)                                                     \
   evaluate(ctx, llvm::cast<llvm::Constant>((expr)->getOperand(num)))
 #define UNARY_OP(expr_) transform((expr_), OPERAND(expr, 0))
@@ -74,7 +95,7 @@ static ContextValue evaluate_expr(Context* ctx, llvm::ConstantExpr* expr) {
       OPERAND(expr, 0))
 
   switch (expr->getOpcode()) {
-  // clang-format off
+    // clang-format off
   // Unary Operations
   case Instruction::FNeg: return UNARY_OP(UnaryOp::CreateFNeg);
 
@@ -198,38 +219,56 @@ static ContextValue evaluate_expr(Context* ctx, llvm::ConstantExpr* expr) {
 //       how LLVM globals work)
 // Note: Needs to be non-static so that the friend declaration within Context
 //       applies.
-ContextValue evaluate_global(Context* ctx, llvm::GlobalVariable* global) {
+template <typename ContextType>
+ContextValue evaluate_global(ContextType ctx, llvm::GlobalVariable* global) {
+  static_assert(
+      std::is_same_v<std::remove_const_t<std::remove_pointer_t<ContextType>>,
+                     Context>,
+      "ContextType must be a Context pointer");
+
   auto it = ctx->globals_.find(global);
   if (it != ctx->globals_.end())
     return it->second;
 
-  CAFFEINE_ASSERT(global->hasInitializer(),
-                  "tried to evaluate global with no initializer");
+  if constexpr (std::is_const_v<std::remove_pointer_t<ContextType>>) {
+    // If we are compiling with a const ContextType, we can just return the
+    // throw because everything below this won't be const safe
+    throw Unevaluated{};
+  } else {
+    CAFFEINE_ASSERT(global->hasInitializer(),
+                    "tried to evaluate global with no initializer");
 
-  auto data = evaluate_global_data(ctx, global->getInitializer());
-  const auto& array = llvm::cast<ArrayBase>(*data);
+    auto data = evaluate_global_data(ctx, global->getInitializer());
+    const auto& array = llvm::cast<ArrayBase>(*data);
 
-  const llvm::DataLayout& layout = ctx->module_->getDataLayout();
-  unsigned bitwidth = layout.getPointerSizeInBits();
-  unsigned alignment = global->getAlignment();
+    const llvm::DataLayout& layout = ctx->module_->getDataLayout();
+    unsigned bitwidth = layout.getPointerSizeInBits();
+    unsigned alignment = global->getAlignment();
 
-  auto alloc = ctx->heap_.allocate(
-      array.size(), ConstantInt::Create(llvm::APInt(bitwidth, alignment)), data,
-      AllocationKind::Global, *ctx);
+    auto alloc = ctx->heap_.allocate(
+        array.size(), ConstantInt::Create(llvm::APInt(bitwidth, alignment)),
+        data, AllocationKind::Global, *ctx);
 
-  auto pointer = ContextValue(
-      Pointer(alloc, ConstantInt::Create(llvm::APInt(bitwidth, 0))));
+    auto pointer = ContextValue(
+        Pointer(alloc, ConstantInt::Create(llvm::APInt(bitwidth, 0))));
 
-  ctx->globals_.emplace(global, pointer);
+    ctx->globals_.emplace(global, pointer);
 
-  return pointer;
+    return pointer;
+  }
 }
 
 /**
  * Evaluate the initializer of a global variable to a byte array.
  */
-static ref<Operation> evaluate_global_data(Context* ctx,
+template <typename ContextType>
+static ref<Operation> evaluate_global_data(ContextType ctx,
                                            llvm::Constant* constant) {
+  static_assert(
+      std::is_same_v<std::remove_const_t<std::remove_pointer_t<ContextType>>,
+                     Context>,
+      "ContextType must be a Context pointer");
+
   const llvm::DataLayout& layout = ctx->llvm_module()->getDataLayout();
 
   if (auto* data = llvm::dyn_cast<llvm::ConstantDataSequential>(constant)) {
@@ -276,7 +315,13 @@ static ref<Operation> evaluate_global_data(Context* ctx,
   CAFFEINE_UNIMPLEMENTED(s);
 }
 
-static ContextValue evaluate(Context* ctx, llvm::Constant* constant) {
+template <typename ContextType>
+static ContextValue evaluate(ContextType ctx, llvm::Constant* constant) {
+
+  static_assert(
+      std::is_same_v<std::remove_const_t<std::remove_pointer_t<ContextType>>,
+                     Context>,
+      "ContextType must be a Context pointer");
 
   if (auto* cnst = llvm::dyn_cast<llvm::ConstantInt>(constant))
     return ContextValue(ConstantInt::Create(cnst->getValue()));
@@ -300,7 +345,7 @@ static ContextValue evaluate(Context* ctx, llvm::Constant* constant) {
     return evaluate_undef(ctx, undef);
 
   if (auto* global = llvm::dyn_cast<llvm::GlobalVariable>(constant))
-    return evaluate_global(ctx, global);
+    return evaluate_global<ContextType>(ctx, global);
 
   if (auto* expr = llvm::dyn_cast<llvm::ConstantExpr>(constant))
     return evaluate_expr(ctx, expr);
@@ -351,6 +396,13 @@ static ContextValue evaluate(Context* ctx, llvm::Constant* constant) {
 
 ContextValue Context::evaluate_constant(llvm::Constant* constant) {
   return evaluate(this, constant);
+}
+
+std::optional<ContextValue>
+Context::evaluate_constant_const(llvm::Constant* constant) const {
+  try {
+    return evaluate(this, constant);
+  } catch (Unevaluated&) { return std::nullopt; }
 }
 
 } // namespace caffeine

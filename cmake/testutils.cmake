@@ -31,9 +31,9 @@ function(declare_test TEST_NAME_OUT test)
   should_skip_test(should_skip "${test}")
 
   string(REGEX REPLACE "\\\\|/" "_" test_target "${test_name}")
-  
+
   get_filename_component(test_ext "${test_name}" LAST_EXT)
-  
+
   if("${test_ext}" STREQUAL ".ll")
     set(test_output "${CMAKE_BINARY_DIR}/test/${test_name}")
   else()
@@ -45,7 +45,7 @@ function(declare_test TEST_NAME_OUT test)
   file(MAKE_DIRECTORY "${output_dir}")
 
   add_llvm_ir_library("${test_target}" "${test}")
-  
+
   add_dependencies("${test_target}" caffeine-builtins)
   target_include_directories("${test_target}" PRIVATE "$<TARGET_PROPERTY:caffeine-builtins,INCLUDE_DIRECTORIES>")
   target_link_libraries     ("${test_target}" PRIVATE caffeine-builtins)
