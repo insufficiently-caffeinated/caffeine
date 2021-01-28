@@ -145,7 +145,7 @@ inline uint32_t Operation::refcnt() const {
 }
 
 inline size_t Operation::num_operands() const {
-  return opcode_ & 0x3;
+  return detail::opcode_nargs(opcode_);
 }
 
 inline ref<Operation> Operation::as_ref() {
@@ -180,17 +180,14 @@ Operation::operands() const {
 }
 
 inline uint16_t Operation::aux_data() const {
-  return (opcode() >> 2) & 0xF;
+  return detail::opcode_aux(opcode());
 }
 inline Type Operation::type() const {
   return type_;
 }
 
 inline bool Operation::is_constant() const {
-  // The opcodes of constant operations are currently represented as (1, 0,
-  // <arbitrary aux data>). If this representation change then we'll have to
-  // update this function.
-  return (opcode_ >> 6) == 1;
+  return detail::opcode_base(opcode_) == 1;
 }
 
 inline Operation& Operation::operator[](size_t idx) {
