@@ -27,8 +27,6 @@ public:
   uint64_t num_failures = 0;
   llvm::Function* func;
 
-  using caffeine::PrintingFailureLogger::PrintingFailureLogger;
-
   CountingFailureLogger(std::ostream& os, llvm::Function* func)
       : PrintingFailureLogger(os), func{func} {}
 
