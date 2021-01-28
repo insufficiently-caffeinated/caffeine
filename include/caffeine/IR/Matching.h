@@ -41,8 +41,8 @@ namespace matching {
    * type internally. This is a template which resolves to T unless T is a
    * ref<Operation> in which case it resolves to RefOperationMatcher.
    *
-   * For an example of how this used check out UnaryOpMatcher. Custom matchers
-   * should be implemented along the same lines.
+   * For an example of how this is used check out UnaryOpMatcher. Custom
+   * matchers should be implemented along the same lines.
    */
 
   /**
@@ -373,9 +373,9 @@ bool matches(const ref<Operation>& op, const Matcher& matcher) {
  * ========
  * Remove all occurrences of double-not anywhere in an expression
  *
- *    ref<Operation> parent, child;
+ *    ref<Operation> child;
  *    while (auto match = matches_anywhere(expr, Not(Not(child))))
- *      *parent = *child;
+ *      *match = *child;
  *
  * Note the use of capture to get the parent node.
  *
