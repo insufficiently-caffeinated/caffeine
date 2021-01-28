@@ -179,6 +179,29 @@ namespace matching {
     }
   };
 
+  /**
+   * Matcher based on whether the opcode can be downcasted to the desired type.
+   * Can optionally capture that node as well.
+   */
+  template <typename OpClass>
+  class OpClassMatcher {
+  private:
+    ref<Operation>* capture = nullptr;
+
+  public:
+    OpClassMatcher() = default;
+    OpClassMatcher(ref<Operation>& cap) : capture(&cap) {}
+    OpClassMatcher(ref<Operation>* cap) : capture(cap) {}
+
+    bool matches(const ref<Operation>& op) const {
+      return llvm::isa<OpClass>(op.get());
+    }
+    void on_match(const ref<Operation>& op) const {
+      if (capture)
+        *capture = op;
+    }
+  };
+
   // Note: We define an extra (unnecessary) type here so that error messages at
   //       least contain the names of the opcodes they're matching against.
   //
@@ -209,6 +232,18 @@ namespace matching {
                                                                  M2&& rhs) {   \
     return detail::name##Matcher<std::decay_t<M1>, std::decay_t<M2>>(          \
         std::forward<M1>(lhs), std::forward<M2>(rhs));                         \
+  }                                                                            \
+  static_assert(true)
+
+#define CAFFEINE_DECL_ZEROOP_MATCHER(name, opclass)                            \
+  OpClassMatcher<opclass> name() {                                             \
+    return OpClassMatcher<opclass>();                                          \
+  };                                                                           \
+  OpClassMatcher<opclass> name(ref<Operation>& op) {                           \
+    return OpClassMatcher<opclass>(&op);                                       \
+  }                                                                            \
+  OpClassMatcher<opclass> name(ref<Operation>* op) {                           \
+    return OpClassMatcher<opclass>(op);                                        \
   }                                                                            \
   static_assert(true)
 
@@ -248,17 +283,128 @@ namespace matching {
   CAFFEINE_DECL_UNOP_MATCHER(SIToFp, Operation::SIToFp);
   CAFFEINE_DECL_UNOP_MATCHER(Bitcast, Operation::Bitcast);
 
+  CAFFEINE_DECL_ZEROOP_MATCHER(ConstantInt, caffeine::ConstantInt);
+  CAFFEINE_DECL_ZEROOP_MATCHER(ConstantFloat, caffeine::ConstantFloat);
+  CAFFEINE_DECL_ZEROOP_MATCHER(ConstantArray, caffeine::ConstantArray);
+  CAFFEINE_DECL_ZEROOP_MATCHER(Constant, caffeine::Constant);
+
 #undef CAFFEINE_DECL_UNOP_MATCHER
 #undef CAFFEINE_DECL_BINOP_MATCHER
 
+  namespace detail {
+    template <typename M>
+    class CaptureMatcher : private MatcherImpl<M> {
+    private:
+      ref<Operation>* capture;
+
+    public:
+      template <typename T>
+      CaptureMatcher(ref<Operation>* op, T&& arg)
+          : MatcherImpl<M>(std::forward<T>(arg)), capture(op) {}
+
+      using MatcherImpl<M>::match;
+
+      void on_match(const ref<Operation>& op) {
+        MatcherImpl<M>::on_match(op);
+        *capture = op;
+      }
+    };
+  } // namespace detail
+
+  /**
+   * Inline matcher that captures a variable as well as matching with the
+   * provided matcher.
+   */
+  template <typename M>
+  detail::CaptureMatcher<std::decay_t<M>> Capture(ref<Operation>& op,
+                                                  M&& matcher) {
+    return detail::CaptureMatcher<std::decay_t<M>>(&op,
+                                                   std::forward<M>(matcher));
+  }
+  template <typename M>
+  detail::CaptureMatcher<std::decay_t<M>> Capture(ref<Operation>* op,
+                                                  M&& matcher) {
+    return detail::CaptureMatcher<std::decay_t<M>>(op,
+                                                   std::forward<M>(matcher));
+  }
+
 } // namespace matching
 
+/**
+ * Match against an expression.
+ *
+ * This methods returns whether the requested matcher successfully matched
+ * against the expression. If that happens, any captures in the match expression
+ * will be set.
+ *
+ * Note that this function only matches at the top level. If you want to find
+ * matches anywhere within the expression use matches_anywhere.
+ *
+ * Examples
+ * ========
+ * Check for double not at the root level
+ *
+ *    ref<Operation> capture;
+ *    if (matches(expr, Not(Not(capture)))) {
+ *       // Do things
+ *    }
+ */
 template <typename Matcher>
 bool matches(const ref<Operation>& op, const Matcher& matcher) {
   bool is_match = matcher.matches(op);
   if (is_match)
     matcher.on_match(op);
   return is_match;
+}
+
+/**
+ * Match anywhere in an expression.
+ *
+ * This method returns the first subexpression within provided expression that
+ * matches the provided pattern. If that happens, then captures within the
+ * pattern will also be set. If no match is found then a null reference will be
+ * returned.
+ *
+ * Note that this function will only match with the first occurrence it finds.
+ * You may also find that this function is quite expensive when called in a
+ * loop.
+ *
+ * Examples
+ * ========
+ * Remove all occurrences of double-not anywhere in an expression
+ *
+ *    ref<Operation> parent, child;
+ *    while (auto match = matches_anywhere(expr, Not(Not(child))))
+ *      *parent = *child;
+ *
+ * Note the use of capture to get the parent node.
+ *
+ * TODO: Make some sort of matching iterator.
+ */
+template <typename Matcher>
+ref<Operation> matches_anywhere(const ref<Operation>& op,
+                                const Matcher& matcher) {
+  if (matcher.matches(op)) {
+    matcher.on_match(op);
+    return op;
+  }
+
+  // Special case for FixedArray since its elements aren't reported in
+  // num_operands.
+  if (const auto* array = llvm::dyn_cast<FixedArray>(op.get())) {
+    for (const auto& elem : array->data()) {
+      if (auto match = matches_anywhere(elem, matcher))
+        return match;
+    }
+  } else {
+    size_t nops = op->num_operands();
+    for (size_t i = 0; i < nops; ++i) {
+      if (auto match = matches_anywhere(op->operand_at(i), matcher))
+        return match;
+    }
+  }
+
+  return nullptr;
 }
 
 } // namespace caffeine

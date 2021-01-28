@@ -40,3 +40,16 @@ TEST_F(MatchingTests, match_unop) {
   ASSERT_TRUE(matches(expr, Not(cnst)));
   ASSERT_EQ(cnst->opcode(), Operation::ConstantNumbered);
 }
+
+TEST_F(MatchingTests, replace_double_not) {
+  using caffeine::Constant;
+
+  auto expr = UnaryOp::CreateNot(
+      UnaryOp::CreateNot(Constant::Create(Type::int_ty(18), 0)));
+
+  ref<Operation> child;
+  while (auto parent = matches_anywhere(expr, Not(Not(child))))
+    *parent = *child;
+
+  ASSERT_TRUE(llvm::isa<Constant>(expr.get()));
+}
