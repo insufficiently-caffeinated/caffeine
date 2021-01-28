@@ -27,7 +27,7 @@ TEST_F(MatchingTests, match_nested) {
       Constant::Create(Type::int_ty(32), 1));
 
   ref<Operation> first, second;
-  ASSERT_TRUE(matches(expr, Add(Sub(first, second), Any())));
+  ASSERT_TRUE(matches(expr, Add(Sub(&first, second), Any())));
 
   ASSERT_EQ(first->opcode(), Operation::ConstantNumbered);
   ASSERT_EQ(second->opcode(), Operation::ConstantInt);

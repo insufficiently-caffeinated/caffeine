@@ -54,6 +54,7 @@ namespace matching {
 
   public:
     RefOperationMatcher(ref<Operation>& output) : output(&output) {}
+    RefOperationMatcher(ref<Operation>* output) : output(output) {}
 
     bool matches(const ref<Operation>&) const {
       return true;
@@ -63,13 +64,50 @@ namespace matching {
     }
   };
 
+  namespace detail {
+    /**
+     * Effectively acts as a type-based match statement.
+     * Works like this
+     *  select<
+     *    T,
+     *    std::pair<A, B>,
+     *    std::pair<C, D>,
+     *    E
+     * >::type
+     *
+     * This boils down to a type-level
+     *        if T == A { return B; }
+     *   else if T == C { return D; }
+     *   else           { return E; }
+     */
+    template <typename U, typename... Ts>
+    struct select;
+
+    template <typename T, typename P1, typename P2, typename... Ts>
+    struct select<T, std::pair<P1, P2>, Ts...> {
+      using type = std::conditional_t<std::is_same_v<T, P1>, P2,
+                                      typename select<T, Ts...>::type>;
+    };
+
+    template <typename T, typename U>
+    struct select<T, U> {
+      using type = U;
+    };
+  } // namespace detail
+
+  // clang-format off
+  // Using custom formatting since it makes things more understandable.
   /**
    * There's a special case for ref<Operation> arguments since they don't have
    * the required methods but we'd like to use them as captures.
    */
   template <typename T>
-  using MatcherImpl = std::conditional_t<std::is_same_v<T, ref<Operation>>,
-                                         RefOperationMatcher, T>;
+  using MatcherImpl = typename detail::select<T, 
+    std::pair<ref<Operation>, RefOperationMatcher>,
+    std::pair<ref<Operation>*, RefOperationMatcher>,
+    T
+  >::type;
+  // clang-format on
 
   /**
    * Matches any expression node and optionally captures a reference to that
@@ -95,7 +133,7 @@ namespace matching {
     MatcherImpl<M1> lhs;
     MatcherImpl<M2> rhs;
 
-    static_assert(detail::opcode_nargs(opcode) == 2,
+    static_assert(caffeine::detail::opcode_nargs(opcode) == 2,
                   "Opcode was not a binary operation");
 
   public:
@@ -123,7 +161,7 @@ namespace matching {
   private:
     MatcherImpl<M> inner;
 
-    static_assert(detail::opcode_nargs(opcode) == 1,
+    static_assert(caffeine::detail::opcode_nargs(opcode) == 1,
                   "Opcode was not a unary operation");
 
   public:
