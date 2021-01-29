@@ -113,8 +113,7 @@ namespace matching {
   // clang-format on
 
   /**
-   * Matches any expression node and optionally captures a reference to that
-   * expression node.
+   * Matches any expression node.
    *
    * This is more or less the simplest possible matcher.
    */
