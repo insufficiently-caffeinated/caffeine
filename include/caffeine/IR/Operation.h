@@ -258,7 +258,7 @@ protected:
   Operation(Opcode op, Type t, const Inner& inner);
   Operation(Opcode op, Type t, Inner&& inner);
 
-  Operation(Opcode op, Type t, ref<Operation>* operands);
+  Operation(Opcode op, Type t, const ref<Operation>* operands);
 
   Operation(Opcode op, Type t, const ref<Operation>& op0);
   Operation(Opcode op, Type t, const ref<Operation>& op0,
@@ -325,6 +325,12 @@ public:
   }
 
   /**
+   * Create a new operation using the same opcode as the current one but with
+   * new operands.
+   */
+  ref<Operation> with_new_operands(llvm::ArrayRef<ref<Operation>> operands) const;
+
+  /**
    * Accessors to operand references.
    */
   ref<Operation>& operand_at(size_t idx);
@@ -347,6 +353,9 @@ protected:
    * however they want.
    */
   uint16_t aux_data() const;
+
+private:
+  ref<Operation> into_ref() const;
 };
 
 std::ostream& operator<<(std::ostream& os, const Operation& op);

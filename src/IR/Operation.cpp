@@ -30,7 +30,7 @@ Operation::Operation(Opcode op, Type t, Inner&& inner)
 Operation::Operation(Opcode op, Type t)
     : opcode_(static_cast<uint16_t>(op)), type_(t), inner_(std::monostate()) {}
 
-Operation::Operation(Opcode op, Type t, ref<Operation>* operands)
+Operation::Operation(Opcode op, Type t, const ref<Operation>* operands)
     : opcode_(static_cast<uint16_t>(op)), type_(t),
       inner_(OpVec(operands, operands + detail::opcode_nargs(opcode_))) {
   CAFFEINE_ASSERT(detail::opcode_base(opcode_) != 1,
@@ -106,6 +106,23 @@ bool Operation::operator==(const Operation& op) const {
 }
 bool Operation::operator!=(const Operation& op) const {
   return !(*this == op);
+}
+
+ref<Operation>
+Operation::with_new_operands(llvm::ArrayRef<ref<Operation>> operands) const {
+  CAFFEINE_ASSERT(operands.size() == num_operands());
+
+  if (num_operands() == 0)
+    return into_ref();
+
+  auto my_operands = std::get<OpVec>(inner_);
+  bool equal = std::equal(std::begin(my_operands), std::end(my_operands),
+                          std::begin(operands), std::end(operands));
+
+  if (equal)
+    return into_ref();
+
+  return ref<Operation>(new Operation((Opcode)opcode(), type(), operands.data()));
 }
 
 const char* Operation::opcode_name() const {
