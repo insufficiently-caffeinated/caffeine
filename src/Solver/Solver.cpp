@@ -155,4 +155,12 @@ std::unique_ptr<Model> Solver::resolve(std::vector<Assertion>& assertions) {
   return resolve(assertions, Assertion());
 }
 
+EmptyModel::EmptyModel(SolverResult result) : Model(result) {
+  CAFFEINE_ASSERT(result != SolverResult::SAT);
+}
+
+Value EmptyModel::lookup(const Constant&) const {
+  CAFFEINE_ABORT("Model was empty");
+}
+
 } // namespace caffeine

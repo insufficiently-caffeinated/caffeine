@@ -137,13 +137,18 @@ public:
   // Calls resolve with an empty extra assertion.
   std::unique_ptr<Model> resolve(std::vector<Assertion>& assertions);
 
-protected:
-  // Protected so that derived classes can still be copyable if they so choose.
   Solver(const Solver&) = default;
   Solver(Solver&&) = default;
 
   Solver& operator=(const Solver&) = default;
   Solver& operator=(Solver&&) = default;
+};
+
+class EmptyModel final : public Model {
+public:
+  EmptyModel(SolverResult result);
+
+  Value lookup(const Constant&) const override;
 };
 
 } // namespace caffeine

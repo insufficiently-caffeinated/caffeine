@@ -43,6 +43,9 @@ public:
    */
   std::unique_ptr<Model> resolve(std::vector<Assertion>& assertions,
                                  const Assertion& extra) override;
+
+  Z3Solver(Z3Solver&&) = default;
+  Z3Solver& operator=(Z3Solver&&) = default;
 };
 
 } // namespace caffeine
