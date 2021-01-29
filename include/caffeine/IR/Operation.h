@@ -334,7 +334,8 @@ public:
    * Create a new operation using the same opcode as the current one but with
    * new operands.
    */
-  ref<Operation> with_new_operands(llvm::ArrayRef<ref<Operation>> operands) const;
+  ref<Operation>
+  with_new_operands(llvm::ArrayRef<ref<Operation>> operands) const;
 
   /**
    * Accessors to operand references.

@@ -122,7 +122,8 @@ Operation::with_new_operands(llvm::ArrayRef<ref<Operation>> operands) const {
   if (equal)
     return into_ref();
 
-  return ref<Operation>(new Operation((Opcode)opcode(), type(), operands.data()));
+  return ref<Operation>(
+      new Operation((Opcode)opcode(), type(), operands.data()));
 }
 
 const char* Operation::opcode_name() const {
