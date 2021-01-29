@@ -2,6 +2,7 @@
 
 #include "caffeine/IR/Assertion.h"
 #include "caffeine/IR/Operation.h"
+#include "caffeine/IR/Visitor.h"
 
 #include <llvm/ADT/SmallVector.h>
 
@@ -11,59 +12,65 @@ namespace caffeine {
 
 using ReferenceMap = std::unordered_map<Operation, ref<Operation>>;
 
-static ref<Operation> canonicalize(const ref<Operation>& op,
-                                   ReferenceMap& seen);
+namespace {
+  class CanonicalizeVisitor
+      : public ConstOpVisitor<CanonicalizeVisitor, ref<Operation>> {
+    ReferenceMap seen;
 
-static ref<Operation> canonicalize_(const ref<Operation>& op,
-                                    ReferenceMap& seen) {
-  if (auto* array = llvm::dyn_cast<FixedArray>(op.get())) {
-    auto data = array->data();
-    bool set_any = false;
+  public:
+    ref<Operation> visit(const Operation* op) {
+      return visit(*op);
+    }
+    ref<Operation> visit(const Operation& op) {
+      auto it = seen.find(op);
+      if (it != seen.end())
+        return it->second;
 
-    for (size_t i = 0; i < data.size(); ++i) {
-      auto elem = data[i];
-      auto rel = canonicalize(elem, seen);
+      auto res = ConstOpVisitor<CanonicalizeVisitor, ref<Operation>>::visit(op);
+      seen.emplace(op, res);
+      return res;
+    }
 
-      if (rel != elem) {
-        data.set(i, std::move(rel));
-        set_any = true;
+    ref<Operation> visitOperation(const Operation& op) {
+      llvm::SmallVector<ref<Operation>, 3> operands;
+
+      for (auto& operand : op.operands()) {
+        operands.push_back(visit(operand));
       }
+
+      return op.with_new_operands(operands);
     }
 
-    if (!set_any)
-      return op;
-    return FixedArray::Create(Type::int_ty(op->type().bitwidth()), data);
-  } else {
-    llvm::SmallVector<ref<Operation>, 3> operands;
+    ref<Operation> visitFixedArray(const FixedArray& array) {
+      auto data = array.data();
+      bool set_any = false;
 
-    size_t nops = op->num_operands();
-    for (size_t i = 0; i < nops; ++i) {
-      operands.push_back(canonicalize(op->operand_at(i), seen));
+      for (size_t i = 0; i < data.size(); ++i) {
+        ref<Operation> elem = data[i];
+        auto rel = visit(*elem);
+
+        if (rel != elem) {
+          data.set(i, std::move(rel));
+          set_any = true;
+        }
+      }
+
+      if (!set_any)
+        return array.into_ref();
+
+      return FixedArray::Create(Type::int_ty(array.type().bitwidth()), data);
     }
-
-    return op->with_new_operands(operands);
-  }
-}
-
-static ref<Operation> canonicalize(const ref<Operation>& op,
-                                   ReferenceMap& seen) {
-  auto it = seen.find(*op);
-  if (it != seen.end())
-    return it->second;
-
-  auto res = canonicalize_(op, seen);
-  seen.emplace(*op, res);
-  return res;
-}
+  };
+} // namespace
 
 void CanonicalizingSolver::canonicalize_all(
     std::vector<Assertion>& assertions) {
   std::unordered_set<Operation*> known_assertions;
-  ReferenceMap seen;
+  CanonicalizeVisitor visitor;
 
   auto it = std::remove_if(
       assertions.begin(), assertions.end(), [&](Assertion& assertion) {
-        assertion.value() = canonicalize(assertion.value(), seen);
+        assertion.value() = visitor.visit(assertion.value().get());
         return !known_assertions.insert(assertion.value().get()).second;
       });
   assertions.erase(it, assertions.end());

@@ -11,7 +11,7 @@ namespace caffeine {
  * but currently there are two guarantees from this solver:
  *  - There will be no unevaluated constant subexpressions (e.g. 3 + 4)
  *  - There will be no repeated duplicate assertions
- * 
+ *
  * Always returns unknown.
  */
 class CanonicalizingSolver final : public Solver {
