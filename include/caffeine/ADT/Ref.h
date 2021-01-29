@@ -106,10 +106,16 @@ public:
     return prev;
   }
 
-  constexpr T* get() {
+  constexpr T* get() & {
     return value;
   }
-  constexpr const T* get() const {
+  constexpr T* get() && {
+    return value;
+  }
+  constexpr const T* get() const& {
+    return value;
+  }
+  constexpr const T* get() const&& {
     return value;
   }
 
@@ -121,16 +127,16 @@ public:
   }
 
   T& operator*() & {
-    return *get();
+    return *value;
   }
   T&& operator*() && {
-    return *get();
+    return std::move(*value);
   }
   const T& operator*() const& {
-    return *get();
+    return *value;
   }
   const T&& operator*() const&& {
-    return *get();
+    return std::move(*value);
   }
 
   operator bool() const {
