@@ -1,6 +1,7 @@
 #ifndef CAFFEINE_IR_MATCHING_H
 #define CAFFEINE_IR_MATCHING_H
 
+#include "caffeine/IR/Assertion.h"
 #include "caffeine/IR/Operation.h"
 
 namespace caffeine {
@@ -358,6 +359,10 @@ bool matches(const ref<Operation>& op, const Matcher& matcher) {
     matcher.on_match(op);
   return is_match;
 }
+template<typename Matcher>
+bool matches(const Assertion& assertion, const Matcher& matcher) {
+  return matches(assertion.value(), matcher);
+}
 
 /**
  * Match anywhere in an expression.
@@ -407,6 +412,10 @@ ref<Operation> matches_anywhere(const ref<Operation>& op,
   }
 
   return nullptr;
+}
+template<typename Matcher>
+ref<Operation> matches_anywhere(const Assertion& assertion, const Matcher& matcher) {
+  return matches_anywhere(assertion.value(), matcher);
 }
 
 } // namespace caffeine
