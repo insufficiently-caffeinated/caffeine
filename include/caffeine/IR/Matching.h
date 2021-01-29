@@ -359,7 +359,7 @@ bool matches(const ref<Operation>& op, const Matcher& matcher) {
     matcher.on_match(op);
   return is_match;
 }
-template<typename Matcher>
+template <typename Matcher>
 bool matches(const Assertion& assertion, const Matcher& matcher) {
   return matches(assertion.value(), matcher);
 }
@@ -413,8 +413,9 @@ ref<Operation> matches_anywhere(const ref<Operation>& op,
 
   return nullptr;
 }
-template<typename Matcher>
-ref<Operation> matches_anywhere(const Assertion& assertion, const Matcher& matcher) {
+template <typename Matcher>
+ref<Operation> matches_anywhere(const Assertion& assertion,
+                                const Matcher& matcher) {
   return matches_anywhere(assertion.value(), matcher);
 }
 
