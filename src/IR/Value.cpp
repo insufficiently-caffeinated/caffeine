@@ -13,14 +13,6 @@ using llvm::APInt;
 
 namespace caffeine {
 
-// template <typename T>
-// Value::ArrayData::ArrayData(const T& data, uint32_t idx_width)
-//     : data(data), index_bitwidth(idx_width) {}
-
-// template <typename T>
-// Value::ArrayData::ArrayData(T&& data, uint32_t idx_width)
-//     : data(data), index_bitwidth(idx_width) {}
-
 Value::Value(const APInt& apint) : inner_(apint) {}
 Value::Value(APInt&& apint) : inner_(std::move(apint)) {}
 
