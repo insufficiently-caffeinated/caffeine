@@ -2,6 +2,7 @@
 #include "caffeine/IR/Assertion.h"
 #include "caffeine/IR/Value.h"
 #include "caffeine/IR/Visitor.h"
+#include "caffeine/Interpreter/Context.h"
 
 #include <fmt/format.h>
 
@@ -119,6 +120,26 @@ Model::Model(SolverResult result) : result_(result) {}
 
 Value Model::evaluate(const Operation& expr) const {
   return ExprEvaluator(this).visit(expr);
+}
+
+Value Model::evaluate(const ContextValue& expr, Context& ctx) const {
+  if (expr.is_scalar()) {
+    return ExprEvaluator(this).visit(*expr.scalar());
+  } else if (expr.is_pointer()) {
+    auto ptr_val = expr.pointer().value(ctx.heap());
+    return ExprEvaluator(this).visit(*ptr_val);
+  } else if (expr.is_vector()) {
+    const auto& vec = expr.vector();
+    std::vector<Value> nested_arr;
+    nested_arr.resize(vec.size());
+
+    std::transform(vec.begin(), vec.end(), nested_arr.begin(),
+                   [&](const auto& i) -> Value { return evaluate(i, ctx); });
+
+    return Value(std::move(nested_arr));
+  }
+
+  CAFFEINE_UNREACHABLE();
 }
 
 SolverResult Solver::check(std::vector<Assertion>& assertions) {

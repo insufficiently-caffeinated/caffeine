@@ -142,6 +142,8 @@ static z3::sort type_to_sort(z3::context& ctx, const Type& type) {
     CAFFEINE_ABORT("Cannot make symbolic pointer constants");
   case Type::FunctionPointer:
     CAFFEINE_ABORT("Cannot make symbolic function constants");
+  case Type::Vector:
+    CAFFEINE_ABORT("Cannot make symbolic vector constants");
   }
 
   CAFFEINE_UNREACHABLE();

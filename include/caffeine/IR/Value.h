@@ -28,6 +28,7 @@ class ConstantFloat;
  * - A floating-point type (via llvm::APFloat)
  * - A byte array (via SharedArray)
  * - An empty value
+ * - A Vector of Values
  *
  * Each of these representations have a set of operations that are valid on them
  * (e.g. bvxxx for integers, fxxx for floats). All operations assert that their
@@ -37,19 +38,23 @@ class ConstantFloat;
 class Value {
 public:
   // Note: These correspond to the variant indices.
-  enum Kind { Empty, Int, Float, Array };
+  enum Kind { Empty, Int, Float, Array, Vector };
 
 private:
+  template <typename T>
   struct ArrayData {
-    SharedArray data;
+    T data;
     uint32_t index_bitwidth;
 
-    ArrayData(const SharedArray& data, uint32_t idx_width);
-    ArrayData(SharedArray&& data, uint32_t idx_width);
+    ArrayData(const T& data, uint32_t idx_width = 0)
+        : data(data), index_bitwidth(idx_width){};
+    ArrayData(T&& data, uint32_t idx_width = 0)
+        : data(data), index_bitwidth(idx_width){};
   };
 
   using Inner =
-      std::variant<std::monostate, llvm::APInt, llvm::APFloat, ArrayData>;
+      std::variant<std::monostate, llvm::APInt, llvm::APFloat,
+                   ArrayData<SharedArray>, ArrayData<std::vector<Value>>>;
 
   Inner inner_;
 
@@ -65,6 +70,9 @@ public:
   Value(const SharedArray& array, Type index_ty);
   Value(SharedArray&& array, Type index_ty);
 
+  Value(const std::vector<Value>& array);
+  Value(std::vector<Value>&& array);
+
   Value(const ConstantInt& constant);
   Value(const ConstantFloat& constant);
 
@@ -73,6 +81,7 @@ public:
   bool is_float() const { return inner_.index() == Float; }
   bool is_empty() const { return inner_.index() == Empty; }
   bool is_array() const { return inner_.index() == Array; }
+  bool is_vector() const { return inner_.index() == Vector; }
 
   Kind kind() const { return static_cast<Kind>(inner_.index()); }
   Type type() const;
@@ -91,6 +100,9 @@ public:
 
   SharedArray& array();
   const SharedArray& array() const;
+
+  std::vector<Value>& vector();
+  const std::vector<Value>& vector() const;
 
   // Value operations
   static Value bvadd(const Value& lhs, const Value& rhs);

@@ -33,7 +33,7 @@ public:
     if (!seen.insert(c.name()).second)
       return;
 
-    auto value = model->lookup(c);
+    auto value = model->evaluate(c);
 
     os << "  " << c.name() << " = " << value << "\n";
   }

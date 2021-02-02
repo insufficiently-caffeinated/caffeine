@@ -53,6 +53,10 @@ Type Type::array_ty(uint32_t bitwidth) {
   return Type(Array, bitwidth);
 }
 
+Type Type::vector_ty() {
+  return Type(Vector, 0);
+}
+
 llvm::FunctionType* Type::signature() const {
   CAFFEINE_ASSERT(is_function_pointer());
 
@@ -165,6 +169,9 @@ std::ostream& operator<<(std::ostream& os, const Type& t) {
 
   if (t.is_array())
     return os << "array";
+
+  if (t.is_vector())
+    return os << "vector";
 
   // TODO: Properly implement printing for any missing types
   return os << "<unimplemented>";

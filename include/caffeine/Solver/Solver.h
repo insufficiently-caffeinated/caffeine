@@ -6,6 +6,7 @@
 
 #include "caffeine/ADT/Ref.h"
 #include "caffeine/IR/Value.h"
+#include "caffeine/Interpreter/Value.h"
 
 namespace caffeine {
 
@@ -39,9 +40,14 @@ public:
    * expression (i.e. is_constant returns true) with the value of said constant.
    *
    * It is invalid to call this method if the model is not SAT.
+   *
+   * Usage: end users should use this method in order to get the value of an
+   * expression in the given model.
    */
-  virtual Value evaluate(const Operation& expr) const;
+  Value evaluate(const Operation& expr) const;
+  Value evaluate(const ContextValue& expr, Context& ctx) const;
 
+protected:
   /**
    * Look up the value of a symbolic constant in this model. Returns an
    * appropriate constant expression with the value of said constant.
@@ -49,15 +55,21 @@ public:
    * If there are no constants with the given name then returns a null pointer.
    *
    * It is invalid to call this method if the model is not SAT.
+   *
+   * Usage: subclasses should override this method and implement appropriate
+   * lookup logic. End users should use the `evaluate` method because it
+   * performs the appropriate operations on the expression tree to evaluate it
+   * (it uses `lookup` under the hood).
    */
   virtual Value lookup(const Constant& constant) const = 0;
 
-protected:
   Model(const Model&) = default;
   Model(Model&&) = default;
 
   Model& operator=(const Model&) = default;
   Model& operator=(Model&&) = default;
+
+  friend class ExprEvaluator;
 };
 
 /**

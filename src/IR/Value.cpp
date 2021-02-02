@@ -13,11 +13,6 @@ using llvm::APInt;
 
 namespace caffeine {
 
-Value::ArrayData::ArrayData(const SharedArray& data, uint32_t idx_width)
-    : data(data), index_bitwidth(idx_width) {}
-Value::ArrayData::ArrayData(SharedArray&& data, uint32_t idx_width)
-    : data(data), index_bitwidth(idx_width) {}
-
 Value::Value(const APInt& apint) : inner_(apint) {}
 Value::Value(APInt&& apint) : inner_(std::move(apint)) {}
 
@@ -25,14 +20,23 @@ Value::Value(const APFloat& apfloat) : inner_(apfloat) {}
 Value::Value(APFloat&& apfloat) : inner_(std::move(apfloat)) {}
 
 Value::Value(const SharedArray& array, Type index_ty)
-    : inner_([&]() -> ArrayData {
+    : inner_([&]() -> ArrayData<SharedArray> {
         CAFFEINE_ASSERT(index_ty.is_int(), "index type was not an integer");
         return ArrayData(array, index_ty.bitwidth());
       }()) {}
 Value::Value(SharedArray&& array, Type index_ty)
-    : inner_([&]() -> ArrayData {
+    : inner_([&]() -> ArrayData<SharedArray> {
         CAFFEINE_ASSERT(index_ty.is_int(), "index type was not an integer");
         return ArrayData(std::move(array), index_ty.bitwidth());
+      }()) {}
+
+Value::Value(const std::vector<Value>& array)
+    : inner_([&]() -> ArrayData<std::vector<Value>> {
+        return ArrayData(array);
+      }()) {}
+Value::Value(std::vector<Value>&& array)
+    : inner_([&]() -> ArrayData<std::vector<Value>> {
+        return ArrayData(std::move(array));
       }()) {}
 
 Value::Value(const ConstantInt& constant) : Value(constant.value()) {}
@@ -47,7 +51,10 @@ Type Value::type() const {
   case Float:
     return Type::type_of(apfloat());
   case Array:
-    return Type::array_ty(std::get<ArrayData>(inner_).index_bitwidth);
+    return Type::array_ty(
+        std::get<ArrayData<SharedArray>>(inner_).index_bitwidth);
+  case Vector:
+    return Type::vector_ty();
   }
 
   CAFFEINE_UNREACHABLE();
@@ -73,11 +80,20 @@ const APFloat& Value::apfloat() const {
 
 SharedArray& Value::array() {
   CAFFEINE_ASSERT(is_array());
-  return std::get<ArrayData>(inner_).data;
+  return std::get<ArrayData<SharedArray>>(inner_).data;
 }
 const SharedArray& Value::array() const {
   CAFFEINE_ASSERT(is_array());
-  return std::get<ArrayData>(inner_).data;
+  return std::get<ArrayData<SharedArray>>(inner_).data;
+}
+
+std::vector<Value>& Value::vector() {
+  CAFFEINE_ASSERT(is_vector());
+  return std::get<ArrayData<std::vector<Value>>>(inner_).data;
+}
+const std::vector<Value>& Value::vector() const {
+  CAFFEINE_ASSERT(is_vector());
+  return std::get<ArrayData<std::vector<Value>>>(inner_).data;
 }
 
 bool Value::operator==(const Value& v) const {
@@ -93,6 +109,8 @@ bool Value::operator==(const Value& v) const {
     return apfloat().bitwiseIsEqual(v.apfloat());
   case Array:
     return array() == v.array();
+  case Vector:
+    return vector() == v.vector();
   }
 
   CAFFEINE_UNREACHABLE();
@@ -258,9 +276,19 @@ std::ostream& operator<<(std::ostream& os, const Value& v) {
     v.apfloat().toString(str);
 
     return os << std::string_view(str.data(), str.size());
-  } else {
+  } else if (v.is_array()) {
+    // TODO: Pretty print values
+    return os << "<array>";
+  } else if (v.is_vector()) {
+    // TODO: Pretty print values
+    return os << "<vector>";
+  } else if (v.is_empty()) {
     return os << "<empty>";
   }
+
+  // If this was reached, it's an indication that more types were added without
+  // modifying the printing logic
+  CAFFEINE_UNREACHABLE();
 }
 
 } // namespace caffeine
