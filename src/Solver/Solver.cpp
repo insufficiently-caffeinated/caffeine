@@ -136,12 +136,7 @@ Value Model::evaluate(const ContextValue& expr, Context& ctx) const {
     std::transform(vec.begin(), vec.end(), nested_arr.begin(),
                    [&](const auto& i) -> Value { return evaluate(i, ctx); });
 
-    // If it's an empty nested array, then the bitwidth is 0 since we can't
-    // really determine it from anything else
-    return Value(std::move(nested_arr),
-                 vec.size() == 0
-                     ? Type::int_ty(0)
-                     : Type::int_ty(nested_arr[0].type().bitwidth()));
+    return Value(std::move(nested_arr));
   }
 
   CAFFEINE_UNREACHABLE();

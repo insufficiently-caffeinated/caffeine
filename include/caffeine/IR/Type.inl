@@ -30,6 +30,9 @@ inline bool Type::is_function_pointer() const {
 inline bool Type::is_array() const {
   return kind() == Array;
 }
+inline bool Type::is_vector() const {
+  return kind() == Vector;
+}
 
 inline uint32_t Type::bitwidth() const {
   CAFFEINE_ASSERT(is_int() || is_array());

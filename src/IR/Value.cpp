@@ -30,15 +30,13 @@ Value::Value(SharedArray&& array, Type index_ty)
         return ArrayData(std::move(array), index_ty.bitwidth());
       }()) {}
 
-Value::Value(const std::vector<Value>& array, Type index_ty)
+Value::Value(const std::vector<Value>& array)
     : inner_([&]() -> ArrayData<std::vector<Value>> {
-        CAFFEINE_ASSERT(index_ty.is_int(), "index type was not an integer");
-        return ArrayData(array, index_ty.bitwidth());
+        return ArrayData(array);
       }()) {}
-Value::Value(std::vector<Value>&& array, Type index_ty)
+Value::Value(std::vector<Value>&& array)
     : inner_([&]() -> ArrayData<std::vector<Value>> {
-        CAFFEINE_ASSERT(index_ty.is_int(), "index type was not an integer");
-        return ArrayData(std::move(array), index_ty.bitwidth());
+        return ArrayData(std::move(array));
       }()) {}
 
 Value::Value(const ConstantInt& constant) : Value(constant.value()) {}
@@ -55,9 +53,8 @@ Type Value::type() const {
   case Array:
     return Type::array_ty(
         std::get<ArrayData<SharedArray>>(inner_).index_bitwidth);
-  case NestedArray:
-    return Type::array_ty(
-        std::get<ArrayData<std::vector<Value>>>(inner_).index_bitwidth);
+  case Vector:
+    return Type::vector_ty();
   }
 
   CAFFEINE_UNREACHABLE();
@@ -90,12 +87,12 @@ const SharedArray& Value::array() const {
   return std::get<ArrayData<SharedArray>>(inner_).data;
 }
 
-std::vector<Value>& Value::nested_array() {
-  CAFFEINE_ASSERT(is_nested_array());
+std::vector<Value>& Value::vector() {
+  CAFFEINE_ASSERT(is_vector());
   return std::get<ArrayData<std::vector<Value>>>(inner_).data;
 }
-const std::vector<Value>& Value::nested_array() const {
-  CAFFEINE_ASSERT(is_nested_array());
+const std::vector<Value>& Value::vector() const {
+  CAFFEINE_ASSERT(is_vector());
   return std::get<ArrayData<std::vector<Value>>>(inner_).data;
 }
 
@@ -112,8 +109,8 @@ bool Value::operator==(const Value& v) const {
     return apfloat().bitwiseIsEqual(v.apfloat());
   case Array:
     return array() == v.array();
-  case NestedArray:
-    return nested_array() == v.nested_array();
+  case Vector:
+    return vector() == v.vector();
   }
 
   CAFFEINE_UNREACHABLE();
@@ -282,9 +279,9 @@ std::ostream& operator<<(std::ostream& os, const Value& v) {
   } else if (v.is_array()) {
     // TODO: Pretty print values
     return os << "<array>";
-  } else if (v.is_nested_array()) {
+  } else if (v.is_vector()) {
     // TODO: Pretty print values
-    return os << "<nested-array>";
+    return os << "<vector>";
   } else if (v.is_empty()) {
     return os << "<empty>";
   }

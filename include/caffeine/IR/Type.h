@@ -45,7 +45,8 @@ public:
     FloatingPoint,
     Pointer,
     FunctionPointer,
-    Array
+    Array,
+    Vector
   };
 
 private:
@@ -68,6 +69,7 @@ public:
   bool is_pointer() const;
   bool is_function_pointer() const;
   bool is_array() const;
+  bool is_vector() const;
 
   uint32_t bitwidth() const;
   uint32_t mantissa_bits() const;
@@ -92,6 +94,7 @@ public:
   // Note: Bitwidth is the bitwidth of the integer used to
   //       index into the byte array.
   static Type array_ty(uint32_t bitwidth);
+  static Type vector_ty();
 
   static Type from_llvm(llvm::Type* type);
 
