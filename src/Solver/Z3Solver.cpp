@@ -143,7 +143,7 @@ static z3::sort type_to_sort(z3::context& ctx, const Type& type) {
   case Type::FunctionPointer:
     CAFFEINE_ABORT("Cannot make symbolic function constants");
   case Type::Vector:
-    CAFFEINE_ABORT("Symbolic vectors are unimplemented");
+    CAFFEINE_ABORT("Cannot make symbolic vector constants");
   }
 
   CAFFEINE_UNREACHABLE();

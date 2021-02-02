@@ -46,11 +46,9 @@ private:
     T data;
     uint32_t index_bitwidth;
 
-    ArrayData(const T& data) : data(data), index_bitwidth(0){};
-    ArrayData(T&& data) : data(data), index_bitwidth(0){};
-    ArrayData(const T& data, uint32_t idx_width)
+    ArrayData(const T& data, uint32_t idx_width = 0)
         : data(data), index_bitwidth(idx_width){};
-    ArrayData(T&& data, uint32_t idx_width)
+    ArrayData(T&& data, uint32_t idx_width = 0)
         : data(data), index_bitwidth(idx_width){};
   };
 
