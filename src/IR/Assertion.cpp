@@ -17,6 +17,15 @@ bool Assertion::is_constant() const {
   return value_->is_constant();
 }
 
+bool Assertion::is_constant_value(bool value) const {
+  const auto* intval = llvm::dyn_cast<ConstantInt>(value_.get());
+
+  if (!intval)
+    return false;
+
+  return intval->value() == (uint64_t)value;
+}
+
 Assertion Assertion::operator!() const {
   CAFFEINE_ASSERT(value_, "assertion had null value");
   return Assertion(UnaryOp::CreateNot(value_));
