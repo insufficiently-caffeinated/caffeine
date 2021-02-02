@@ -26,7 +26,7 @@ public:
 
   bool is_empty() const;
   bool is_constant() const;
-  bool is_constant(bool value) const;
+  bool is_constant_value(bool value) const;
 
   Assertion operator!() const;
 

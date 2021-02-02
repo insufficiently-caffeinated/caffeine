@@ -17,7 +17,7 @@ bool Assertion::is_constant() const {
   return value_->is_constant();
 }
 
-bool Assertion::is_constant(bool value) const {
+bool Assertion::is_constant_value(bool value) const {
   const auto* intval = llvm::dyn_cast<ConstantInt>(value_.get());
 
   if (!intval)
