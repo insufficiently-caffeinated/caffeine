@@ -83,6 +83,8 @@ public:
   ExecutionResult visitShuffleVectorInst(llvm::ShuffleVectorInst& inst);
   ExecutionResult visitAllocaInst(llvm::AllocaInst& inst);
 
+  ExecutionResult visitMemCpyInst(llvm::MemCpyInst& memcpy);
+
 private:
   ExecutionResult visitExternFunc(llvm::CallInst& inst);
 

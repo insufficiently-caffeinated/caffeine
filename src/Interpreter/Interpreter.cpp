@@ -892,6 +892,16 @@ ExecutionResult Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {
   return ExecutionResult::Continue;
 }
 
+ExecutionResult Interpreter::visitMemCpyInst(llvm::MemCpyInst& memcpy) {
+  // memcpy is implemented by a C function within the builtins library so we
+  // just forward the call to that.
+  auto memcpy_fn = memcpy.getModule()->getFunction("caffeine_builtin_memcpy");
+  CAFFEINE_ASSERT(memcpy_fn);
+  memcpy.setCalledFunction(memcpy_fn);
+
+  return visitCall(memcpy);
+}
+
 /***************************************************
  * External function                               *
  ***************************************************/
