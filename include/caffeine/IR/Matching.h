@@ -239,13 +239,13 @@ namespace matching {
   static_assert(true)
 
 #define CAFFEINE_DECL_ZEROOP_MATCHER(name, opclass)                            \
-  OpClassMatcher<opclass> name() {                                             \
+  inline OpClassMatcher<opclass> name() {                                      \
     return OpClassMatcher<opclass>();                                          \
   };                                                                           \
-  OpClassMatcher<opclass> name(ref<Operation>& op) {                           \
+  inline OpClassMatcher<opclass> name(ref<Operation>& op) {                    \
     return OpClassMatcher<opclass>(&op);                                       \
   }                                                                            \
-  OpClassMatcher<opclass> name(ref<Operation>* op) {                           \
+  inline OpClassMatcher<opclass> name(ref<Operation>* op) {                    \
     return OpClassMatcher<opclass>(op);                                        \
   }                                                                            \
   static_assert(true)
