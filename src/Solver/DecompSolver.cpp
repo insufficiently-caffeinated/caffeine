@@ -14,7 +14,7 @@ void DecompSolver::transform(std::vector<Assertion>& assertions) {
 
   auto it = std::remove_if(
       assertions.begin(), assertions.end(),
-      [](const auto& assertion) { return assertion.is_constant(true); });
+      [](const auto& assertion) { return assertion.is_constant_value(true); });
   assertions.erase(it, assertions.end());
 
   for (size_t i = 0; i < assertions.size(); ++i) {
