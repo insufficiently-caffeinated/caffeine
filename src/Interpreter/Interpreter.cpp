@@ -915,6 +915,9 @@ ExecutionResult Interpreter::visitExternFunc(llvm::CallInst& call) {
   if (name == "caffeine_free")
     return visitFree(call);
 
+  if (name == "caffeine_builtin_resolve")
+    return visitBuiltinResolve(call);
+
   CAFFEINE_ABORT(
       fmt::format("external function '{}' not implemented", name.str()));
 }
@@ -1075,6 +1078,38 @@ ExecutionResult Interpreter::visitFree(llvm::CallInst& call) {
   heap.deallocate(resolved[0].alloc());
 
   return ExecutionResult::Continue;
+}
+
+ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallInst& call) {
+  auto mem = ctx->lookup(call.getArgOperand(0)).pointer();
+  auto size = ctx->lookup(call.getArgOperand(1)).scalar();
+
+  auto assertion = ctx->heap().check_valid(mem, size);
+  auto model = ctx->resolve(!assertion);
+  if (model->result() == SolverResult::SAT) {
+    logger->log_failure(*model, *ctx, Failure(!assertion));
+
+    // If we're getting an out-of-bounds access then there's a pretty good
+    // chance that we'll find that we can overlap with just about any other
+    // allocation. This isn't likely to produce useful bugs so we'll kill the
+    // context here.
+    return ExecutionResult::Stop;
+  }
+
+  auto resolved = ctx->heap().resolve(mem, *ctx);
+
+  if (resolved.size() == 1) {
+    ctx->stack_top().insert(&call, ContextValue(resolved[0]));
+    return ExecutionResult::Continue;
+  }
+
+  for (const auto& ptr : resolved) {
+    Context forked = ctx->fork();
+    forked.stack_top().insert(&call, ContextValue(ptr));
+    queue->add_context(std::move(forked));
+  }
+
+  return ExecutionResult::Stop;
 }
 
 } // namespace caffeine

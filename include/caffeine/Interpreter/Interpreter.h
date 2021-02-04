@@ -92,6 +92,8 @@ private:
   ExecutionResult visitMalloc(llvm::CallInst& inst);
   ExecutionResult visitCalloc(llvm::CallInst& inst);
   ExecutionResult visitFree(llvm::CallInst& inst);
+
+  ExecutionResult visitBuiltinResolve(llvm::CallInst& inst);
 };
 
 } // namespace caffeine
