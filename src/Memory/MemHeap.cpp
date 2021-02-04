@@ -40,6 +40,11 @@ bool Allocation::is_constant_size() const {
 
 Assertion Allocation::check_inbounds(const ref<Operation>& offset,
                                      uint32_t width) const {
+  return check_inbounds(offset, ConstantInt::Create(llvm::APInt(
+                                    offset->type().bitwidth(), width)));
+}
+Assertion Allocation::check_inbounds(const ref<Operation>& offset,
+                                     const ref<Operation>& width) const {
   // Basic check: offset < size && offset + width < size.
   // Need to check that the entire range is within the allocation.
   // TODO: Should we check for wraparound, probably not worth it for now.
@@ -279,6 +284,10 @@ bool MemHeap::check_live(const AllocId& alloc) const {
 }
 
 Assertion MemHeap::check_valid(const Pointer& ptr, uint32_t width) {
+  return check_valid(ptr, ConstantInt::Create(llvm::APInt(
+                              ptr.offset()->type().bitwidth(), width)));
+}
+Assertion MemHeap::check_valid(const Pointer& ptr, const ref<Operation>& width) {
   /**
    * Implementation note: When checking that the end of the read is within the
    * allocation we check ptr < alloc + (size - width) instead of checking ptr +
