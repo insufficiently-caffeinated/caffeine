@@ -82,6 +82,8 @@ uint32_t Type::byte_size(const llvm::DataLayout& layout) const {
     return layout.getPointerSize();
   case Array:
     CAFFEINE_ABORT("Arrays have no size");
+  case Vector:
+    CAFFEINE_ABORT("Vectors have no size");
   }
 
   CAFFEINE_UNREACHABLE("Unknown type kind");
