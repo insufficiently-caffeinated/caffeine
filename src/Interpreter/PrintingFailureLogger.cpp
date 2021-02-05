@@ -2,6 +2,7 @@
 
 #include "caffeine/IR/Visitor.h"
 
+#include <boost/range/adaptor/reversed.hpp>
 #include <iostream>
 #include <unordered_set>
 
@@ -45,6 +46,18 @@ public:
 
 PrintingFailureLogger::PrintingFailureLogger(std::ostream& os) : os(&os) {}
 
+static void print_context_backtrace(std::ostream& os, const Context& ctx) {
+  size_t i = 0;
+  const auto& stack = ctx.stack();
+
+  for (const auto& frame : boost::adaptors::reverse(stack)) {
+    llvm::Function* func = frame.current_block->getParent();
+
+    os << "  #" << i << " " << func->getName().str() << "\n";
+    i += 1;
+  }
+}
+
 void PrintingFailureLogger::log_failure(const Model& model, const Context& ctx,
                                         const Failure& failure) {
   CAFFEINE_ASSERT(model.result() == SolverResult::SAT);
@@ -57,6 +70,9 @@ void PrintingFailureLogger::log_failure(const Model& model, const Context& ctx,
     printer.visit(*assertion.value());
   }
   printer.visit(*failure.check.value());
+
+  *os << "Backtrace:\n";
+  print_context_backtrace(*os, ctx);
 
   *os << std::flush;
 }
