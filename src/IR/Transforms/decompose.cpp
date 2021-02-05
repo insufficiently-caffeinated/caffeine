@@ -1,7 +1,7 @@
 
-#include "caffeine/IR/Transforms.h"
 #include "caffeine/IR/Assertion.h"
 #include "caffeine/IR/Matching.h"
+#include "caffeine/IR/Transforms.h"
 
 namespace caffeine::transforms {
 
