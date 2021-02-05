@@ -287,7 +287,8 @@ Assertion MemHeap::check_valid(const Pointer& ptr, uint32_t width) {
   return check_valid(ptr, ConstantInt::Create(llvm::APInt(
                               ptr.offset()->type().bitwidth(), width)));
 }
-Assertion MemHeap::check_valid(const Pointer& ptr, const ref<Operation>& width) {
+Assertion MemHeap::check_valid(const Pointer& ptr,
+                               const ref<Operation>& width) {
   /**
    * Implementation note: When checking that the end of the read is within the
    * allocation we check ptr < alloc + (size - width) instead of checking ptr +
