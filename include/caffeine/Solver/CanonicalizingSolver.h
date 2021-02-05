@@ -23,9 +23,6 @@ public:
 
   std::unique_ptr<Model> resolve(std::vector<Assertion>& assertions,
                                  const Assertion& extra) override;
-
-private:
-  void canonicalize_all(std::vector<Assertion>& assertions);
 };
 
 } // namespace caffeine
