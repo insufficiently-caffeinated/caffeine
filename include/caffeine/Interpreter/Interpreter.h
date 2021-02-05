@@ -84,6 +84,7 @@ public:
   ExecutionResult visitAllocaInst(llvm::AllocaInst& inst);
 
   ExecutionResult visitMemCpyInst(llvm::MemCpyInst& memcpy);
+  ExecutionResult visitMemMoveInst(llvm::MemMoveInst& memmove);
 
 private:
   ExecutionResult visitExternFunc(llvm::CallInst& inst);

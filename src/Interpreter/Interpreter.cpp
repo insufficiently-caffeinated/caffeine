@@ -895,11 +895,20 @@ ExecutionResult Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {
 ExecutionResult Interpreter::visitMemCpyInst(llvm::MemCpyInst& memcpy) {
   // memcpy is implemented by a C function within the builtins library so we
   // just forward the call to that.
-  auto memcpy_fn = memcpy.getModule()->getFunction("caffeine_builtin_memcpy");
-  CAFFEINE_ASSERT(memcpy_fn);
-  memcpy.setCalledFunction(memcpy_fn);
+  auto func = memcpy.getModule()->getFunction("caffeine_builtin_memcpy");
+  CAFFEINE_ASSERT(func);
+  memcpy.setCalledFunction(func);
 
   return visitCall(memcpy);
+}
+ExecutionResult Interpreter::visitMemMoveInst(llvm::MemMoveInst& memmove) {
+  // memmove is implemented by a C function within the builtins library so we
+  // just forward the call to that.
+  auto func = memmove.getModule()->getFunction("caffeine_builtin_memmove");
+  CAFFEINE_ASSERT(func);
+  memmove.setCalledFunction(func);
+
+  return visitCall(memmove);
 }
 
 /***************************************************
