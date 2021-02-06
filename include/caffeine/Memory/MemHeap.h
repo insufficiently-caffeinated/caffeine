@@ -80,6 +80,8 @@ public:
    * given width would be a valid inbounds read.
    */
   Assertion check_inbounds(const ref<Operation>& offset, uint32_t width) const;
+  Assertion check_inbounds(const ref<Operation>& offset,
+                           const ref<Operation>& width) const;
 
   /**
    * Read the specified type from the allocation at the given offset.
@@ -216,6 +218,7 @@ public:
    * assertion that the pointer points within one of them.
    */
   Assertion check_valid(const Pointer& value, uint32_t width);
+  Assertion check_valid(const Pointer& value, const ref<Operation>& offset);
 
   /**
    * Get an assertion that checks whether the provided pointer points to the
