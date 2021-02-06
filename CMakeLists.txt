@@ -9,7 +9,8 @@ option(CAFFEINE_ENABLE_TESTS  "Enable test targets" ON)
 option(CAFFEINE_ENABLE_FORMAT "Enable formatting targets" ON)
 
 # Optimization settings
-option(CAFFEINE_ENABLE_LTO    "Enable link-time-optimizations" OFF)
+set(CAFFEINE_ENABLE_LTO OFF CACHE STRING "Enable link-time-optimizations. Valid values: ON, OFF, FULL, THIN")
+set(CAFFEINE_USE_LINKER ""  CACHE STRING "Add -fuse-ld={name} to the link invocation.")
 
 # Options used within CI but not really useful anywhere else
 option(CAFFEINE_CI            "Enable options that are inconvenient for normal development but are used in CI" OFF)
@@ -50,6 +51,7 @@ if (CAFFEINE_ENABLE_BUILD)
   find_package(fmt REQUIRED)
 
   include(CaffeineWarnings)
+  include(CaffeineLinking)
   include(LLVMIRUtils)
 
   if (CAFFEINE_ENABLE_TESTS)
