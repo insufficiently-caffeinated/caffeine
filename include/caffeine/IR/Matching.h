@@ -71,8 +71,8 @@ namespace matching {
     ref<Operation>* output;
 
   public:
-    RefOperationMatcher(ref<Operation>& output) : output(&output) {}
-    RefOperationMatcher(ref<Operation>* output) : output(output) {}
+    explicit RefOperationMatcher(ref<Operation>& output) : output(&output) {}
+    explicit RefOperationMatcher(ref<Operation>* output) : output(output) {}
 
     bool matches(const ref<Operation>&) const {
       return true;
@@ -169,7 +169,7 @@ namespace matching {
 
   public:
     template <typename T>
-    UnaryOpMatcher(T&& inner) : inner(std::forward<T>(inner)) {}
+    explicit UnaryOpMatcher(T&& inner) : inner(std::forward<T>(inner)) {}
 
     bool matches(const ref<Operation>& op) const {
       if (op->opcode() != static_cast<uint16_t>(opcode))
@@ -193,8 +193,8 @@ namespace matching {
 
   public:
     OpClassMatcher() = default;
-    OpClassMatcher(ref<Operation>& cap) : capture(&cap) {}
-    OpClassMatcher(ref<Operation>* cap) : capture(cap) {}
+    explicit OpClassMatcher(ref<Operation>& cap) : capture(&cap) {}
+    explicit OpClassMatcher(ref<Operation>* cap) : capture(cap) {}
 
     bool matches(const ref<Operation>& op) const {
       return llvm::isa<OpClass>(op.get());
