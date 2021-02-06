@@ -1,6 +1,4 @@
 
-include(testutils)
-
 # Add a regression test case. Regression test files are named
 # according to the following convention:
 #

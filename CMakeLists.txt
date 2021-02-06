@@ -30,9 +30,10 @@ set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED TRUE)
 
 if (CAFFEINE_CI)
-  set(CAFFEINE_WARN ERROR)
+  # We want CI do error out if something is not found
+  set(CAFFEINE_WARNING ERROR)
 else()
-  set(CAFFEINE_WARN WARNING)
+  set(CAFFEINE_WARNING WARNING)
 endif()
 
 set(CAFFEINE_FMTONLY OFF CACHE BOOL "Avoid building the project itself")
@@ -46,7 +47,7 @@ if (CAFFEINE_ENABLE_BUILD)
   find_package(Boost REQUIRED)
   find_package(fmt REQUIRED)
 
-  include(setup-warnings)
+  include(CaffeineWarnings)
   include(LLVMIRUtils)
 
   if (CAFFEINE_ENABLE_TESTS)
@@ -65,13 +66,13 @@ endif()
 find_program(CLANG_FORMAT clang-format)
 if (CLANG_FORMAT STREQUAL "CLANG_FORMAT-NOTFOUND")
   message(
-    ${CAFFEINE_WARN} 
+    ${CAFFEINE_WARNING} 
     "Unable to find clang-format. " 
     "Formatting target will not be configured. "
     "Specify CLANG_FORMAT to re-enable formatting."
   )
 else()
-  include(formatting)
+  include(CaffeineFormatting)
 endif()
 
 # This is only supported for cmake >= 3.17
