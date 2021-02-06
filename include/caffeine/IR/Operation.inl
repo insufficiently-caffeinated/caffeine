@@ -209,6 +209,12 @@ inline const ref<Operation>& Operation::operand_at(size_t idx) const {
   return std::get<OpVec>(inner_)[idx];
 }
 
+inline ref<Operation> Operation::into_ref() const {
+  if (refcnt() == 0)
+    return make_ref<Operation>(*this);
+  return ref<Operation>(const_cast<Operation*>(this));
+}
+
 /***************************************************
  * Constant                                        *
  ***************************************************/

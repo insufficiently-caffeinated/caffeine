@@ -258,7 +258,7 @@ protected:
   Operation(Opcode op, Type t, const Inner& inner);
   Operation(Opcode op, Type t, Inner&& inner);
 
-  Operation(Opcode op, Type t, ref<Operation>* operands);
+  Operation(Opcode op, Type t, const ref<Operation>* operands);
 
   Operation(Opcode op, Type t, const ref<Operation>& op0);
   Operation(Opcode op, Type t, const ref<Operation>& op0,
@@ -303,6 +303,12 @@ public:
   ref<Operation> as_ref();
   ref<const Operation> as_ref() const;
 
+  /**
+   * Get this operation as a ref, or create a new ref with a copy if it isn't
+   * already a reference.
+   */
+  ref<Operation> into_ref() const;
+
   typedef detail::double_deref_iterator<ref<Operation>> operand_iterator;
   typedef detail::double_deref_iterator<const ref<Operation>>
       const_operand_iterator;
@@ -323,6 +329,13 @@ public:
   bool is() const {
     return llvm::isa<T>(*this);
   }
+
+  /**
+   * Create a new operation using the same opcode as the current one but with
+   * new operands.
+   */
+  ref<Operation>
+  with_new_operands(llvm::ArrayRef<ref<Operation>> operands) const;
 
   /**
    * Accessors to operand references.
