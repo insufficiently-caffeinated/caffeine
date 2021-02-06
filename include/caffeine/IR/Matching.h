@@ -50,6 +50,20 @@ namespace matching {
    */
 
   /**
+   * Matches any expression node.
+   *
+   * This is more or less the simplest possible matcher.
+   */
+  struct Any {
+    Any() = default;
+
+    bool matches(const ref<Operation>&) const {
+      return true;
+    }
+    void on_match(const ref<Operation>&) const {}
+  };
+
+  /**
    * Matcher to capture an expression tree node.
    */
   struct RefOperationMatcher {
@@ -112,20 +126,6 @@ namespace matching {
     T
   >::type;
   // clang-format on
-
-  /**
-   * Matches any expression node.
-   *
-   * This is more or less the simplest possible matcher.
-   */
-  struct Any {
-    Any() = default;
-
-    bool matches(const ref<Operation>&) const {
-      return true;
-    }
-    void on_match(const ref<Operation>&) const {}
-  };
 
   /**
    * Match a binary operation with a defined opcode.
