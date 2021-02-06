@@ -32,7 +32,7 @@ if (NOT CAFFEINE_FMTONLY)
 
   add_subdirectory(src)
   add_subdirectory(test)
-  add_subdirectory(interface)
+  add_subdirectory(libraries)
 
 else()
   if (CLANG_FORMAT STREQUAL "CLANG_FORMAT-NOTFOUND")
