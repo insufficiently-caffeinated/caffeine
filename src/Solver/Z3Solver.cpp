@@ -149,17 +149,6 @@ static z3::sort type_to_sort(z3::context& ctx, const Type& type) {
   CAFFEINE_UNREACHABLE();
 }
 
-class EmptyModel : public Model {
-public:
-  EmptyModel(SolverResult result) : Model(result) {
-    CAFFEINE_ASSERT(result != SolverResult::SAT);
-  }
-
-  Value lookup(const Constant&) const override {
-    CAFFEINE_ABORT("Model was empty");
-  }
-};
-
 /***************************************************
  * Z3Model                                         *
  ***************************************************/
