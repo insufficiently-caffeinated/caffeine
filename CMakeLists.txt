@@ -30,7 +30,9 @@ set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED TRUE)
 
 if (CAFFEINE_CI)
-  # We want CI do error out if something is not found
+  # Normally these should be non-critical warnings (e.g. something that the
+  # user can resolve by passing additional flags). However in CI we can't do
+  # that so we want them to error out.
   set(CAFFEINE_WARNING ERROR)
 else()
   set(CAFFEINE_WARNING WARNING)
