@@ -55,7 +55,6 @@ if (CAFFEINE_ENABLE_BUILD)
   endif()
 
   add_subdirectory(src)
-  add_subdirectory(test)
   add_subdirectory(libraries)
 
   if (CAFFEINE_ENABLE_TESTS)
