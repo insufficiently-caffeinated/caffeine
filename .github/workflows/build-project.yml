@@ -13,7 +13,7 @@ jobs:
       - name: Configure
         run: |
           mkdir -p build
-          cmake -B build
+          cmake -B build -DCAFFEINE_CI=ON
 
       - name: Build
         run: cmake --build "build" -j$(nproc)

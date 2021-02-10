@@ -19,11 +19,11 @@ if (MSVC)
   # Some code within LLVM triggers this. It's not something we can fix so
   # better to silence the warning than have it drown everything out.
   add_compile_definitions(_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS=1)
-elseif(UNIX)
+else()
   if (CMAKE_GENERATOR STREQUAL "Ninja")
     # By default error messages are emitted without colour when compiling
     # with Ninja. This turns on coloured diagnostics by default.
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
       add_compile_options(-fdiagnostics-color=always)
     elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
       add_compile_options(-fcolor-diagnostics)
@@ -31,9 +31,11 @@ elseif(UNIX)
   endif()
 
   # Add more warnings here as we identify those we want
-  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     add_compile_options(-Wall -Wextra)
-  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    add_compile_options(-Wall -Wextra)
+
+    if (CAFFEINE_CI)
+      add_compile_options(-Werror)
+    endif()
   endif()
 endif()
