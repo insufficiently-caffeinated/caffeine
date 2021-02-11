@@ -23,3 +23,4 @@ add_subdirectory(run-fail)
 add_subdirectory(regression)
 
 add_executable(skip-test skip-test.cpp)
+target_link_options(skip-test PRIVATE ${LINK_FLAGS})
