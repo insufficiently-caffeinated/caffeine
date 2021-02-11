@@ -25,7 +25,7 @@ static void assert_valid_arg(llvm::Type* type) {
 
 Context::Context(llvm::Function* function, std::shared_ptr<Solver> solver)
     : solver_(std::move(solver)), module_(function->front().getModule()) {
-  stack.emplace_back(function);
+  stack_.emplace_back(function);
   StackFrame& frame = stack_top();
 
   size_t i = 0;
@@ -49,25 +49,29 @@ Context Context::fork() const {
 }
 
 const StackFrame& Context::stack_top() const {
-  CAFFEINE_ASSERT(!stack.empty());
-  return stack.back();
+  CAFFEINE_ASSERT(!stack_.empty());
+  return stack_.back();
 }
 
 StackFrame& Context::stack_top() {
-  CAFFEINE_ASSERT(!stack.empty());
-  return stack.back();
+  CAFFEINE_ASSERT(!stack_.empty());
+  return stack_.back();
+}
+
+const std::vector<StackFrame>& Context::stack() const {
+  return stack_;
 }
 
 void Context::push(const StackFrame& frame) {
-  stack.push_back(frame);
+  stack_.push_back(frame);
 }
 void Context::push(StackFrame&& frame) {
-  stack.push_back(frame);
+  stack_.push_back(frame);
 }
 void Context::pop() {
-  CAFFEINE_ASSERT(!stack.empty());
+  CAFFEINE_ASSERT(!stack_.empty());
 
-  auto& frame = stack.back();
+  auto& frame = stack_.back();
   for (auto allocid : frame.allocations) {
     CAFFEINE_ASSERT(heap()[allocid].kind() == AllocationKind::Alloca,
                     "found non-stack allocation on the stack");
@@ -75,11 +79,11 @@ void Context::pop() {
     heap().deallocate(allocid);
   }
 
-  stack.pop_back();
+  stack_.pop_back();
 }
 
 bool Context::empty() const {
-  return stack.empty();
+  return stack_.empty();
 }
 
 std::shared_ptr<Solver> Context::solver() const {

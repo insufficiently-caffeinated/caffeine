@@ -21,7 +21,7 @@ namespace caffeine {
 
 class Context {
 private:
-  std::vector<StackFrame> stack;
+  std::vector<StackFrame> stack_;
   // The current set of invariants for this context
   std::vector<Assertion> assertions_;
   std::unordered_map<llvm::GlobalVariable*, ContextValue> globals_;
@@ -48,6 +48,8 @@ public:
    */
   const StackFrame& stack_top() const;
   StackFrame& stack_top();
+
+  const std::vector<StackFrame>& stack() const;
 
   // Utility methods for adding/removing stack frames
   /**
