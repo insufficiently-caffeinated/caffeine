@@ -83,6 +83,9 @@ public:
   ExecutionResult visitShuffleVectorInst(llvm::ShuffleVectorInst& inst);
   ExecutionResult visitAllocaInst(llvm::AllocaInst& inst);
 
+  ExecutionResult visitMemCpyInst(llvm::MemCpyInst& memcpy);
+  ExecutionResult visitMemMoveInst(llvm::MemMoveInst& memmove);
+
 private:
   ExecutionResult visitExternFunc(llvm::CallInst& inst);
 
@@ -92,6 +95,8 @@ private:
   ExecutionResult visitMalloc(llvm::CallInst& inst);
   ExecutionResult visitCalloc(llvm::CallInst& inst);
   ExecutionResult visitFree(llvm::CallInst& inst);
+
+  ExecutionResult visitBuiltinResolve(llvm::CallInst& inst);
 };
 
 } // namespace caffeine
