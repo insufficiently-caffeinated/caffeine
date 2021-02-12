@@ -27,10 +27,10 @@ foreach(OBJ ${PROC_OBJECTS})
   if("${ext}" STREQUAL ".ll" OR "${ext}" STREQUAL ".bc")
     list(APPEND OBJECTS "${OBJ}")
   else()
-    list(APPEND OBJECTS "${OBJ}.ll")
+    list(APPEND OBJECTS "${OBJ}${OBJ_EXT}")
 
     execute_process(
-      COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${OBJ}" "${OBJ}.ll"
+      COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${OBJ}" "${OBJ}${OBJ_EXT}"
       RESULT_VARIABLE EXITVAL
     )
 
