@@ -313,9 +313,9 @@ public:
   typedef detail::double_deref_iterator<const ref<Operation>>
       const_operand_iterator;
 
-  size_t num_operands() const;
-  llvm::iterator_range<operand_iterator> operands();
-  llvm::iterator_range<const_operand_iterator> operands() const;
+  virtual size_t num_operands() const;
+  virtual llvm::iterator_range<operand_iterator> operands();
+  virtual llvm::iterator_range<const_operand_iterator> operands() const;
 
   Operation& operator[](size_t idx);
   const Operation& operator[](size_t idx) const;
@@ -334,14 +334,14 @@ public:
    * Create a new operation using the same opcode as the current one but with
    * new operands.
    */
-  ref<Operation>
+  virtual ref<Operation>
   with_new_operands(llvm::ArrayRef<ref<Operation>> operands) const;
 
   /**
    * Accessors to operand references.
    */
-  ref<Operation>& operand_at(size_t idx);
-  const ref<Operation>& operand_at(size_t idx) const;
+  virtual ref<Operation>& operand_at(size_t idx);
+  virtual const ref<Operation>& operand_at(size_t idx) const;
 
   // Need to define this since refcount shouldn't be copied/moved.
   Operation(const Operation& op);
@@ -763,13 +763,24 @@ public:
 /**
  * An array with symbolic contents but a fixed size.
  */
-class FixedArray : public ArrayBase {
+class FixedArray final : public ArrayBase {
 private:
   FixedArray(Type t, const PersistentArray<ref<Operation>>& data);
 
 public:
+  PersistentArray<ref<Operation>>& data();
   const PersistentArray<ref<Operation>>& data() const;
   ref<Operation> size() const override;
+
+  size_t num_operands() const override;
+  llvm::iterator_range<operand_iterator> operands() override;
+  llvm::iterator_range<const_operand_iterator> operands() const override;
+
+  ref<Operation>
+  with_new_operands(llvm::ArrayRef<ref<Operation>> operands) const override;
+
+  ref<Operation>& operand_at(size_t i) override;
+  const ref<Operation>& operand_at(size_t i) const override;
 
   static ref<Operation> Create(Type index_ty,
                                const PersistentArray<ref<Operation>>& data);

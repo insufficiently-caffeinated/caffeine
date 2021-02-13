@@ -1238,6 +1238,39 @@ ref<Operation> Undef::Create(const Type& t) {
 FixedArray::FixedArray(Type t, const PersistentArray<ref<Operation>>& data)
     : ArrayBase(Operation::FixedArray, t, data) {}
 
+llvm::iterator_range<Operation::operand_iterator> FixedArray::operands() {
+  auto array = data().vec();
+  auto range = llvm::iterator_range<operand_iterator>(
+      array.data(), array.data() + array.size());
+
+  data() = PersistentArray<ref<Operation>>(std::move(array));
+  return range;
+}
+llvm::iterator_range<Operation::const_operand_iterator>
+FixedArray::operands() const {
+  data().reroot();
+
+  const auto& array = *data().underlying_vec();
+  return llvm::iterator_range<const_operand_iterator>(
+      array.data(), array.data() + array.size());
+}
+
+ref<Operation>
+FixedArray::with_new_operands(llvm::ArrayRef<ref<Operation>> operands) const {
+  CAFFEINE_ASSERT(operands.size() == num_operands());
+
+  if (num_operands() == 0)
+    return into_ref();
+
+  bool equal = std::equal(std::begin(operands), std::end(operands),
+                          std::begin(data()), std::end(data()));
+
+  if (equal)
+    return into_ref();
+
+  return ref<Operation>(new FixedArray(type(), operands.vec()));
+}
+
 ref<Operation> FixedArray::Create(Type index_ty,
                                   const PersistentArray<ref<Operation>>& data) {
   CAFFEINE_ASSERT(index_ty.is_int());

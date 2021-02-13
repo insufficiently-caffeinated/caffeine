@@ -145,6 +145,9 @@ inline uint32_t Operation::refcnt() const {
 }
 
 inline size_t Operation::num_operands() const {
+  if (const auto* array = llvm::dyn_cast<caffeine::FixedArray>(this))
+    return array->size();
+
   return detail::opcode_nargs(opcode_);
 }
 
@@ -395,12 +398,26 @@ inline const ref<Operation>& StoreOp::value() const {
 /***************************************************
  * FixedArray                                      *
  ***************************************************/
+inline PersistentArray<ref<Operation>>& FixedArray::data() {
+  return std::get<PersistentArray<ref<Operation>>>(inner_);
+}
 inline const PersistentArray<ref<Operation>>& FixedArray::data() const {
   return std::get<PersistentArray<ref<Operation>>>(inner_);
 }
 
 inline ref<Operation> FixedArray::size() const {
   return ConstantInt::Create(llvm::APInt(type().bitwidth(), data().size()));
+}
+
+inline size_t FixedArray::num_operands() const {
+  return data().size();
+}
+
+inline ref<Operation>& FixedArray::operand_at(size_t i) {
+  return std::get<PersistentArray<ref<Operation>>>(inner_).element_reference(i);
+}
+inline const ref<Operation>& FixedArray::operand_at(size_t i) const {
+  return data().get(i);
 }
 
 /***************************************************
