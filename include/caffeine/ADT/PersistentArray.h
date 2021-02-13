@@ -165,7 +165,20 @@ public:
     return data_->get(i);
   }
 
-  /// Copy the elements within this PersistenVector to a std::vector.
+  /**
+   * Reroot the underlying data array to the version pointed to by the current
+   * reference.
+   *
+   * Semantically this doesn't change the value of the array but it does affect
+   * the inner representation.
+   */
+  void reroot() const {
+    if (data_) {
+      const_cast<Node*>(data_.get())->reroot();
+    }
+  }
+
+  /// Copy the elements within this PersistentVector to a std::vector.
   std::vector<T> vec() const {
     return std::vector<T>(begin(), end());
   }
@@ -187,6 +200,17 @@ public:
     return std::move(std::get<Node::Base>(inner->data));
   }
 
+  /**
+   * If available, access the underlying vector of this PersistentArray. Returns
+   * nullptr otherwise.
+   */
+  const std::vector<T>* underlying_vec() const {
+    if (!data_)
+      return nullptr;
+
+    return std::get_if<Node::Base>(&data_->data);
+  }
+
   const T& operator[](size_t i) const {
     return get(i);
   }
@@ -195,6 +219,16 @@ public:
       throw_out_of_range(i);
 
     return ElementAccessor(this, i);
+  }
+
+  /**
+   * Get a modifiable reference to an element. Multiple references can be
+   * acquired at a single time but requesting the same reference twice will not
+   * necessarily result in getting the a reference to the same location.
+   */
+  T& element_reference(size_t i) {
+    data_ = make_ref<Node>(data_, i, get(i));
+    return std::get<Node::Diff>(data_->data).value;
   }
 
   bool operator==(const PersistentArray<T>& array) const {
@@ -285,11 +319,6 @@ private:
 
   [[noreturn]] void throw_out_of_range(size_t i) const {
     detail::throw_out_of_bounds(i, size());
-  }
-
-  void reroot() {
-    if (data_)
-      data_->reroot();
   }
 
 public:
