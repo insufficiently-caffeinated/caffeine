@@ -131,6 +131,7 @@ std::string_view Operation::opcode_name() const {
   return opcode_name(static_cast<Opcode>(opcode()));
 }
 std::string_view Operation::opcode_name(Opcode op) {
+#ifdef MAGIC_ENUM_SUPPORTED
   std::string_view name = magic_enum::enum_name(op);
 
   if (name.empty())
@@ -142,6 +143,9 @@ std::string_view Operation::opcode_name(Opcode op) {
     return "FCmp";
 
   return name;
+#else
+  return "<unsupported>";
+#endif
 }
 
 template <typename T, typename... Ts>
