@@ -137,7 +137,6 @@ const char* Operation::opcode_name(Opcode op) {
   case ConstantNamed: return "Constant";
   case ConstantInt:   return "ConstantInt";
   case ConstantFloat: return "ConstantFloat";
-  case ConstantArray: return "ConstantArray";
   case Undef:         return "Undef";
 
   case Add:   return "Add";
