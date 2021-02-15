@@ -27,9 +27,6 @@ public:
   Value visitConstantFloat(const ConstantFloat& op) {
     return op.value();
   }
-  Value visitConstantArray(const ConstantArray& op) {
-    return Value(op.data(), Type::int_ty(op.type().bitwidth()));
-  }
   Value visitFixedArray(const FixedArray& op) {
     auto size_val = op.size();
     uint64_t size = visit(*size_val).apint().getLimitedValue();
