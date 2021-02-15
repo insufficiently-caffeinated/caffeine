@@ -397,17 +397,10 @@ ref<Operation> matches_anywhere(const ref<Operation>& op,
 
   // Special case for FixedArray since its elements aren't reported in
   // num_operands.
-  if (const auto* array = llvm::dyn_cast<FixedArray>(op.get())) {
-    for (const auto& elem : array->data()) {
-      if (auto match = matches_anywhere(elem, matcher))
-        return match;
-    }
-  } else {
-    size_t nops = op->num_operands();
-    for (size_t i = 0; i < nops; ++i) {
-      if (auto match = matches_anywhere(op->operand_at(i), matcher))
-        return match;
-    }
+  size_t nops = op->num_operands();
+  for (size_t i = 0; i < nops; ++i) {
+    if (auto match = matches_anywhere(op->operand_at(i), matcher))
+      return match;
   }
 
   return nullptr;
