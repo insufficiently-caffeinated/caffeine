@@ -232,7 +232,7 @@ protected:
   using OpVec = boost::container::static_vector<ref<Operation>, 3>;
   using Inner =
       std::variant<std::monostate, OpVec, llvm::APInt, llvm::APFloat, uint64_t,
-                   std::string, SharedArray, PersistentArray<ref<Operation>>>;
+                   std::string, PersistentArray<ref<Operation>>>;
 
   uint16_t opcode_;
   uint16_t dummy_ = 0; // Unused, used for padding
