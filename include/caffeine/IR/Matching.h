@@ -288,7 +288,6 @@ namespace matching {
 
   CAFFEINE_DECL_ZEROOP_MATCHER(ConstantInt, caffeine::ConstantInt);
   CAFFEINE_DECL_ZEROOP_MATCHER(ConstantFloat, caffeine::ConstantFloat);
-  CAFFEINE_DECL_ZEROOP_MATCHER(ConstantArray, caffeine::ConstantArray);
   CAFFEINE_DECL_ZEROOP_MATCHER(Constant, caffeine::Constant);
 
 #undef CAFFEINE_DECL_UNOP_MATCHER
