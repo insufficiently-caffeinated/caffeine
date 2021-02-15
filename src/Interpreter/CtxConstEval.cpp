@@ -275,7 +275,14 @@ static ref<Operation> evaluate_global_data(ContextType ctx,
     auto raw = data->getRawDataValues();
     auto idxty = Type::int_ty(layout.getPointerSizeInBits());
 
-    return ConstantArray::Create(idxty, SharedArray(raw.data(), raw.size()));
+    std::vector<ref<Operation>> values;
+    values.reserve(raw.size());
+
+    for (size_t i = 0; i < raw.size(); ++i) {
+      values.push_back(ConstantInt::Create(llvm::APInt(8, (uint8_t)raw[i])));
+    }
+
+    return FixedArray::Create(idxty, std::move(values));
   }
 
   if (auto* data = llvm::dyn_cast<llvm::ConstantAggregateZero>(constant)) {
