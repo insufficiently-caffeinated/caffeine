@@ -367,35 +367,6 @@ ref<Operation> ConstantFloat::Create(double value) {
 }
 
 /***************************************************
- * ConstantArray                                   *
- ***************************************************/
-ConstantArray::ConstantArray(Type t, const SharedArray& array)
-    : ArrayBase(Opcode::ConstantArray, t, array) {}
-ConstantArray::ConstantArray(Type t, SharedArray&& array)
-    : ArrayBase(Opcode::ConstantArray, t, std::move(array)) {}
-
-ref<Operation> ConstantArray::Create(Type index_ty, const SharedArray& array) {
-  CAFFEINE_ASSERT(index_ty.is_int(),
-                  "Arrays cannot be indexed by non-integer types");
-  CAFFEINE_ASSERT(
-      index_ty.bitwidth() >= ilog2(array.size()),
-      "Index bitwidth is not large enough to address entire constant array");
-
-  return ref<Operation>(
-      new ConstantArray(Type::array_ty(index_ty.bitwidth()), array));
-}
-ref<Operation> ConstantArray::Create(Type index_ty, SharedArray&& array) {
-  CAFFEINE_ASSERT(index_ty.is_int(),
-                  "Arrays cannot be indexed by non-integer types");
-  CAFFEINE_ASSERT(
-      index_ty.bitwidth() >= ilog2(array.size()),
-      "Index bitwidth is not large enough to address entire constant array");
-
-  return ref<Operation>(
-      new ConstantArray(Type::array_ty(index_ty.bitwidth()), std::move(array)));
-}
-
-/***************************************************
  * BinaryOp                                        *
  ***************************************************/
 BinaryOp::BinaryOp(Opcode op, Type t, const ref<Operation>& lhs,

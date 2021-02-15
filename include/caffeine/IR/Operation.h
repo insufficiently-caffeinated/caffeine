@@ -128,7 +128,7 @@ public:
     ConstantNumbered = detail::opcode(1, 0, 1),
     ConstantInt = detail::opcode(1, 0, 5),
     ConstantFloat = detail::opcode(1, 0, 6),
-    ConstantArray = detail::opcode(1, 0, 7),
+
     /**
      * An unnamed symbolic constant that can have any value whenever it is
      * used. Has the same semantics as LLVM's undef.
@@ -215,7 +215,7 @@ public:
      * Create a new symbolic array that is filled with a default value.
      *
      * This is mean to be used for malloc and alloca. Constant arrays with
-     * prefilled data should use ConstantArray instead.
+     * prefilled data should use FixedArray instead.
      */
     Alloc = detail::opcode(21, 2, 0),
     /**
@@ -451,24 +451,6 @@ public:
   static ref<Operation> Create(const llvm::APFloat& fconst);
   static ref<Operation> Create(llvm::APFloat&& fconst);
   static ref<Operation> Create(double value);
-
-  static bool classof(const Operation* op);
-};
-
-/**
- * Constant byte array.
- */
-class ConstantArray : public ArrayBase {
-private:
-  ConstantArray(Type t, const SharedArray& array);
-  ConstantArray(Type t, SharedArray&& array);
-
-public:
-  ref<Operation> size() const override;
-  const SharedArray& data() const;
-
-  static ref<Operation> Create(Type index_ty, const SharedArray& array);
-  static ref<Operation> Create(Type index_ty, SharedArray&& array);
 
   static bool classof(const Operation* op);
 };
