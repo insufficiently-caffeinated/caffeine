@@ -106,6 +106,8 @@ public:
   friend llvm::hash_code hash_value(const Symbol& symbol);
 };
 
+std::ostream& operator<<(std::ostream& os, const Symbol& symbol);
+
 /**
  * An individual expression node.
  *

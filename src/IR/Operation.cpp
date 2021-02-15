@@ -232,6 +232,15 @@ std::ostream& operator<<(std::ostream& os, const Operation& op) {
 }
 
 /***************************************************
+ * Symbol                                          *
+ ***************************************************/
+std::ostream& operator<<(std::ostream& os, const Symbol& symbol) {
+  if (symbol.is_named())
+    return os << symbol.name();
+  return os << symbol.number();
+}
+
+/***************************************************
  * Constant                                        *
  ***************************************************/
 Constant::Constant(Type t, const Symbol& symbol)
