@@ -15,6 +15,28 @@
 
 namespace caffeine {
 
+namespace detail {
+  void CopyVTablePtr::copy_from(const CopyVTablePtr& base) noexcept {
+    std::memcpy((void*)this, (const void*)&base, sizeof(*this));
+  }
+
+  CopyVTablePtr::CopyVTablePtr(const CopyVTablePtr& base) noexcept {
+    copy_from(base);
+  }
+  CopyVTablePtr::CopyVTablePtr(CopyVTablePtr&& base) noexcept {
+    copy_from(base);
+  }
+
+  CopyVTablePtr& CopyVTablePtr::operator=(const CopyVTablePtr& base) noexcept {
+    copy_from(base);
+    return *this;
+  }
+  CopyVTablePtr& CopyVTablePtr::operator=(CopyVTablePtr&& base) noexcept {
+    copy_from(base);
+    return *this;
+  }
+} // namespace detail
+
 #define ASSERT_SAME_TYPES(v1, v2)                                              \
   CAFFEINE_ASSERT((v1)->type() == (v2)->type(),                                \
                   fmt::format("arguments had different types: {} != {}",       \
