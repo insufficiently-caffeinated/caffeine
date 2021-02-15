@@ -81,7 +81,6 @@ void canonicalize(std::vector<Assertion>& assertions) {
           [](const Assertion& a) { return a.is_constant_value(false); })) {
     assertions.clear();
     assertions.push_back(Assertion(ConstantInt::Create(false)));
-    return;
   }
 }
 
