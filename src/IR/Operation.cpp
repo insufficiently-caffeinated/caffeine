@@ -1242,6 +1242,9 @@ FixedArray::FixedArray(Type t, const PersistentArray<ref<Operation>>& data)
 ref<Operation> FixedArray::Create(Type index_ty,
                                   const PersistentArray<ref<Operation>>& data) {
   CAFFEINE_ASSERT(index_ty.is_int());
+  CAFFEINE_ASSERT(
+      index_ty.bitwidth() >= ilog2(data.size()),
+      "Index bitwidth is not large enough to address entire constant array");
 
   return ref<Operation>(
       new FixedArray(Type::array_ty(index_ty.bitwidth()), data));
