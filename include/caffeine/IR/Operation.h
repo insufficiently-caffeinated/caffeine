@@ -11,6 +11,7 @@
 #include <llvm/ADT/APInt.h>
 #include <llvm/ADT/iterator_range.h>
 #include <llvm/Support/Casting.h>
+#include <magic_enum.hpp>
 
 #include "caffeine/ADT/PersistentArray.h"
 #include "caffeine/ADT/Ref.h"
@@ -226,6 +227,9 @@ public:
      * Load a byte from a position within an array.
      */
     Load = detail::opcode(21, 2, 2),
+
+    // This one should be last
+    OpLast
   };
 
 protected:
@@ -283,8 +287,8 @@ public:
 
   // Get a static string that contains the opcode name. Returns "Unknown" on
   // unknown opcode.
-  const char* opcode_name() const;
-  static const char* opcode_name(Opcode op);
+  std::string_view opcode_name() const;
+  static std::string_view opcode_name(Opcode op);
 
   // Read-only access to the refcount. If this is 0 then this is not a
   // reference-counted Operation instance.

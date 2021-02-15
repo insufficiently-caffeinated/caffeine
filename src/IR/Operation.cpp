@@ -2,6 +2,7 @@
 #include "Operation.h"
 #include "caffeine/IR/Type.h"
 
+#include <boost/algorithm/string.hpp>
 #include <boost/container_hash/hash.hpp>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
@@ -126,87 +127,21 @@ Operation::with_new_operands(llvm::ArrayRef<ref<Operation>> operands) const {
       new Operation((Opcode)opcode(), type(), operands.data()));
 }
 
-const char* Operation::opcode_name() const {
+std::string_view Operation::opcode_name() const {
   return opcode_name(static_cast<Opcode>(opcode()));
 }
-const char* Operation::opcode_name(Opcode op) {
-  // clang-format off
-  switch (op) {
-  case Invalid:       return "Invalid";
-  case ConstantNumbered:
-  case ConstantNamed: return "Constant";
-  case ConstantInt:   return "ConstantInt";
-  case ConstantFloat: return "ConstantFloat";
-  case Undef:         return "Undef";
+std::string_view Operation::opcode_name(Opcode op) {
+  std::string_view name = magic_enum::enum_name(op);
 
-  case Add:   return "Add";
-  case Sub:   return "Sub";
-  case Mul:   return "Mul";
-  case UDiv:  return "UDiv";
-  case SDiv:  return "SDiv";
-  case URem:  return "URem";
-  case SRem:  return "SRem";
-  case And:   return "And";
-  case Or:    return "Or";
-  case Xor:   return "Xor";
-  case Shl:   return "Shl";
-  case LShr:  return "LShr";
-  case AShr:  return "AShr";
-  case Not:   return "Not";
+  if (name.empty())
+    return "Unknown";
 
-  case FAdd:    return "FAdd";
-  case FSub:    return "FSub";
-  case FMul:    return "FMul";
-  case FDiv:    return "FDiv";
-  case FRem:    return "FRem";
-  case FNeg:    return "FNeg";
-  case FIsNaN:  return "FIsNaN";
-
-  case Trunc:   return "Trunc";
-  case SExt:    return "SExt";
-  case ZExt:    return "ZExt";
-  case FpTrunc: return "FpTrunc";
-  case FpExt:   return "FpExt";
-  case FpToUI:  return "FpToUI";
-  case FpToSI:  return "FpToSI";
-  case UIToFp:  return "UIToFp";
-  case SIToFp:  return "SIToFp";
-  case Bitcast: return "Bitcast";
-
-  case ICmpEq:
-  case ICmpNe:
-  case ICmpUgt:
-  case ICmpUge:
-  case ICmpUlt:
-  case ICmpUle:
-  case ICmpSgt:
-  case ICmpSge:
-  case ICmpSlt:
-  case ICmpSle:
+  if (boost::algorithm::starts_with(name, "ICmp"))
     return "ICmp";
-
-  case FCmpEq:
-  case FCmpGt:
-  case FCmpGe:
-  case FCmpLt:
-  case FCmpLe:
-  case FCmpNe:
+  if (boost::algorithm::starts_with(name, "FCmp"))
     return "FCmp";
 
-  case Select: return "Select";
-  case FixedArray: return "FixedArray";
-
-  case Alloc: return "Alloc";
-  case Load:  return "Load";
-  case Store: return "Store";
-
-  // Silence warnings here
-  case UnaryOpLast:
-  case BinaryOpLast:
-    break;
-  }
-  // clang-format on
-  return "Unknown";
+  return name;
 }
 
 template <typename T, typename... Ts>
@@ -247,43 +182,25 @@ std::ostream& operator<<(std::ostream& os, const Operation& op) {
     return print_cons(os, op.type(), s);
   }
 
-  std::string name = op.opcode_name();
+  std::string name(op.opcode_name());
   std::transform(name.begin(), name.end(), name.begin(),
                  [](char c) { return std::tolower(c); });
 
   if (const auto* icmp = llvm::dyn_cast<ICmpOp>(&op)) {
-    const char* cmp = "<unknown>";
-    switch (icmp->comparison()) {
-    // clang-format off
-    case ICmpOpcode::EQ:  cmp = "eq";  break;
-    case ICmpOpcode::NE:  cmp = "ne";  break;
-    case ICmpOpcode::UGT: cmp = "ugt"; break;
-    case ICmpOpcode::UGE: cmp = "uge"; break;
-    case ICmpOpcode::ULT: cmp = "ult"; break;
-    case ICmpOpcode::ULE: cmp = "ule"; break;
-    case ICmpOpcode::SGT: cmp = "sgt"; break;
-    case ICmpOpcode::SGE: cmp = "sge"; break;
-    case ICmpOpcode::SLT: cmp = "slt"; break;
-    case ICmpOpcode::SLE: cmp = "sle"; break;
-      // clang-format on
-    }
+    std::string_view cmp = magic_enum::enum_name(icmp->comparison());
+
+    if (cmp.empty())
+      cmp = "<unknown>";
 
     name.push_back('.');
     name += cmp;
   }
 
   if (const auto* fcmp = llvm::dyn_cast<FCmpOp>(&op)) {
-    const char* cmp = "<unknown>";
-    switch (fcmp->comparison()) {
-    // clang-format off
-    case FCmpOpcode::EQ: cmp = "oeq"; break;
-    case FCmpOpcode::GT: cmp = "ogt"; break;
-    case FCmpOpcode::GE: cmp = "oge"; break;
-    case FCmpOpcode::LT: cmp = "olt"; break;
-    case FCmpOpcode::LE: cmp = "ole"; break;
-    case FCmpOpcode::NE: cmp = "one"; break;
-      // clang-format on
-    }
+    std::string_view cmp = magic_enum::enum_name(fcmp->comparison());
+
+    if (cmp.empty())
+      cmp = "<unknown>";
 
     name.push_back('.');
     name += cmp;
