@@ -234,25 +234,23 @@ std::ostream& operator<<(std::ostream& os, const Operation& op) {
 /***************************************************
  * Constant                                        *
  ***************************************************/
-Constant::Constant(Type t, const std::string& name)
-    : Operation(ConstantNamed, t, name) {}
-Constant::Constant(Type t, std::string&& name)
-    : Operation(ConstantNamed, t, std::move(name)) {}
-Constant::Constant(Type t, uint64_t number)
-    : Operation(ConstantNumbered, t, number) {}
+Constant::Constant(Type t, const Symbol& symbol)
+    : Operation(op_for_symbol(symbol), t, ConstantData(symbol, nullptr)) {}
+Constant::Constant(Type t, Symbol&& symbol)
+    : Operation(op_for_symbol(symbol), t,
+                ConstantData(std::move(symbol), nullptr)) {}
 
-ref<Operation> Constant::Create(Type t, const std::string& name) {
-  CAFFEINE_ASSERT(!name.empty(), "cannot create constant with empty name");
-
-  return ref<Operation>(new Constant(t, name));
+ref<Operation> Constant::Create(Type t, const Symbol& symbol) {
+  return ref<Operation>(new Constant(t, symbol));
 }
-ref<Operation> Constant::Create(Type t, std::string&& name) {
-  CAFFEINE_ASSERT(!name.empty(), "cannot create constant with empty name");
-
-  return ref<Operation>(new Constant(t, std::move(name)));
+ref<Operation> Constant::Create(Type t, Symbol&& symbol) {
+  return ref<Operation>(new Constant(t, std::move(symbol)));
 }
-ref<Operation> Constant::Create(Type t, uint64_t number) {
-  return ref<Operation>(new Constant(t, number));
+
+Operation::Opcode Constant::op_for_symbol(const Symbol& symbol) {
+  if (symbol.is_named())
+    return ConstantNamed;
+  return ConstantNumbered;
 }
 
 /***************************************************
@@ -1247,6 +1245,13 @@ llvm::hash_code hash_value(const Operation& op) {
         }
       },
       op.inner_);
+}
+llvm::hash_code hash_value(const Symbol& symbol) {
+  return std::visit(
+      [&](const auto& v) {
+        return llvm::hash_combine(symbol.value_.index(), v);
+      },
+      symbol.value_);
 }
 
 } // namespace caffeine

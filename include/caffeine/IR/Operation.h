@@ -71,6 +71,42 @@ enum class FCmpOpcode : uint8_t {
 };
 
 /**
+ * Identifier for a symbolic constant.
+ *
+ * It can be either a string or a number as required. Numeric symbol names are
+ * usually used for internal symbolic values such as allocations. String ones
+ * are usually used for user-specified symbolic values.
+ */
+class Symbol {
+private:
+  enum {
+    Named = 0,
+    Numbered = 1,
+  };
+
+  std::variant<std::string, uint64_t> value_;
+
+public:
+  Symbol(const std::string& name);
+  Symbol(std::string&& name);
+  Symbol(uint64_t number);
+
+  template <size_t N>
+  Symbol(const char (&name)[N]);
+
+  bool is_named() const;
+  bool is_numbered() const;
+
+  std::string_view name() const;
+  uint64_t number() const;
+
+  bool operator==(const Symbol& symbol) const;
+  bool operator!=(const Symbol& symbol) const;
+
+  friend llvm::hash_code hash_value(const Symbol& symbol);
+};
+
+/**
  * An individual expression node.
  *
  * In general, an expression node has
@@ -130,6 +166,7 @@ public:
     ConstantNumbered = detail::opcode(1, 0, 1),
     ConstantInt = detail::opcode(1, 0, 5),
     ConstantFloat = detail::opcode(1, 0, 6),
+    ConstantArray = detail::opcode(1, 1, 7),
 
     /**
      * An unnamed symbolic constant that can have any value whenever it is
@@ -234,10 +271,11 @@ public:
   };
 
 protected:
+  using ConstantData = std::pair<Symbol, ref<Operation>>;
+  using FixedData = PersistentArray<ref<Operation>>;
   using OpVec = boost::container::static_vector<ref<Operation>, 3>;
-  using Inner =
-      std::variant<std::monostate, OpVec, llvm::APInt, llvm::APFloat, uint64_t,
-                   std::string, PersistentArray<ref<Operation>>>;
+  using Inner = std::variant<std::monostate, OpVec, llvm::APInt, llvm::APFloat,
+                             FixedData, ConstantData>;
 
   uint16_t opcode_;
   uint16_t dummy_ = 0; // Unused, used for padding
@@ -258,6 +296,7 @@ protected:
   friend class ref;
 
   friend llvm::hash_code hash_value(const Operation& op);
+  friend llvm::hash_code hash_value(const ConstantData& op);
 
 protected:
   Operation(Opcode op, Type t, const Inner& inner);
@@ -399,22 +438,24 @@ public:
  */
 class Constant : public Operation {
 private:
-  Constant(Type t, const std::string& name);
-  Constant(Type t, std::string&& name);
-  Constant(Type t, uint64_t number);
+  Constant(Type t, const Symbol& symbol);
+  Constant(Type t, Symbol&& symbol);
 
 public:
+  const Symbol& symbol() const;
   std::string_view name() const;
   uint64_t number() const;
 
   bool is_numbered() const;
   bool is_named() const;
 
-  static ref<Operation> Create(Type t, const std::string& name);
-  static ref<Operation> Create(Type t, std::string&& name);
-  static ref<Operation> Create(Type t, uint64_t number);
+  static ref<Operation> Create(Type t, const Symbol& symbol);
+  static ref<Operation> Create(Type t, Symbol&& symbol);
 
   static bool classof(const Operation* op);
+
+private:
+  static Opcode op_for_symbol(const Symbol& symbol);
 };
 
 /**
