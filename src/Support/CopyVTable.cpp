@@ -4,7 +4,9 @@
 namespace caffeine {
 
 void CopyVTable::copy_vtable(const CopyVTable& base) noexcept {
-  std::memcpy((void*)this, (const void*)&base, sizeof(*this));
+  if (this != &base) {
+    std::memcpy((void*)this, (const void*)&base, sizeof(*this));
+  }
 }
 
 CopyVTable::CopyVTable(const CopyVTable& base) noexcept {
