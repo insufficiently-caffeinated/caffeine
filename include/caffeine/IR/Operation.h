@@ -119,7 +119,7 @@ enum class FCmpOpcode : uint8_t {
  *    Visitor.cpp. This may also require adding new built-in methods to the
  *    Value type.
  */
-class Operation /* : private detail::CopyVTablePtr */ {
+class Operation : private detail::CopyVTablePtr {
 protected:
   // Base opcode used for FCmp opcodes
   static constexpr uint16_t fcmp_base = 4;
