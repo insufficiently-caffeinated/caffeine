@@ -65,9 +65,10 @@ Operation::Operation(Opcode op, Type t, const ref<Operation>& op0,
 }
 
 Operation::Operation(const Operation& op)
-    : opcode_(op.opcode_), refcount(0), type_(op.type_), inner_(op.inner_) {}
+    : CopyVTable(op), opcode_(op.opcode_), refcount(0), type_(op.type_),
+      inner_(op.inner_) {}
 Operation::Operation(Operation&& op) noexcept
-    : opcode_(op.opcode_), refcount(0), type_(op.type_),
+    : CopyVTable(op), opcode_(op.opcode_), refcount(0), type_(op.type_),
       inner_(std::move(op.inner_)) {}
 
 Operation& Operation::operator=(const Operation& op) {
@@ -76,12 +77,16 @@ Operation& Operation::operator=(const Operation& op) {
   type_ = op.type_;
   opcode_ = op.opcode_;
 
+  copy_vtable(op);
+
   return *this;
 }
 Operation& Operation::operator=(Operation&& op) noexcept {
   inner_ = std::move(op.inner_);
   type_ = op.type_;
   opcode_ = op.opcode_;
+
+  copy_vtable(op);
 
   return *this;
 }
