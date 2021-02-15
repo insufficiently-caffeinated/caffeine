@@ -15,28 +15,6 @@
 
 namespace caffeine {
 
-namespace detail {
-  void CopyVTablePtr::copy_from(const CopyVTablePtr& base) noexcept {
-    std::memcpy((void*)this, (const void*)&base, sizeof(*this));
-  }
-
-  CopyVTablePtr::CopyVTablePtr(const CopyVTablePtr& base) noexcept {
-    copy_from(base);
-  }
-  CopyVTablePtr::CopyVTablePtr(CopyVTablePtr&& base) noexcept {
-    copy_from(base);
-  }
-
-  CopyVTablePtr& CopyVTablePtr::operator=(const CopyVTablePtr& base) noexcept {
-    copy_from(base);
-    return *this;
-  }
-  CopyVTablePtr& CopyVTablePtr::operator=(CopyVTablePtr&& base) noexcept {
-    copy_from(base);
-    return *this;
-  }
-} // namespace detail
-
 #define ASSERT_SAME_TYPES(v1, v2)                                              \
   CAFFEINE_ASSERT((v1)->type() == (v2)->type(),                                \
                   fmt::format("arguments had different types: {} != {}",       \
@@ -144,8 +122,10 @@ Operation::with_new_operands(llvm::ArrayRef<ref<Operation>> operands) const {
   if (equal)
     return into_ref();
 
-  return ref<Operation>(
-      new Operation((Opcode)opcode(), type(), operands.data()));
+  auto value =
+      ref<Operation>(new Operation((Opcode)opcode(), type(), operands.data()));
+  value->copy_vtable(*this);
+  return value;
 }
 
 const char* Operation::opcode_name() const {

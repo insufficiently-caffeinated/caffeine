@@ -17,6 +17,7 @@
 #include "caffeine/ADT/SharedArray.h"
 #include "caffeine/IR/Type.h"
 #include "caffeine/Support/Assert.h"
+#include "caffeine/Support/CopyVTable.h"
 
 namespace caffeine {
 
@@ -44,22 +45,6 @@ namespace detail {
 
   template <typename T>
   class double_deref_iterator;
-
-  // Inner class used to make sure that the derived vtable is copied.
-  class CopyVTablePtr {
-  public:
-    CopyVTablePtr() = default;
-    virtual ~CopyVTablePtr() = default;
-
-    CopyVTablePtr(const CopyVTablePtr&) noexcept;
-    CopyVTablePtr(CopyVTablePtr&&) noexcept;
-
-    CopyVTablePtr& operator=(const CopyVTablePtr&) noexcept;
-    CopyVTablePtr& operator=(CopyVTablePtr&&) noexcept;
-
-  private:
-    void copy_from(const CopyVTablePtr&) noexcept;
-  };
 } // namespace detail
 
 enum class ICmpOpcode : uint8_t {
@@ -119,7 +104,7 @@ enum class FCmpOpcode : uint8_t {
  *    Visitor.cpp. This may also require adding new built-in methods to the
  *    Value type.
  */
-class Operation : private detail::CopyVTablePtr {
+class Operation : private CopyVTable {
 protected:
   // Base opcode used for FCmp opcodes
   static constexpr uint16_t fcmp_base = 4;
