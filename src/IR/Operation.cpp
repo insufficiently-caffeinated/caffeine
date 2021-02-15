@@ -1290,7 +1290,14 @@ FixedArray::with_new_operands(llvm::ArrayRef<ref<Operation>> operands) const {
   if (equal)
     return into_ref();
 
-  return ref<Operation>(new FixedArray(type(), operands.vec()));
+  auto array = data();
+  array.reroot();
+  for (size_t i = 0; i < operands.size(); ++i) {
+    if (array[i] != operands[i])
+      array.set(i, operands[i]);
+  }
+
+  return ref<Operation>(new FixedArray(type(), array));
 }
 
 ref<Operation> FixedArray::Create(Type index_ty,
