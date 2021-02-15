@@ -1210,13 +1210,7 @@ ref<Operation> LoadOp::Create(const ref<Operation>& data,
 
 #ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
   const auto* fixedarray = llvm::dyn_cast<caffeine::FixedArray>(data.get());
-  const auto* constarray = llvm::dyn_cast<caffeine::ConstantArray>(data.get());
   const auto* offset_int = llvm::dyn_cast<caffeine::ConstantInt>(offset.get());
-
-  if (constarray && offset_int) {
-    return ConstantInt::Create(llvm::APInt(
-        8, constarray->data()[offset_int->value().getLimitedValue()]));
-  }
 
   if (fixedarray && offset_int) {
     return fixedarray->data()[offset_int->value().getLimitedValue()];
@@ -1246,18 +1240,7 @@ ref<Operation> StoreOp::Create(const ref<Operation>& data,
 
 #ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
   const auto* offset_cnst = llvm::dyn_cast<caffeine::ConstantInt>(offset.get());
-  const auto* value_cnst = llvm::dyn_cast<caffeine::ConstantInt>(value.get());
-
-  const auto* cnstarray = llvm::dyn_cast<caffeine::ConstantArray>(data.get());
   const auto* fixedarray = llvm::dyn_cast<caffeine::FixedArray>(data.get());
-
-  if (offset_cnst && value_cnst && cnstarray) {
-    auto data = cnstarray->data();
-    data.store(offset_cnst->value().getLimitedValue(),
-               value_cnst->value().getLimitedValue());
-
-    return ConstantArray::Create(offset->type(), std::move(data));
-  }
 
   if (offset_cnst && fixedarray) {
     auto data = fixedarray->data();
