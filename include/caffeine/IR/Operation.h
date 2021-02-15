@@ -270,6 +270,8 @@ protected:
   Operation();
   Operation(Opcode op, Type t);
 
+  using CopyVTable::copy_vtable;
+
 public:
   /**
    * Indicate whether this Operation instance is valid.
