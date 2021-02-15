@@ -9,6 +9,7 @@
 #include <boost/container/static_vector.hpp>
 #include <llvm/ADT/APFloat.h>
 #include <llvm/ADT/APInt.h>
+#include <llvm/ADT/Hashing.h>
 #include <llvm/ADT/iterator_range.h>
 #include <llvm/Support/Casting.h>
 #include <magic_enum.hpp>
@@ -298,7 +299,6 @@ protected:
   friend class ref;
 
   friend llvm::hash_code hash_value(const Operation& op);
-  friend llvm::hash_code hash_value(const ConstantData& op);
 
 protected:
   Operation(Opcode op, Type t, const Inner& inner);
