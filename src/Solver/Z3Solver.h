@@ -68,7 +68,6 @@ public:
   z3::expr visitConstant     (const Constant& op);
   z3::expr visitConstantInt  (const ConstantInt& op);
   z3::expr visitConstantFloat(const ConstantFloat& op);
-  z3::expr visitConstantArray(const ConstantArray& op);
   z3::expr visitUndef        (const Undef& op);
   z3::expr visitFixedArray   (const FixedArray& op);
 

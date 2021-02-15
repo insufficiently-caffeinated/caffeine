@@ -27,7 +27,6 @@ namespace caffeine {
 // All derived operation types should be the same size
 static_assert(sizeof(ConstantInt) == sizeof(Operation));
 static_assert(sizeof(ConstantFloat) == sizeof(Operation));
-static_assert(sizeof(ConstantArray) == sizeof(Operation));
 static_assert(sizeof(Constant) == sizeof(Operation));
 static_assert(sizeof(BinaryOp) == sizeof(Operation));
 static_assert(sizeof(UnaryOp) == sizeof(Operation));
@@ -255,17 +254,6 @@ inline const llvm::APFloat& ConstantFloat::value() const {
 }
 
 /***************************************************
- * ConstantArray                                   *
- ***************************************************/
-inline const SharedArray& ConstantArray::data() const {
-  return std::get<SharedArray>(inner_);
-}
-
-inline ref<Operation> ConstantArray::size() const {
-  return ConstantInt::Create(llvm::APInt(type().bitwidth(), data().size()));
-}
-
-/***************************************************
  * BinaryOp                                        *
  ***************************************************/
 inline const ref<Operation>& BinaryOp::lhs() const {
@@ -426,7 +414,6 @@ inline ref<Operation> FixedArray::size() const {
 
 CAFFEINE_OP_DECL_CLASSOF(ConstantInt, ConstantInt);
 CAFFEINE_OP_DECL_CLASSOF(ConstantFloat, ConstantFloat);
-CAFFEINE_OP_DECL_CLASSOF(ConstantArray, ConstantArray);
 CAFFEINE_OP_DECL_CLASSOF(SelectOp, Select);
 CAFFEINE_OP_DECL_CLASSOF(AllocOp, Alloc);
 CAFFEINE_OP_DECL_CLASSOF(LoadOp, Load);
@@ -453,8 +440,8 @@ inline bool FCmpOp::classof(const Operation* op) {
 }
 
 inline bool ArrayBase::classof(const Operation* op) {
-  return op->opcode() == ConstantArray || op->opcode() == Alloc ||
-         op->opcode() == Store || op->opcode() == FixedArray;
+  return op->opcode() == Alloc || op->opcode() == Store ||
+         op->opcode() == FixedArray;
 }
 
 #undef CAFFEINE_OP_DECL_CLASSOF

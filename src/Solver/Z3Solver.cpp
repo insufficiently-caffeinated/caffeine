@@ -289,19 +289,6 @@ z3::expr Z3OpVisitor::visitConstantFloat(const ConstantFloat& op) {
   expr.check_error();
   return expr;
 }
-z3::expr Z3OpVisitor::visitConstantArray(const ConstantArray& op) {
-  const SharedArray& data = op.data();
-
-  z3::expr array = next_const(
-      ctx->array_sort(ctx->bv_sort(op.type().bitwidth()), ctx->bv_sort(8)));
-
-  for (size_t i = 0; i < data.size(); ++i) {
-    solver->add(z3::select(array, ctx->bv_val(i, op.type().bitwidth())) ==
-                (uint8_t)data[i]);
-  }
-
-  return array;
-}
 z3::expr Z3OpVisitor::visitUndef(const Undef& op) {
   // TODO: Semantically, we can return absolutely any value when working with
   //       undef. In the future we'll probably want to do something a bit more

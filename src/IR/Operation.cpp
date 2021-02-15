@@ -137,7 +137,6 @@ const char* Operation::opcode_name(Opcode op) {
   case ConstantNamed: return "Constant";
   case ConstantInt:   return "ConstantInt";
   case ConstantFloat: return "ConstantFloat";
-  case ConstantArray: return "ConstantArray";
   case Undef:         return "Undef";
 
   case Add:   return "Add";
@@ -364,35 +363,6 @@ ref<Operation> ConstantFloat::Create(llvm::APFloat&& fconst) {
 }
 ref<Operation> ConstantFloat::Create(double value) {
   return ref<Operation>(new ConstantFloat(llvm::APFloat(value)));
-}
-
-/***************************************************
- * ConstantArray                                   *
- ***************************************************/
-ConstantArray::ConstantArray(Type t, const SharedArray& array)
-    : ArrayBase(Opcode::ConstantArray, t, array) {}
-ConstantArray::ConstantArray(Type t, SharedArray&& array)
-    : ArrayBase(Opcode::ConstantArray, t, std::move(array)) {}
-
-ref<Operation> ConstantArray::Create(Type index_ty, const SharedArray& array) {
-  CAFFEINE_ASSERT(index_ty.is_int(),
-                  "Arrays cannot be indexed by non-integer types");
-  CAFFEINE_ASSERT(
-      index_ty.bitwidth() >= ilog2(array.size()),
-      "Index bitwidth is not large enough to address entire constant array");
-
-  return ref<Operation>(
-      new ConstantArray(Type::array_ty(index_ty.bitwidth()), array));
-}
-ref<Operation> ConstantArray::Create(Type index_ty, SharedArray&& array) {
-  CAFFEINE_ASSERT(index_ty.is_int(),
-                  "Arrays cannot be indexed by non-integer types");
-  CAFFEINE_ASSERT(
-      index_ty.bitwidth() >= ilog2(array.size()),
-      "Index bitwidth is not large enough to address entire constant array");
-
-  return ref<Operation>(
-      new ConstantArray(Type::array_ty(index_ty.bitwidth()), std::move(array)));
 }
 
 /***************************************************
@@ -1210,13 +1180,7 @@ ref<Operation> LoadOp::Create(const ref<Operation>& data,
 
 #ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
   const auto* fixedarray = llvm::dyn_cast<caffeine::FixedArray>(data.get());
-  const auto* constarray = llvm::dyn_cast<caffeine::ConstantArray>(data.get());
   const auto* offset_int = llvm::dyn_cast<caffeine::ConstantInt>(offset.get());
-
-  if (constarray && offset_int) {
-    return ConstantInt::Create(llvm::APInt(
-        8, constarray->data()[offset_int->value().getLimitedValue()]));
-  }
 
   if (fixedarray && offset_int) {
     return fixedarray->data()[offset_int->value().getLimitedValue()];
@@ -1246,18 +1210,7 @@ ref<Operation> StoreOp::Create(const ref<Operation>& data,
 
 #ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
   const auto* offset_cnst = llvm::dyn_cast<caffeine::ConstantInt>(offset.get());
-  const auto* value_cnst = llvm::dyn_cast<caffeine::ConstantInt>(value.get());
-
-  const auto* cnstarray = llvm::dyn_cast<caffeine::ConstantArray>(data.get());
   const auto* fixedarray = llvm::dyn_cast<caffeine::FixedArray>(data.get());
-
-  if (offset_cnst && value_cnst && cnstarray) {
-    auto data = cnstarray->data();
-    data.store(offset_cnst->value().getLimitedValue(),
-               value_cnst->value().getLimitedValue());
-
-    return ConstantArray::Create(offset->type(), std::move(data));
-  }
 
   if (offset_cnst && fixedarray) {
     auto data = fixedarray->data();
@@ -1288,6 +1241,9 @@ FixedArray::FixedArray(Type t, const PersistentArray<ref<Operation>>& data)
 ref<Operation> FixedArray::Create(Type index_ty,
                                   const PersistentArray<ref<Operation>>& data) {
   CAFFEINE_ASSERT(index_ty.is_int());
+  CAFFEINE_ASSERT(
+      index_ty.bitwidth() >= ilog2(data.size()),
+      "Index bitwidth is not large enough to address entire constant array");
 
   return ref<Operation>(
       new FixedArray(Type::array_ty(index_ty.bitwidth()), data));
