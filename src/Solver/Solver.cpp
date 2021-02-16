@@ -32,6 +32,8 @@ public:
     uint64_t size = visit(*size_val).apint().getLimitedValue();
     uint32_t bitwidth = size_val->type().bitwidth();
 
+    CAFFEINE_ASSERT(size <= (uint64_t)SIZE_MAX);
+
     std::vector<char> bytes;
     bytes.reserve(size);
 

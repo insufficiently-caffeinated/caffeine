@@ -65,9 +65,10 @@ Operation::Operation(Opcode op, Type t, const ref<Operation>& op0,
 }
 
 Operation::Operation(const Operation& op)
-    : opcode_(op.opcode_), refcount(0), type_(op.type_), inner_(op.inner_) {}
+    : CopyVTable(op), opcode_(op.opcode_), refcount(0), type_(op.type_),
+      inner_(op.inner_) {}
 Operation::Operation(Operation&& op) noexcept
-    : opcode_(op.opcode_), refcount(0), type_(op.type_),
+    : CopyVTable(op), opcode_(op.opcode_), refcount(0), type_(op.type_),
       inner_(std::move(op.inner_)) {}
 
 Operation& Operation::operator=(const Operation& op) {
@@ -76,12 +77,16 @@ Operation& Operation::operator=(const Operation& op) {
   type_ = op.type_;
   opcode_ = op.opcode_;
 
+  copy_vtable(op);
+
   return *this;
 }
 Operation& Operation::operator=(Operation&& op) noexcept {
   inner_ = std::move(op.inner_);
   type_ = op.type_;
   opcode_ = op.opcode_;
+
+  copy_vtable(op);
 
   return *this;
 }
@@ -122,8 +127,10 @@ Operation::with_new_operands(llvm::ArrayRef<ref<Operation>> operands) const {
   if (equal)
     return into_ref();
 
-  return ref<Operation>(
-      new Operation((Opcode)opcode(), type(), operands.data()));
+  auto value =
+      ref<Operation>(new Operation((Opcode)opcode(), type(), operands.data()));
+  value->copy_vtable(*this);
+  return value;
 }
 
 const char* Operation::opcode_name() const {
@@ -1237,6 +1244,46 @@ ref<Operation> Undef::Create(const Type& t) {
  ***************************************************/
 FixedArray::FixedArray(Type t, const PersistentArray<ref<Operation>>& data)
     : ArrayBase(Operation::FixedArray, t, data) {}
+
+llvm::iterator_range<Operation::operand_iterator> FixedArray::operands() {
+  auto array = data().vec();
+  auto range = llvm::iterator_range<operand_iterator>(
+      array.data(), array.data() + array.size());
+
+  data() = PersistentArray<ref<Operation>>(std::move(array));
+  return range;
+}
+llvm::iterator_range<Operation::const_operand_iterator>
+FixedArray::operands() const {
+  data().reroot();
+
+  const auto& array = *data().underlying_vec();
+  return llvm::iterator_range<const_operand_iterator>(
+      array.data(), array.data() + array.size());
+}
+
+ref<Operation>
+FixedArray::with_new_operands(llvm::ArrayRef<ref<Operation>> operands) const {
+  CAFFEINE_ASSERT(operands.size() == num_operands());
+
+  if (num_operands() == 0)
+    return into_ref();
+
+  bool equal = std::equal(std::begin(operands), std::end(operands),
+                          std::begin(data()), std::end(data()));
+
+  if (equal)
+    return into_ref();
+
+  auto array = data();
+  array.reroot();
+  for (size_t i = 0; i < operands.size(); ++i) {
+    if (array[i] != operands[i])
+      array.set(i, operands[i]);
+  }
+
+  return ref<Operation>(new FixedArray(type(), array));
+}
 
 ref<Operation> FixedArray::Create(Type index_ty,
                                   const PersistentArray<ref<Operation>>& data) {
