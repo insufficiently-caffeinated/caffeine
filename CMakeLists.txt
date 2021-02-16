@@ -54,6 +54,8 @@ if (CAFFEINE_ENABLE_BUILD)
   find_package(Boost REQUIRED)
   find_package(fmt REQUIRED)
 
+  include (CaffeineDependencies)
+
   set(IR_USE_BITCODE ${CAFFEINE_BUILD_BITCODE})
 
   include(CaffeineWarnings)

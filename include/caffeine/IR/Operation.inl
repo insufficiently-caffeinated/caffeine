@@ -481,4 +481,17 @@ struct hash<caffeine::Operation> {
 
 } // namespace std
 
+namespace magic_enum::customize {
+
+template <>
+struct enum_range<caffeine::Operation::Opcode> {
+  static constexpr int16_t min = 0;
+  static constexpr int16_t max = caffeine::Operation::Opcode::OpLast;
+
+  static_assert(caffeine::Operation::Opcode::OpLast < INT16_MAX,
+                "Opcode max opcode number must be less than INT16_MAX");
+};
+
+} // namespace magic_enum::customize
+
 #endif

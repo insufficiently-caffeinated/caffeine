@@ -9,6 +9,7 @@
     "llvm",
     "fmt",
     "z3",
-    "gtest"
+    "gtest",
+    "magic_enum"
   ]
 }
