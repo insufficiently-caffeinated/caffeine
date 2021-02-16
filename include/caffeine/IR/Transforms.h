@@ -43,4 +43,14 @@ namespace caffeine::transforms {
  */
 void decompose(std::vector<Assertion>& assertions);
 
+/**
+ * Attempts to convert the assertions into a canonical form that is suitable for
+ * cache lookups (or one that can be transformed into such a form with little
+ * effort).
+ *
+ * Currently all it does is apply existing constant-folding and remove exactly
+ * duplicate expressions from the vector but in the future it will do more.
+ */
+void canonicalize(std::vector<Assertion>& assertions);
+
 } // namespace caffeine::transforms
