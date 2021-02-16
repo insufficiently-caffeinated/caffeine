@@ -12,8 +12,13 @@ if (CAFFEINE_ENABLE_LTO STREQUAL "ON" OR
   endif()
 elseif(CAFFEINE_ENABLE_LTO STREQUAL "THIN")
   if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    add_compile_options(-flto=thin)
-    list(APPEND LINK_FLAGS -flto=thin)
+    # This generator expression only sets up LTO if not building in debug mode
+    set(lto_tmp $<$<NOT:$<CONFIG:Debug>>:-flto=thin>)
+
+    add_compile_options("${lto_tmp}")
+    list(APPEND LINK_FLAGS "${lto_tmp}")
+
+    unset(lto_tmp)
   else()
     message(${CAFFEINE_WARNING} "ThinLTO is only supported when compiling with clang")
   endif()

@@ -40,6 +40,9 @@ else()
   set(CAFFEINE_WARNING WARNING)
 endif()
 
+# Easier string comparisons in the presence of random user casing
+string(TOUPPER "${CAFFEINE_ENABLE_LTO}" CAFFEINE_ENABLE_LTO)
+
 set(CAFFEINE_FMTONLY OFF CACHE BOOL "Avoid building the project itself")
 mark_as_advanced(CAFFEINE_FMTONLY)
 
