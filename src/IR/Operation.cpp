@@ -301,6 +301,25 @@ ref<Operation> ConstantFloat::Create(double value) {
 }
 
 /***************************************************
+ * ConstantArray                                   *
+ ***************************************************/
+ConstantArray::ConstantArray(Symbol&& symbol, const ref<Operation>& size)
+    : ArrayBase(Operation::ConstantArray,
+                Type::array_ty(size->type().bitwidth()),
+                ConstantData(std::move(symbol), size)) {}
+
+ref<Operation> ConstantArray::Create(const Symbol& symbol,
+                                     const ref<Operation>& size) {
+  return Create(Symbol(symbol), size);
+}
+ref<Operation> ConstantArray::Create(Symbol&& symbol,
+                                     const ref<Operation>& size) {
+  CAFFEINE_ASSERT(size->type().is_int());
+
+  return ref<Operation>(new ConstantArray(std::move(symbol), size));
+}
+
+/***************************************************
  * BinaryOp                                        *
  ***************************************************/
 BinaryOp::BinaryOp(Opcode op, Type t, const ref<Operation>& lhs,
