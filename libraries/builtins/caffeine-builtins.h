@@ -23,6 +23,10 @@ void* caffeine_calloc(size_t size);
 // This is a more limited version of free that expects mem != nullptr
 void caffeine_free(void* mem);
 
+// This creates an allocation with symbolic value and given size and associates
+// it with the provided name
+void* caffeine_builtin_symbolic_alloca(size_t size, const char* name);
+
 /***************************************************
  * Pointer Functions                               *
  ***************************************************/

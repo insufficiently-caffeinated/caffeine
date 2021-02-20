@@ -91,6 +91,7 @@ private:
 
   ExecutionResult visitAssume(llvm::CallInst& inst);
   ExecutionResult visitAssert(llvm::CallInst& inst);
+  ExecutionResult visitSymbolicAlloca(llvm::CallInst& inst);
 
   ExecutionResult visitMalloc(llvm::CallInst& inst);
   ExecutionResult visitCalloc(llvm::CallInst& inst);

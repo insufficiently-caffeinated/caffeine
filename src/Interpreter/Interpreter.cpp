@@ -935,6 +935,8 @@ ExecutionResult Interpreter::visitExternFunc(llvm::CallInst& call) {
 
   if (name == "caffeine_builtin_resolve")
     return visitBuiltinResolve(call);
+  if (name == "caffeine_builtin_symbolic_alloca")
+    return visitSymbolicAlloca(call);
 
   CAFFEINE_ABORT(
       fmt::format("external function '{}' not implemented", name.str()));
@@ -962,6 +964,62 @@ ExecutionResult Interpreter::visitAssert(llvm::CallInst& call) {
     logger->log_failure(*model, *ctx, Failure(!assertion));
 
   ctx->add(assertion);
+
+  return ExecutionResult::Continue;
+}
+
+std::optional<std::string> readSymbolicName(Context* ctx, const Pointer& ptr) {
+  const auto& alloc = ctx->heap()[ptr.alloc()];
+
+  auto model = ctx->resolve();
+  if (model->result() != SolverResult::SAT) {
+    return std::nullopt;
+  }
+
+  uint64_t offset = model->evaluate(*ptr.offset()).apint().getLimitedValue();
+  uint64_t size = model->evaluate(*alloc.size()).apint().getLimitedValue();
+  auto array = std::move(model->evaluate(*alloc.data()).array());
+
+  std::string name;
+  name.reserve(size - offset);
+
+  const char* values = array.data();
+  for (size_t i = offset; i < size; ++i) {
+    if (values[i] == 0)
+      return name;
+    name.push_back(values[i]);
+  }
+
+  // TODO: This should really be an error when we would read beyond the end of
+  //       the array.
+  return std::nullopt;
+}
+
+ExecutionResult Interpreter::visitSymbolicAlloca(llvm::CallInst& call) {
+  auto size = ctx->lookup(call.getArgOperand(0)).scalar();
+  auto name = ctx->lookup(call.getArgOperand(1)).pointer();
+
+  auto resolved = ctx->heap().resolve(name, *ctx);
+
+  CAFFEINE_ASSERT(resolved.size() == 1,
+                  "caffeine_make_symbolic called with symbolic name");
+
+  auto alloc_name = readSymbolicName(ctx, resolved.front());
+  if (!alloc_name.has_value())
+    return ExecutionResult::Stop;
+
+  unsigned ptr_width = size->type().bitwidth();
+
+  auto alloc = ctx->heap().allocate(
+      size, ConstantInt::Create(llvm::APInt(ptr_width, 1)),
+      ConstantArray::Create(Symbol(std::move(*alloc_name)), size),
+      AllocationKind::Alloca, *ctx);
+
+  auto& frame = ctx->stack_top();
+  frame.insert(&call,
+               ContextValue(Pointer(
+                   alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
+  frame.allocations.push_back(alloc);
 
   return ExecutionResult::Continue;
 }
