@@ -319,6 +319,26 @@ ref<Operation> ConstantArray::Create(Symbol&& symbol,
   return ref<Operation>(new ConstantArray(std::move(symbol), size));
 }
 
+llvm::iterator_range<Operation::operand_iterator> ConstantArray::operands() {
+  auto& operand = std::get<ConstantData>(inner_).second;
+  return llvm::iterator_range<operand_iterator>(&operand, &operand + 1);
+}
+llvm::iterator_range<Operation::const_operand_iterator>
+ConstantArray::operands() const {
+  const auto& operand = std::get<ConstantData>(inner_).second;
+  return llvm::iterator_range<const_operand_iterator>(&operand, &operand + 1);
+}
+
+ref<Operation> ConstantArray::with_new_operands(
+    llvm::ArrayRef<ref<Operation>> operands) const {
+  CAFFEINE_ASSERT(operands.size() == 1);
+
+  if (size() == operands[0])
+    return into_ref();
+
+  return Create(symbol(), operands[0]);
+}
+
 /***************************************************
  * BinaryOp                                        *
  ***************************************************/

@@ -38,6 +38,34 @@ public:
 
     os << "  " << c.name() << " = " << value << "\n";
   }
+
+  void visitConstantArray(const ConstantArray& c) {
+    const auto& symbol = c.symbol();
+    if (!symbol.is_named())
+      return;
+
+    if (!seen.insert(symbol.name()).second)
+      return;
+
+    auto array = model->evaluate(c).array();
+    char* data = array.data();
+
+    os << "  " << symbol.name() << " = ";
+
+    for (size_t i = 0; i < array.size(); ++i) {
+      uint8_t value = data[i];
+
+      os << inttohex(value & 0xF) << inttohex(value >> 4);
+    }
+    os << "\n";
+  }
+
+private:
+  static char inttohex(uint8_t value) {
+    if (value < 10)
+      return '0' + value;
+    return ('A' - 10) + value;
+  }
 };
 
 /***************************************************

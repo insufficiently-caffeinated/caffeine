@@ -135,7 +135,7 @@ static z3::sort type_to_sort(z3::context& ctx, const Type& type) {
   case Type::FloatingPoint:
     return ctx.fpa_sort(type.exponent_bits(), type.mantissa_bits());
   case Type::Array:
-    CAFFEINE_ABORT("Symbolic arrays are unimplemented");
+    return ctx.array_sort(ctx.bv_sort(type.bitwidth()), ctx.bv_sort(8));
   case Type::Void:
     CAFFEINE_ABORT("Cannot make symbolic void constants");
   case Type::Pointer:
@@ -166,12 +166,30 @@ Value Z3Model::lookup(const Symbol& symbol, std::optional<size_t> size) const {
     return Value();
   }
 
-  auto evaluated = model.eval(it->second, true);
+  if (it->second.is_bv()) {
+    return Value(z3_to_apint(model.eval(it->second, true)));
+  } else if (it->second.is_fpa()) {
+    return Value(z3_to_apfloat(model.eval(it->second, true)));
+  } else if (it->second.is_array()) {
+    auto domain = it->second.get_sort().array_domain();
+    auto range = it->second.get_sort().array_range();
 
-  if (evaluated.is_bv()) {
-    return Value(z3_to_apint(evaluated));
-  } else if (evaluated.is_fpa()) {
-    return Value(z3_to_apfloat(evaluated));
+    CAFFEINE_ASSERT(size.has_value(),
+                    "Called lookup for array constant without size");
+    CAFFEINE_ASSERT(domain.is_bv());
+    CAFFEINE_ASSERT(range.is_bv() && range.bv_size() == 8);
+
+    std::vector<char> data;
+    data.reserve(*size);
+
+    for (size_t i = 0; i < *size; ++i) {
+      auto value = model.eval(
+          z3::select(it->second, model.ctx().bv_val(i, domain.bv_size())),
+          true);
+      data.push_back((char)(uint8_t)value.get_numeral_uint64());
+    }
+
+    return Value(SharedArray(std::move(data)), Type::int_ty(domain.bv_size()));
   } else {
     CAFFEINE_ABORT("Unsupported numeral type");
   }
@@ -260,6 +278,19 @@ z3::expr Z3OpVisitor::visitConstant(const Constant& op) {
   auto sort = type_to_sort(*ctx, type);
   auto expr = ctx->constant(name_to_symbol(*ctx, name), sort);
   constMap.insert({name, expr});
+  return expr;
+}
+z3::expr Z3OpVisitor::visitConstantArray(const ConstantArray& op) {
+  auto name = op_name(op.symbol());
+
+  auto it = constMap.find(name);
+  if (it != constMap.end()) {
+    return it->second;
+  }
+
+  auto sort = type_to_sort(*ctx, op.type());
+  auto expr = ctx->constant(name_to_symbol(*ctx, name), sort);
+  constMap.insert({std::move(name), expr});
   return expr;
 }
 z3::expr Z3OpVisitor::visitConstantInt(const ConstantInt& op) {

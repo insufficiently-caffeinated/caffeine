@@ -17,7 +17,13 @@ public:
   }
 
   Value visitConstant(const Constant& op) {
-    auto value = model_->lookup(op.symbol());
+    Value value = model_->lookup(op.symbol());
+    CAFFEINE_ASSERT(value.type() != Type::void_ty());
+    return value;
+  }
+  Value visitConstantArray(const ConstantArray& op) {
+    size_t size = visit(*op.size()).apint().getLimitedValue(SIZE_MAX);
+    Value value = model_->lookup(op.symbol(), size);
     CAFFEINE_ASSERT(value.type() != Type::void_ty());
     return value;
   }

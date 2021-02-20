@@ -521,6 +521,15 @@ public:
                                const ref<Operation>& size);
   static ref<Operation> Create(Symbol&& symbol, const ref<Operation>& size);
 
+  llvm::iterator_range<operand_iterator> operands() override;
+  llvm::iterator_range<const_operand_iterator> operands() const override;
+
+  ref<Operation>
+  with_new_operands(llvm::ArrayRef<ref<Operation>> operands) const override;
+
+  ref<Operation>& operand_at(size_t idx) override;
+  const ref<Operation>& operand_at(size_t idx) const override;
+
   static bool classof(const Operation* op);
 };
 

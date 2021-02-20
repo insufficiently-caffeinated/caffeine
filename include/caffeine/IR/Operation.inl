@@ -299,6 +299,20 @@ inline ref<Operation> ConstantArray::size() const {
   return operand_at(0);
 }
 
+inline const Symbol& ConstantArray::symbol() const {
+  return std::get<ConstantData>(inner_).first;
+}
+
+inline ref<Operation>& ConstantArray::operand_at(size_t idx) {
+  CAFFEINE_ASSERT(idx == 0, "Accessed out of bounds operand index");
+  return std::get<ConstantData>(inner_).second;
+}
+
+inline const ref<Operation>& ConstantArray::operand_at(size_t idx) const {
+  CAFFEINE_ASSERT(idx == 0, "Accessed out of bounds operand index");
+  return std::get<ConstantData>(inner_).second;
+}
+
 /***************************************************
  * BinaryOp                                        *
  ***************************************************/
