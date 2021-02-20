@@ -13,6 +13,7 @@ namespace caffeine {
 class Assertion;
 class Operation;
 class Constant;
+class Symbol;
 
 enum SolverResult { UNSAT, SAT, Unknown };
 
@@ -50,7 +51,8 @@ public:
 protected:
   /**
    * Look up the value of a symbolic constant in this model. Returns an
-   * appropriate constant expression with the value of said constant.
+   * appropriate constant expression with the value of said constant. If the
+   * lookup is for an array constant then size will have a value.
    *
    * If there are no constants with the given name then returns a null pointer.
    *
@@ -61,7 +63,8 @@ protected:
    * performs the appropriate operations on the expression tree to evaluate it
    * (it uses `lookup` under the hood).
    */
-  virtual Value lookup(const Constant& constant) const = 0;
+  virtual Value lookup(const Symbol& symbol,
+                       std::optional<size_t> size = std::nullopt) const = 0;
 
   Model(const Model&) = default;
   Model(Model&&) = default;
@@ -148,7 +151,7 @@ class EmptyModel final : public Model {
 public:
   EmptyModel(SolverResult result);
 
-  Value lookup(const Constant&) const override;
+  Value lookup(const Symbol& symbol, std::optional<size_t> size) const override;
 };
 
 } // namespace caffeine

@@ -30,15 +30,7 @@ public:
   Z3Model(SolverResult result, const z3::model& model, const ConstMap& map);
   Z3Model(SolverResult result, const z3::model& model, ConstMap&& map);
 
-  /**
-   * Look up the value of a symbolic constant in this model. Returns an
-   * appropriate constant expression with the value of said constant.
-   *
-   * If there are no constants with the given name then returns a null pointer.
-   *
-   * It is invalid to call this method if the model is not SAT.
-   */
-  Value lookup(const Constant& constant) const;
+  Value lookup(const Symbol& symbol, std::optional<size_t> size) const override;
 };
 
 class Z3OpVisitor : public ConstOpVisitor<Z3OpVisitor, z3::expr> {

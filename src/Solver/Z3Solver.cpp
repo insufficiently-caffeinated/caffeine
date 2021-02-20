@@ -108,12 +108,12 @@ static z3::expr normalize_to_bv(const z3::expr& expr) {
   return expr;
 }
 
-static Z3Model::SymbolName op_name(const Constant& constant) {
-  if (constant.is_numbered()) {
-    return constant.number();
+static Z3Model::SymbolName op_name(const Symbol& symbol) {
+  if (symbol.is_numbered()) {
+    return symbol.number();
   }
 
-  return std::string(constant.name());
+  return std::string(symbol.name());
 }
 
 static z3::symbol name_to_symbol(z3::context& ctx,
@@ -158,10 +158,10 @@ Z3Model::Z3Model(SolverResult result, const z3::model& model,
 Z3Model::Z3Model(SolverResult result, const z3::model& model, ConstMap&& map)
     : Model(result), model(model), constants(std::move(map)) {}
 
-Value Z3Model::lookup(const Constant& constant) const {
+Value Z3Model::lookup(const Symbol& symbol, std::optional<size_t> size) const {
   CAFFEINE_ASSERT(result() == SolverResult::SAT, "Model is not SAT");
 
-  auto it = constants.find(op_name(constant));
+  auto it = constants.find(op_name(symbol));
   if (it == constants.end()) {
     return Value();
   }
@@ -248,7 +248,7 @@ z3::expr Z3OpVisitor::visitOperation(const Operation& op) {
 
 z3::expr Z3OpVisitor::visitConstant(const Constant& op) {
   auto type = op.type();
-  auto name = op_name(op);
+  auto name = op_name(op.symbol());
 
   // Reuse already created constants (otherwise Z3 will view them as different?)
   auto it = constMap.find(name);

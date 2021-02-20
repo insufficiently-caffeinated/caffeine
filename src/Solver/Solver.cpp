@@ -158,7 +158,7 @@ EmptyModel::EmptyModel(SolverResult result) : Model(result) {
   CAFFEINE_ASSERT(result != SolverResult::SAT);
 }
 
-Value EmptyModel::lookup(const Constant&) const {
+Value EmptyModel::lookup(const Symbol&, std::optional<size_t>) const {
   CAFFEINE_ABORT("Model was empty");
 }
 
