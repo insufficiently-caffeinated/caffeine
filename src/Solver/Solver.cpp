@@ -17,7 +17,7 @@ public:
   }
 
   Value visitConstant(const Constant& op) {
-    auto value = model_->lookup(op);
+    auto value = model_->lookup(op.symbol());
     CAFFEINE_ASSERT(value.type() != Type::void_ty());
     return value;
   }
