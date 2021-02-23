@@ -158,7 +158,7 @@ Z3Model::Z3Model(SolverResult result, const z3::model& model,
 Z3Model::Z3Model(SolverResult result, const z3::model& model, ConstMap&& map)
     : Model(result), model(model), constants(std::move(map)) {}
 
-Value Z3Model::lookup(const Symbol& symbol, std::optional<size_t> size) const {
+Value Z3Model::lookup(const Symbol& symbol, std::optional<size_t>) const {
   CAFFEINE_ASSERT(result() == SolverResult::SAT, "Model is not SAT");
 
   auto it = constants.find(op_name(symbol));
