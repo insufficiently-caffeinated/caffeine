@@ -29,11 +29,12 @@
  *    implementation of a transform algorithm should have to worry about.
  */
 
+#include "caffeine/IR/Operation.h"
 #include <vector>
 
 namespace caffeine {
 class Assertion;
-}
+} // namespace caffeine
 
 namespace caffeine::transforms {
 
@@ -53,4 +54,12 @@ void decompose(std::vector<Assertion>& assertions);
  */
 void canonicalize(std::vector<Assertion>& assertions);
 
+/**
+ * 
+ */
+template <typename Visitor>
+ref<Operation> rebuild(const ref<Operation>& expression, Visitor& visitor);
+
 } // namespace caffeine::transforms
+
+#include "caffeine/IR/Transforms.inl"
