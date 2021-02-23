@@ -146,6 +146,9 @@ public:
 
   RetTy visit(transform_t<Operation>* O);
   RetTy visit(transform_t<Operation>& O);
+
+  RetTy operator()(transform_t<Operation>* O);
+  RetTy operator()(transform_t<Operation>& O);
 };
 
 /**
