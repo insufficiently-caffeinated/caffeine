@@ -9,9 +9,6 @@
 #include <llvm/ADT/Hashing.h>
 #include <llvm/Support/raw_ostream.h>
 
-// TODO: We should put this in a config file
-#define CAFFEINE_IMPLICIT_CONSTANT_FOLDING 1
-
 #define SIZE_BITS (sizeof(size_t) * CHAR_BIT)
 
 namespace caffeine {
@@ -353,7 +350,7 @@ OpRef BinaryOp::Create(Opcode op, const OpRef& lhs, const OpRef& rhs) {
               "BinaryOp created from operands with different types: {} != {}"),
           lhs->type(), rhs->type()));
 
-  return OpRef(new BinaryOp(op, lhs->type(), lhs, rhs));
+  return constant_fold(BinaryOp(op, lhs->type(), lhs, rhs));
 }
 
 #define ASSERT_INT(op) CAFFEINE_ASSERT((op)->type().is_int())
@@ -371,373 +368,26 @@ OpRef BinaryOp::Create(Opcode op, const OpRef& lhs, const OpRef& rhs) {
   }                                                                            \
   static_assert(true)
 
-OpRef BinaryOp::CreateAdd(const OpRef& lhs, const OpRef& rhs) {
-  CAFFEINE_ASSERT(lhs, "lhs was null");
-  CAFFEINE_ASSERT(rhs, "rhs was null");
-  ASSERT_INT(lhs);
-  ASSERT_INT(rhs);
-
-  if (lhs->is<caffeine::Undef>() || rhs->is<caffeine::Undef>())
-    return Undef::Create(lhs->type());
-
-  if (is_constant_int(*lhs, 0))
-    return rhs;
-  if (is_constant_int(*rhs, 0))
-    return lhs;
-
-  const auto* lhs_int = llvm::dyn_cast<caffeine::ConstantInt>(lhs.get());
-  const auto* rhs_int = llvm::dyn_cast<caffeine::ConstantInt>(rhs.get());
-  if (lhs_int && rhs_int)
-    return ConstantInt::Create(lhs_int->value() + rhs_int->value());
-
-  return Create(Opcode::Add, lhs, rhs);
-}
-OpRef BinaryOp::CreateSub(const OpRef& lhs, const OpRef& rhs) {
-  CAFFEINE_ASSERT(lhs, "lhs was null");
-  CAFFEINE_ASSERT(rhs, "rhs was null");
-  ASSERT_INT(lhs);
-  ASSERT_INT(rhs);
-  ASSERT_SAME_TYPES(lhs, rhs);
-
-#ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
-  if (lhs->is<caffeine::Undef>() || rhs->is<caffeine::Undef>())
-    return Undef::Create(lhs->type());
-
-  if (is_constant_int(*rhs, 0))
-    return lhs;
-
-  if (rhs.get() == lhs.get())
-    return ConstantInt::Create(llvm::APInt(lhs->type().bitwidth(), 0));
-
-  const auto* lhs_int = llvm::dyn_cast<caffeine::ConstantInt>(lhs.get());
-  const auto* rhs_int = llvm::dyn_cast<caffeine::ConstantInt>(rhs.get());
-  if (lhs_int && rhs_int)
-    return ConstantInt::Create(lhs_int->value() - rhs_int->value());
-#endif
-
-  return Create(Opcode::Sub, lhs, rhs);
-}
-OpRef BinaryOp::CreateMul(const OpRef& lhs, const OpRef& rhs) {
-  CAFFEINE_ASSERT(lhs, "lhs was null");
-  CAFFEINE_ASSERT(rhs, "rhs was null");
-  ASSERT_INT(lhs);
-  ASSERT_INT(rhs);
-
-#ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
-  if (is_constant_int(*lhs, 0))
-    return lhs;
-  if (is_constant_int(*rhs, 0))
-    return rhs;
-
-  const auto* lhs_int = llvm::dyn_cast<caffeine::ConstantInt>(lhs.get());
-  const auto* rhs_int = llvm::dyn_cast<caffeine::ConstantInt>(rhs.get());
-  if (lhs_int && rhs_int)
-    return ConstantInt::Create(lhs_int->value() * rhs_int->value());
-#endif
-
-  return Create(Opcode::Mul, lhs, rhs);
-}
-OpRef BinaryOp::CreateUDiv(const OpRef& lhs, const OpRef& rhs) {
-  CAFFEINE_ASSERT(lhs, "lhs was null");
-  CAFFEINE_ASSERT(rhs, "rhs was null");
-  ASSERT_INT(lhs);
-  ASSERT_INT(rhs);
-
-#ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
-  if (is_constant_int(*lhs, 0) || is_constant_int(*rhs, 1))
-    return lhs;
-
-  const auto* lhs_int = llvm::dyn_cast<caffeine::ConstantInt>(lhs.get());
-  const auto* rhs_int = llvm::dyn_cast<caffeine::ConstantInt>(rhs.get());
-  if (lhs_int && rhs_int)
-    return ConstantInt::Create(lhs_int->value().udiv(rhs_int->value()));
-#endif
-
-  return Create(Opcode::UDiv, lhs, rhs);
-}
-OpRef BinaryOp::CreateSDiv(const OpRef& lhs, const OpRef& rhs) {
-  CAFFEINE_ASSERT(lhs, "lhs was null");
-  CAFFEINE_ASSERT(rhs, "rhs was null");
-  ASSERT_INT(lhs);
-  ASSERT_INT(rhs);
-
-#ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
-  if (is_constant_int(*lhs, 0))
-    return lhs;
-  if (is_constant_int(*rhs, 1) && rhs->type().bitwidth() > 1)
-    return lhs;
-
-  const auto* lhs_int = llvm::dyn_cast<caffeine::ConstantInt>(lhs.get());
-  const auto* rhs_int = llvm::dyn_cast<caffeine::ConstantInt>(rhs.get());
-  if (lhs_int && rhs_int)
-    return ConstantInt::Create(lhs_int->value().sdiv(rhs_int->value()));
-#endif
-
-  return Create(Opcode::SDiv, lhs, rhs);
-}
-OpRef BinaryOp::CreateURem(const OpRef& lhs, const OpRef& rhs) {
-  CAFFEINE_ASSERT(lhs, "lhs was null");
-  CAFFEINE_ASSERT(rhs, "rhs was null");
-  ASSERT_INT(lhs);
-  ASSERT_INT(rhs);
-
-#ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
-  if (is_constant_int(*lhs, 0))
-    return lhs;
-  if (is_constant_int(*rhs, 1))
-    return ConstantInt::Create(llvm::APInt(lhs->type().bitwidth(), 0));
-
-  const auto* lhs_int = llvm::dyn_cast<caffeine::ConstantInt>(lhs.get());
-  const auto* rhs_int = llvm::dyn_cast<caffeine::ConstantInt>(rhs.get());
-  if (lhs_int && rhs_int)
-    return ConstantInt::Create(lhs_int->value().urem(rhs_int->value()));
-#endif
-
-  return Create(Opcode::URem, lhs, rhs);
-}
-OpRef BinaryOp::CreateSRem(const OpRef& lhs, const OpRef& rhs) {
-  CAFFEINE_ASSERT(lhs, "lhs was null");
-  CAFFEINE_ASSERT(rhs, "rhs was null");
-  ASSERT_INT(lhs);
-  ASSERT_INT(rhs);
-
-#ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
-  if (is_constant_int(*lhs, 0))
-    return lhs;
-  if (is_constant_int(*rhs, 1) && rhs->type().bitwidth() > 1)
-    return ConstantInt::Create(llvm::APInt(lhs->type().bitwidth(), 0));
-
-  const auto* lhs_int = llvm::dyn_cast<caffeine::ConstantInt>(lhs.get());
-  const auto* rhs_int = llvm::dyn_cast<caffeine::ConstantInt>(rhs.get());
-  if (lhs_int && rhs_int)
-    return ConstantInt::Create(lhs_int->value().srem(rhs_int->value()));
-#endif
-
-  return Create(Opcode::SRem, lhs, rhs);
-}
-
-OpRef BinaryOp::CreateAnd(const OpRef& lhs, const OpRef& rhs) {
-  CAFFEINE_ASSERT(lhs, "lhs was null");
-  CAFFEINE_ASSERT(rhs, "rhs was null");
-  ASSERT_INT(lhs);
-  ASSERT_INT(rhs);
-
-#ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
-  if (is_constant_int(*lhs, 0))
-    return lhs;
-  if (is_constant_int(*rhs, 0))
-    return rhs;
-
-  if (is_constant_ones(*lhs))
-    return rhs;
-  if (is_constant_ones(*rhs))
-    return lhs;
-
-  const auto* lhs_int = llvm::dyn_cast<caffeine::ConstantInt>(lhs.get());
-  const auto* rhs_int = llvm::dyn_cast<caffeine::ConstantInt>(rhs.get());
-  if (lhs_int && rhs_int)
-    return ConstantInt::Create(lhs_int->value() & rhs_int->value());
-#endif
-
-  return Create(Opcode::And, lhs, rhs);
-}
-OpRef BinaryOp::CreateOr(const OpRef& lhs, const OpRef& rhs) {
-  CAFFEINE_ASSERT(lhs, "lhs was null");
-  CAFFEINE_ASSERT(rhs, "rhs was null");
-  ASSERT_INT(lhs);
-  ASSERT_INT(rhs);
-
-#ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
-  if (is_constant_int(*lhs, 0))
-    return rhs;
-  if (is_constant_int(*rhs, 0))
-    return lhs;
-
-  if (is_constant_ones(*lhs))
-    return lhs;
-  if (is_constant_ones(*rhs))
-    return rhs;
-
-  const auto* lhs_int = llvm::dyn_cast<caffeine::ConstantInt>(lhs.get());
-  const auto* rhs_int = llvm::dyn_cast<caffeine::ConstantInt>(rhs.get());
-  if (lhs_int && rhs_int)
-    return ConstantInt::Create(lhs_int->value() | rhs_int->value());
-#endif
-
-  return Create(Opcode::Or, lhs, rhs);
-}
-OpRef BinaryOp::CreateXor(const OpRef& lhs, const OpRef& rhs) {
-  CAFFEINE_ASSERT(lhs, "lhs was null");
-  CAFFEINE_ASSERT(rhs, "rhs was null");
-  ASSERT_INT(lhs);
-  ASSERT_INT(rhs);
-
-#ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
-  if (lhs->is<caffeine::Undef>() || rhs->is<caffeine::Undef>())
-    return Undef::Create(lhs->type());
-
-  if (is_constant_int(*lhs, 0))
-    return rhs;
-  if (is_constant_int(*rhs, 0))
-    return lhs;
-
-  const auto* lhs_int = llvm::dyn_cast<caffeine::ConstantInt>(lhs.get());
-  const auto* rhs_int = llvm::dyn_cast<caffeine::ConstantInt>(rhs.get());
-  if (lhs_int && rhs_int)
-    return ConstantInt::Create(lhs_int->value() ^ rhs_int->value());
-#endif
-
-  return Create(Opcode::Xor, lhs, rhs);
-}
-OpRef BinaryOp::CreateShl(const OpRef& lhs, const OpRef& rhs) {
-  CAFFEINE_ASSERT(lhs, "lhs was null");
-  CAFFEINE_ASSERT(rhs, "rhs was null");
-  ASSERT_INT(lhs);
-  ASSERT_INT(rhs);
-
-#ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
-  if (is_constant_int(*lhs, 0) || is_constant_int(*rhs, 0))
-    return lhs;
-
-  const auto* lhs_int = llvm::dyn_cast<caffeine::ConstantInt>(lhs.get());
-  const auto* rhs_int = llvm::dyn_cast<caffeine::ConstantInt>(rhs.get());
-  if (lhs_int && rhs_int)
-    return ConstantInt::Create(lhs_int->value() << rhs_int->value());
-#endif
-
-  return Create(Opcode::Shl, lhs, rhs);
-}
-OpRef BinaryOp::CreateLShr(const OpRef& lhs, const OpRef& rhs) {
-  CAFFEINE_ASSERT(lhs, "lhs was null");
-  CAFFEINE_ASSERT(rhs, "rhs was null");
-  ASSERT_INT(lhs);
-  ASSERT_INT(rhs);
-
-#ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
-  if (is_constant_int(*lhs, 0) || is_constant_int(*rhs, 0))
-    return lhs;
-
-  const auto* lhs_int = llvm::dyn_cast<caffeine::ConstantInt>(lhs.get());
-  const auto* rhs_int = llvm::dyn_cast<caffeine::ConstantInt>(rhs.get());
-  if (lhs_int && rhs_int)
-    return ConstantInt::Create(lhs_int->value().lshr(rhs_int->value()));
-#endif
-
-  return Create(Opcode::LShr, lhs, rhs);
-}
-OpRef BinaryOp::CreateAShr(const OpRef& lhs, const OpRef& rhs) {
-  CAFFEINE_ASSERT(lhs, "lhs was null");
-  CAFFEINE_ASSERT(rhs, "rhs was null");
-  ASSERT_INT(lhs);
-  ASSERT_INT(rhs);
-
-#ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
-  if (is_constant_int(*lhs, 0) || is_constant_int(*rhs, 0))
-    return lhs;
-
-  const auto* lhs_int = llvm::dyn_cast<caffeine::ConstantInt>(lhs.get());
-  const auto* rhs_int = llvm::dyn_cast<caffeine::ConstantInt>(rhs.get());
-  if (lhs_int && rhs_int)
-    return ConstantInt::Create(lhs_int->value().ashr(rhs_int->value()));
-#endif
-
-  return Create(Opcode::AShr, lhs, rhs);
-}
-
-OpRef BinaryOp::CreateFAdd(const OpRef& lhs, const OpRef& rhs) {
-  CAFFEINE_ASSERT(lhs, "lhs was null");
-  CAFFEINE_ASSERT(rhs, "rhs was null");
-  ASSERT_FP(lhs);
-  ASSERT_FP(rhs);
-
-#ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
-  const auto* lhs_float = llvm::dyn_cast<caffeine::ConstantFloat>(lhs.get());
-  const auto* rhs_float = llvm::dyn_cast<caffeine::ConstantFloat>(rhs.get());
-
-  if (lhs_float && rhs_float) {
-    return caffeine::ConstantFloat::Create(lhs_float->value() +
-                                           rhs_float->value());
-  }
-#endif
-
-  return Create(Opcode::FAdd, lhs, rhs);
-}
-
-OpRef BinaryOp::CreateFSub(const OpRef& lhs, const OpRef& rhs) {
-  CAFFEINE_ASSERT(lhs, "lhs was null");
-  CAFFEINE_ASSERT(rhs, "rhs was null");
-  ASSERT_FP(lhs);
-  ASSERT_FP(rhs);
-
-#ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
-  const auto* lhs_float = llvm::dyn_cast<caffeine::ConstantFloat>(lhs.get());
-  const auto* rhs_float = llvm::dyn_cast<caffeine::ConstantFloat>(rhs.get());
-
-  if (lhs_float && rhs_float) {
-    return caffeine::ConstantFloat::Create(lhs_float->value() -
-                                           rhs_float->value());
-  }
-#endif
-
-  return Create(Opcode::FSub, lhs, rhs);
-}
-
-OpRef BinaryOp::CreateFMul(const OpRef& lhs, const OpRef& rhs) {
-  CAFFEINE_ASSERT(lhs, "lhs was null");
-  CAFFEINE_ASSERT(rhs, "rhs was null");
-  ASSERT_FP(lhs);
-  ASSERT_FP(rhs);
-
-#ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
-  const auto* lhs_float = llvm::dyn_cast<caffeine::ConstantFloat>(lhs.get());
-  const auto* rhs_float = llvm::dyn_cast<caffeine::ConstantFloat>(rhs.get());
-
-  if (lhs_float && rhs_float) {
-    return caffeine::ConstantFloat::Create(lhs_float->value() *
-                                           rhs_float->value());
-  }
-#endif
-
-  return Create(Opcode::FMul, lhs, rhs);
-}
-
-OpRef BinaryOp::CreateFDiv(const OpRef& lhs, const OpRef& rhs) {
-  CAFFEINE_ASSERT(lhs, "lhs was null");
-  CAFFEINE_ASSERT(rhs, "rhs was null");
-  ASSERT_FP(lhs);
-  ASSERT_FP(rhs);
-
-#ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
-  const auto* lhs_float = llvm::dyn_cast<caffeine::ConstantFloat>(lhs.get());
-  const auto* rhs_float = llvm::dyn_cast<caffeine::ConstantFloat>(rhs.get());
-
-  if (lhs_float && rhs_float) {
-    return caffeine::ConstantFloat::Create(lhs_float->value() /
-                                           rhs_float->value());
-  }
-#endif
-
-  return Create(Opcode::FDiv, lhs, rhs);
-}
-
-OpRef BinaryOp::CreateFRem(const OpRef& lhs, const OpRef& rhs) {
-  CAFFEINE_ASSERT(lhs, "lhs was null");
-  CAFFEINE_ASSERT(rhs, "rhs was null");
-  ASSERT_FP(lhs);
-  ASSERT_FP(rhs);
-
-#ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
-  const auto* lhs_float = llvm::dyn_cast<caffeine::ConstantFloat>(lhs.get());
-  const auto* rhs_float = llvm::dyn_cast<caffeine::ConstantFloat>(rhs.get());
-
-  if (lhs_float && rhs_float) {
-    return caffeine::ConstantFloat::Create(
-        llvm::APFloat(lhs_float->value()).remainder(rhs_float->value()));
-  }
-#endif
-
-  return Create(Opcode::FRem, lhs, rhs);
-}
+DECL_BINOP_CREATE(Add, ASSERT_INT);
+DECL_BINOP_CREATE(Sub, ASSERT_INT);
+DECL_BINOP_CREATE(Mul, ASSERT_INT);
+DECL_BINOP_CREATE(UDiv, ASSERT_INT);
+DECL_BINOP_CREATE(SDiv, ASSERT_INT);
+DECL_BINOP_CREATE(URem, ASSERT_INT);
+DECL_BINOP_CREATE(SRem, ASSERT_INT);
+
+DECL_BINOP_CREATE(And, ASSERT_INT);
+DECL_BINOP_CREATE(Or, ASSERT_INT);
+DECL_BINOP_CREATE(Xor, ASSERT_INT);
+DECL_BINOP_CREATE(Shl, ASSERT_INT);
+DECL_BINOP_CREATE(LShr, ASSERT_INT);
+DECL_BINOP_CREATE(AShr, ASSERT_INT);
+
+DECL_BINOP_CREATE(FAdd, ASSERT_FP);
+DECL_BINOP_CREATE(FSub, ASSERT_FP);
+DECL_BINOP_CREATE(FMul, ASSERT_FP);
+DECL_BINOP_CREATE(FDiv, ASSERT_FP);
+DECL_BINOP_CREATE(FRem, ASSERT_FP);
 
 #define DEF_INT_BINOP_CONST_CREATE_DETAIL(opcode, ty, signed)                  \
   OpRef BinaryOp::Create##opcode(const OpRef& lhs, ty rhs) {                   \
@@ -798,7 +448,7 @@ OpRef UnaryOp::Create(Opcode op, const OpRef& operand, Type returnType) {
   CAFFEINE_ASSERT(operand, "operand was null");
   CAFFEINE_ASSERT((op & 0x3) == 1, "Opcode doesn't have 2 operands");
 
-  return OpRef(new UnaryOp(op, returnType, operand));
+  return constant_fold(UnaryOp(op, returnType, operand));
 }
 
 #define DECL_UNOP_CREATE(opcode, assert, return_type)                          \
@@ -806,19 +456,10 @@ OpRef UnaryOp::Create(Opcode op, const OpRef& operand, Type returnType) {
     assert(operand);                                                           \
                                                                                \
     return Create(Opcode::opcode, operand, return_type);                       \
-  }
+  }                                                                            \
+  static_assert(true)
 
-OpRef UnaryOp::CreateNot(const OpRef& operand) {
-  ASSERT_INT(operand);
-
-#ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
-  if (const auto* op = llvm::dyn_cast<caffeine::ConstantInt>(operand.get()))
-    return ConstantInt::Create(~op->value());
-#endif
-
-  return Create(Opcode::Not, operand);
-}
-
+DECL_UNOP_CREATE(Not, ASSERT_INT, operand->type());
 DECL_UNOP_CREATE(FNeg, ASSERT_FP, operand->type());
 DECL_UNOP_CREATE(FIsNaN, ASSERT_FP, Type::int_ty(1));
 
@@ -827,42 +468,21 @@ OpRef UnaryOp::CreateTrunc(Type tgt, const OpRef& operand) {
   CAFFEINE_ASSERT(operand->type().is_int());
   CAFFEINE_ASSERT(tgt.bitwidth() < operand->type().bitwidth());
 
-#ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
-  if (llvm::isa<caffeine::Undef>(operand.get()))
-    return Undef::Create(tgt);
-
-  if (const auto* op = llvm::dyn_cast<caffeine::ConstantInt>(operand.get()))
-    return ConstantInt::Create(op->value().trunc(tgt.bitwidth()));
-#endif
-
-  return OpRef(new UnaryOp(Opcode::Trunc, tgt, operand));
+  return Create(Opcode::Trunc, operand, tgt);
 }
 OpRef UnaryOp::CreateZExt(Type tgt, const OpRef& operand) {
   CAFFEINE_ASSERT(tgt.is_int());
   CAFFEINE_ASSERT(operand->type().is_int());
   CAFFEINE_ASSERT(tgt.bitwidth() > operand->type().bitwidth());
 
-#ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
-  if (const auto* op = llvm::dyn_cast<caffeine::ConstantInt>(operand.get()))
-    return ConstantInt::Create(op->value().zext(tgt.bitwidth()));
-#endif
-
-  return OpRef(new UnaryOp(Opcode::ZExt, tgt, operand));
+  return Create(Opcode::ZExt, operand, tgt);
 }
 OpRef UnaryOp::CreateSExt(Type tgt, const OpRef& operand) {
   CAFFEINE_ASSERT(tgt.is_int());
   CAFFEINE_ASSERT(operand->type().is_int());
   CAFFEINE_ASSERT(tgt.bitwidth() > operand->type().bitwidth());
 
-#ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
-  if (llvm::isa<caffeine::Undef>(operand.get()))
-    return Undef::Create(tgt);
-
-  if (const auto* op = llvm::dyn_cast<caffeine::ConstantInt>(operand.get()))
-    return ConstantInt::Create(op->value().sext(tgt.bitwidth()));
-#endif
-
-  return OpRef(new UnaryOp(Opcode::SExt, tgt, operand));
+  return Create(Opcode::SExt, operand, tgt);
 }
 OpRef UnaryOp::CreateFpTrunc(Type tgt, const OpRef& operand) {
   CAFFEINE_ASSERT(tgt.is_float());
@@ -870,7 +490,7 @@ OpRef UnaryOp::CreateFpTrunc(Type tgt, const OpRef& operand) {
   CAFFEINE_ASSERT(tgt.exponent_bits() < operand->type().exponent_bits() &&
                   tgt.mantissa_bits() < operand->type().mantissa_bits());
 
-  return OpRef(new UnaryOp(Opcode::FpTrunc, tgt, operand));
+  return Create(Opcode::FpTrunc, operand, tgt);
 }
 OpRef UnaryOp::CreateFpExt(Type tgt, const OpRef& operand) {
   CAFFEINE_ASSERT(tgt.is_float());
@@ -878,37 +498,37 @@ OpRef UnaryOp::CreateFpExt(Type tgt, const OpRef& operand) {
   CAFFEINE_ASSERT(tgt.exponent_bits() > operand->type().exponent_bits() &&
                   tgt.mantissa_bits() > operand->type().mantissa_bits());
 
-  return OpRef(new UnaryOp(Opcode::FpExt, tgt, operand));
+  return Create(Opcode::FpExt, operand, tgt);
 }
 OpRef UnaryOp::CreateFpToUI(Type tgt, const OpRef& operand) {
   CAFFEINE_ASSERT(tgt.is_int());
   CAFFEINE_ASSERT(operand->type().is_float());
 
-  return OpRef(new UnaryOp(Opcode::FpToUI, tgt, operand));
+  return Create(Opcode::FpToUI, operand, tgt);
 }
 OpRef UnaryOp::CreateFpToSI(Type tgt, const OpRef& operand) {
   CAFFEINE_ASSERT(tgt.is_int());
   CAFFEINE_ASSERT(operand->type().is_float());
 
-  return OpRef(new UnaryOp(Opcode::FpToSI, tgt, operand));
+  return Create(Opcode::FpToSI, operand, tgt);
 }
 OpRef UnaryOp::CreateUIToFp(Type tgt, const OpRef& operand) {
   CAFFEINE_ASSERT(tgt.is_float());
   CAFFEINE_ASSERT(operand->type().is_int());
 
-  return OpRef(new UnaryOp(Opcode::UIToFp, tgt, operand));
+  return Create(Opcode::UIToFp, operand, tgt);
 }
 OpRef UnaryOp::CreateSIToFp(Type tgt, const OpRef& operand) {
   CAFFEINE_ASSERT(tgt.is_float());
   CAFFEINE_ASSERT(operand->type().is_int());
 
-  return OpRef(new UnaryOp(Opcode::SIToFp, tgt, operand));
+  return Create(Opcode::SIToFp, operand, tgt);
 }
 OpRef UnaryOp::CreateBitcast(Type tgt, const OpRef& operand) {
   // TODO: Validate sizes if possible.
   // CAFFEINE_ASSERT(tgt.byte_size() == operand->type().byte_size());
 
-  return OpRef(new UnaryOp(Opcode::Bitcast, tgt, operand));
+  return Create(Opcode::Bitcast, operand, tgt);
 }
 
 OpRef UnaryOp::CreateTruncOrZExt(Type tgt, const OpRef& operand) {
@@ -952,12 +572,8 @@ OpRef SelectOp::Create(const OpRef& cond, const OpRef& true_value,
   CAFFEINE_ASSERT(true_value->type() == false_value->type(),
                   "select values had different types");
 
-#ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
-  if (const auto* vcond = llvm::dyn_cast<caffeine::ConstantInt>(cond.get()))
-    return vcond->value() == 1 ? true_value : false_value;
-#endif
-
-  return OpRef(new SelectOp(true_value->type(), cond, true_value, false_value));
+  return constant_fold(
+      SelectOp(true_value->type(), cond, true_value, false_value));
 }
 
 /***************************************************
@@ -978,35 +594,7 @@ OpRef ICmpOp::CreateICmp(ICmpOpcode cmp, const OpRef& lhs, const OpRef& rhs) {
   CAFFEINE_ASSERT(lhs->type().is_int(),
                   "icmp can only be created with integer operands");
 
-#ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
-  const auto* lhs_int = llvm::dyn_cast<caffeine::ConstantInt>(lhs.get());
-  const auto* rhs_int = llvm::dyn_cast<caffeine::ConstantInt>(rhs.get());
-  if (lhs_int && rhs_int)
-    return ConstantInt::Create(
-        constant_int_compare(cmp, lhs_int->value(), rhs_int->value()));
-
-  if (lhs.get() == rhs.get()) {
-    if (lhs->is<caffeine::Undef>())
-      return Undef::Create(Type::int_ty(1));
-
-    switch (cmp) {
-    case ICmpOpcode::EQ:
-    case ICmpOpcode::ULE:
-    case ICmpOpcode::SLE:
-    case ICmpOpcode::UGE:
-    case ICmpOpcode::SGE:
-      return ConstantInt::Create(true);
-    case ICmpOpcode::NE:
-    case ICmpOpcode::ULT:
-    case ICmpOpcode::SLT:
-    case ICmpOpcode::UGT:
-    case ICmpOpcode::SGT:
-      return ConstantInt::Create(false);
-    }
-  }
-#endif
-
-  return OpRef(new ICmpOp(cmp, Type::int_ty(1), lhs, rhs));
+  return constant_fold(ICmpOp(cmp, Type::type_of<bool>(), lhs, rhs));
 }
 OpRef ICmpOp::CreateICmp(ICmpOpcode cmp, int64_t lhs, const OpRef& rhs) {
   CAFFEINE_ASSERT(rhs, "rhs was null");
@@ -1045,32 +633,7 @@ OpRef FCmpOp::CreateFCmp(FCmpOpcode cmp, const OpRef& lhs, const OpRef& rhs) {
   CAFFEINE_ASSERT(lhs->type().is_float(),
                   "icmp can only be created with integer operands");
 
-#ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
-  const auto* lhs_float = llvm::dyn_cast<caffeine::ConstantFloat>(lhs.get());
-  const auto* rhs_float = llvm::dyn_cast<caffeine::ConstantFloat>(rhs.get());
-
-  if (lhs_float && rhs_float)
-    return ConstantInt::Create(
-        constant_float_compare(cmp, lhs_float->value(), rhs_float->value()));
-
-  if (lhs.get() == rhs.get()) {
-    if (lhs_float->value().isNaN())
-      return lhs;
-
-    switch (cmp) {
-    case FCmpOpcode::EQ:
-    case FCmpOpcode::LE:
-    case FCmpOpcode::GE:
-      return ConstantInt::Create(true);
-    case FCmpOpcode::NE:
-    case FCmpOpcode::LT:
-    case FCmpOpcode::GT:
-      return ConstantInt::Create(false);
-    }
-  }
-#endif
-
-  return OpRef(new FCmpOp(cmp, Type::type_of<bool>(), lhs, rhs));
+  return constant_fold(FCmpOp(cmp, Type::type_of<bool>(), lhs, rhs));
 }
 
 /***************************************************
@@ -1090,16 +653,7 @@ OpRef AllocOp::Create(const OpRef& size, const OpRef& defaultval) {
   CAFFEINE_ASSERT(size->type().is_int(), "Array size must be an integer type");
   CAFFEINE_ASSERT(defaultval->type() == Type::int_ty(8));
 
-#ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
-  if (const auto* cnst = llvm::dyn_cast<caffeine::ConstantInt>(size.get())) {
-    if (cnst->value().getLimitedValue(SIZE_MAX) < SIZE_MAX) {
-      return FixedArray::Create(cnst->type(), defaultval,
-                                cnst->value().getLimitedValue());
-    }
-  }
-#endif
-
-  return OpRef(new AllocOp(size, defaultval));
+  return constant_fold(AllocOp(size, defaultval));
 }
 
 /***************************************************
@@ -1114,16 +668,7 @@ OpRef LoadOp::Create(const OpRef& data, const OpRef& offset) {
   CAFFEINE_ASSERT(offset->type().is_int(),
                   "Load offset must be a pointer-sized integer type");
 
-#ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
-  const auto* fixedarray = llvm::dyn_cast<caffeine::FixedArray>(data.get());
-  const auto* offset_int = llvm::dyn_cast<caffeine::ConstantInt>(offset.get());
-
-  if (fixedarray && offset_int) {
-    return fixedarray->data()[offset_int->value().getLimitedValue()];
-  }
-#endif
-
-  return OpRef(new LoadOp(data, offset));
+  return constant_fold(LoadOp(data, offset));
 }
 
 /***************************************************
@@ -1142,19 +687,7 @@ OpRef StoreOp::Create(const OpRef& data, const OpRef& offset,
                   "Store offset must be a pointer-size integer type");
   CAFFEINE_ASSERT(value->type() == Type::int_ty(8), "Value must be of type i8");
 
-#ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
-  const auto* offset_cnst = llvm::dyn_cast<caffeine::ConstantInt>(offset.get());
-  const auto* fixedarray = llvm::dyn_cast<caffeine::FixedArray>(data.get());
-
-  if (offset_cnst && fixedarray) {
-    auto data = fixedarray->data();
-    data.set(offset_cnst->value().getLimitedValue(), value);
-    return FixedArray::Create(offset->type(), data);
-  }
-
-#endif
-
-  return OpRef(new StoreOp(data, offset, value));
+  return constant_fold(StoreOp(data, offset, value));
 }
 
 /***************************************************
@@ -1163,7 +696,7 @@ OpRef StoreOp::Create(const OpRef& data, const OpRef& offset,
 Undef::Undef(const Type& t) : Operation(Opcode::Undef, t) {}
 
 OpRef Undef::Create(const Type& t) {
-  return OpRef(new Undef(t));
+  return constant_fold(Undef(t));
 }
 
 /***************************************************
@@ -1217,7 +750,7 @@ OpRef FixedArray::Create(Type index_ty, const PersistentArray<OpRef>& data) {
       index_ty.bitwidth() >= ilog2(data.size()),
       "Index bitwidth is not large enough to address entire constant array");
 
-  return OpRef(new FixedArray(Type::array_ty(index_ty.bitwidth()), data));
+  return constant_fold(FixedArray(Type::array_ty(index_ty.bitwidth()), data));
 }
 OpRef FixedArray::Create(Type index_ty, const OpRef& value, size_t size) {
   return FixedArray::Create(
