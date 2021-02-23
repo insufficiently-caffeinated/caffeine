@@ -20,7 +20,11 @@ namespace caffeine {
  *
  * However, if you know that all dervied classes will have exactly the same size
  * as the base class and you want to have the classes vtable copied along with
- * them then you should take use this class.
+ * them then you should use this class. To actually make use of this class you
+ * will have to call copy_vtable within the copy/move ctors/assigment operators.
+ * This is because the compiler overwrites the vtable during construction of the
+ * derived operation so copy_vtable needs to be called after the object is
+ * initialized (i.e. within the body of the constructor).
  *
  * Limitations
  * ===========
@@ -42,11 +46,12 @@ public:
   CopyVTable() = default;
   virtual ~CopyVTable() = default;
 
-  CopyVTable(const CopyVTable&) noexcept;
-  CopyVTable(CopyVTable&&) noexcept;
+  // Deleted so the user is forced to call copy_vtable
+  CopyVTable(const CopyVTable&) noexcept = delete;
+  CopyVTable(CopyVTable&&) noexcept = delete;
 
-  CopyVTable& operator=(const CopyVTable&) noexcept;
-  CopyVTable& operator=(CopyVTable&&) noexcept;
+  CopyVTable& operator=(const CopyVTable&) noexcept = delete;
+  CopyVTable& operator=(CopyVTable&&) noexcept = delete;
 
   void copy_vtable(const CopyVTable& vtable) noexcept;
 };
