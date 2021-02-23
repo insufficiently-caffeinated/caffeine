@@ -126,9 +126,9 @@ OpRef Operation::with_new_operands(llvm::ArrayRef<OpRef> operands) const {
   if (equal)
     return into_ref();
 
-  auto value = new Operation((Opcode)opcode(), type(), operands.data());
-  value->copy_vtable(*this);
-  return OpRef(value);
+  Operation next{(Opcode)opcode(), type(), operands.data()};
+  next.copy_vtable(*this);
+  return constant_fold(std::move(next));
 }
 
 std::string_view Operation::opcode_name() const {
