@@ -1,5 +1,8 @@
 
 #include "caffeine/Interpreter/Interpreter.h"
+#include "caffeine/Solver/CanonicalizingSolver.h"
+#include "caffeine/Solver/SequenceSolver.h"
+#include "caffeine/Solver/SimplifyingSolver.h"
 #include "caffeine/Solver/Z3Solver.h"
 
 #include <boost/core/demangle.hpp>
@@ -161,8 +164,9 @@ int main(int argc, char** argv) {
   // Print out exception messages in std::terminate
   llvm_handler = std::set_terminate(custom_terminate_handler);
 
-  std::shared_ptr<caffeine::Solver> solver =
-      std::make_shared<caffeine::Z3Solver>();
+  std::shared_ptr<caffeine::Solver> solver = caffeine::make_sequence_solver(
+      caffeine::SimplifyingSolver(), caffeine::CanonicalizingSolver(),
+      caffeine::Z3Solver());
   auto logger = CountingFailureLogger{std::cout, function};
 
   Executor exec;
