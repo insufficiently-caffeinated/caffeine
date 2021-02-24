@@ -63,6 +63,8 @@ void canonicalize(std::vector<Assertion>& assertions);
  * transformations.
  */
 template <typename Visitor>
+ref<Operation> rebuild(const ref<Operation>& expression, Visitor& visitor);
+template <typename Visitor>
 ref<Operation> rebuild(const ref<Operation>& expression, Visitor&& visitor);
 
 } // namespace caffeine::transforms
