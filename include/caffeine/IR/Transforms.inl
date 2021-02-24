@@ -12,7 +12,7 @@ ref<Operation> rebuild(const ref<Operation>& expression, Visitor&& visitor) {
   ops.reserve(nops);
 
   for (size_t i = 0; i < nops; ++i) {
-    ops.push_back(rebuild(expression->operand_at(i), visitor));
+    ops.push_back(rebuild(expression->operand_at(i), std::move(visitor)));
   }
 
   return visitor(expression->with_new_operands(ops));
