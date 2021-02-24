@@ -23,4 +23,6 @@ RUN apt-get update \
         python3-distutils \
         libfmt-dev \
         libboost-all-dev \
+        libcapnp-dev \
+        capnproto \
     && rm -rf /var/lib/apt/lists/*
