@@ -4,6 +4,7 @@ file(
   CONFIGURE_DEPENDS
   *.c
   *.h
+  *.ll
 )
 
 add_llvm_ir_library(caffeine-builtins
