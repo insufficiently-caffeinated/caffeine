@@ -10,7 +10,7 @@
     "fmt",
     "z3",
     "gtest",
-    "magic_enum",
-    "capnproto"
+    "capnproto",
+    "magic-enum"
   ]
 }

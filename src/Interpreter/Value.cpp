@@ -1,4 +1,5 @@
 #include "caffeine/Interpreter/Value.h"
+#include "caffeine/IR/Operation.h"
 
 #include <type_traits>
 
@@ -78,9 +79,9 @@ std::ostream& operator<<(std::ostream& os, const ContextValue& value) {
     auto ptr = value.pointer();
 
     if (ptr.is_resolved())
-      return os << "[" << ptr.alloc().first << " offset " << ptr.offset()
+      return os << "[" << ptr.alloc().first << " offset " << *ptr.offset()
                 << "]";
-    return os << ptr.offset();
+    return os << *ptr.offset();
   }
 
   os << "<";
