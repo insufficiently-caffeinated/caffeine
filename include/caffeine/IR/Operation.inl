@@ -152,10 +152,10 @@ inline size_t Operation::num_operands() const {
   return detail::opcode_nargs(opcode_);
 }
 
-inline ref<Operation> Operation::as_ref() {
+inline OpRef Operation::as_ref() {
   CAFFEINE_ASSERT(refcount != 0, "Unable to convert non-refcounted Operation "
                                  "instance to a refcounted one");
-  return ref<Operation>(this);
+  return OpRef(this);
 }
 inline ref<const Operation> Operation::as_ref() const {
   CAFFEINE_ASSERT(refcount != 0, "Unable to convert non-refcounted Operation "
@@ -205,17 +205,17 @@ inline const Operation& Operation::operator[](size_t idx) const {
   return *operand_at(idx);
 }
 
-inline ref<Operation>& Operation::operand_at(size_t idx) {
+inline OpRef& Operation::operand_at(size_t idx) {
   return std::get<OpVec>(inner_)[idx];
 }
-inline const ref<Operation>& Operation::operand_at(size_t idx) const {
+inline const OpRef& Operation::operand_at(size_t idx) const {
   return std::get<OpVec>(inner_)[idx];
 }
 
-inline ref<Operation> Operation::into_ref() const {
+inline OpRef Operation::into_ref() const {
   if (refcnt() == 0)
     return make_ref<Operation>(*this);
-  return ref<Operation>(const_cast<Operation*>(this));
+  return OpRef(const_cast<Operation*>(this));
 }
 
 /***************************************************
@@ -295,7 +295,7 @@ inline const llvm::APFloat& ConstantFloat::value() const {
 /***************************************************
  * ConstantArray                                   *
  ***************************************************/
-inline ref<Operation> ConstantArray::size() const {
+inline OpRef ConstantArray::size() const {
   return operand_at(0);
 }
 
@@ -303,12 +303,12 @@ inline const Symbol& ConstantArray::symbol() const {
   return std::get<ConstantData>(inner_).first;
 }
 
-inline ref<Operation>& ConstantArray::operand_at(size_t idx) {
+inline OpRef& ConstantArray::operand_at(size_t idx) {
   CAFFEINE_ASSERT(idx == 0, "Accessed out of bounds operand index");
   return std::get<ConstantData>(inner_).second;
 }
 
-inline const ref<Operation>& ConstantArray::operand_at(size_t idx) const {
+inline const OpRef& ConstantArray::operand_at(size_t idx) const {
   CAFFEINE_ASSERT(idx == 0, "Accessed out of bounds operand index");
   return std::get<ConstantData>(inner_).second;
 }
@@ -316,50 +316,50 @@ inline const ref<Operation>& ConstantArray::operand_at(size_t idx) const {
 /***************************************************
  * BinaryOp                                        *
  ***************************************************/
-inline const ref<Operation>& BinaryOp::lhs() const {
+inline const OpRef& BinaryOp::lhs() const {
   return operand_at(0);
 }
-inline const ref<Operation>& BinaryOp::rhs() const {
+inline const OpRef& BinaryOp::rhs() const {
   return operand_at(1);
 }
 
-inline ref<Operation>& BinaryOp::lhs() {
+inline OpRef& BinaryOp::lhs() {
   return operand_at(0);
 }
-inline ref<Operation>& BinaryOp::rhs() {
+inline OpRef& BinaryOp::rhs() {
   return operand_at(1);
 }
 
 /***************************************************
  * UnaryOp                                         *
  ***************************************************/
-inline ref<Operation>& UnaryOp::operand() {
+inline OpRef& UnaryOp::operand() {
   return operand_at(0);
 }
-inline const ref<Operation>& UnaryOp::operand() const {
+inline const OpRef& UnaryOp::operand() const {
   return operand_at(0);
 }
 
 /***************************************************
  * SelectOp                                        *
  ***************************************************/
-inline ref<Operation>& SelectOp::condition() {
+inline OpRef& SelectOp::condition() {
   return operand_at(0);
 }
-inline ref<Operation>& SelectOp::true_value() {
+inline OpRef& SelectOp::true_value() {
   return operand_at(1);
 }
-inline ref<Operation>& SelectOp::false_value() {
+inline OpRef& SelectOp::false_value() {
   return operand_at(2);
 }
 
-inline const ref<Operation>& SelectOp::condition() const {
+inline const OpRef& SelectOp::condition() const {
   return operand_at(0);
 }
-inline const ref<Operation>& SelectOp::true_value() const {
+inline const OpRef& SelectOp::true_value() const {
   return operand_at(1);
 }
-inline const ref<Operation>& SelectOp::false_value() const {
+inline const OpRef& SelectOp::false_value() const {
   return operand_at(2);
 }
 
@@ -396,73 +396,73 @@ inline bool FCmpOp::is_unordered() const {
 /***************************************************
  * AllocOp                                         *
  ***************************************************/
-inline ref<Operation> AllocOp::size() const {
+inline OpRef AllocOp::size() const {
   return operand_at(0);
 }
 
-inline ref<Operation>& AllocOp::default_value() {
+inline OpRef& AllocOp::default_value() {
   return operand_at(1);
 }
-inline const ref<Operation>& AllocOp::default_value() const {
+inline const OpRef& AllocOp::default_value() const {
   return operand_at(1);
 }
 
 /***************************************************
  * LoadOp                                          *
  ***************************************************/
-inline ref<Operation>& LoadOp::data() {
+inline OpRef& LoadOp::data() {
   return operand_at(0);
 }
-inline const ref<Operation>& LoadOp::data() const {
+inline const OpRef& LoadOp::data() const {
   return operand_at(0);
 }
 
-inline ref<Operation>& LoadOp::offset() {
+inline OpRef& LoadOp::offset() {
   return operand_at(1);
 }
-inline const ref<Operation>& LoadOp::offset() const {
+inline const OpRef& LoadOp::offset() const {
   return operand_at(1);
 }
 
 /***************************************************
  * StoreOp                                         *
  ***************************************************/
-inline ref<Operation> StoreOp::size() const {
+inline OpRef StoreOp::size() const {
   return llvm::cast<ArrayBase>(*data()).size();
 }
 
-inline ref<Operation>& StoreOp::data() {
+inline OpRef& StoreOp::data() {
   return operand_at(0);
 }
-inline const ref<Operation>& StoreOp::data() const {
+inline const OpRef& StoreOp::data() const {
   return operand_at(0);
 }
 
-inline ref<Operation>& StoreOp::offset() {
+inline OpRef& StoreOp::offset() {
   return operand_at(1);
 }
-inline const ref<Operation>& StoreOp::offset() const {
+inline const OpRef& StoreOp::offset() const {
   return operand_at(1);
 }
 
-inline ref<Operation>& StoreOp::value() {
+inline OpRef& StoreOp::value() {
   return operand_at(2);
 }
-inline const ref<Operation>& StoreOp::value() const {
+inline const OpRef& StoreOp::value() const {
   return operand_at(2);
 }
 
 /***************************************************
  * FixedArray                                      *
  ***************************************************/
-inline PersistentArray<ref<Operation>>& FixedArray::data() {
-  return std::get<PersistentArray<ref<Operation>>>(inner_);
+inline PersistentArray<OpRef>& FixedArray::data() {
+  return std::get<PersistentArray<OpRef>>(inner_);
 }
-inline const PersistentArray<ref<Operation>>& FixedArray::data() const {
-  return std::get<PersistentArray<ref<Operation>>>(inner_);
+inline const PersistentArray<OpRef>& FixedArray::data() const {
+  return std::get<PersistentArray<OpRef>>(inner_);
 }
 
-inline ref<Operation> FixedArray::size() const {
+inline OpRef FixedArray::size() const {
   return ConstantInt::Create(llvm::APInt(type().bitwidth(), data().size()));
 }
 
@@ -470,10 +470,10 @@ inline size_t FixedArray::num_operands() const {
   return data().size();
 }
 
-inline ref<Operation>& FixedArray::operand_at(size_t i) {
-  return std::get<PersistentArray<ref<Operation>>>(inner_).element_reference(i);
+inline OpRef& FixedArray::operand_at(size_t i) {
+  return std::get<PersistentArray<OpRef>>(inner_).element_reference(i);
 }
-inline const ref<Operation>& FixedArray::operand_at(size_t i) const {
+inline const OpRef& FixedArray::operand_at(size_t i) const {
   return data().get(i);
 }
 

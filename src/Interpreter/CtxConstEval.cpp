@@ -26,7 +26,7 @@ template <typename ContextType>
 static ContextValue evaluate(ContextType ctx, llvm::Constant* constant);
 
 template <typename ContextType>
-static ref<Operation> evaluate_global_data(ContextType,
+static OpRef evaluate_global_data(ContextType,
                                            llvm::Constant* constant);
 
 static ContextValue evaluate_undef(const Context* ctx,
@@ -91,7 +91,7 @@ static ContextValue evaluate_expr(ContextType ctx, llvm::ConstantExpr* expr) {
 #define CAST_OP(expr_)                                                         \
   transform(                                                                   \
       [=, type = Type::from_llvm(expr->getType())](                            \
-          const ref<Operation>& value) -> ref<Operation> { return (expr_); },  \
+          const OpRef& value) -> OpRef { return (expr_); },  \
       OPERAND(expr, 0))
 
   switch (expr->getOpcode()) {
@@ -262,7 +262,7 @@ ContextValue evaluate_global(ContextType ctx, llvm::GlobalVariable* global) {
  * Evaluate the initializer of a global variable to a byte array.
  */
 template <typename ContextType>
-static ref<Operation> evaluate_global_data(ContextType ctx,
+static OpRef evaluate_global_data(ContextType ctx,
                                            llvm::Constant* constant) {
   static_assert(
       std::is_same_v<std::remove_const_t<std::remove_pointer_t<ContextType>>,
@@ -275,7 +275,7 @@ static ref<Operation> evaluate_global_data(ContextType ctx,
     auto raw = data->getRawDataValues();
     auto idxty = Type::int_ty(layout.getPointerSizeInBits());
 
-    std::vector<ref<Operation>> values;
+    std::vector<OpRef> values;
     values.reserve(raw.size());
 
     for (size_t i = 0; i < raw.size(); ++i) {

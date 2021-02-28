@@ -18,7 +18,7 @@ void StackFrame::jump_to(llvm::BasicBlock* block) {
   current = block->begin();
 }
 
-void StackFrame::insert(llvm::Value* value, const ref<Operation>& expr) {
+void StackFrame::insert(llvm::Value* value, const OpRef& expr) {
   insert(value, ContextValue{expr});
 }
 void StackFrame::insert(llvm::Value* value, const ContextValue& exprs) {

@@ -11,24 +11,24 @@ namespace caffeine {
  * Allocation                                      *
  ***************************************************/
 
-inline const ref<Operation>& Allocation::size() const {
+inline const OpRef& Allocation::size() const {
   return size_;
 }
-inline ref<Operation>& Allocation::size() {
+inline OpRef& Allocation::size() {
   return size_;
 }
 
-inline const ref<Operation>& Allocation::data() const {
+inline const OpRef& Allocation::data() const {
   return data_;
 }
-inline ref<Operation>& Allocation::data() {
+inline OpRef& Allocation::data() {
   return data_;
 }
 
-inline const ref<Operation>& Allocation::address() const {
+inline const OpRef& Allocation::address() const {
   return address_;
 }
-inline ref<Operation>& Allocation::address() {
+inline OpRef& Allocation::address() {
   return address_;
 }
 
@@ -44,7 +44,7 @@ inline AllocId Pointer::alloc() const {
   return alloc_;
 }
 
-inline const ref<Operation>& Pointer::offset() const {
+inline const OpRef& Pointer::offset() const {
   return offset_;
 }
 

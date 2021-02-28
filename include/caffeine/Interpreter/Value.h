@@ -33,11 +33,11 @@ private:
         : data(data), size(size) {}
   };
 
-  std::variant<ref<Operation>, std::vector<ContextValue>, slice, Pointer>
+  std::variant<OpRef, std::vector<ContextValue>, slice, Pointer>
       inner_;
 
 public:
-  explicit ContextValue(const ref<Operation>& op);
+  explicit ContextValue(const OpRef& op);
   explicit ContextValue(const std::vector<ContextValue>& data);
   explicit ContextValue(std::vector<ContextValue>&& data);
   explicit ContextValue(const Pointer& ptr);
@@ -58,13 +58,13 @@ public:
 
   Kind kind() const;
 
-  const ref<Operation>& scalar() const;
+  const OpRef& scalar() const;
   llvm::ArrayRef<ContextValue> vector() const;
   const Pointer& pointer() const;
 };
 
 /**
- * Map the ref<Operation> elements of any number of ContextValues
+ * Map the OpRef elements of any number of ContextValues
  * to form a new ContextValue with the same shape.
  *
  * For this to work all ContextValues must have the same "shape"

@@ -15,22 +15,22 @@ namespace caffeine {
  * Allocation                                      *
  ***************************************************/
 
-Allocation::Allocation(const ref<Operation>& address,
-                       const ref<Operation>& size, const ref<Operation>& data,
+Allocation::Allocation(const OpRef& address,
+                       const OpRef& size, const OpRef& data,
                        AllocationKind kind)
     : address_(address), size_(size), data_(data), kind_(kind) {
   CAFFEINE_ASSERT(address->type().is_int());
   CAFFEINE_ASSERT(size->type().is_int());
   CAFFEINE_ASSERT(address->type().bitwidth() == size->type().bitwidth());
 }
-Allocation::Allocation(const ref<Operation>& address, const ConstantInt& size,
-                       const ref<Operation>& data, AllocationKind kind)
+Allocation::Allocation(const OpRef& address, const ConstantInt& size,
+                       const OpRef& data, AllocationKind kind)
     : Allocation(address, make_ref<Operation>(size), data, kind) {}
 
-void Allocation::overwrite(const ref<Operation>& newdata) {
+void Allocation::overwrite(const OpRef& newdata) {
   data_ = newdata;
 }
-void Allocation::overwrite(ref<Operation>&& newdata) {
+void Allocation::overwrite(OpRef&& newdata) {
   data_ = std::move(newdata);
 }
 
@@ -38,13 +38,13 @@ bool Allocation::is_constant_size() const {
   return size()->is_constant();
 }
 
-Assertion Allocation::check_inbounds(const ref<Operation>& offset,
+Assertion Allocation::check_inbounds(const OpRef& offset,
                                      uint32_t width) const {
   return check_inbounds(offset, ConstantInt::Create(llvm::APInt(
                                     offset->type().bitwidth(), width)));
 }
-Assertion Allocation::check_inbounds(const ref<Operation>& offset,
-                                     const ref<Operation>& width) const {
+Assertion Allocation::check_inbounds(const OpRef& offset,
+                                     const OpRef& width) const {
   // Basic check: offset < size && offset + width < size.
   // Need to check that the entire range is within the allocation.
   // TODO: Should we check for wraparound, probably not worth it for now.
@@ -56,7 +56,7 @@ Assertion Allocation::check_inbounds(const ref<Operation>& offset,
   return Assertion(BinaryOp::CreateAnd(std::move(upper), std::move(lower)));
 }
 
-ref<Operation> Allocation::read(const ref<Operation>& offset, const Type& t,
+OpRef Allocation::read(const OpRef& offset, const Type& t,
                                 const llvm::DataLayout& llvm) const {
   /**
    * Reading data here is actually somewhat complex. We need to effectively
@@ -68,7 +68,7 @@ ref<Operation> Allocation::read(const ref<Operation>& offset, const Type& t,
   CAFFEINE_ASSERT(!t.is_array(), "attempted to read a value of type array");
 
   uint32_t width = t.byte_size(llvm);
-  llvm::SmallVector<ref<Operation>, 8> bytes;
+  llvm::SmallVector<OpRef, 8> bytes;
   bytes.reserve(width);
 
   for (uint32_t i = 0; i < width; ++i) {
@@ -101,7 +101,7 @@ ref<Operation> Allocation::read(const ref<Operation>& offset, const Type& t,
 
   return UnaryOp::CreateBitcast(t, bitresult);
 }
-ContextValue Allocation::read(const ref<Operation>& offset, llvm::Type* type,
+ContextValue Allocation::read(const OpRef& offset, llvm::Type* type,
                               const llvm::DataLayout& layout) {
   if (type->isPointerTy()) {
     return ContextValue(Pointer(
@@ -126,8 +126,8 @@ ContextValue Allocation::read(const ref<Operation>& offset, llvm::Type* type,
   return ContextValue(std::move(values));
 }
 
-void Allocation::write(const ref<Operation>& offset,
-                       const ref<Operation>& value_,
+void Allocation::write(const OpRef& offset,
+                       const OpRef& value_,
                        const llvm::DataLayout& layout) {
   /**
    * This is essentially the same process as for read but executed in reverse.
@@ -162,7 +162,7 @@ void Allocation::write(const ref<Operation>& offset,
     overwrite(StoreOp::Create(data(), index, byte));
   }
 }
-void Allocation::write(const ref<Operation>& offset, llvm::Type* type,
+void Allocation::write(const OpRef& offset, llvm::Type* type,
                        const ContextValue& value, const MemHeap& heap,
                        const llvm::DataLayout& layout) {
   if (value.is_pointer()) {
@@ -191,16 +191,16 @@ void Allocation::write(const ref<Operation>& offset, llvm::Type* type,
  * Pointer                                         *
  ***************************************************/
 
-Pointer::Pointer(const ref<Operation>& value)
+Pointer::Pointer(const OpRef& value)
     : Pointer({SIZE_MAX, SIZE_MAX}, value) {
   CAFFEINE_ASSERT(value->type().is_int());
 }
-Pointer::Pointer(const AllocId& alloc, const ref<Operation>& offset)
+Pointer::Pointer(const AllocId& alloc, const OpRef& offset)
     : alloc_(alloc), offset_(offset) {
   CAFFEINE_ASSERT(offset->type().is_int());
 }
 
-ref<Operation> Pointer::value(const MemHeap& heap) const {
+OpRef Pointer::value(const MemHeap& heap) const {
   if (is_resolved())
     return BinaryOp::CreateAdd(heap[alloc()].address(), offset());
   return offset();
@@ -221,9 +221,9 @@ const Allocation& MemHeap::operator[](const AllocId& alloc) const {
   return allocs_.at(alloc);
 }
 
-AllocId MemHeap::allocate(const ref<Operation>& size,
-                          const ref<Operation>& alignment,
-                          const ref<Operation>& data, AllocationKind kind,
+AllocId MemHeap::allocate(const OpRef& size,
+                          const OpRef& alignment,
+                          const OpRef& data, AllocationKind kind,
                           Context& ctx) {
   CAFFEINE_ASSERT(size->type() == alignment->type());
   CAFFEINE_ASSERT(size->type().is_int());
@@ -288,7 +288,7 @@ Assertion MemHeap::check_valid(const Pointer& ptr, uint32_t width) {
                               ptr.offset()->type().bitwidth(), width)));
 }
 Assertion MemHeap::check_valid(const Pointer& ptr,
-                               const ref<Operation>& width) {
+                               const OpRef& width) {
   /**
    * Implementation note: When checking that the end of the read is within the
    * allocation we check ptr < alloc + (size - width) instead of checking ptr +

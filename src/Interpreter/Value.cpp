@@ -5,7 +5,7 @@
 
 namespace caffeine {
 
-ContextValue::ContextValue(const ref<Operation>& op) : inner_(op) {}
+ContextValue::ContextValue(const OpRef& op) : inner_(op) {}
 ContextValue::ContextValue(const Pointer& ptr) : inner_(ptr) {}
 
 ContextValue::ContextValue(const std::vector<ContextValue>& data)
@@ -43,8 +43,8 @@ ContextValue ContextValue::into_owned() && {
   return *this;
 }
 
-const ref<Operation>& ContextValue::scalar() const {
-  const auto* val = std::get_if<ref<Operation>>(&inner_);
+const OpRef& ContextValue::scalar() const {
+  const auto* val = std::get_if<OpRef>(&inner_);
   CAFFEINE_ASSERT(val, "ContextValue was not a scalar");
   return *val;
 }

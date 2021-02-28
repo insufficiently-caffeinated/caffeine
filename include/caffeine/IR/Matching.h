@@ -11,10 +11,10 @@ namespace matching {
    * Writing a Matcher
    * =================
    * Every matching object exposes two methods:
-   *  - bool matches(const ref<Operation>&) const
+   *  - bool matches(const OpRef&) const
    *    Returns true if the provided operation node satisfies the current
    *    matcher.
-   *  - void on_match(const ref<Operation>&) const
+   *  - void on_match(const OpRef&) const
    *    Does whatever processing the current matcher decides to do when a match
    *    occurs. Usually this will be something like saving captured variables.
    *    This method will always be called with an expression node for which
@@ -31,19 +31,19 @@ namespace matching {
    *
    * For convenience reasons, we'd like to be able to do
    *
-   *    ref<Operation> first, second;
+   *    OpRef first, second;
    *    if (matches(<expr>, Add(first, second))) {
    *       // do things with first and second
    *    }
    *
    * and have first and second be set to the expression nodes that were matched
-   * against. However, ref<Operation> doesn't implement the protocol (and you'd
+   * against. However, OpRef doesn't implement the protocol (and you'd
    * need a reference anyway). To work around this matchers use the MatcherImpl
    * type internally. This is a template which resolves to T unless T is one of
    * a few custom types in which case it resolves to custom matcher.
    *
    * Currently the only special case is RefOperationMatcher if T is
-   * ref<Operation> or ref<Operation>*.
+   * OpRef or OpRef*.
    *
    * For an example of how this is used check out UnaryOpMatcher. Custom
    * matchers should be implemented along the same lines.
@@ -57,10 +57,10 @@ namespace matching {
   struct Any {
     Any() = default;
 
-    bool matches(const ref<Operation>&) const {
+    bool matches(const OpRef&) const {
       return true;
     }
-    void on_match(const ref<Operation>&) const {}
+    void on_match(const OpRef&) const {}
   };
 
   /**
@@ -68,16 +68,16 @@ namespace matching {
    */
   struct RefOperationMatcher {
   private:
-    ref<Operation>* output;
+    OpRef* output;
 
   public:
-    explicit RefOperationMatcher(ref<Operation>& output) : output(&output) {}
-    explicit RefOperationMatcher(ref<Operation>* output) : output(output) {}
+    explicit RefOperationMatcher(OpRef& output) : output(&output) {}
+    explicit RefOperationMatcher(OpRef* output) : output(output) {}
 
-    bool matches(const ref<Operation>&) const {
+    bool matches(const OpRef&) const {
       return true;
     }
-    void on_match(const ref<Operation>& op) const {
+    void on_match(const OpRef& op) const {
       *output = op;
     }
   };
@@ -116,13 +116,13 @@ namespace matching {
   // clang-format off
   // Using custom formatting since it makes things more understandable.
   /**
-   * There's a special case for ref<Operation> arguments since they don't have
+   * There's a special case for OpRef arguments since they don't have
    * the required methods but we'd like to use them as captures.
    */
   template <typename T>
   using MatcherImpl = typename detail::select<T, 
-    std::pair<ref<Operation>, RefOperationMatcher>,
-    std::pair<ref<Operation>*, RefOperationMatcher>,
+    std::pair<OpRef, RefOperationMatcher>,
+    std::pair<OpRef*, RefOperationMatcher>,
     T
   >::type;
   // clang-format on
@@ -144,13 +144,13 @@ namespace matching {
     BinaryOpMatcher(T1&& lhs, T2&& rhs)
         : lhs(std::forward<T1>(lhs)), rhs(std::forward<T2>(rhs)) {}
 
-    bool matches(const ref<Operation>& op) const {
+    bool matches(const OpRef& op) const {
       if (op->opcode() != static_cast<uint16_t>(opcode))
         return false;
 
       return lhs.matches(op->operand_at(0)) && rhs.matches(op->operand_at(1));
     }
-    void on_match(const ref<Operation>& op) const {
+    void on_match(const OpRef& op) const {
       lhs.on_match(op->operand_at(0));
       rhs.on_match(op->operand_at(1));
     }
@@ -171,13 +171,13 @@ namespace matching {
     template <typename T>
     explicit UnaryOpMatcher(T&& inner) : inner(std::forward<T>(inner)) {}
 
-    bool matches(const ref<Operation>& op) const {
+    bool matches(const OpRef& op) const {
       if (op->opcode() != static_cast<uint16_t>(opcode))
         return false;
 
       return inner.matches(op->operand_at(0));
     }
-    void on_match(const ref<Operation>& op) const {
+    void on_match(const OpRef& op) const {
       inner.on_match(op->operand_at(0));
     }
   };
@@ -189,17 +189,17 @@ namespace matching {
   template <typename OpClass>
   class OpClassMatcher {
   private:
-    ref<Operation>* capture = nullptr;
+    OpRef* capture = nullptr;
 
   public:
     OpClassMatcher() = default;
-    explicit OpClassMatcher(ref<Operation>& cap) : capture(&cap) {}
-    explicit OpClassMatcher(ref<Operation>* cap) : capture(cap) {}
+    explicit OpClassMatcher(OpRef& cap) : capture(&cap) {}
+    explicit OpClassMatcher(OpRef* cap) : capture(cap) {}
 
-    bool matches(const ref<Operation>& op) const {
+    bool matches(const OpRef& op) const {
       return llvm::isa<OpClass>(op.get());
     }
-    void on_match(const ref<Operation>& op) const {
+    void on_match(const OpRef& op) const {
       if (capture)
         *capture = op;
     }
@@ -242,10 +242,10 @@ namespace matching {
   inline OpClassMatcher<opclass> name() {                                      \
     return OpClassMatcher<opclass>();                                          \
   };                                                                           \
-  inline OpClassMatcher<opclass> name(ref<Operation>& op) {                    \
+  inline OpClassMatcher<opclass> name(OpRef& op) {                    \
     return OpClassMatcher<opclass>(&op);                                       \
   }                                                                            \
-  inline OpClassMatcher<opclass> name(ref<Operation>* op) {                    \
+  inline OpClassMatcher<opclass> name(OpRef* op) {                    \
     return OpClassMatcher<opclass>(op);                                        \
   }                                                                            \
   static_assert(true)
@@ -297,16 +297,16 @@ namespace matching {
     template <typename M>
     class CaptureMatcher : private MatcherImpl<M> {
     private:
-      ref<Operation>* capture;
+      OpRef* capture;
 
     public:
       template <typename T>
-      CaptureMatcher(ref<Operation>* op, T&& arg)
+      CaptureMatcher(OpRef* op, T&& arg)
           : MatcherImpl<M>(std::forward<T>(arg)), capture(op) {}
 
       using MatcherImpl<M>::match;
 
-      void on_match(const ref<Operation>& op) {
+      void on_match(const OpRef& op) {
         MatcherImpl<M>::on_match(op);
         *capture = op;
       }
@@ -318,13 +318,13 @@ namespace matching {
    * provided matcher.
    */
   template <typename M>
-  detail::CaptureMatcher<std::decay_t<M>> Capture(ref<Operation>& op,
+  detail::CaptureMatcher<std::decay_t<M>> Capture(OpRef& op,
                                                   M&& matcher) {
     return detail::CaptureMatcher<std::decay_t<M>>(&op,
                                                    std::forward<M>(matcher));
   }
   template <typename M>
-  detail::CaptureMatcher<std::decay_t<M>> Capture(ref<Operation>* op,
+  detail::CaptureMatcher<std::decay_t<M>> Capture(OpRef* op,
                                                   M&& matcher) {
     return detail::CaptureMatcher<std::decay_t<M>>(op,
                                                    std::forward<M>(matcher));
@@ -346,13 +346,13 @@ namespace matching {
  * ========
  * Check for double not at the root level
  *
- *    ref<Operation> capture;
+ *    OpRef capture;
  *    if (matches(expr, Not(Not(capture)))) {
  *       // Do things
  *    }
  */
 template <typename Matcher>
-bool matches(const ref<Operation>& op, const Matcher& matcher) {
+bool matches(const OpRef& op, const Matcher& matcher) {
   bool is_match = matcher.matches(op);
   if (is_match)
     matcher.on_match(op);
@@ -379,7 +379,7 @@ bool matches(const Assertion& assertion, const Matcher& matcher) {
  * ========
  * Remove all occurrences of double-not anywhere in an expression
  *
- *    ref<Operation> child;
+ *    OpRef child;
  *    while (auto match = matches_anywhere(expr, Not(Not(child))))
  *      *match = *child;
  *
@@ -388,7 +388,7 @@ bool matches(const Assertion& assertion, const Matcher& matcher) {
  * TODO: Make some sort of matching iterator.
  */
 template <typename Matcher>
-ref<Operation> matches_anywhere(const ref<Operation>& op,
+OpRef matches_anywhere(const OpRef& op,
                                 const Matcher& matcher) {
   if (matcher.matches(op)) {
     matcher.on_match(op);
@@ -406,7 +406,7 @@ ref<Operation> matches_anywhere(const ref<Operation>& op,
   return nullptr;
 }
 template <typename Matcher>
-ref<Operation> matches_anywhere(const Assertion& assertion,
+OpRef matches_anywhere(const Assertion& assertion,
                                 const Matcher& matcher) {
   return matches_anywhere(assertion.value(), matcher);
 }

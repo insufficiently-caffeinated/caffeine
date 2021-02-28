@@ -277,9 +277,9 @@ public:
   };
 
 protected:
-  using ConstantData = std::pair<Symbol, ref<Operation>>;
-  using FixedData = PersistentArray<ref<Operation>>;
-  using OpVec = boost::container::static_vector<ref<Operation>, 3>;
+  using ConstantData = std::pair<Symbol, OpRef>;
+  using FixedData = PersistentArray<OpRef>;
+  using OpVec = boost::container::static_vector<OpRef, 3>;
   using Inner = std::variant<std::monostate, OpVec, llvm::APInt, llvm::APFloat,
                              FixedData, ConstantData>;
 
@@ -307,13 +307,13 @@ protected:
   Operation(Opcode op, Type t, const Inner& inner);
   Operation(Opcode op, Type t, Inner&& inner);
 
-  Operation(Opcode op, Type t, const ref<Operation>* operands);
+  Operation(Opcode op, Type t, const OpRef* operands);
 
-  Operation(Opcode op, Type t, const ref<Operation>& op0);
-  Operation(Opcode op, Type t, const ref<Operation>& op0,
-            const ref<Operation>& op1);
-  Operation(Opcode op, Type t, const ref<Operation>& op0,
-            const ref<Operation>& op1, const ref<Operation>& op2);
+  Operation(Opcode op, Type t, const OpRef& op0);
+  Operation(Opcode op, Type t, const OpRef& op0,
+            const OpRef& op1);
+  Operation(Opcode op, Type t, const OpRef& op0,
+            const OpRef& op1, const OpRef& op2);
 
   Operation();
   Operation(Opcode op, Type t);
@@ -351,17 +351,17 @@ public:
    * (i.e. refcnt() > 0). If not, then calling as_ref will cause an assertion
    * failure.
    */
-  ref<Operation> as_ref();
+  OpRef as_ref();
   ref<const Operation> as_ref() const;
 
   /**
    * Get this operation as a ref, or create a new ref with a copy if it isn't
    * already a reference.
    */
-  ref<Operation> into_ref() const;
+  OpRef into_ref() const;
 
-  typedef detail::double_deref_iterator<ref<Operation>> operand_iterator;
-  typedef detail::double_deref_iterator<const ref<Operation>>
+  typedef detail::double_deref_iterator<OpRef> operand_iterator;
+  typedef detail::double_deref_iterator<const OpRef>
       const_operand_iterator;
 
   virtual size_t num_operands() const;
@@ -385,14 +385,14 @@ public:
    * Create a new operation using the same opcode as the current one but with
    * new operands.
    */
-  virtual ref<Operation>
-  with_new_operands(llvm::ArrayRef<ref<Operation>> operands) const;
+  virtual OpRef
+  with_new_operands(llvm::ArrayRef<OpRef> operands) const;
 
   /**
    * Accessors to operand references.
    */
-  virtual ref<Operation>& operand_at(size_t idx);
-  virtual const ref<Operation>& operand_at(size_t idx) const;
+  virtual OpRef& operand_at(size_t idx);
+  virtual const OpRef& operand_at(size_t idx) const;
 
   // Need to define this since refcount shouldn't be copied/moved.
   Operation(const Operation& op);
@@ -426,7 +426,7 @@ protected:
   using Operation::Operation;
 
 public:
-  virtual ref<Operation> size() const = 0;
+  virtual OpRef size() const = 0;
 
   static bool classof(const Operation* op);
 };
@@ -454,8 +454,8 @@ public:
   bool is_numbered() const;
   bool is_named() const;
 
-  static ref<Operation> Create(Type t, const Symbol& symbol);
-  static ref<Operation> Create(Type t, Symbol&& symbol);
+  static OpRef Create(Type t, const Symbol& symbol);
+  static OpRef Create(Type t, Symbol&& symbol);
 
   static bool classof(const Operation* op);
 
@@ -478,10 +478,10 @@ public:
   llvm::APInt& value();
   const llvm::APInt& value() const;
 
-  static ref<Operation> Create(const llvm::APInt& iconst);
-  static ref<Operation> Create(llvm::APInt&& iconst);
+  static OpRef Create(const llvm::APInt& iconst);
+  static OpRef Create(llvm::APInt&& iconst);
   // Specialization for creating boolean constants
-  static ref<Operation> Create(bool value);
+  static OpRef Create(bool value);
 
   static bool classof(const Operation* op);
 };
@@ -501,9 +501,9 @@ public:
   llvm::APFloat& value();
   const llvm::APFloat& value() const;
 
-  static ref<Operation> Create(const llvm::APFloat& fconst);
-  static ref<Operation> Create(llvm::APFloat&& fconst);
-  static ref<Operation> Create(double value);
+  static OpRef Create(const llvm::APFloat& fconst);
+  static OpRef Create(llvm::APFloat&& fconst);
+  static OpRef Create(double value);
 
   static bool classof(const Operation* op);
 };
@@ -513,25 +513,25 @@ public:
  */
 class ConstantArray : public ArrayBase {
 private:
-  ConstantArray(Symbol&& symbol, const ref<Operation>& size);
+  ConstantArray(Symbol&& symbol, const OpRef& size);
 
 public:
-  ref<Operation> size() const override;
+  OpRef size() const override;
 
   const Symbol& symbol() const;
 
-  static ref<Operation> Create(const Symbol& symbol,
-                               const ref<Operation>& size);
-  static ref<Operation> Create(Symbol&& symbol, const ref<Operation>& size);
+  static OpRef Create(const Symbol& symbol,
+                               const OpRef& size);
+  static OpRef Create(Symbol&& symbol, const OpRef& size);
 
   llvm::iterator_range<operand_iterator> operands() override;
   llvm::iterator_range<const_operand_iterator> operands() const override;
 
-  ref<Operation>
-  with_new_operands(llvm::ArrayRef<ref<Operation>> operands) const override;
+  OpRef
+  with_new_operands(llvm::ArrayRef<OpRef> operands) const override;
 
-  ref<Operation>& operand_at(size_t idx) override;
-  const ref<Operation>& operand_at(size_t idx) const override;
+  OpRef& operand_at(size_t idx) override;
+  const OpRef& operand_at(size_t idx) const override;
 
   static bool classof(const Operation* op);
 };
@@ -543,64 +543,64 @@ public:
  */
 class BinaryOp : public Operation {
 protected:
-  BinaryOp(Opcode op, Type t, const ref<Operation>& lhs,
-           const ref<Operation>& rhs);
+  BinaryOp(Opcode op, Type t, const OpRef& lhs,
+           const OpRef& rhs);
 
 public:
-  const ref<Operation>& lhs() const;
-  const ref<Operation>& rhs() const;
+  const OpRef& lhs() const;
+  const OpRef& rhs() const;
 
-  ref<Operation>& lhs();
-  ref<Operation>& rhs();
+  OpRef& lhs();
+  OpRef& rhs();
 
-  static ref<Operation> Create(Opcode op, const ref<Operation>& lhs,
-                               const ref<Operation>& rhs);
+  static OpRef Create(Opcode op, const OpRef& lhs,
+                               const OpRef& rhs);
 
-  static ref<Operation> CreateAdd(const ref<Operation>& lhs,
-                                  const ref<Operation>& rhs);
-  static ref<Operation> CreateSub(const ref<Operation>& lhs,
-                                  const ref<Operation>& rhs);
-  static ref<Operation> CreateMul(const ref<Operation>& lhs,
-                                  const ref<Operation>& rhs);
-  static ref<Operation> CreateUDiv(const ref<Operation>& lhs,
-                                   const ref<Operation>& rhs);
-  static ref<Operation> CreateSDiv(const ref<Operation>& lhs,
-                                   const ref<Operation>& rhs);
-  static ref<Operation> CreateURem(const ref<Operation>& lhs,
-                                   const ref<Operation>& rhs);
-  static ref<Operation> CreateSRem(const ref<Operation>& lhs,
-                                   const ref<Operation>& rhs);
+  static OpRef CreateAdd(const OpRef& lhs,
+                                  const OpRef& rhs);
+  static OpRef CreateSub(const OpRef& lhs,
+                                  const OpRef& rhs);
+  static OpRef CreateMul(const OpRef& lhs,
+                                  const OpRef& rhs);
+  static OpRef CreateUDiv(const OpRef& lhs,
+                                   const OpRef& rhs);
+  static OpRef CreateSDiv(const OpRef& lhs,
+                                   const OpRef& rhs);
+  static OpRef CreateURem(const OpRef& lhs,
+                                   const OpRef& rhs);
+  static OpRef CreateSRem(const OpRef& lhs,
+                                   const OpRef& rhs);
 
-  static ref<Operation> CreateAnd(const ref<Operation>& lhs,
-                                  const ref<Operation>& rhs);
-  static ref<Operation> CreateOr(const ref<Operation>& lhs,
-                                 const ref<Operation>& rhs);
-  static ref<Operation> CreateXor(const ref<Operation>& lhs,
-                                  const ref<Operation>& rhs);
-  static ref<Operation> CreateShl(const ref<Operation>& lhs,
-                                  const ref<Operation>& rhs);
-  static ref<Operation> CreateLShr(const ref<Operation>& lhs,
-                                   const ref<Operation>& rhs);
-  static ref<Operation> CreateAShr(const ref<Operation>& lhs,
-                                   const ref<Operation>& rhs);
+  static OpRef CreateAnd(const OpRef& lhs,
+                                  const OpRef& rhs);
+  static OpRef CreateOr(const OpRef& lhs,
+                                 const OpRef& rhs);
+  static OpRef CreateXor(const OpRef& lhs,
+                                  const OpRef& rhs);
+  static OpRef CreateShl(const OpRef& lhs,
+                                  const OpRef& rhs);
+  static OpRef CreateLShr(const OpRef& lhs,
+                                   const OpRef& rhs);
+  static OpRef CreateAShr(const OpRef& lhs,
+                                   const OpRef& rhs);
 
-  static ref<Operation> CreateFAdd(const ref<Operation>& lhs,
-                                   const ref<Operation>& rhs);
-  static ref<Operation> CreateFSub(const ref<Operation>& lhs,
-                                   const ref<Operation>& rhs);
-  static ref<Operation> CreateFMul(const ref<Operation>& lhs,
-                                   const ref<Operation>& rhs);
-  static ref<Operation> CreateFDiv(const ref<Operation>& lhs,
-                                   const ref<Operation>& rhs);
-  static ref<Operation> CreateFRem(const ref<Operation>& lhs,
-                                   const ref<Operation>& rhs);
+  static OpRef CreateFAdd(const OpRef& lhs,
+                                   const OpRef& rhs);
+  static OpRef CreateFSub(const OpRef& lhs,
+                                   const OpRef& rhs);
+  static OpRef CreateFMul(const OpRef& lhs,
+                                   const OpRef& rhs);
+  static OpRef CreateFDiv(const OpRef& lhs,
+                                   const OpRef& rhs);
+  static OpRef CreateFRem(const OpRef& lhs,
+                                   const OpRef& rhs);
 
   // Utility methods for creating integer arithmetic when one of the operations
   // is a constant.
 
 #define CAFFEINE_DECL_BINOP_INT_CONST(op)                                      \
-  static ref<Operation> Create##op(const ref<Operation>& lhs, int64_t rhs);    \
-  static ref<Operation> Create##op(int64_t lhs, const ref<Operation>& rhs)
+  static OpRef Create##op(const OpRef& lhs, int64_t rhs);    \
+  static OpRef Create##op(int64_t lhs, const OpRef& rhs)
 
   CAFFEINE_DECL_BINOP_INT_CONST(Add);
   CAFFEINE_DECL_BINOP_INT_CONST(Sub);
@@ -629,38 +629,38 @@ public:
  */
 class UnaryOp : public Operation {
 protected:
-  UnaryOp(Opcode op, Type t, const ref<Operation>& operand);
+  UnaryOp(Opcode op, Type t, const OpRef& operand);
 
 public:
-  ref<Operation>& operand();
-  const ref<Operation>& operand() const;
+  OpRef& operand();
+  const OpRef& operand() const;
 
-  static ref<Operation> Create(Opcode op, const ref<Operation>& operand);
-  static ref<Operation> Create(Opcode op, const ref<Operation>& operand,
+  static OpRef Create(Opcode op, const OpRef& operand);
+  static OpRef Create(Opcode op, const OpRef& operand,
                                Type returnType);
-  static ref<Operation> CreateNot(const ref<Operation>& operand);
-  static ref<Operation> CreateFNeg(const ref<Operation>& operand);
-  static ref<Operation> CreateFIsNaN(const ref<Operation>& operand);
+  static OpRef CreateNot(const OpRef& operand);
+  static OpRef CreateFNeg(const OpRef& operand);
+  static OpRef CreateFIsNaN(const OpRef& operand);
 
-  static ref<Operation> CreateTrunc(Type tgt, const ref<Operation>& operand);
-  static ref<Operation> CreateZExt(Type tgt, const ref<Operation>& operand);
-  static ref<Operation> CreateSExt(Type tgt, const ref<Operation>& operand);
-  static ref<Operation> CreateFpTrunc(Type tgt, const ref<Operation>& operand);
-  static ref<Operation> CreateFpExt(Type tgt, const ref<Operation>& operand);
-  static ref<Operation> CreateFpToUI(Type tgt, const ref<Operation>& operand);
-  static ref<Operation> CreateFpToSI(Type tgt, const ref<Operation>& operand);
-  static ref<Operation> CreateUIToFp(Type tgt, const ref<Operation>& operand);
-  static ref<Operation> CreateSIToFp(Type tgt, const ref<Operation>& operand);
-  static ref<Operation> CreateBitcast(Type tgt, const ref<Operation>& operand);
+  static OpRef CreateTrunc(Type tgt, const OpRef& operand);
+  static OpRef CreateZExt(Type tgt, const OpRef& operand);
+  static OpRef CreateSExt(Type tgt, const OpRef& operand);
+  static OpRef CreateFpTrunc(Type tgt, const OpRef& operand);
+  static OpRef CreateFpExt(Type tgt, const OpRef& operand);
+  static OpRef CreateFpToUI(Type tgt, const OpRef& operand);
+  static OpRef CreateFpToSI(Type tgt, const OpRef& operand);
+  static OpRef CreateUIToFp(Type tgt, const OpRef& operand);
+  static OpRef CreateSIToFp(Type tgt, const OpRef& operand);
+  static OpRef CreateBitcast(Type tgt, const OpRef& operand);
 
   /// Create a trunc operation or a zext operation as needed to convert operand
   /// to the required bitwidth. If the bitwidths are the same then does nothing.
-  static ref<Operation> CreateTruncOrZExt(Type tgt,
-                                          const ref<Operation>& operand);
+  static OpRef CreateTruncOrZExt(Type tgt,
+                                          const OpRef& operand);
   /// Create a trunc operation or a sext operation as needed to convert operand
   /// to the required bitwidth. If the bitwidths are the same then does nothing.
-  static ref<Operation> CreateTruncOrSExt(Type tgt,
-                                          const ref<Operation>& operand);
+  static OpRef CreateTruncOrSExt(Type tgt,
+                                          const OpRef& operand);
 
   static bool classof(const Operation* op);
 };
@@ -673,21 +673,21 @@ public:
  */
 class SelectOp : public Operation {
 protected:
-  SelectOp(Type t, const ref<Operation>& cond, const ref<Operation>& true_val,
-           const ref<Operation>& false_val);
+  SelectOp(Type t, const OpRef& cond, const OpRef& true_val,
+           const OpRef& false_val);
 
 public:
-  ref<Operation>& condition();
-  ref<Operation>& true_value();
-  ref<Operation>& false_value();
+  OpRef& condition();
+  OpRef& true_value();
+  OpRef& false_value();
 
-  const ref<Operation>& condition() const;
-  const ref<Operation>& true_value() const;
-  const ref<Operation>& false_value() const;
+  const OpRef& condition() const;
+  const OpRef& true_value() const;
+  const OpRef& false_value() const;
 
-  static ref<Operation> Create(const ref<Operation>& cond,
-                               const ref<Operation>& true_value,
-                               const ref<Operation>& false_value);
+  static OpRef Create(const OpRef& cond,
+                               const OpRef& true_value,
+                               const OpRef& false_value);
 
   static bool classof(const Operation* op);
 };
@@ -697,8 +697,8 @@ public:
  */
 class ICmpOp : public BinaryOp {
 private:
-  ICmpOp(ICmpOpcode cmp, Type t, const ref<Operation>& lhs,
-         const ref<Operation>& rhs);
+  ICmpOp(ICmpOpcode cmp, Type t, const OpRef& lhs,
+         const OpRef& rhs);
 
 public:
   ICmpOpcode comparison() const;
@@ -717,11 +717,11 @@ public:
    */
   bool is_unsigned() const;
 
-  static ref<Operation> CreateICmp(ICmpOpcode cmp, const ref<Operation>& lhs,
-                                   const ref<Operation>& rhs);
-  static ref<Operation> CreateICmp(ICmpOpcode cmp, int64_t lhs,
-                                   const ref<Operation>& rhs);
-  static ref<Operation> CreateICmp(ICmpOpcode cmp, const ref<Operation>& lhs,
+  static OpRef CreateICmp(ICmpOpcode cmp, const OpRef& lhs,
+                                   const OpRef& rhs);
+  static OpRef CreateICmp(ICmpOpcode cmp, int64_t lhs,
+                                   const OpRef& rhs);
+  static OpRef CreateICmp(ICmpOpcode cmp, const OpRef& lhs,
                                    int64_t rhs);
 
   static bool classof(const Operation* op);
@@ -732,8 +732,8 @@ public:
  */
 class FCmpOp : public BinaryOp {
 private:
-  FCmpOp(FCmpOpcode cmp, Type t, const ref<Operation>& lhs,
-         const ref<Operation>& rhs);
+  FCmpOp(FCmpOpcode cmp, Type t, const OpRef& lhs,
+         const OpRef& rhs);
 
 public:
   FCmpOpcode comparison() const;
@@ -743,8 +743,8 @@ public:
   // Whether this comparison is an unordered one
   bool is_unordered() const;
 
-  static ref<Operation> CreateFCmp(FCmpOpcode cmp, const ref<Operation>& lhs,
-                                   const ref<Operation>& rhs);
+  static OpRef CreateFCmp(FCmpOpcode cmp, const OpRef& lhs,
+                                   const OpRef& rhs);
 
   static bool classof(const Operation* op);
 };
@@ -758,16 +758,16 @@ public:
  */
 class AllocOp : public ArrayBase {
 private:
-  AllocOp(const ref<Operation>& size, const ref<Operation>& defaultval);
+  AllocOp(const OpRef& size, const OpRef& defaultval);
 
 public:
-  ref<Operation> size() const override;
+  OpRef size() const override;
 
-  ref<Operation>& default_value();
-  const ref<Operation>& default_value() const;
+  OpRef& default_value();
+  const OpRef& default_value() const;
 
-  static ref<Operation> Create(const ref<Operation>& size,
-                               const ref<Operation>& defaultval);
+  static OpRef Create(const OpRef& size,
+                               const OpRef& defaultval);
 
   static bool classof(const Operation* op);
 };
@@ -779,17 +779,17 @@ public:
  */
 class LoadOp : public Operation {
 private:
-  LoadOp(const ref<Operation>& data, const ref<Operation>& offset);
+  LoadOp(const OpRef& data, const OpRef& offset);
 
 public:
-  ref<Operation>& data();
-  const ref<Operation>& data() const;
+  OpRef& data();
+  const OpRef& data() const;
 
-  ref<Operation>& offset();
-  const ref<Operation>& offset() const;
+  OpRef& offset();
+  const OpRef& offset() const;
 
-  static ref<Operation> Create(const ref<Operation>& data,
-                               const ref<Operation>& offset);
+  static OpRef Create(const OpRef& data,
+                               const OpRef& offset);
 
   static bool classof(const Operation* op);
 };
@@ -802,24 +802,24 @@ public:
  */
 class StoreOp : public ArrayBase {
 private:
-  StoreOp(const ref<Operation>& data, const ref<Operation>& offset,
-          const ref<Operation>& value);
+  StoreOp(const OpRef& data, const OpRef& offset,
+          const OpRef& value);
 
 public:
-  ref<Operation> size() const override;
+  OpRef size() const override;
 
-  ref<Operation>& data();
-  const ref<Operation>& data() const;
+  OpRef& data();
+  const OpRef& data() const;
 
-  ref<Operation>& offset();
-  const ref<Operation>& offset() const;
+  OpRef& offset();
+  const OpRef& offset() const;
 
-  ref<Operation>& value();
-  const ref<Operation>& value() const;
+  OpRef& value();
+  const OpRef& value() const;
 
-  static ref<Operation> Create(const ref<Operation>& data,
-                               const ref<Operation>& offset,
-                               const ref<Operation>& value);
+  static OpRef Create(const OpRef& data,
+                               const OpRef& offset,
+                               const OpRef& value);
 
   static bool classof(const Operation* op);
 };
@@ -836,7 +836,7 @@ private:
   Undef(const Type& t);
 
 public:
-  static ref<Operation> Create(const Type& t);
+  static OpRef Create(const Type& t);
 
   static bool classof(const Operation* op);
 };
@@ -846,26 +846,26 @@ public:
  */
 class FixedArray final : public ArrayBase {
 private:
-  FixedArray(Type t, const PersistentArray<ref<Operation>>& data);
+  FixedArray(Type t, const PersistentArray<OpRef>& data);
 
 public:
-  PersistentArray<ref<Operation>>& data();
-  const PersistentArray<ref<Operation>>& data() const;
-  ref<Operation> size() const override;
+  PersistentArray<OpRef>& data();
+  const PersistentArray<OpRef>& data() const;
+  OpRef size() const override;
 
   size_t num_operands() const override;
   llvm::iterator_range<operand_iterator> operands() override;
   llvm::iterator_range<const_operand_iterator> operands() const override;
 
-  ref<Operation>
-  with_new_operands(llvm::ArrayRef<ref<Operation>> operands) const override;
+  OpRef
+  with_new_operands(llvm::ArrayRef<OpRef> operands) const override;
 
-  ref<Operation>& operand_at(size_t i) override;
-  const ref<Operation>& operand_at(size_t i) const override;
+  OpRef& operand_at(size_t i) override;
+  const OpRef& operand_at(size_t i) const override;
 
-  static ref<Operation> Create(Type index_ty,
-                               const PersistentArray<ref<Operation>>& data);
-  static ref<Operation> Create(Type index_ty, const ref<Operation>& value,
+  static OpRef Create(Type index_ty,
+                               const PersistentArray<OpRef>& data);
+  static OpRef Create(Type index_ty, const OpRef& value,
                                size_t size);
 
   static bool classof(const Operation* op);

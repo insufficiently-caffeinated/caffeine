@@ -365,10 +365,10 @@ ExecutionResult Interpreter::visitFCmpInst(llvm::FCmpInst& fcmp) {
     frame.insert(&fcmp,                                                        \
                  transform(                                                    \
                      [](const auto& lhs, const auto& rhs) {                    \
-                       ref<Operation> def = ConstantInt::Create(result);       \
-                       ref<Operation> thenFcmp =                               \
+                       OpRef def = ConstantInt::Create(result);       \
+                       OpRef thenFcmp =                               \
                            FCmpOp::CreateFCmp(FCmpOpcode::ourOp, lhs, rhs);    \
-                       ref<Operation> neitherIsNaN = SelectOp::Create(         \
+                       OpRef neitherIsNaN = SelectOp::Create(         \
                            UnaryOp::CreateFIsNaN(lhs), def,                    \
                            SelectOp::Create(UnaryOp::CreateFIsNaN(rhs), def,   \
                                             thenFcmp));                        \

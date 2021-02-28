@@ -44,44 +44,44 @@ enum class AllocationKind { Alloca, Malloc, Global };
  */
 class Allocation {
 private:
-  ref<Operation> address_;
-  ref<Operation> size_;
-  ref<Operation> data_;
+  OpRef address_;
+  OpRef size_;
+  OpRef data_;
 
   AllocationKind kind_;
 
 public:
-  Allocation(const ref<Operation>& address, const ref<Operation>& size,
-             const ref<Operation>& data, AllocationKind kind);
-  Allocation(const ref<Operation>& address, const ConstantInt& size,
-             const ref<Operation>& data, AllocationKind kind);
+  Allocation(const OpRef& address, const OpRef& size,
+             const OpRef& data, AllocationKind kind);
+  Allocation(const OpRef& address, const ConstantInt& size,
+             const OpRef& data, AllocationKind kind);
 
-  const ref<Operation>& size() const;
-  ref<Operation>& size();
+  const OpRef& size() const;
+  OpRef& size();
 
   AllocationKind kind() const;
 
-  const ref<Operation>& data() const;
-  ref<Operation>& data();
+  const OpRef& data() const;
+  OpRef& data();
 
-  const ref<Operation>& address() const;
-  ref<Operation>& address();
+  const OpRef& address() const;
+  OpRef& address();
 
   bool is_constant_size() const;
 
   /**
    * Update the internal data array of this allocation.
    */
-  void overwrite(const ref<Operation>& newdata);
-  void overwrite(ref<Operation>&& newdata);
+  void overwrite(const OpRef& newdata);
+  void overwrite(OpRef&& newdata);
 
   /**
    * Assert that a read from this allocation at the given offset and with the
    * given width would be a valid inbounds read.
    */
-  Assertion check_inbounds(const ref<Operation>& offset, uint32_t width) const;
-  Assertion check_inbounds(const ref<Operation>& offset,
-                           const ref<Operation>& width) const;
+  Assertion check_inbounds(const OpRef& offset, uint32_t width) const;
+  Assertion check_inbounds(const OpRef& offset,
+                           const OpRef& width) const;
 
   /**
    * Read the specified type from the allocation at the given offset.
@@ -89,9 +89,9 @@ public:
    * Does not assert that the read is inbounds. Callers of this method should
    * check the assertion first.
    */
-  ref<Operation> read(const ref<Operation>& offset, const Type& t,
+  OpRef read(const OpRef& offset, const Type& t,
                       const llvm::DataLayout& layout) const;
-  ContextValue read(const ref<Operation>& offset, llvm::Type* type,
+  ContextValue read(const OpRef& offset, llvm::Type* type,
                     const llvm::DataLayout& layout);
 
   /**
@@ -100,9 +100,9 @@ public:
    * Does not assert that the write is inbounds. Callers of this method should
    * add the assertion first.
    */
-  void write(const ref<Operation>& offset, const ref<Operation>& value,
+  void write(const OpRef& offset, const OpRef& value,
              const llvm::DataLayout& layout);
-  void write(const ref<Operation>& offset, llvm::Type* type,
+  void write(const OpRef& offset, llvm::Type* type,
              const ContextValue& value, const MemHeap& heap,
              const llvm::DataLayout& layout);
 };
@@ -143,14 +143,14 @@ using AllocId = typename slot_map<Allocation>::key_type;
 class Pointer {
 private:
   AllocId alloc_;
-  ref<Operation> offset_;
+  OpRef offset_;
 
 public:
-  explicit Pointer(const ref<Operation>& value);
-  Pointer(const AllocId& alloc, const ref<Operation>& offset);
+  explicit Pointer(const OpRef& value);
+  Pointer(const AllocId& alloc, const OpRef& offset);
 
   AllocId alloc() const;
-  const ref<Operation>& offset() const;
+  const OpRef& offset() const;
 
   /**
    * The absolute value of this pointer.
@@ -159,7 +159,7 @@ public:
    * offset pair. This method normalizes it to just the absolute value. Use
    * MemHeap::resolve to go the other way.
    */
-  ref<Operation> value(const MemHeap& heap) const;
+  OpRef value(const MemHeap& heap) const;
 
   /**
    * Whether this pointer has been resolved to a specific allocation.
@@ -191,8 +191,8 @@ public:
    *
    * This will add the corresponding assertions to the context as well.
    */
-  AllocId allocate(const ref<Operation>& size, const ref<Operation>& alignment,
-                   const ref<Operation>& data, AllocationKind kind,
+  AllocId allocate(const OpRef& size, const OpRef& alignment,
+                   const OpRef& data, AllocationKind kind,
                    Context& ctx);
 
   /**
@@ -218,7 +218,7 @@ public:
    * assertion that the pointer points within one of them.
    */
   Assertion check_valid(const Pointer& value, uint32_t width);
-  Assertion check_valid(const Pointer& value, const ref<Operation>& offset);
+  Assertion check_valid(const Pointer& value, const OpRef& offset);
 
   /**
    * Get an assertion that checks whether the provided pointer points to the
