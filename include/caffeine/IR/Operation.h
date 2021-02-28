@@ -50,7 +50,7 @@ namespace detail {
 } // namespace detail
 
 class Operation;
-typedef ref<Operation> OpRef;
+typedef ref<const Operation> OpRef;
 
 enum class ICmpOpcode : uint8_t {
   EQ = 0x8,
@@ -366,7 +366,6 @@ public:
   virtual llvm::iterator_range<operand_iterator> operands();
   virtual llvm::iterator_range<const_operand_iterator> operands() const;
 
-  Operation& operator[](size_t idx);
   const Operation& operator[](size_t idx) const;
 
   bool operator==(const Operation& op) const;

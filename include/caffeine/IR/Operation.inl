@@ -194,11 +194,6 @@ inline bool Operation::is_constant() const {
   return detail::opcode_base(opcode_) == 1;
 }
 
-inline Operation& Operation::operator[](size_t idx) {
-  CAFFEINE_ASSERT(idx < num_operands(),
-                  "Tried to access out-of-bounds operand");
-  return *operand_at(idx);
-}
 inline const Operation& Operation::operator[](size_t idx) const {
   CAFFEINE_ASSERT(idx < num_operands(),
                   "Tried to access out-of-bounds operand");
