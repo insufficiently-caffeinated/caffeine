@@ -366,7 +366,6 @@ public:
   virtual llvm::iterator_range<operand_iterator> operands();
   virtual llvm::iterator_range<const_operand_iterator> operands() const;
 
-  Operation& operator[](size_t idx);
   const Operation& operator[](size_t idx) const;
 
   bool operator==(const Operation& op) const;
