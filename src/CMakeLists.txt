@@ -35,7 +35,7 @@ file(
   "${CMAKE_SOURCE_DIR}/include/*.inl"
 )
 
-add_library(caffeine STATIC ${sources} ${headers})
+add_library(caffeine ${sources} ${headers})
 
 target_include_directories(caffeine 
   PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}"

@@ -17,8 +17,10 @@ set(CAFFEINE_USE_LINKER ""  CACHE STRING "Add -fuse-ld={name} to the link invoca
 option(CAFFEINE_CI            "Enable options that are inconvenient for normal development but are used in CI" OFF)
 option(CAFFEINE_ENABLE_BUILD  "Enable normal build targets" ON)
 
+option(BUILD_SHARED_LIBS "Build libcaffeine as a shared library" OFF)
+
 # Usually users probably don't want to disable the entirety of the project
-mark_as_advanced(CAFFEINE_ENABLE_BUILD)
+mark_as_advanced(CAFFEINE_ENABLE_BUILD BUILD_SHARED_LIBS)
 
 ###########################################################
 #            Non-option cmake configuration               #
