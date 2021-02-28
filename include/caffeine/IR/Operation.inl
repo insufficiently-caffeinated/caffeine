@@ -38,6 +38,7 @@ static_assert(sizeof(LoadOp) == sizeof(Operation));
 static_assert(sizeof(StoreOp) == sizeof(Operation));
 static_assert(sizeof(Undef) == sizeof(Operation));
 static_assert(sizeof(FixedArray) == sizeof(Operation));
+static_assert(sizeof(ConstantArray) == sizeof(Operation));
 
 namespace detail {
   template <typename T>
@@ -292,6 +293,27 @@ inline const llvm::APFloat& ConstantFloat::value() const {
 }
 
 /***************************************************
+ * ConstantArray                                   *
+ ***************************************************/
+inline ref<Operation> ConstantArray::size() const {
+  return operand_at(0);
+}
+
+inline const Symbol& ConstantArray::symbol() const {
+  return std::get<ConstantData>(inner_).first;
+}
+
+inline ref<Operation>& ConstantArray::operand_at(size_t idx) {
+  CAFFEINE_ASSERT(idx == 0, "Accessed out of bounds operand index");
+  return std::get<ConstantData>(inner_).second;
+}
+
+inline const ref<Operation>& ConstantArray::operand_at(size_t idx) const {
+  CAFFEINE_ASSERT(idx == 0, "Accessed out of bounds operand index");
+  return std::get<ConstantData>(inner_).second;
+}
+
+/***************************************************
  * BinaryOp                                        *
  ***************************************************/
 inline const ref<Operation>& BinaryOp::lhs() const {
@@ -466,6 +488,7 @@ inline const ref<Operation>& FixedArray::operand_at(size_t i) const {
 
 CAFFEINE_OP_DECL_CLASSOF(ConstantInt, ConstantInt);
 CAFFEINE_OP_DECL_CLASSOF(ConstantFloat, ConstantFloat);
+CAFFEINE_OP_DECL_CLASSOF(ConstantArray, ConstantArray);
 CAFFEINE_OP_DECL_CLASSOF(SelectOp, Select);
 CAFFEINE_OP_DECL_CLASSOF(AllocOp, Alloc);
 CAFFEINE_OP_DECL_CLASSOF(LoadOp, Load);
