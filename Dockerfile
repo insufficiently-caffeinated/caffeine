@@ -25,4 +25,5 @@ RUN apt-get update \
         libboost-all-dev \
         libcapnp-dev \
         capnproto \
+        pkg-config \
     && rm -rf /var/lib/apt/lists/*
