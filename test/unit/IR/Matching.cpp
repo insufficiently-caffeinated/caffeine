@@ -48,10 +48,9 @@ TEST_F(MatchingTests, replace_double_not) {
       UnaryOp::CreateNot(Constant::Create(Type::int_ty(18), 0)));
 
   OpRef child;
-  while (auto parent = matches_anywhere(expr, Not(Not(child))))
-    *parent = *child;
-
-  ASSERT_TRUE(llvm::isa<Constant>(expr.get()));
+  if (auto parent = matches_anywhere(expr, Not(Not(child)))) {
+    ASSERT_TRUE(matches(parent, Not(Not(Any()))));
+  }
 }
 
 TEST_F(MatchingTests, fixedarray) {
