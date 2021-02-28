@@ -50,7 +50,7 @@ namespace detail {
 } // namespace detail
 
 class Operation;
-typedef ref<Operation> OpRef;
+typedef ref<const Operation> OpRef;
 
 enum class ICmpOpcode : uint8_t {
   EQ = 0x8,
