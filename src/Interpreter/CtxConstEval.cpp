@@ -26,8 +26,7 @@ template <typename ContextType>
 static ContextValue evaluate(ContextType ctx, llvm::Constant* constant);
 
 template <typename ContextType>
-static OpRef evaluate_global_data(ContextType,
-                                           llvm::Constant* constant);
+static OpRef evaluate_global_data(ContextType, llvm::Constant* constant);
 
 static ContextValue evaluate_undef(const Context* ctx,
                                    llvm::UndefValue* undef) {
@@ -89,10 +88,9 @@ static ContextValue evaluate_expr(ContextType ctx, llvm::ConstantExpr* expr) {
   transform([=](const auto& a, const auto& b) { return (expr_)(a, b); },       \
             OPERAND(expr, 0), OPERAND(expr, 1))
 #define CAST_OP(expr_)                                                         \
-  transform(                                                                   \
-      [=, type = Type::from_llvm(expr->getType())](                            \
-          const OpRef& value) -> OpRef { return (expr_); },  \
-      OPERAND(expr, 0))
+  transform([=, type = Type::from_llvm(expr->getType())](                      \
+                const OpRef& value) -> OpRef { return (expr_); },              \
+            OPERAND(expr, 0))
 
   switch (expr->getOpcode()) {
     // clang-format off
@@ -262,8 +260,7 @@ ContextValue evaluate_global(ContextType ctx, llvm::GlobalVariable* global) {
  * Evaluate the initializer of a global variable to a byte array.
  */
 template <typename ContextType>
-static OpRef evaluate_global_data(ContextType ctx,
-                                           llvm::Constant* constant) {
+static OpRef evaluate_global_data(ContextType ctx, llvm::Constant* constant) {
   static_assert(
       std::is_same_v<std::remove_const_t<std::remove_pointer_t<ContextType>>,
                      Context>,

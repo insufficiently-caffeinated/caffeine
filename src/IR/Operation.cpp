@@ -49,15 +49,14 @@ Operation::Operation(Opcode op, Type t, const OpRef& op0)
                   "Tried to create a constant with operands");
   CAFFEINE_ASSERT(num_operands() == 1);
 }
-Operation::Operation(Opcode op, Type t, const OpRef& op0,
-                     const OpRef& op1)
+Operation::Operation(Opcode op, Type t, const OpRef& op0, const OpRef& op1)
     : opcode_(static_cast<uint16_t>(op)), type_(t), inner_(OpVec{op0, op1}) {
   CAFFEINE_ASSERT(detail::opcode_base(opcode_) != 1,
                   "Tried to create a constant with operands");
   CAFFEINE_ASSERT(num_operands() == 2);
 }
-Operation::Operation(Opcode op, Type t, const OpRef& op0,
-                     const OpRef& op1, const OpRef& op2)
+Operation::Operation(Opcode op, Type t, const OpRef& op0, const OpRef& op1,
+                     const OpRef& op2)
     : opcode_(static_cast<uint16_t>(op)), type_(t),
       inner_(OpVec{op0, op1, op2}) {
   CAFFEINE_ASSERT(detail::opcode_base(opcode_) != 1,
@@ -114,8 +113,7 @@ bool Operation::operator!=(const Operation& op) const {
   return !(*this == op);
 }
 
-OpRef
-Operation::with_new_operands(llvm::ArrayRef<OpRef> operands) const {
+OpRef Operation::with_new_operands(llvm::ArrayRef<OpRef> operands) const {
   CAFFEINE_ASSERT(operands.size() == num_operands());
 
   if (num_operands() == 0)
@@ -128,8 +126,7 @@ Operation::with_new_operands(llvm::ArrayRef<OpRef> operands) const {
   if (equal)
     return into_ref();
 
-  auto value =
-      OpRef(new Operation((Opcode)opcode(), type(), operands.data()));
+  auto value = OpRef(new Operation((Opcode)opcode(), type(), operands.data()));
   value->copy_vtable(*this);
   return value;
 }
@@ -308,12 +305,10 @@ ConstantArray::ConstantArray(Symbol&& symbol, const OpRef& size)
                 Type::array_ty(size->type().bitwidth()),
                 ConstantData(std::move(symbol), size)) {}
 
-OpRef ConstantArray::Create(const Symbol& symbol,
-                                     const OpRef& size) {
+OpRef ConstantArray::Create(const Symbol& symbol, const OpRef& size) {
   return Create(Symbol(symbol), size);
 }
-OpRef ConstantArray::Create(Symbol&& symbol,
-                                     const OpRef& size) {
+OpRef ConstantArray::Create(Symbol&& symbol, const OpRef& size) {
   CAFFEINE_ASSERT(size->type().is_int());
 
   return OpRef(new ConstantArray(std::move(symbol), size));
@@ -329,8 +324,7 @@ ConstantArray::operands() const {
   return llvm::iterator_range<const_operand_iterator>(&operand, &operand + 1);
 }
 
-OpRef ConstantArray::with_new_operands(
-    llvm::ArrayRef<OpRef> operands) const {
+OpRef ConstantArray::with_new_operands(llvm::ArrayRef<OpRef> operands) const {
   CAFFEINE_ASSERT(operands.size() == 1);
 
   if (size() == operands[0])
@@ -342,12 +336,10 @@ OpRef ConstantArray::with_new_operands(
 /***************************************************
  * BinaryOp                                        *
  ***************************************************/
-BinaryOp::BinaryOp(Opcode op, Type t, const OpRef& lhs,
-                   const OpRef& rhs)
+BinaryOp::BinaryOp(Opcode op, Type t, const OpRef& lhs, const OpRef& rhs)
     : Operation(op, t, lhs, rhs) {}
 
-OpRef BinaryOp::Create(Opcode op, const OpRef& lhs,
-                                const OpRef& rhs) {
+OpRef BinaryOp::Create(Opcode op, const OpRef& lhs, const OpRef& rhs) {
   CAFFEINE_ASSERT((op & 0x3) == 2, "Opcode doesn't have 2 operands");
   CAFFEINE_ASSERT(lhs, "lhs was null");
   CAFFEINE_ASSERT(rhs, "rhs was null");
@@ -366,8 +358,7 @@ OpRef BinaryOp::Create(Opcode op, const OpRef& lhs,
 
 // There's a lot of these so template them out using a macro
 #define DECL_BINOP_CREATE(opcode, assert)                                      \
-  OpRef BinaryOp::Create##opcode(const OpRef& lhs,           \
-                                          const OpRef& rhs) {         \
+  OpRef BinaryOp::Create##opcode(const OpRef& lhs, const OpRef& rhs) {         \
     CAFFEINE_ASSERT(lhs, "lhs was null");                                      \
     CAFFEINE_ASSERT(rhs, "rhs was null");                                      \
     assert(lhs);                                                               \
@@ -377,8 +368,7 @@ OpRef BinaryOp::Create(Opcode op, const OpRef& lhs,
   }                                                                            \
   static_assert(true)
 
-OpRef BinaryOp::CreateAdd(const OpRef& lhs,
-                                   const OpRef& rhs) {
+OpRef BinaryOp::CreateAdd(const OpRef& lhs, const OpRef& rhs) {
   CAFFEINE_ASSERT(lhs, "lhs was null");
   CAFFEINE_ASSERT(rhs, "rhs was null");
   ASSERT_INT(lhs);
@@ -399,8 +389,7 @@ OpRef BinaryOp::CreateAdd(const OpRef& lhs,
 
   return Create(Opcode::Add, lhs, rhs);
 }
-OpRef BinaryOp::CreateSub(const OpRef& lhs,
-                                   const OpRef& rhs) {
+OpRef BinaryOp::CreateSub(const OpRef& lhs, const OpRef& rhs) {
   CAFFEINE_ASSERT(lhs, "lhs was null");
   CAFFEINE_ASSERT(rhs, "rhs was null");
   ASSERT_INT(lhs);
@@ -425,8 +414,7 @@ OpRef BinaryOp::CreateSub(const OpRef& lhs,
 
   return Create(Opcode::Sub, lhs, rhs);
 }
-OpRef BinaryOp::CreateMul(const OpRef& lhs,
-                                   const OpRef& rhs) {
+OpRef BinaryOp::CreateMul(const OpRef& lhs, const OpRef& rhs) {
   CAFFEINE_ASSERT(lhs, "lhs was null");
   CAFFEINE_ASSERT(rhs, "rhs was null");
   ASSERT_INT(lhs);
@@ -446,8 +434,7 @@ OpRef BinaryOp::CreateMul(const OpRef& lhs,
 
   return Create(Opcode::Mul, lhs, rhs);
 }
-OpRef BinaryOp::CreateUDiv(const OpRef& lhs,
-                                    const OpRef& rhs) {
+OpRef BinaryOp::CreateUDiv(const OpRef& lhs, const OpRef& rhs) {
   CAFFEINE_ASSERT(lhs, "lhs was null");
   CAFFEINE_ASSERT(rhs, "rhs was null");
   ASSERT_INT(lhs);
@@ -465,8 +452,7 @@ OpRef BinaryOp::CreateUDiv(const OpRef& lhs,
 
   return Create(Opcode::UDiv, lhs, rhs);
 }
-OpRef BinaryOp::CreateSDiv(const OpRef& lhs,
-                                    const OpRef& rhs) {
+OpRef BinaryOp::CreateSDiv(const OpRef& lhs, const OpRef& rhs) {
   CAFFEINE_ASSERT(lhs, "lhs was null");
   CAFFEINE_ASSERT(rhs, "rhs was null");
   ASSERT_INT(lhs);
@@ -486,8 +472,7 @@ OpRef BinaryOp::CreateSDiv(const OpRef& lhs,
 
   return Create(Opcode::SDiv, lhs, rhs);
 }
-OpRef BinaryOp::CreateURem(const OpRef& lhs,
-                                    const OpRef& rhs) {
+OpRef BinaryOp::CreateURem(const OpRef& lhs, const OpRef& rhs) {
   CAFFEINE_ASSERT(lhs, "lhs was null");
   CAFFEINE_ASSERT(rhs, "rhs was null");
   ASSERT_INT(lhs);
@@ -507,8 +492,7 @@ OpRef BinaryOp::CreateURem(const OpRef& lhs,
 
   return Create(Opcode::URem, lhs, rhs);
 }
-OpRef BinaryOp::CreateSRem(const OpRef& lhs,
-                                    const OpRef& rhs) {
+OpRef BinaryOp::CreateSRem(const OpRef& lhs, const OpRef& rhs) {
   CAFFEINE_ASSERT(lhs, "lhs was null");
   CAFFEINE_ASSERT(rhs, "rhs was null");
   ASSERT_INT(lhs);
@@ -529,8 +513,7 @@ OpRef BinaryOp::CreateSRem(const OpRef& lhs,
   return Create(Opcode::SRem, lhs, rhs);
 }
 
-OpRef BinaryOp::CreateAnd(const OpRef& lhs,
-                                   const OpRef& rhs) {
+OpRef BinaryOp::CreateAnd(const OpRef& lhs, const OpRef& rhs) {
   CAFFEINE_ASSERT(lhs, "lhs was null");
   CAFFEINE_ASSERT(rhs, "rhs was null");
   ASSERT_INT(lhs);
@@ -555,8 +538,7 @@ OpRef BinaryOp::CreateAnd(const OpRef& lhs,
 
   return Create(Opcode::And, lhs, rhs);
 }
-OpRef BinaryOp::CreateOr(const OpRef& lhs,
-                                  const OpRef& rhs) {
+OpRef BinaryOp::CreateOr(const OpRef& lhs, const OpRef& rhs) {
   CAFFEINE_ASSERT(lhs, "lhs was null");
   CAFFEINE_ASSERT(rhs, "rhs was null");
   ASSERT_INT(lhs);
@@ -581,8 +563,7 @@ OpRef BinaryOp::CreateOr(const OpRef& lhs,
 
   return Create(Opcode::Or, lhs, rhs);
 }
-OpRef BinaryOp::CreateXor(const OpRef& lhs,
-                                   const OpRef& rhs) {
+OpRef BinaryOp::CreateXor(const OpRef& lhs, const OpRef& rhs) {
   CAFFEINE_ASSERT(lhs, "lhs was null");
   CAFFEINE_ASSERT(rhs, "rhs was null");
   ASSERT_INT(lhs);
@@ -605,8 +586,7 @@ OpRef BinaryOp::CreateXor(const OpRef& lhs,
 
   return Create(Opcode::Xor, lhs, rhs);
 }
-OpRef BinaryOp::CreateShl(const OpRef& lhs,
-                                   const OpRef& rhs) {
+OpRef BinaryOp::CreateShl(const OpRef& lhs, const OpRef& rhs) {
   CAFFEINE_ASSERT(lhs, "lhs was null");
   CAFFEINE_ASSERT(rhs, "rhs was null");
   ASSERT_INT(lhs);
@@ -624,8 +604,7 @@ OpRef BinaryOp::CreateShl(const OpRef& lhs,
 
   return Create(Opcode::Shl, lhs, rhs);
 }
-OpRef BinaryOp::CreateLShr(const OpRef& lhs,
-                                    const OpRef& rhs) {
+OpRef BinaryOp::CreateLShr(const OpRef& lhs, const OpRef& rhs) {
   CAFFEINE_ASSERT(lhs, "lhs was null");
   CAFFEINE_ASSERT(rhs, "rhs was null");
   ASSERT_INT(lhs);
@@ -643,8 +622,7 @@ OpRef BinaryOp::CreateLShr(const OpRef& lhs,
 
   return Create(Opcode::LShr, lhs, rhs);
 }
-OpRef BinaryOp::CreateAShr(const OpRef& lhs,
-                                    const OpRef& rhs) {
+OpRef BinaryOp::CreateAShr(const OpRef& lhs, const OpRef& rhs) {
   CAFFEINE_ASSERT(lhs, "lhs was null");
   CAFFEINE_ASSERT(rhs, "rhs was null");
   ASSERT_INT(lhs);
@@ -663,8 +641,7 @@ OpRef BinaryOp::CreateAShr(const OpRef& lhs,
   return Create(Opcode::AShr, lhs, rhs);
 }
 
-OpRef BinaryOp::CreateFAdd(const OpRef& lhs,
-                                    const OpRef& rhs) {
+OpRef BinaryOp::CreateFAdd(const OpRef& lhs, const OpRef& rhs) {
   CAFFEINE_ASSERT(lhs, "lhs was null");
   CAFFEINE_ASSERT(rhs, "rhs was null");
   ASSERT_FP(lhs);
@@ -683,8 +660,7 @@ OpRef BinaryOp::CreateFAdd(const OpRef& lhs,
   return Create(Opcode::FAdd, lhs, rhs);
 }
 
-OpRef BinaryOp::CreateFSub(const OpRef& lhs,
-                                    const OpRef& rhs) {
+OpRef BinaryOp::CreateFSub(const OpRef& lhs, const OpRef& rhs) {
   CAFFEINE_ASSERT(lhs, "lhs was null");
   CAFFEINE_ASSERT(rhs, "rhs was null");
   ASSERT_FP(lhs);
@@ -703,8 +679,7 @@ OpRef BinaryOp::CreateFSub(const OpRef& lhs,
   return Create(Opcode::FSub, lhs, rhs);
 }
 
-OpRef BinaryOp::CreateFMul(const OpRef& lhs,
-                                    const OpRef& rhs) {
+OpRef BinaryOp::CreateFMul(const OpRef& lhs, const OpRef& rhs) {
   CAFFEINE_ASSERT(lhs, "lhs was null");
   CAFFEINE_ASSERT(rhs, "rhs was null");
   ASSERT_FP(lhs);
@@ -723,8 +698,7 @@ OpRef BinaryOp::CreateFMul(const OpRef& lhs,
   return Create(Opcode::FMul, lhs, rhs);
 }
 
-OpRef BinaryOp::CreateFDiv(const OpRef& lhs,
-                                    const OpRef& rhs) {
+OpRef BinaryOp::CreateFDiv(const OpRef& lhs, const OpRef& rhs) {
   CAFFEINE_ASSERT(lhs, "lhs was null");
   CAFFEINE_ASSERT(rhs, "rhs was null");
   ASSERT_FP(lhs);
@@ -743,8 +717,7 @@ OpRef BinaryOp::CreateFDiv(const OpRef& lhs,
   return Create(Opcode::FDiv, lhs, rhs);
 }
 
-OpRef BinaryOp::CreateFRem(const OpRef& lhs,
-                                    const OpRef& rhs) {
+OpRef BinaryOp::CreateFRem(const OpRef& lhs, const OpRef& rhs) {
   CAFFEINE_ASSERT(lhs, "lhs was null");
   CAFFEINE_ASSERT(rhs, "rhs was null");
   ASSERT_FP(lhs);
@@ -764,7 +737,7 @@ OpRef BinaryOp::CreateFRem(const OpRef& lhs,
 }
 
 #define DEF_INT_BINOP_CONST_CREATE_DETAIL(opcode, ty, signed)                  \
-  OpRef BinaryOp::Create##opcode(const OpRef& lhs, ty rhs) { \
+  OpRef BinaryOp::Create##opcode(const OpRef& lhs, ty rhs) {                   \
     CAFFEINE_ASSERT(lhs, "lhs is null");                                       \
     CAFFEINE_ASSERT(lhs->type().is_int());                                     \
                                                                                \
@@ -772,7 +745,7 @@ OpRef BinaryOp::CreateFRem(const OpRef& lhs,
         lhs, ConstantInt::Create(                                              \
                  llvm::APInt(lhs->type().bitwidth(), rhs, signed)));           \
   }                                                                            \
-  OpRef BinaryOp::Create##opcode(ty lhs, const OpRef& rhs) { \
+  OpRef BinaryOp::Create##opcode(ty lhs, const OpRef& rhs) {                   \
     CAFFEINE_ASSERT(rhs, "rhs is null");                                       \
     CAFFEINE_ASSERT(rhs->type().is_int());                                     \
                                                                                \
@@ -818,8 +791,7 @@ OpRef UnaryOp::Create(Opcode op, const OpRef& operand) {
   return Create(op, operand, operand->type());
 }
 
-OpRef UnaryOp::Create(Opcode op, const OpRef& operand,
-                               Type returnType) {
+OpRef UnaryOp::Create(Opcode op, const OpRef& operand, Type returnType) {
   CAFFEINE_ASSERT(operand, "operand was null");
   CAFFEINE_ASSERT((op & 0x3) == 1, "Opcode doesn't have 2 operands");
 
@@ -827,7 +799,7 @@ OpRef UnaryOp::Create(Opcode op, const OpRef& operand,
 }
 
 #define DECL_UNOP_CREATE(opcode, assert, return_type)                          \
-  OpRef UnaryOp::Create##opcode(const OpRef& operand) {      \
+  OpRef UnaryOp::Create##opcode(const OpRef& operand) {                        \
     assert(operand);                                                           \
                                                                                \
     return Create(Opcode::opcode, operand, return_type);                       \
@@ -936,8 +908,7 @@ OpRef UnaryOp::CreateBitcast(Type tgt, const OpRef& operand) {
   return OpRef(new UnaryOp(Opcode::Bitcast, tgt, operand));
 }
 
-OpRef UnaryOp::CreateTruncOrZExt(Type tgt,
-                                          const OpRef& operand) {
+OpRef UnaryOp::CreateTruncOrZExt(Type tgt, const OpRef& operand) {
   CAFFEINE_ASSERT(operand->type().is_int());
   CAFFEINE_ASSERT(tgt.is_int());
 
@@ -947,8 +918,7 @@ OpRef UnaryOp::CreateTruncOrZExt(Type tgt,
     return CreateZExt(tgt, operand);
   return operand;
 }
-OpRef UnaryOp::CreateTruncOrSExt(Type tgt,
-                                          const OpRef& operand) {
+OpRef UnaryOp::CreateTruncOrSExt(Type tgt, const OpRef& operand) {
   CAFFEINE_ASSERT(operand->type().is_int());
   CAFFEINE_ASSERT(tgt.is_int());
 
@@ -962,14 +932,12 @@ OpRef UnaryOp::CreateTruncOrSExt(Type tgt,
 /***************************************************
  * SelectOp                                        *
  ***************************************************/
-SelectOp::SelectOp(Type t, const OpRef& cond,
-                   const OpRef& true_val,
+SelectOp::SelectOp(Type t, const OpRef& cond, const OpRef& true_val,
                    const OpRef& false_val)
     : Operation(Opcode::Select, t, cond, true_val, false_val) {}
 
-OpRef SelectOp::Create(const OpRef& cond,
-                                const OpRef& true_value,
-                                const OpRef& false_value) {
+OpRef SelectOp::Create(const OpRef& cond, const OpRef& true_value,
+                       const OpRef& false_value) {
   CAFFEINE_ASSERT(cond, "cond was null");
   CAFFEINE_ASSERT(true_value, "true_value was null");
   CAFFEINE_ASSERT(false_value, "false_value was null");
@@ -986,21 +954,18 @@ OpRef SelectOp::Create(const OpRef& cond,
     return vcond->value() == 1 ? true_value : false_value;
 #endif
 
-  return OpRef(
-      new SelectOp(true_value->type(), cond, true_value, false_value));
+  return OpRef(new SelectOp(true_value->type(), cond, true_value, false_value));
 }
 
 /***************************************************
  * ICmpOp                                          *
  ***************************************************/
-ICmpOp::ICmpOp(ICmpOpcode cmp, Type t, const OpRef& lhs,
-               const OpRef& rhs)
+ICmpOp::ICmpOp(ICmpOpcode cmp, Type t, const OpRef& lhs, const OpRef& rhs)
     : BinaryOp(static_cast<Opcode>(
                    detail::opcode(icmp_base, 2, static_cast<uint16_t>(cmp))),
                t, lhs, rhs) {}
 
-OpRef ICmpOp::CreateICmp(ICmpOpcode cmp, const OpRef& lhs,
-                                  const OpRef& rhs) {
+OpRef ICmpOp::CreateICmp(ICmpOpcode cmp, const OpRef& lhs, const OpRef& rhs) {
   CAFFEINE_ASSERT(rhs, "rhs was null");
   CAFFEINE_ASSERT(lhs, "lhs was null");
   CAFFEINE_ASSERT(
@@ -1040,8 +1005,7 @@ OpRef ICmpOp::CreateICmp(ICmpOpcode cmp, const OpRef& lhs,
 
   return OpRef(new ICmpOp(cmp, Type::int_ty(1), lhs, rhs));
 }
-OpRef ICmpOp::CreateICmp(ICmpOpcode cmp, int64_t lhs,
-                                  const OpRef& rhs) {
+OpRef ICmpOp::CreateICmp(ICmpOpcode cmp, int64_t lhs, const OpRef& rhs) {
   CAFFEINE_ASSERT(rhs, "rhs was null");
   CAFFEINE_ASSERT(rhs->type().is_int(),
                   "icmp can only be created with integer operands");
@@ -1051,8 +1015,7 @@ OpRef ICmpOp::CreateICmp(ICmpOpcode cmp, int64_t lhs,
       cmp, ConstantInt::Create(literal.sextOrTrunc(rhs->type().bitwidth())),
       rhs);
 }
-OpRef ICmpOp::CreateICmp(ICmpOpcode cmp, const OpRef& lhs,
-                                  int64_t rhs) {
+OpRef ICmpOp::CreateICmp(ICmpOpcode cmp, const OpRef& lhs, int64_t rhs) {
   CAFFEINE_ASSERT(lhs, "rhs was null");
   CAFFEINE_ASSERT(lhs->type().is_int(),
                   "icmp can only be created with integer operands");
@@ -1066,14 +1029,12 @@ OpRef ICmpOp::CreateICmp(ICmpOpcode cmp, const OpRef& lhs,
 /***************************************************
  * FCmpOp                                          *
  ***************************************************/
-FCmpOp::FCmpOp(FCmpOpcode cmp, Type t, const OpRef& lhs,
-               const OpRef& rhs)
+FCmpOp::FCmpOp(FCmpOpcode cmp, Type t, const OpRef& lhs, const OpRef& rhs)
     : BinaryOp(static_cast<Opcode>(
                    detail::opcode(fcmp_base, 2, static_cast<uint16_t>(cmp))),
                t, lhs, rhs) {}
 
-OpRef FCmpOp::CreateFCmp(FCmpOpcode cmp, const OpRef& lhs,
-                                  const OpRef& rhs) {
+OpRef FCmpOp::CreateFCmp(FCmpOpcode cmp, const OpRef& lhs, const OpRef& rhs) {
   CAFFEINE_ASSERT(rhs, "rhs was null");
   CAFFEINE_ASSERT(lhs, "lhs was null");
   CAFFEINE_ASSERT(rhs->type() == lhs->type(),
@@ -1116,8 +1077,7 @@ AllocOp::AllocOp(const OpRef& size, const OpRef& defaultval)
     : ArrayBase(Opcode::Alloc, Type::array_ty(size->type().bitwidth()), size,
                 defaultval) {}
 
-OpRef AllocOp::Create(const OpRef& size,
-                               const OpRef& defaultval) {
+OpRef AllocOp::Create(const OpRef& size, const OpRef& defaultval) {
   CAFFEINE_ASSERT(size, "size was null");
   CAFFEINE_ASSERT(defaultval, "defaultval was null");
   // To be fully correct, this should be validating that the bitwidth of size
@@ -1145,8 +1105,7 @@ OpRef AllocOp::Create(const OpRef& size,
 LoadOp::LoadOp(const OpRef& data, const OpRef& offset)
     : Operation(Opcode::Load, Type::int_ty(8), data, offset) {}
 
-OpRef LoadOp::Create(const OpRef& data,
-                              const OpRef& offset) {
+OpRef LoadOp::Create(const OpRef& data, const OpRef& offset) {
   CAFFEINE_ASSERT(data, "data was null");
   CAFFEINE_ASSERT(offset, "offset was null");
   CAFFEINE_ASSERT(offset->type().is_int(),
@@ -1167,13 +1126,11 @@ OpRef LoadOp::Create(const OpRef& data,
 /***************************************************
  * StoreOp                                         *
  ***************************************************/
-StoreOp::StoreOp(const OpRef& data, const OpRef& offset,
-                 const OpRef& value)
+StoreOp::StoreOp(const OpRef& data, const OpRef& offset, const OpRef& value)
     : ArrayBase(Opcode::Store, data->type(), data, offset, value) {}
 
-OpRef StoreOp::Create(const OpRef& data,
-                               const OpRef& offset,
-                               const OpRef& value) {
+OpRef StoreOp::Create(const OpRef& data, const OpRef& offset,
+                      const OpRef& value) {
   CAFFEINE_ASSERT(data, "data was null");
   CAFFEINE_ASSERT(offset, "offset was null");
   CAFFEINE_ASSERT(value, "value was null");
@@ -1229,8 +1186,7 @@ FixedArray::operands() const {
       array.data(), array.data() + array.size());
 }
 
-OpRef
-FixedArray::with_new_operands(llvm::ArrayRef<OpRef> operands) const {
+OpRef FixedArray::with_new_operands(llvm::ArrayRef<OpRef> operands) const {
   CAFFEINE_ASSERT(operands.size() == num_operands());
 
   if (num_operands() == 0)
@@ -1252,21 +1208,17 @@ FixedArray::with_new_operands(llvm::ArrayRef<OpRef> operands) const {
   return OpRef(new FixedArray(type(), array));
 }
 
-OpRef FixedArray::Create(Type index_ty,
-                                  const PersistentArray<OpRef>& data) {
+OpRef FixedArray::Create(Type index_ty, const PersistentArray<OpRef>& data) {
   CAFFEINE_ASSERT(index_ty.is_int());
   CAFFEINE_ASSERT(
       index_ty.bitwidth() >= ilog2(data.size()),
       "Index bitwidth is not large enough to address entire constant array");
 
-  return OpRef(
-      new FixedArray(Type::array_ty(index_ty.bitwidth()), data));
+  return OpRef(new FixedArray(Type::array_ty(index_ty.bitwidth()), data));
 }
-OpRef FixedArray::Create(Type index_ty, const OpRef& value,
-                                  size_t size) {
-  return FixedArray::Create(index_ty,
-                            PersistentArray<OpRef>(
-                                std::vector<OpRef>(size, value)));
+OpRef FixedArray::Create(Type index_ty, const OpRef& value, size_t size) {
+  return FixedArray::Create(
+      index_ty, PersistentArray<OpRef>(std::vector<OpRef>(size, value)));
 }
 
 /***************************************************

@@ -15,9 +15,8 @@ namespace caffeine {
  * Allocation                                      *
  ***************************************************/
 
-Allocation::Allocation(const OpRef& address,
-                       const OpRef& size, const OpRef& data,
-                       AllocationKind kind)
+Allocation::Allocation(const OpRef& address, const OpRef& size,
+                       const OpRef& data, AllocationKind kind)
     : address_(address), size_(size), data_(data), kind_(kind) {
   CAFFEINE_ASSERT(address->type().is_int());
   CAFFEINE_ASSERT(size->type().is_int());
@@ -57,7 +56,7 @@ Assertion Allocation::check_inbounds(const OpRef& offset,
 }
 
 OpRef Allocation::read(const OpRef& offset, const Type& t,
-                                const llvm::DataLayout& llvm) const {
+                       const llvm::DataLayout& llvm) const {
   /**
    * Reading data here is actually somewhat complex. We need to effectively
    * reconstitute the type from its component bytes after we've read them
@@ -126,8 +125,7 @@ ContextValue Allocation::read(const OpRef& offset, llvm::Type* type,
   return ContextValue(std::move(values));
 }
 
-void Allocation::write(const OpRef& offset,
-                       const OpRef& value_,
+void Allocation::write(const OpRef& offset, const OpRef& value_,
                        const llvm::DataLayout& layout) {
   /**
    * This is essentially the same process as for read but executed in reverse.
@@ -191,8 +189,7 @@ void Allocation::write(const OpRef& offset, llvm::Type* type,
  * Pointer                                         *
  ***************************************************/
 
-Pointer::Pointer(const OpRef& value)
-    : Pointer({SIZE_MAX, SIZE_MAX}, value) {
+Pointer::Pointer(const OpRef& value) : Pointer({SIZE_MAX, SIZE_MAX}, value) {
   CAFFEINE_ASSERT(value->type().is_int());
 }
 Pointer::Pointer(const AllocId& alloc, const OpRef& offset)
@@ -221,8 +218,7 @@ const Allocation& MemHeap::operator[](const AllocId& alloc) const {
   return allocs_.at(alloc);
 }
 
-AllocId MemHeap::allocate(const OpRef& size,
-                          const OpRef& alignment,
+AllocId MemHeap::allocate(const OpRef& size, const OpRef& alignment,
                           const OpRef& data, AllocationKind kind,
                           Context& ctx) {
   CAFFEINE_ASSERT(size->type() == alignment->type());
@@ -287,8 +283,7 @@ Assertion MemHeap::check_valid(const Pointer& ptr, uint32_t width) {
   return check_valid(ptr, ConstantInt::Create(llvm::APInt(
                               ptr.offset()->type().bitwidth(), width)));
 }
-Assertion MemHeap::check_valid(const Pointer& ptr,
-                               const OpRef& width) {
+Assertion MemHeap::check_valid(const Pointer& ptr, const OpRef& width) {
   /**
    * Implementation note: When checking that the end of the read is within the
    * allocation we check ptr < alloc + (size - width) instead of checking ptr +

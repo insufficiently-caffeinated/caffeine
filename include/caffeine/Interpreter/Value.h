@@ -33,8 +33,7 @@ private:
         : data(data), size(size) {}
   };
 
-  std::variant<OpRef, std::vector<ContextValue>, slice, Pointer>
-      inner_;
+  std::variant<OpRef, std::vector<ContextValue>, slice, Pointer> inner_;
 
 public:
   explicit ContextValue(const OpRef& op);

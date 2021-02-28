@@ -51,10 +51,10 @@ private:
   AllocationKind kind_;
 
 public:
-  Allocation(const OpRef& address, const OpRef& size,
-             const OpRef& data, AllocationKind kind);
-  Allocation(const OpRef& address, const ConstantInt& size,
-             const OpRef& data, AllocationKind kind);
+  Allocation(const OpRef& address, const OpRef& size, const OpRef& data,
+             AllocationKind kind);
+  Allocation(const OpRef& address, const ConstantInt& size, const OpRef& data,
+             AllocationKind kind);
 
   const OpRef& size() const;
   OpRef& size();
@@ -80,8 +80,7 @@ public:
    * given width would be a valid inbounds read.
    */
   Assertion check_inbounds(const OpRef& offset, uint32_t width) const;
-  Assertion check_inbounds(const OpRef& offset,
-                           const OpRef& width) const;
+  Assertion check_inbounds(const OpRef& offset, const OpRef& width) const;
 
   /**
    * Read the specified type from the allocation at the given offset.
@@ -90,7 +89,7 @@ public:
    * check the assertion first.
    */
   OpRef read(const OpRef& offset, const Type& t,
-                      const llvm::DataLayout& layout) const;
+             const llvm::DataLayout& layout) const;
   ContextValue read(const OpRef& offset, llvm::Type* type,
                     const llvm::DataLayout& layout);
 
@@ -102,9 +101,8 @@ public:
    */
   void write(const OpRef& offset, const OpRef& value,
              const llvm::DataLayout& layout);
-  void write(const OpRef& offset, llvm::Type* type,
-             const ContextValue& value, const MemHeap& heap,
-             const llvm::DataLayout& layout);
+  void write(const OpRef& offset, llvm::Type* type, const ContextValue& value,
+             const MemHeap& heap, const llvm::DataLayout& layout);
 };
 
 using AllocId = typename slot_map<Allocation>::key_type;
@@ -191,9 +189,8 @@ public:
    *
    * This will add the corresponding assertions to the context as well.
    */
-  AllocId allocate(const OpRef& size, const OpRef& alignment,
-                   const OpRef& data, AllocationKind kind,
-                   Context& ctx);
+  AllocId allocate(const OpRef& size, const OpRef& alignment, const OpRef& data,
+                   AllocationKind kind, Context& ctx);
 
   /**
    * Deallocate an existing allocation.

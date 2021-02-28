@@ -242,10 +242,10 @@ namespace matching {
   inline OpClassMatcher<opclass> name() {                                      \
     return OpClassMatcher<opclass>();                                          \
   };                                                                           \
-  inline OpClassMatcher<opclass> name(OpRef& op) {                    \
+  inline OpClassMatcher<opclass> name(OpRef& op) {                             \
     return OpClassMatcher<opclass>(&op);                                       \
   }                                                                            \
-  inline OpClassMatcher<opclass> name(OpRef* op) {                    \
+  inline OpClassMatcher<opclass> name(OpRef* op) {                             \
     return OpClassMatcher<opclass>(op);                                        \
   }                                                                            \
   static_assert(true)
@@ -318,14 +318,12 @@ namespace matching {
    * provided matcher.
    */
   template <typename M>
-  detail::CaptureMatcher<std::decay_t<M>> Capture(OpRef& op,
-                                                  M&& matcher) {
+  detail::CaptureMatcher<std::decay_t<M>> Capture(OpRef& op, M&& matcher) {
     return detail::CaptureMatcher<std::decay_t<M>>(&op,
                                                    std::forward<M>(matcher));
   }
   template <typename M>
-  detail::CaptureMatcher<std::decay_t<M>> Capture(OpRef* op,
-                                                  M&& matcher) {
+  detail::CaptureMatcher<std::decay_t<M>> Capture(OpRef* op, M&& matcher) {
     return detail::CaptureMatcher<std::decay_t<M>>(op,
                                                    std::forward<M>(matcher));
   }
@@ -388,8 +386,7 @@ bool matches(const Assertion& assertion, const Matcher& matcher) {
  * TODO: Make some sort of matching iterator.
  */
 template <typename Matcher>
-OpRef matches_anywhere(const OpRef& op,
-                                const Matcher& matcher) {
+OpRef matches_anywhere(const OpRef& op, const Matcher& matcher) {
   if (matcher.matches(op)) {
     matcher.on_match(op);
     return op;
@@ -406,8 +403,7 @@ OpRef matches_anywhere(const OpRef& op,
   return nullptr;
 }
 template <typename Matcher>
-OpRef matches_anywhere(const Assertion& assertion,
-                                const Matcher& matcher) {
+OpRef matches_anywhere(const Assertion& assertion, const Matcher& matcher) {
   return matches_anywhere(assertion.value(), matcher);
 }
 
