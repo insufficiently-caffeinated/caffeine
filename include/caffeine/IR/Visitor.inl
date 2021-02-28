@@ -99,7 +99,21 @@ template <template <typename T> class Transform, typename SubClass,
           typename RetTy>
 RetTy OpVisitorBase<Transform, SubClass, RetTy>::visit(
     transform_t<Operation>* op) {
-  return visit(*op);
+  return static_cast<SubClass*>(this)->visit(*op);
+}
+
+template <template <typename T> class Transform, typename SubClass,
+          typename RetTy>
+RetTy OpVisitorBase<Transform, SubClass, RetTy>::operator()(
+    transform_t<Operation>& op) {
+  return static_cast<SubClass*>(this)->visit(op);
+}
+
+template <template <typename T> class Transform, typename SubClass,
+          typename RetTy>
+RetTy OpVisitorBase<Transform, SubClass, RetTy>::operator()(
+    transform_t<Operation>* op) {
+  return static_cast<SubClass*>(this)->visit(op);
 }
 
 } // namespace caffeine
