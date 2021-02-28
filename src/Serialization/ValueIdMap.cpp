@@ -7,7 +7,7 @@
 namespace caffeine_distributed {
 
 ValueIdMap::ValueIdMap(llvm::Function* func) : func_{func} {
-  uint64_t curr = 0;
+  ValueId curr = 0;
   for (auto& basic_block : *func) {
     for (auto& instr : basic_block) {
       mapping_.insert({&instr, curr});
@@ -22,7 +22,7 @@ ValueIdMap::ValueIdMap(llvm::Function* func) : func_{func} {
   }
 };
 
-std::optional<uint64_t> ValueIdMap::getValueId(llvm::Value* val) {
+std::optional<ValueId> ValueIdMap::getValueId(llvm::Value* val) {
   if (mapping_.find(val) == mapping_.end()) {
     return std::nullopt;
   }
