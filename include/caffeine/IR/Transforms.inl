@@ -6,16 +6,16 @@
 namespace caffeine::transforms {
 
 template <typename Visitor>
-ref<Operation> rebuild(const ref<Operation>& expression, Visitor& visitor) {
+OpRef rebuild(const OpRef& expression, Visitor& visitor) {
   size_t nops = expression->num_operands();
-  llvm::SmallVector<ref<Operation>, 3> ops;
+  llvm::SmallVector<OpRef, 3> ops;
   ops.reserve(nops);
 
   size_t same_count = 0;
 
   for (size_t i = 0; i < nops; ++i) {
-    const ref<Operation>& operand = expression->operand_at(i);
-    ref<Operation> newexpr = rebuild(operand, visitor);
+    const OpRef& operand = expression->operand_at(i);
+    OpRef newexpr = rebuild(operand, visitor);
 
     if (newexpr == operand) {
       same_count += 1;
@@ -31,7 +31,7 @@ ref<Operation> rebuild(const ref<Operation>& expression, Visitor& visitor) {
   }
 }
 template <typename Visitor>
-ref<Operation> rebuild(const ref<Operation>& expression, Visitor&& visitor) {
+OpRef rebuild(const OpRef& expression, Visitor&& visitor) {
   return rebuild(expression, visitor);
 }
 
