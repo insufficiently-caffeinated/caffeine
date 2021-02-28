@@ -407,6 +407,10 @@ protected:
    * however they want.
    */
   uint16_t aux_data() const;
+
+private:
+  // Utility during debugging - should never actually be called by the program.
+  void DebugPrint() const;
 };
 
 std::ostream& operator<<(std::ostream& os, const Operation& op);

@@ -49,7 +49,7 @@ file(MAKE_DIRECTORY ${CAPNPC_OUTPUT_DIR})
 capnp_generate_cpp(CAPNP_SRCS CAPNP_HDRS "${capnp_schemas}")
 list(APPEND sources ${CAPNP_SRCS})
 
-add_library(caffeine STATIC ${sources} ${headers})
+add_library(caffeine ${sources} ${headers})
 
 target_include_directories(caffeine PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
 
