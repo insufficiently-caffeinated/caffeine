@@ -16,21 +16,21 @@ void decompose(std::vector<Assertion>& assertions) {
 
       // A & B -> A, B
       if (matches(assertions[i], And(lhs, rhs))) {
-        *assertions[i].value() = *lhs;
+        assertions[i].value() = lhs;
         assertions.push_back(std::move(rhs));
         continue;
       }
 
       // !(A | B) -> !A, !B
       if (matches(assertions[i], Not(Or(lhs, rhs)))) {
-        *assertions[i].value() = *UnaryOp::CreateNot(lhs);
+        assertions[i].value() = UnaryOp::CreateNot(lhs);
         assertions.push_back(UnaryOp::CreateNot(rhs));
         continue;
       }
 
       // !!A -> A
       if (matches(assertions[i], Not(Not(value)))) {
-        *assertions[i].value() = *value;
+        assertions[i].value() = value;
         continue;
       }
 
