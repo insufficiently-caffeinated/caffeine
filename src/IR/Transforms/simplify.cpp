@@ -7,8 +7,8 @@ namespace m = caffeine::matching;
 
 namespace {
 
-  bool is_equality_expr(const Assertion& assertion, ref<Operation>& constant,
-                        ref<Operation>& value) {
+  bool is_equality_expr(const Assertion& assertion, OpRef& constant,
+                        OpRef& value) {
     using namespace caffeine::matching;
 
     if (matches(assertion, ICmpEq(Capture(constant, m::Constant()),
@@ -31,7 +31,7 @@ void simplify(std::vector<Assertion>& assertions) {
   decompose(assertions);
 
   for (size_t i = 0; i < assertions.size(); ++i) {
-    ref<Operation> constant_, value;
+    OpRef constant_, value;
     if (!is_equality_expr(assertions[i], constant_, value))
       continue;
 
@@ -41,17 +41,16 @@ void simplify(std::vector<Assertion>& assertions) {
       if (j == i)
         continue;
 
-      auto changed =
-          rebuild(assertions[i].value(), [&](const ref<Operation>& op) {
-            const auto* cnst = llvm::dyn_cast<Constant>(op.get());
-            if (!cnst)
-              return op;
+      auto changed = rebuild(assertions[i].value(), [&](const OpRef& op) {
+        const auto* cnst = llvm::dyn_cast<Constant>(op.get());
+        if (!cnst)
+          return op;
 
-            if (cnst->symbol() != constant->symbol())
-              return op;
+        if (cnst->symbol() != constant->symbol())
+          return op;
 
-            return value;
-          });
+        return value;
+      });
 
       assertions[i].value() = changed;
     }
