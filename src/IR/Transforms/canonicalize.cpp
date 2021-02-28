@@ -63,7 +63,7 @@ namespace {
 } // namespace
 
 void canonicalize(std::vector<Assertion>& assertions) {
-  std::unordered_set<Operation*> known;
+  std::unordered_set<const Operation*> known;
   CanonicalizeVisitor visitor;
 
   auto it = std::remove_if(
