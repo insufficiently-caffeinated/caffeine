@@ -49,6 +49,9 @@ namespace detail {
   class double_deref_iterator;
 } // namespace detail
 
+class Operation;
+typedef ref<Operation> OpRef;
+
 enum class ICmpOpcode : uint8_t {
   EQ = 0x8,
   NE = 0x9,
