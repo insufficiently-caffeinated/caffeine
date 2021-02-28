@@ -90,8 +90,7 @@ inline uint64_t ilog2(uint64_t x) {
 }
 
 template <bool move_out = false>
-class ConstantFolder
-    : public ConstOpVisitor<ConstantFolder<move_out>, OpRef> {
+class ConstantFolder : public ConstOpVisitor<ConstantFolder<move_out>, OpRef> {
 public:
 #define TRY_CONST_INT(expr)                                                    \
   do {                                                                         \
@@ -411,8 +410,7 @@ public:
 
 private:
   template <typename F>
-  OpRef try_const_int(const OpRef& lhs,
-                               const OpRef& rhs, F&& func) {
+  OpRef try_const_int(const OpRef& lhs, const OpRef& rhs, F&& func) {
     const auto* lhs_int = llvm::dyn_cast<ConstantInt>(lhs.get());
     const auto* rhs_int = llvm::dyn_cast<ConstantInt>(rhs.get());
 
@@ -424,8 +422,7 @@ private:
   }
 
   template <typename F>
-  OpRef try_const_float(const OpRef& lhs,
-                                 const OpRef& rhs, F&& func) {
+  OpRef try_const_float(const OpRef& lhs, const OpRef& rhs, F&& func) {
     const auto* lhs_flt = llvm::dyn_cast<ConstantFloat>(lhs.get());
     const auto* rhs_flt = llvm::dyn_cast<ConstantFloat>(rhs.get());
 
