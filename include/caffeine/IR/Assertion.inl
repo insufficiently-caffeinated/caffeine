@@ -5,16 +5,16 @@
 
 namespace caffeine {
 
-inline ref<Operation>& Assertion::value() & {
+inline OpRef& Assertion::value() & {
   return value_;
 }
-inline ref<Operation>&& Assertion::value() && {
+inline OpRef&& Assertion::value() && {
   return std::move(value_);
 }
-inline const ref<Operation>& Assertion::value() const& {
+inline const OpRef& Assertion::value() const& {
   return value_;
 }
-inline const ref<Operation>&& Assertion::value() const&& {
+inline const OpRef&& Assertion::value() const&& {
   return std::move(value_);
 }
 

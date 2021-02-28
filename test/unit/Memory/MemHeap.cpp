@@ -34,7 +34,7 @@ protected:
   llvm::DataLayout layout{X86_64_LINUX};
   std::unique_ptr<llvm::Function> function = empty_function(llvm);
 
-  ref<Operation> MakeInt(uint64_t value, unsigned AS = 0) {
+  OpRef MakeInt(uint64_t value, unsigned AS = 0) {
     return ConstantInt::Create(
         llvm::APInt(layout.getIndexSizeInBits(AS), value));
   }

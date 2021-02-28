@@ -7,7 +7,7 @@
 namespace caffeine {
 
 Assertion::Assertion() : Assertion(constant(true)) {}
-Assertion::Assertion(const ref<Operation>& value) : value_(value) {
+Assertion::Assertion(const OpRef& value) : value_(value) {
   CAFFEINE_ASSERT(value, "created assertion with null expression");
   CAFFEINE_ASSERT(value->type() == Type::int_ty(1));
 }
