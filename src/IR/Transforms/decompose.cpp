@@ -12,7 +12,7 @@ void decompose(std::vector<Assertion>& assertions) {
   for (size_t i = 0; i < assertions.size(); ++i) {
     // Keep breaking the expression down until it stops working
     while (true) {
-      ref<Operation> lhs, rhs, value;
+      OpRef lhs, rhs, value;
 
       // A & B -> A, B
       if (matches(assertions[i], And(lhs, rhs))) {

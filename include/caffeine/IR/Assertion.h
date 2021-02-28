@@ -13,16 +13,16 @@ namespace caffeine {
  */
 class Assertion {
 private:
-  ref<Operation> value_;
+  OpRef value_;
 
 public:
   Assertion();
-  Assertion(const ref<Operation>& value);
+  Assertion(const OpRef& value);
 
-  ref<Operation>& value() &;
-  ref<Operation>&& value() &&;
-  const ref<Operation>& value() const&;
-  const ref<Operation>&& value() const&&;
+  OpRef& value() &;
+  OpRef&& value() &&;
+  const OpRef& value() const&;
+  const OpRef&& value() const&&;
 
   bool is_empty() const;
   bool is_constant() const;

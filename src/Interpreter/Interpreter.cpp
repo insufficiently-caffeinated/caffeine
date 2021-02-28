@@ -362,19 +362,18 @@ ExecutionResult Interpreter::visitFCmpInst(llvm::FCmpInst& fcmp) {
 // `result` is the boolean value to return if either the lhs or rhs is a NaN
 #define FCMP_CASE(op, ourOp, result)                                           \
   case FCmpInst::FCMP_##op:                                                    \
-    frame.insert(&fcmp,                                                        \
-                 transform(                                                    \
-                     [](const auto& lhs, const auto& rhs) {                    \
-                       ref<Operation> def = ConstantInt::Create(result);       \
-                       ref<Operation> thenFcmp =                               \
-                           FCmpOp::CreateFCmp(FCmpOpcode::ourOp, lhs, rhs);    \
-                       ref<Operation> neitherIsNaN = SelectOp::Create(         \
-                           UnaryOp::CreateFIsNaN(lhs), def,                    \
-                           SelectOp::Create(UnaryOp::CreateFIsNaN(rhs), def,   \
-                                            thenFcmp));                        \
-                       return neitherIsNaN;                                    \
-                     },                                                        \
-                     lhs, rhs));                                               \
+    frame.insert(&fcmp, transform(                                             \
+                            [](const auto& lhs, const auto& rhs) {             \
+                              OpRef def = ConstantInt::Create(result);         \
+                              OpRef thenFcmp = FCmpOp::CreateFCmp(             \
+                                  FCmpOpcode::ourOp, lhs, rhs);                \
+                              OpRef neitherIsNaN = SelectOp::Create(           \
+                                  UnaryOp::CreateFIsNaN(lhs), def,             \
+                                  SelectOp::Create(UnaryOp::CreateFIsNaN(rhs), \
+                                                   def, thenFcmp));            \
+                              return neitherIsNaN;                             \
+                            },                                                 \
+                            lhs, rhs));                                        \
     return ExecutionResult::Continue;
 
   switch (fcmp.getPredicate()) {

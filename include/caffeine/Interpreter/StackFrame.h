@@ -44,7 +44,7 @@ public:
    * Insert a new value into the current stack frame. If that value
    * is already in the current stack frame then it overwrites it.
    */
-  void insert(llvm::Value* value, const ref<Operation>& expr);
+  void insert(llvm::Value* value, const OpRef& expr);
   void insert(llvm::Value* value, const ContextValue& exprs);
 
   /**

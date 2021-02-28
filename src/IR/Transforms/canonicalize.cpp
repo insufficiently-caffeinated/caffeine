@@ -10,28 +10,28 @@
 namespace caffeine::transforms {
 
 namespace {
-  using ReferenceMap = std::unordered_map<Operation, ref<Operation>>;
+  using ReferenceMap = std::unordered_map<Operation, OpRef>;
 
   class CanonicalizeVisitor
-      : public ConstOpVisitor<CanonicalizeVisitor, ref<Operation>> {
+      : public ConstOpVisitor<CanonicalizeVisitor, OpRef> {
     ReferenceMap seen;
 
   public:
-    ref<Operation> visit(const Operation* op) {
+    OpRef visit(const Operation* op) {
       return visit(*op);
     }
-    ref<Operation> visit(const Operation& op) {
+    OpRef visit(const Operation& op) {
       auto it = seen.find(op);
       if (it != seen.end())
         return it->second;
 
-      auto res = ConstOpVisitor<CanonicalizeVisitor, ref<Operation>>::visit(op);
+      auto res = ConstOpVisitor<CanonicalizeVisitor, OpRef>::visit(op);
       seen.emplace(op, res);
       return res;
     }
 
-    ref<Operation> visitOperation(const Operation& op) {
-      llvm::SmallVector<ref<Operation>, 3> operands;
+    OpRef visitOperation(const Operation& op) {
+      llvm::SmallVector<OpRef, 3> operands;
 
       for (auto& operand : op.operands()) {
         operands.push_back(visit(operand));
@@ -40,12 +40,12 @@ namespace {
       return op.with_new_operands(operands);
     }
 
-    ref<Operation> visitFixedArray(const FixedArray& array) {
+    OpRef visitFixedArray(const FixedArray& array) {
       auto data = array.data();
       bool set_any = false;
 
       for (size_t i = 0; i < data.size(); ++i) {
-        ref<Operation> elem = data[i];
+        OpRef elem = data[i];
         auto rel = visit(*elem);
 
         if (rel != elem) {
