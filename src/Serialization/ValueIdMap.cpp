@@ -23,11 +23,12 @@ ValueIdMap::ValueIdMap(llvm::Function* func) : func_{func} {
 };
 
 std::optional<ValueId> ValueIdMap::getValueId(llvm::Value* val) {
-  if (mapping_.find(val) == mapping_.end()) {
+  auto it = mapping_.find(val);
+  if (it == mapping_.end()) {
     return std::nullopt;
   }
 
-  return mapping_.at(val);
+  return it->second;
 }
 
 } // namespace caffeine_distributed

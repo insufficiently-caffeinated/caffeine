@@ -1,7 +1,7 @@
-#ifndef CAFFEINE_DIST_SERIALIZATION_H
-#define CAFFEINE_DIST_SERIALIZATION_H
+#pragma once
 
 #include <cstdint>
+#include <optional>
 #include <unordered_map>
 
 #include <llvm/IR/Function.h>
@@ -30,5 +30,3 @@ public:
 };
 
 } // namespace caffeine_distributed
-
-#endif
