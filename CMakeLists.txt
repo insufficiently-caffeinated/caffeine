@@ -55,6 +55,7 @@ if (CAFFEINE_ENABLE_BUILD)
   find_package(Z3 4.8.7 REQUIRED)
   find_package(Boost REQUIRED)
   find_package(fmt REQUIRED)
+  find_package(CapnProto REQUIRED)
 
   include (CaffeineDependencies)
 
@@ -79,8 +80,8 @@ endif()
 find_program(CLANG_FORMAT clang-format)
 if (CLANG_FORMAT STREQUAL "CLANG_FORMAT-NOTFOUND")
   message(
-    ${CAFFEINE_WARNING} 
-    "Unable to find clang-format. " 
+    ${CAFFEINE_WARNING}
+    "Unable to find clang-format. "
     "Formatting target will not be configured. "
     "Specify CLANG_FORMAT to re-enable formatting."
   )
@@ -92,4 +93,3 @@ endif()
 if("${CMAKE_VERSION}" VERSION_GREATER_EQUAL "3.17")
   list(APPEND CMAKE_CTEST_ARGUMENTS "--output-on-failure")
 endif()
-
