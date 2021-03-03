@@ -53,6 +53,31 @@ public:
   std::optional<LLVMValue> try_visit(llvm::Value* val);
 
   /*********************************************
+   * Constant visitor methods                  *
+   *********************************************/
+  LLVMValue visitConstant(llvm::Constant& cnst);
+
+  // Subclasses of ConstantData
+  LLVMValue visitConstantAggregateZero(llvm::ConstantAggregateZero& cnst);
+  LLVMValue visitConstantDataVector(llvm::ConstantDataVector& cnst);
+  LLVMValue visitConstantInt(llvm::ConstantInt& cnst);
+  LLVMValue visitConstantFP(llvm::ConstantFP& cnst);
+  LLVMValue visitConstantPointerNull(llvm::ConstantPointerNull& cnst);
+  LLVMValue visitUndefValue(llvm::UndefValue& undef);
+
+  // Subclasses of ConstantAggregate
+  LLVMValue visitConstantArray(llvm::ConstantArray& cnst);
+  LLVMValue visitConstantStruct(llvm::ConstantStruct& cnst);
+  LLVMValue visitConstantVector(llvm::ConstantVector& cnst);
+
+  // Subclasses of GlobalValue
+  LLVMValue visitGlobalVariable(llvm::GlobalVariable& global);
+
+  // Extras
+  OpRef visitGlobalData(llvm::Constant& cnst, unsigned AS);
+  LLVMValue visitConstantExpr(llvm::ConstantExpr& expr);
+
+  /*********************************************
    * InstVisitor override methods              *
    *********************************************/
 
