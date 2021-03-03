@@ -85,6 +85,7 @@ public:
 
   ExecutionResult visitMemCpyInst(llvm::MemCpyInst& memcpy);
   ExecutionResult visitMemMoveInst(llvm::MemMoveInst& memmove);
+  ExecutionResult visitMemSetInst(llvm::MemSetInst& memset);
 
 private:
   ExecutionResult visitExternFunc(llvm::CallInst& inst);
