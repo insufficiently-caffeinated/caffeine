@@ -138,6 +138,8 @@ DECL_CAST_OP_VISIT(FPTrunc, FpTrunc);
 DECL_CAST_OP_VISIT(FPExt, FpExt);
 DECL_CAST_OP_VISIT(UIToFP, UIToFp);
 DECL_CAST_OP_VISIT(SIToFP, SIToFp);
+DECL_CAST_OP_VISIT(FPToSI, FpToSI);
+DECL_CAST_OP_VISIT(FPToUI, FpToUI);
 
 LLVMValue ExprEvaluator::visitFNeg(llvm::UnaryOperator& op) {
   LLVMValue value = visit(op.getOperand(0));
