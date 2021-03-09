@@ -35,6 +35,9 @@ LLVMValue ExprEvaluator::visit(llvm::Value* val) {
 
   CAFFEINE_ABORT(msg);
 }
+LLVMValue ExprEvaluator::visit(llvm::Value& val) {
+  return visit(&val);
+}
 
 LLVMValue ExprEvaluator::visitInstruction(llvm::Instruction& inst) {
   std::string msg = "";

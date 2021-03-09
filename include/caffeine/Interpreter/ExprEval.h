@@ -32,6 +32,7 @@ public:
   explicit ExprEvaluator(Context* ctx, Options options = Options());
 
   LLVMValue visit(llvm::Value* val);
+  LLVMValue visit(llvm::Value& val);
 
 
   /*********************************************
