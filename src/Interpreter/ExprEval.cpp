@@ -17,6 +17,28 @@ namespace {
   }
 } // namespace
 
+ExprEvaluator::Unevaluatable::Unevaluatable(llvm::Value* expr,
+                                            const char* context)
+    : expr_(expr), context_(context) {
+  CAFFEINE_ASSERT(expr != nullptr);
+}
+
+const char* ExprEvaluator::Unevaluatable::what() const throw() {
+  if (msg_cache_.empty()) {
+    std::string printed;
+    llvm::raw_string_ostream os{printed};
+    expr_->print(os, true);
+
+    msg_cache_ = fmt::format(
+        "Unable to evaluate expression: {}. Expression: {}", context_, printed);
+  }
+
+  return msg_cache_.c_str();
+}
+llvm::Value* ExprEvaluator::Unevaluatable::expr() const {
+  return expr_;
+}
+
 ExprEvaluator::ExprEvaluator(Context* ctx, Options options)
     : ctx(ctx), options(options) {}
 
