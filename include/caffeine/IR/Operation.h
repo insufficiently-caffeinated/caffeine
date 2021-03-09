@@ -483,6 +483,8 @@ public:
   // Specialization for creating boolean constants
   static OpRef Create(bool value);
 
+  static OpRef CreateZero(unsigned bitwidth);
+
   static bool classof(const Operation* op);
 };
 

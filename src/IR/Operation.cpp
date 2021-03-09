@@ -278,6 +278,10 @@ OpRef ConstantInt::Create(bool value) {
   return ConstantInt::Create(llvm::APInt(1, static_cast<uint64_t>(value)));
 }
 
+OpRef ConstantInt::CreateZero(unsigned bitwidth) {
+  return ConstantInt::Create(llvm::APInt::getNullValue(bitwidth));
+}
+
 /***************************************************
  * ConstantFloat                                   *
  ***************************************************/
