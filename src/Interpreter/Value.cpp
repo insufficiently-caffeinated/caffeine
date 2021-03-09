@@ -5,6 +5,44 @@
 
 namespace caffeine {
 
+LLVMScalar::operator ContextValue() const {
+  if (is_expr())
+    return ContextValue(expr());
+  return ContextValue(pointer());
+}
+LLVMValue::operator ContextValue() const {
+  CAFFEINE_ASSERT(!is_aggregate(),
+                  "Cannot convert an aggregate LLVMValue to a ContextValue");
+
+  if (is_scalar())
+    return (ContextValue)scalar();
+
+  std::vector<ContextValue> values;
+  for (const auto& elem : elements()) {
+    values.push_back((ContextValue)elem);
+  }
+  return ContextValue(std::move(values));
+}
+
+ContextValue::operator LLVMScalar() const {
+  if (is_scalar())
+    return LLVMScalar(scalar());
+  if (is_pointer())
+    return LLVMScalar(pointer());
+
+  CAFFEINE_ABORT("Cannot convert a vector ContextValue to a LLVMScalar value");
+}
+ContextValue::operator LLVMValue() const {
+  if (is_scalar() || is_pointer())
+    return LLVMValue((LLVMScalar) * this);
+
+  LLVMValue::OpVector vec;
+  for (const auto& elem : vector()) {
+    vec.push_back((LLVMScalar)elem);
+  }
+  return LLVMValue(std::move(vec));
+}
+
 ContextValue::ContextValue(const OpRef& op) : inner_(op) {}
 ContextValue::ContextValue(const Pointer& ptr) : inner_(ptr) {}
 

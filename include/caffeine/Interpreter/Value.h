@@ -12,6 +12,9 @@
 
 namespace caffeine {
 
+class ContextValue;
+class LLVMValue;
+
 /**
  * A LLVM value that is not an aggregate or a vector.
  *
@@ -37,6 +40,9 @@ public:
 
   const OpRef& expr() const;
   const caffeine::Pointer& pointer() const;
+
+public:
+  explicit operator ContextValue() const;
 };
 
 /**
@@ -83,6 +89,9 @@ public:
   size_t num_members() const;
   const LLVMValue& member(size_t idx) const;
   llvm::ArrayRef<LLVMValue> members() const;
+
+public:
+  explicit operator ContextValue() const;
 };
 
 /**
@@ -103,7 +112,7 @@ LLVMValue transform_elements(F&& func, const Vals&... values);
  * - a single value (scalar), or
  * - a recursive array of values (vector)
  */
-class ContextValue {
+class /* [[deprecated]] */ ContextValue {
 public:
   enum Kind { Scalar, Vector, Ptr };
 
@@ -144,6 +153,10 @@ public:
   const OpRef& scalar() const;
   llvm::ArrayRef<ContextValue> vector() const;
   const Pointer& pointer() const;
+
+public:
+  explicit operator LLVMScalar() const;
+  explicit operator LLVMValue() const;
 };
 
 /**
