@@ -51,7 +51,7 @@ list(APPEND sources ${CAPNP_SRCS})
 
 add_library(caffeine ${sources} ${headers})
 
-target_include_directories(caffeine PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+target_include_directories(caffeine PUBLIC "${CMAKE_CURRENT_BINARY_DIR}")
 
 target_include_directories(caffeine
   PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}"
