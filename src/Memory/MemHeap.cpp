@@ -184,6 +184,51 @@ void Allocation::write(const OpRef& offset, llvm::Type* type,
           elem_ty, values[i], heap, layout);
   }
 }
+void Allocation::write(const OpRef& offset, const LLVMScalar& value,
+                       const MemHeap& heap, const llvm::DataLayout& layout) {
+  if (value.is_pointer()) {
+    write(offset, value.pointer().value(heap), layout);
+  } else {
+    write(offset, value.expr(), layout);
+  }
+}
+void Allocation::write(const OpRef& offset, llvm::Type* type,
+                       const LLVMValue& value, const MemHeap& heap,
+                       const llvm::DataLayout& layout) {
+  if (value.is_vector()) {
+    CAFFEINE_ASSERT(value.num_elements() == type->getVectorNumElements());
+    llvm::Type* elem_ty = type->getVectorElementType();
+
+    for (size_t i = 0; i < value.num_elements(); ++i) {
+      OpRef offset =
+          BinaryOp::CreateAdd(offset, i * layout.getTypeAllocSize(elem_ty));
+
+      write(offset, value.element(i), heap, layout);
+    }
+  } else if (type->isArrayTy()) {
+    CAFFEINE_ASSERT(value.num_members() == type->getArrayNumElements());
+    llvm::Type* elem_ty = type->getArrayElementType();
+
+    for (size_t i = 0; i < value.num_elements(); ++i) {
+      OpRef offset =
+          BinaryOp::CreateAdd(offset, i * layout.getTypeAllocSize(elem_ty));
+
+      write(offset, elem_ty, value.member(i), heap, layout);
+    }
+  } else if (type->isStructTy()) {
+    CAFFEINE_ASSERT(value.num_members() == type->getStructNumElements());
+    size_t elem_offset = 0;
+
+    for (size_t i = 0; i < value.num_members(); ++i) {
+      llvm::Type* elem_ty = type->getStructElementType(i);
+
+      write(BinaryOp::CreateAdd(offset, elem_offset), elem_ty, value.member(i),
+            heap, layout);
+
+      elem_offset += layout.getTypeAllocSize(elem_ty);
+    }
+  }
+}
 
 /***************************************************
  * Pointer                                         *
