@@ -70,11 +70,11 @@ private:
   std::variant<OpVector, std::vector<LLVMValue>> inner_;
 
 public:
-  LLVMValue(const LLVMScalar& value);
-  LLVMValue(OpVector&& values);
-  LLVMValue(llvm::ArrayRef<LLVMScalar> values);
-  LLVMValue(llvm::ArrayRef<LLVMValue> values);
-  LLVMValue(std::vector<LLVMValue>&& values);
+  explicit LLVMValue(const LLVMScalar& value);
+  explicit LLVMValue(OpVector&& values);
+  explicit LLVMValue(llvm::ArrayRef<LLVMScalar> values);
+  explicit LLVMValue(llvm::ArrayRef<LLVMValue> values);
+  explicit LLVMValue(std::vector<LLVMValue>&& values);
 
   bool is_scalar() const;
   bool is_vector() const;
