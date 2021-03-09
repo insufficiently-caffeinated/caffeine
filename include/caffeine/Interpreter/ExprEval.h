@@ -1,5 +1,6 @@
 #pragma once
 
+#include "caffeine/IR/Operation.h"
 #include <llvm/IR/InstVisitor.h>
 #include <optional>
 #include <stdexcept>
@@ -29,6 +30,19 @@ public:
     bool create_allocations = true;
 
     constexpr Options() noexcept {}
+  };
+
+  class Unevaluatable : public std::exception {
+  private:
+    llvm::Value* expr_;
+    const char* context_;
+    mutable std::string msg_cache_;
+
+  public:
+    explicit Unevaluatable(llvm::Value* expr, const char* context = nullptr);
+
+    const char* what() const throw() override;
+    llvm::Value* expr() const;
   };
 
   explicit ExprEvaluator(Context* ctx, Options options = Options());

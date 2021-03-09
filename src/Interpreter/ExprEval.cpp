@@ -2,6 +2,7 @@
 
 #include "caffeine/Interpreter/Context.h"
 #include "caffeine/Interpreter/Value.h"
+#include "caffeine/Memory/MemHeap.h"
 #include <fmt/format.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/Instructions.h>
