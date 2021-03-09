@@ -1,11 +1,8 @@
 
 #include "caffeine/Protos/operation.capnp.h"
 
-#include <cstdio>
-
 #include <capnp/message.h>
 #include <capnp/serialize.h>
-#include <iostream>
 
 #include <gtest/gtest.h>
 
