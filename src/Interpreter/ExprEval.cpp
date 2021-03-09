@@ -553,6 +553,9 @@ OpRef ExprEvaluator::visitGlobalData(llvm::Constant& constant, unsigned AS) {
 
   return alloc.data();
 }
+LLVMValue ExprEvaluator::visitConstantExpr(llvm::ConstantExpr& expr) {
+  return visit(expr.getAsInstruction());
+}
 
 /*********************************************
  * InstVisitor override methods              *
