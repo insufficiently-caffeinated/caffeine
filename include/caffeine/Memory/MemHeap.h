@@ -32,7 +32,6 @@ enum class AllocationKind { Alloca, Malloc, Global };
  * - address is the pointer to the start of the allocation.
  * - size is the size in bytes of the allocation.
  * - data is an array containing the bytes of the allocation.
- * - dead indicates whether this allocation has been freed.
  *
  * Any of address, size, or data may be either concrete, symbolic, or, for data,
  * some combination of the two. With the current design, dead will never be
