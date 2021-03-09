@@ -61,6 +61,18 @@ LLVMValue ExprEvaluator::visit(llvm::Value& val) {
   return visit(&val);
 }
 
+std::optional<LLVMValue> ExprEvaluator::try_visit(llvm::Value* val) {
+  try {
+    return visit(val);
+  } catch (Unevaluatable&) {
+    return std::nullopt;
+  }
+}
+
+/*********************************************
+ * InstVisitor override methods              *
+ *********************************************/
+
 LLVMValue ExprEvaluator::visitInstruction(llvm::Instruction& inst) {
   std::string msg = "";
   llvm::raw_string_ostream os{msg};
@@ -70,10 +82,6 @@ LLVMValue ExprEvaluator::visitInstruction(llvm::Instruction& inst) {
       fmt::format("Instruction '{}' not implemented! Full expression: {}",
                   inst.getOpcodeName(), msg));
 }
-
-/*********************************************
- * InstVisitor override methods              *
- *********************************************/
 
 #define DECL_BINARY_OP_VISIT(opcode)                                           \
   LLVMValue ExprEvaluator::visit##opcode(llvm::BinaryOperator& op) {           \

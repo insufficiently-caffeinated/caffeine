@@ -1,6 +1,8 @@
 #pragma once
 
 #include <llvm/IR/InstVisitor.h>
+#include <optional>
+#include <stdexcept>
 
 namespace caffeine {
 
@@ -34,6 +36,7 @@ public:
   LLVMValue visit(llvm::Value* val);
   LLVMValue visit(llvm::Value& val);
 
+  std::optional<LLVMValue> try_visit(llvm::Value* val);
 
   /*********************************************
    * InstVisitor override methods              *
