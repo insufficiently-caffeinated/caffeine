@@ -62,6 +62,9 @@ public:
    * `variables` as it correctly handles constants.
    */
   ContextValue lookup(llvm::Value* value) const;
+
+private:
+  friend class ExprEvaluator;
 };
 
 } // namespace caffeine
