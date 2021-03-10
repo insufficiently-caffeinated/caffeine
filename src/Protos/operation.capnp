@@ -1,7 +1,7 @@
 @0xf54292a58fc34e9a;
 
 using Cxx = import "/capnp/c++.capnp";
-$Cxx.namespace("caffeine_distributed::protos");
+$Cxx.namespace("caffeine::protos");
 
 struct Symbol {
   union {

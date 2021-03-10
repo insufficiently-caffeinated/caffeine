@@ -4,7 +4,7 @@
 
 #include "caffeine/Protos/operation.capnp.h"
 
-namespace caffeine_distributed {
+namespace caffeine {
 
 ValueIdMap::ValueIdMap(llvm::Function* func) : func_{func} {
   ValueId curr = 0;
@@ -31,4 +31,4 @@ std::optional<ValueId> ValueIdMap::getValueId(llvm::Value* val) {
   return it->second;
 }
 
-} // namespace caffeine_distributed
+} // namespace caffeine

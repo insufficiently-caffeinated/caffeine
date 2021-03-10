@@ -7,7 +7,7 @@
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Value.h>
 
-namespace caffeine_distributed {
+namespace caffeine {
 
 typedef uint64_t ValueId;
 
@@ -29,4 +29,4 @@ public:
   std::optional<ValueId> getValueId(llvm::Value* val);
 };
 
-} // namespace caffeine_distributed
+} // namespace caffeine
