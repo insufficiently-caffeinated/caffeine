@@ -118,6 +118,8 @@ public:
   LLVMValue visitPtrToInt(llvm::PtrToIntInst& op);
   LLVMValue visitIntToPtr(llvm::IntToPtrInst& op);
 
+  LLVMValue visitBitCast(llvm::BitCastInst& op);
+
 private:
   Context* ctx;
   Options options;

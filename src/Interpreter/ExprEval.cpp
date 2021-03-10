@@ -415,4 +415,8 @@ LLVMValue ExprEvaluator::visitIntToPtr(llvm::IntToPtrInst& inst) {
       visit(inst.getOperand(0)));
 }
 
+LLVMValue ExprEvaluator::visitBitCast(llvm::BitCastInst& inst) {
+  return visit(inst.getOperand(0));
+}
+
 } // namespace caffeine
