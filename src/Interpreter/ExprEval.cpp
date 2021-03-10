@@ -322,17 +322,16 @@ LLVMValue ExprEvaluator::visitConstantExpr(llvm::ConstantExpr& expr) {
 }
 
 /*********************************************
- * InstVisitor override methods              *
+ * Constant visitor methods                  *
  *********************************************/
 
-LLVMValue ExprEvaluator::visitInstruction(llvm::Instruction& inst) {
+LLVMValue ExprEvaluator::visitConstant(llvm::Constant& cnst) {
   std::string msg = "";
   llvm::raw_string_ostream os{msg};
-  inst.print(os, true);
+  cnst.print(os, true);
 
   CAFFEINE_ABORT(
-      fmt::format("Instruction '{}' not implemented! Full expression: {}",
-                  inst.getOpcodeName(), msg));
+      fmt::format("Unable to evaluate constant expression: {}", msg));
 }
 
 LLVMValue
@@ -569,6 +568,16 @@ LLVMValue ExprEvaluator::visitConstantExpr(llvm::ConstantExpr& expr) {
 /*********************************************
  * InstVisitor override methods              *
  *********************************************/
+
+LLVMValue ExprEvaluator::visitInstruction(llvm::Instruction& inst) {
+  std::string msg = "";
+  llvm::raw_string_ostream os{msg};
+  inst.print(os, true);
+
+  CAFFEINE_ABORT(
+      fmt::format("Instruction '{}' not implemented! Full expression: {}",
+                  inst.getOpcodeName(), msg));
+}
 
 #define DECL_BINARY_OP_VISIT(opcode)                                           \
   LLVMValue ExprEvaluator::visit##opcode(llvm::BinaryOperator& op) {           \
