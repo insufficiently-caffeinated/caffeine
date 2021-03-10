@@ -40,6 +40,9 @@ public:
   const OpRef& expr() const;
   const caffeine::Pointer& pointer() const;
 
+  // Create a vector consisting of n copies of this scalar.
+  LLVMValue broadcast(size_t width) const;
+
 public:
   explicit operator ContextValue() const;
 };
