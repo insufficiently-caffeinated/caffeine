@@ -65,9 +65,7 @@ LLVMValue ExprEvaluator::visit(llvm::Value& val) {
 std::optional<LLVMValue> ExprEvaluator::try_visit(llvm::Value* val) {
   try {
     return visit(val);
-  } catch (Unevaluatable&) {
-    return std::nullopt;
-  }
+  } catch (Unevaluatable&) { return std::nullopt; }
 }
 
 /*********************************************
