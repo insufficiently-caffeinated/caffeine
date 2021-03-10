@@ -24,6 +24,10 @@ LLVMValue::operator ContextValue() const {
   return ContextValue(std::move(values));
 }
 
+LLVMValue LLVMScalar::broadcast(size_t width) const {
+  return LLVMValue(LLVMValue::OpVector(width, *this));
+}
+
 ContextValue::operator LLVMScalar() const {
   if (is_scalar())
     return LLVMScalar(scalar());
