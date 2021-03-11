@@ -72,10 +72,6 @@ public:
    */
   uint64_t next_constant();
 
-  llvm::Module* llvm_module() const {
-    return mod;
-  }
-
   /**
    * Add a new assertion to this context.
    */
