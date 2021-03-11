@@ -19,33 +19,44 @@ foreach(directory ${checked_dirs})
   list(APPEND fmt_sources ${fmt_sources_tmp})
 endforeach()
 
-add_custom_target(format
-  COMMAND ${CLANG_FORMAT} -i ${fmt_sources}
-  VERBATIM
-  WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-)
-
 set(formatted "")
+set(checked "")
 
 foreach(source ${fmt_sources})
   get_filename_component(source_dir "${source}" DIRECTORY)
 
+  set(stamp_dir "${CMAKE_BINARY_DIR}/.fmt/check")
+
   add_custom_command(
-    OUTPUT "${CMAKE_BINARY_DIR}/.fmt/${source}"
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/.fmt/${source_dir}"
-    COMMAND ${CLANG_FORMAT} "${CMAKE_SOURCE_DIR}/${source}" > "${CMAKE_BINARY_DIR}/.fmt/${source}"
-    COMMAND diff --color=always -u "${CMAKE_SOURCE_DIR}/${source}" "${CMAKE_BINARY_DIR}/.fmt/${source}"
+    OUTPUT "${stamp_dir}/${source}"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${stamp_dir}/${source_dir}"
+    COMMAND ${CLANG_FORMAT} "${CMAKE_SOURCE_DIR}/${source}" > "${stamp_dir}/${source}"
+    COMMAND diff --color=always -u "${stamp_dir}/${source}" "${stamp_dir}/${source}"
     DEPENDS "${CMAKE_SOURCE_DIR}/${source}"
     COMMENT "Checking formatting for ${source}"
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
   )
 
-  list(APPEND formatted "${CMAKE_BINARY_DIR}/.fmt/${source}")
+  list(APPEND checked "${stamp_dir}/${source}")
+
+  set(stamp_dir "${CMAKE_BINARY_DIR}/.fmt/fmt")
+
+  add_custom_command(
+    OUTPUT "${stamp_dir}/${source}"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${stamp_dir}/${source_dir}"
+    COMMAND ${CLANG_FORMAT} -i "${CMAKE_SOURCE_DIR}/${source}"
+    COMMAND ${CMAKE_COMMAND} -E touch "${stamp_dir}/${source}"
+    COMMAND diff --color=always -u "${stamp_dir}/${source}" "${stamp_dir}/${source}"
+    DEPENDS "${CMAKE_SOURCE_DIR}/${source}"
+    COMMENT "Formatting ${source}"
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+  )
+
+  list(APPEND formatted "${stamp_dir}/${source}")
 endforeach()
 
-add_custom_target(check-format
-  DEPENDS ${formatted}
-)
+add_custom_target(check-format DEPENDS ${checked})
+add_custom_target(format       DEPENDS ${formatted})
 
 endfunction()
 
