@@ -25,8 +25,8 @@ static void assert_valid_arg(llvm::Type* type) {
 }
 
 Context::Context(llvm::Function* function, std::shared_ptr<Solver> solver)
-    : solver_(std::move(solver)), module_(function->front().getModule()) {
-  stack_.emplace_back(function);
+    : solver(std::move(solver)), mod(function->front().getModule()) {
+  stack.emplace_back(function);
   StackFrame& frame = stack_top();
 
   size_t i = 0;
@@ -50,57 +50,44 @@ Context Context::fork() const {
 }
 
 const StackFrame& Context::stack_top() const {
-  CAFFEINE_ASSERT(!stack_.empty());
-  return stack_.back();
+  CAFFEINE_ASSERT(!stack.empty());
+  return stack.back();
 }
 
 StackFrame& Context::stack_top() {
-  CAFFEINE_ASSERT(!stack_.empty());
-  return stack_.back();
-}
-
-const std::vector<StackFrame>& Context::stack() const {
-  return stack_;
+  CAFFEINE_ASSERT(!stack.empty());
+  return stack.back();
 }
 
 void Context::push(const StackFrame& frame) {
-  stack_.push_back(frame);
+  stack.push_back(frame);
 }
 void Context::push(StackFrame&& frame) {
-  stack_.push_back(frame);
+  stack.push_back(frame);
 }
 void Context::pop() {
-  CAFFEINE_ASSERT(!stack_.empty());
+  CAFFEINE_ASSERT(!stack.empty());
 
-  auto& frame = stack_.back();
+  auto& frame = stack.back();
   for (auto allocid : frame.allocations) {
-    CAFFEINE_ASSERT(heap()[allocid].kind() == AllocationKind::Alloca,
+    CAFFEINE_ASSERT(heap[allocid].kind() == AllocationKind::Alloca,
                     "found non-stack allocation on the stack");
 
-    heap().deallocate(allocid);
+    heap.deallocate(allocid);
   }
 
-  stack_.pop_back();
+  stack.pop_back();
 }
 
 bool Context::empty() const {
-  return stack_.empty();
-}
-
-std::shared_ptr<Solver> Context::solver() const {
-  return solver_;
-}
-
-llvm::iterator_range<std::vector<Assertion>::const_iterator>
-Context::assertions() const {
-  return {std::begin(assertions_), std::end(assertions_)};
+  return stack.empty();
 }
 
 void Context::add(const Assertion& assertion) {
-  assertions_.push_back(assertion);
+  assertions.push_back(assertion);
 }
 void Context::add(Assertion&& assertion) {
-  assertions_.push_back(std::move(assertion));
+  assertions.push_back(std::move(assertion));
 }
 
 std::optional<ContextValue> Context::lookup_const(llvm::Value* value) const {
@@ -119,10 +106,10 @@ ContextValue Context::lookup(llvm::Value* value) {
 }
 
 SolverResult Context::check(const Assertion& extra) {
-  return solver_->check(assertions_, extra);
+  return solver->check(assertions, extra);
 }
 std::unique_ptr<Model> Context::resolve(const Assertion& extra) {
-  return solver_->resolve(assertions_, extra);
+  return solver->resolve(assertions, extra);
 }
 
 uint64_t Context::next_constant() {

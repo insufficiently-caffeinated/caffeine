@@ -320,7 +320,7 @@ ExecutionResult Interpreter::visitICmpInst(llvm::ICmpInst& icmp) {
     if (value.is_scalar())
       return value.scalar();
     if (value.is_pointer())
-      return value.pointer().value(ctx->heap());
+      return value.pointer().value(ctx->heap);
     CAFFEINE_UNREACHABLE();
   };
 
@@ -486,8 +486,7 @@ ExecutionResult Interpreter::visitPtrToIntInst(llvm::PtrToIntInst& ptrtoint) {
   auto func = [&](const ContextValue& operand) {
     const Pointer& ptr = operand.pointer();
 
-    return ContextValue(
-        UnaryOp::CreateTruncOrZExt(type, ptr.value(ctx->heap())));
+    return ContextValue(UnaryOp::CreateTruncOrZExt(type, ptr.value(ctx->heap)));
   };
   frame.insert(&ptrtoint, transform_value(func, operand));
 
@@ -781,7 +780,7 @@ Interpreter::visitGetElementPtrInst(llvm::GetElementPtrInst& inst) {
               Pointer(ptr.alloc(), BinaryOp::CreateAdd(ptr.offset(), offset)));
         } else {
           return ContextValue(
-              Pointer(BinaryOp::CreateAdd(ptr.value(ctx->heap()), offset)));
+              Pointer(BinaryOp::CreateAdd(ptr.value(ctx->heap), offset)));
         }
       },
       ctx->lookup(ptr_op));
@@ -802,7 +801,7 @@ ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
   const Pointer& pointer = operand.pointer();
 
   auto assertion =
-      ctx->heap().check_valid(pointer, layout.getTypeStoreSize(inst.getType()));
+      ctx->heap.check_valid(pointer, layout.getTypeStoreSize(inst.getType()));
   auto model = ctx->resolve(!assertion);
   if (model->result() == SolverResult::SAT) {
     logger->log_failure(*model, *ctx, Failure(!assertion));
@@ -814,12 +813,12 @@ ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
     return ExecutionResult::Stop;
   }
 
-  auto resolved = ctx->heap().resolve(pointer, *ctx);
+  auto resolved = ctx->heap.resolve(pointer, *ctx);
 
   for (const Pointer& ptr : resolved) {
     Context forked = ctx->fork();
 
-    Allocation& alloc = ctx->heap()[ptr.alloc()];
+    Allocation& alloc = ctx->heap[ptr.alloc()];
     forked.add(alloc.check_inbounds(ptr.offset(),
                                     layout.getTypeStoreSize(inst.getType())));
 
@@ -839,7 +838,7 @@ ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
   const llvm::DataLayout& layout = inst.getModule()->getDataLayout();
   const Pointer& pointer = dest.pointer();
 
-  auto assertion = ctx->heap().check_valid(
+  auto assertion = ctx->heap.check_valid(
       pointer, layout.getTypeStoreSize(inst.getOperand(0)->getType()));
   auto model = ctx->resolve(!assertion);
   if (model->result() == SolverResult::SAT) {
@@ -852,14 +851,14 @@ ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
     return ExecutionResult::Stop;
   }
 
-  auto resolved = ctx->heap().resolve(pointer, *ctx);
+  auto resolved = ctx->heap.resolve(pointer, *ctx);
   for (const Pointer& ptr : resolved) {
     Context forked = ctx->fork();
 
-    Allocation& alloc = forked.heap()[ptr.alloc()];
+    Allocation& alloc = forked.heap[ptr.alloc()];
     forked.add(
         alloc.check_inbounds(ptr.offset(), layout.getTypeStoreSize(op_ty)));
-    alloc.write(ptr.offset(), op_ty, value, ctx->heap(), layout);
+    alloc.write(ptr.offset(), op_ty, value, ctx->heap, layout);
 
     queue->add_context(std::move(forked));
   }
@@ -878,7 +877,7 @@ ExecutionResult Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {
       layout.getPointerSizeInBits(inst.getType()->getPointerAddressSpace());
 
   auto size_op = ConstantInt::Create(llvm::APInt(ptr_width, size));
-  auto alloc = ctx->heap().allocate(
+  auto alloc = ctx->heap.allocate(
       size_op, ConstantInt::Create(llvm::APInt(ptr_width, align)),
       AllocOp::Create(size_op, ConstantInt::Create(llvm::APInt(8, 0xDD))),
       AllocationKind::Alloca, *ctx);
@@ -978,7 +977,7 @@ ExecutionResult Interpreter::visitAssert(llvm::CallInst& call) {
 }
 
 std::optional<std::string> readSymbolicName(Context* ctx, const Pointer& ptr) {
-  const auto& alloc = ctx->heap()[ptr.alloc()];
+  const auto& alloc = ctx->heap[ptr.alloc()];
 
   auto model = ctx->resolve();
   if (model->result() != SolverResult::SAT) {
@@ -1008,7 +1007,7 @@ ExecutionResult Interpreter::visitSymbolicAlloca(llvm::CallInst& call) {
   auto size = ctx->lookup(call.getArgOperand(0)).scalar();
   auto name = ctx->lookup(call.getArgOperand(1)).pointer();
 
-  auto resolved = ctx->heap().resolve(name, *ctx);
+  auto resolved = ctx->heap.resolve(name, *ctx);
 
   CAFFEINE_ASSERT(resolved.size() == 1,
                   "caffeine_make_symbolic called with symbolic name");
@@ -1019,7 +1018,7 @@ ExecutionResult Interpreter::visitSymbolicAlloca(llvm::CallInst& call) {
 
   unsigned ptr_width = size->type().bitwidth();
 
-  auto alloc = ctx->heap().allocate(
+  auto alloc = ctx->heap.allocate(
       size, ConstantInt::Create(llvm::APInt(ptr_width, 1)),
       ConstantArray::Create(Symbol(std::move(*alloc_name)), size),
       AllocationKind::Alloca, *ctx);
@@ -1062,7 +1061,7 @@ ExecutionResult Interpreter::visitMalloc(llvm::CallInst& call) {
   }
 
   auto size_op = UnaryOp::CreateTruncOrZExt(Type::int_ty(ptr_width), size);
-  auto alloc = ctx->heap().allocate(
+  auto alloc = ctx->heap.allocate(
       size_op,
       ConstantInt::Create(llvm::APInt(ptr_width, options.malloc_alignment)),
       AllocOp::Create(size_op, ConstantInt::Create(llvm::APInt(8, 0xDD))),
@@ -1099,7 +1098,7 @@ ExecutionResult Interpreter::visitCalloc(llvm::CallInst& call) {
   }
 
   auto size_op = UnaryOp::CreateTruncOrZExt(Type::int_ty(ptr_width), size);
-  auto alloc = ctx->heap().allocate(
+  auto alloc = ctx->heap.allocate(
       size_op,
       ConstantInt::Create(llvm::APInt(ptr_width, options.malloc_alignment)),
       AllocOp::Create(size_op, ConstantInt::Create(llvm::APInt(8, 0x00))),
@@ -1121,7 +1120,7 @@ ExecutionResult Interpreter::visitFree(llvm::CallInst& call) {
   CAFFEINE_ASSERT(call.getArgOperand(0)->getType()->isPointerTy(),
                   "Invalid free signature");
 
-  auto& heap = ctx->heap();
+  auto& heap = ctx->heap;
   auto memptr = ctx->lookup(call.getArgOperand(0)).pointer();
 
   auto is_valid_ptr = heap.check_starts_allocation(memptr);
@@ -1139,10 +1138,10 @@ ExecutionResult Interpreter::visitFree(llvm::CallInst& call) {
   for (size_t i = 1; i < resolved.size(); ++i) {
     Context forked = ctx->fork();
 
-    Allocation& alloc = forked.heap()[resolved[i].alloc()];
+    Allocation& alloc = forked.heap[resolved[i].alloc()];
 
     forked.add(ICmpOp::CreateICmp(
-        ICmpOpcode::EQ, resolved[i].value(forked.heap()), alloc.address()));
+        ICmpOpcode::EQ, resolved[i].value(forked.heap), alloc.address()));
 
     if (alloc.kind() != AllocationKind::Malloc) {
       auto model = ctx->resolve();
@@ -1156,7 +1155,7 @@ ExecutionResult Interpreter::visitFree(llvm::CallInst& call) {
       continue;
     }
 
-    forked.heap().deallocate(resolved[i].alloc());
+    forked.heap.deallocate(resolved[i].alloc());
     queue->add_context(std::move(forked));
   }
 
@@ -1169,7 +1168,7 @@ ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallInst& call) {
   auto mem = ctx->lookup(call.getArgOperand(0)).pointer();
   auto size = ctx->lookup(call.getArgOperand(1)).scalar();
 
-  auto assertion = ctx->heap().check_valid(mem, size);
+  auto assertion = ctx->heap.check_valid(mem, size);
   auto model = ctx->resolve(!assertion);
   if (model->result() == SolverResult::SAT) {
     logger->log_failure(*model, *ctx, Failure(!assertion));
@@ -1181,7 +1180,7 @@ ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallInst& call) {
     return ExecutionResult::Stop;
   }
 
-  auto resolved = ctx->heap().resolve(mem, *ctx);
+  auto resolved = ctx->heap.resolve(mem, *ctx);
 
   if (resolved.size() == 1) {
     ctx->stack_top().insert(&call, ContextValue(resolved[0]));

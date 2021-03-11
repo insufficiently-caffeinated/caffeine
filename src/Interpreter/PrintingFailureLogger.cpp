@@ -76,7 +76,7 @@ PrintingFailureLogger::PrintingFailureLogger(std::ostream& os) : os(&os) {}
 
 static void print_context_backtrace(std::ostream& os, const Context& ctx) {
   size_t i = 0;
-  const auto& stack = ctx.stack();
+  const auto& stack = ctx.stack;
 
   for (const auto& frame : boost::adaptors::reverse(stack)) {
     llvm::Function* func = frame.current_block->getParent();
@@ -94,7 +94,7 @@ void PrintingFailureLogger::log_failure(const Model& model, const Context& ctx,
 
   *os << "Found assertion failure:\n";
 
-  for (const auto& assertion : ctx.assertions()) {
+  for (const auto& assertion : ctx.assertions) {
     printer.visit(*assertion.value());
   }
   printer.visit(*failure.check.value());
