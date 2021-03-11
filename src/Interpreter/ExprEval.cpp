@@ -310,8 +310,8 @@ LLVMValue ExprEvaluator::visitConstantVector(llvm::ConstantVector& vec) {
 }
 
 LLVMValue ExprEvaluator::visitGlobalVariable(llvm::GlobalVariable& global) {
-  auto it = ctx->globals_.find(&global);
-  if (it != ctx->globals_.end())
+  auto it = ctx->globals.find(&global);
+  if (it != ctx->globals.end())
     return (LLVMValue)it->second;
 
   if (!options.create_allocations) {
@@ -331,14 +331,14 @@ LLVMValue ExprEvaluator::visitGlobalVariable(llvm::GlobalVariable& global) {
   unsigned bitwidth = layout.getPointerSizeInBits();
   unsigned alignment = global.getAlignment();
 
-  auto alloc = ctx->heap().allocate(
+  auto alloc = ctx->heap.allocate(
       array.size(), ConstantInt::Create(llvm::APInt(bitwidth, alignment)), data,
       AllocationKind::Global, *ctx);
 
   auto pointer = LLVMValue(
       Pointer(alloc, ConstantInt::Create(llvm::APInt::getNullValue(bitwidth))));
 
-  ctx->globals_.emplace(&global, (ContextValue)pointer);
+  ctx->globals.emplace(&global, (ContextValue)pointer);
 
   return pointer;
 }
@@ -355,7 +355,7 @@ OpRef ExprEvaluator::visitGlobalData(llvm::Constant& constant, unsigned AS) {
   Allocation alloc{ConstantInt::CreateZero(bitwidth), size,
                    AllocOp::Create(size, ConstantInt::CreateZero(8)),
                    AllocationKind::Alloca};
-  alloc.write(ConstantInt::CreateZero(bitwidth), type, value, ctx->heap(),
+  alloc.write(ConstantInt::CreateZero(bitwidth), type, value, ctx->heap,
               layout);
 
   return alloc.data();
@@ -385,7 +385,7 @@ LLVMValue ExprEvaluator::visitInstruction(llvm::Instruction& inst) {
                                                                                \
     return transform_elements(                                                 \
         [&](const LLVMScalar& lhs, const LLVMScalar& rhs) -> LLVMScalar {      \
-          const auto& heap = ctx->heap();                                      \
+          const auto& heap = ctx->heap;                                        \
           return BinaryOp::Create##opcode(scalarize(lhs, heap),                \
                                           scalarize(rhs, heap));               \
         },                                                                     \
@@ -451,7 +451,7 @@ LLVMValue ExprEvaluator::visitPtrToInt(llvm::PtrToIntInst& inst) {
       [&](const LLVMScalar& value) {
         return LLVMScalar(
             UnaryOp::CreateTruncOrZExt(Type::from_llvm(inst.getType()),
-                                       value.pointer().value(ctx->heap())));
+                                       value.pointer().value(ctx->heap)));
       },
       visit(inst.getOperand(0)));
 }
