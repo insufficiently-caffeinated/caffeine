@@ -16,10 +16,9 @@ namespace caffeine {
 class Context;
 
 class StackFrame {
-private:
-  std::unordered_map<llvm::Value*, ContextValue> variables;
-
 public:
+  std::unordered_map<llvm::Value*, LLVMValue> variables;
+
   /**
    * Iterators used by Interpreter::execute
    */
@@ -46,25 +45,7 @@ public:
    */
   void insert(llvm::Value* value, const OpRef& expr);
   void insert(llvm::Value* value, const ContextValue& exprs);
-
-  /**
-   * Lookup a value within the current stack frame.
-   *
-   * There are two main cases here:
-   * 1. `value` is an existing variable
-   * 2. `value` is a constant
-   *
-   * In the first case we just look up the variable the `variables` map
-   * and then return it. In the second case we build an expression
-   * that represents the constant and return that.
-   *
-   * This method should be preferred over directly interacting with
-   * `variables` as it correctly handles constants.
-   */
-  ContextValue lookup(llvm::Value* value) const;
-
-private:
-  friend class ExprEvaluator;
+  void insert(llvm::Value* value, const LLVMValue& exprs);
 };
 
 } // namespace caffeine
