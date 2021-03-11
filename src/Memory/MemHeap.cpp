@@ -196,24 +196,22 @@ void Allocation::write(const OpRef& offset, llvm::Type* type,
                        const LLVMValue& value, const MemHeap& heap,
                        const llvm::DataLayout& layout) {
   if (value.is_vector()) {
-    CAFFEINE_ASSERT(value.num_elements() == type->getVectorNumElements());
-    llvm::Type* elem_ty = type->getVectorElementType();
+    if (type->isVectorTy()) {
+      CAFFEINE_ASSERT(value.num_elements() == type->getVectorNumElements());
+      type = type->getVectorElementType();
+    }
 
     for (size_t i = 0; i < value.num_elements(); ++i) {
-      OpRef offset =
-          BinaryOp::CreateAdd(offset, i * layout.getTypeAllocSize(elem_ty));
-
-      write(offset, value.element(i), heap, layout);
+      write(BinaryOp::CreateAdd(offset, i * layout.getTypeAllocSize(type)),
+            value.element(i), heap, layout);
     }
   } else if (type->isArrayTy()) {
     CAFFEINE_ASSERT(value.num_members() == type->getArrayNumElements());
     llvm::Type* elem_ty = type->getArrayElementType();
 
-    for (size_t i = 0; i < value.num_elements(); ++i) {
-      OpRef offset =
-          BinaryOp::CreateAdd(offset, i * layout.getTypeAllocSize(elem_ty));
-
-      write(offset, elem_ty, value.member(i), heap, layout);
+    for (size_t i = 0; i < value.num_members(); ++i) {
+      write(BinaryOp::CreateAdd(offset, i * layout.getTypeAllocSize(elem_ty)),
+            elem_ty, value.member(i), heap, layout);
     }
   } else if (type->isStructTy()) {
     CAFFEINE_ASSERT(value.num_members() == type->getStructNumElements());
