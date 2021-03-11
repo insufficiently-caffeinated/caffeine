@@ -4,6 +4,10 @@
 
 namespace caffeine {
 void Operation::DebugPrint() const {
-  std::cout << *this << std::endl;
+  if ((void*)this) {
+    std::cout << *this << std::endl;
+  } else {
+    std::cout << "NULL" << std::endl;
+  }
 }
 } // namespace caffeine
