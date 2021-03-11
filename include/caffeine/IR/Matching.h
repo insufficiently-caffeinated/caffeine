@@ -304,9 +304,9 @@ namespace matching {
       CaptureMatcher(OpRef* op, T&& arg)
           : MatcherImpl<M>(std::forward<T>(arg)), capture(op) {}
 
-      using MatcherImpl<M>::match;
+      using MatcherImpl<M>::matches;
 
-      void on_match(const OpRef& op) {
+      void on_match(const OpRef& op) const {
         MatcherImpl<M>::on_match(op);
         *capture = op;
       }
@@ -327,6 +327,55 @@ namespace matching {
     return detail::CaptureMatcher<std::decay_t<M>>(op,
                                                    std::forward<M>(matcher));
   }
+
+  namespace detail {
+    template <ICmpOpcode opcode, typename M1, typename M2>
+    class ICmpMatcher {
+    private:
+      MatcherImpl<M1> lhs;
+      MatcherImpl<M2> rhs;
+
+    public:
+      template <typename T1, typename T2>
+      ICmpMatcher(T1&& lhs, T2&& rhs)
+          : lhs(std::forward<T1>(lhs)), rhs(std::forward<T2>(rhs)) {}
+
+      bool matches(const ref<Operation>& op) const {
+        const auto* icmp = llvm::dyn_cast<ICmpOp>(op.get());
+        if (!icmp)
+          return false;
+
+        if (icmp->comparison() != opcode)
+          return false;
+
+        return lhs.matches(icmp->lhs()) && rhs.matches(icmp->rhs());
+      }
+      void on_match(const ref<Operation>& op) const {
+        lhs.on_match(op->operand_at(0));
+        rhs.on_match(op->operand_at(1));
+      }
+    };
+  } // namespace detail
+
+  template <ICmpOpcode opcode, typename M1, typename M2>
+  detail::ICmpMatcher<opcode, std::decay_t<M1>, std::decay_t<M2>>
+  ICmp(M1&& lhs, M2&& rhs) {
+    return detail::ICmpMatcher<opcode, std::decay_t<M1>, std::decay_t<M2>>(
+        std::forward<M1>(lhs), std::forward<M2>(rhs));
+  }
+
+#define CAFFEINE_DECL_ICMP_MATCHER(name, opcode)                               \
+  template <typename M1, typename M2>                                          \
+  detail::ICmpMatcher<opcode, std::decay_t<M1>, std::decay_t<M2>> name(        \
+      M1&& lhs, M2&& rhs) {                                                    \
+    return ICmp<opcode>(std::forward<M1>(lhs), std::forward<M2>(rhs));         \
+  }                                                                            \
+  static_assert(true)
+
+  CAFFEINE_DECL_ICMP_MATCHER(ICmpEq, ICmpOpcode::EQ);
+  CAFFEINE_DECL_ICMP_MATCHER(ICmpNe, ICmpOpcode::NE);
+
+#undef CAFFEINE_DECL_ICMP_MATCHER
 
 } // namespace matching
 
