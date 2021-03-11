@@ -135,20 +135,6 @@ public:
   resolve(const Assertion& extra = Assertion::constant(true));
 
 private:
-  /**
-   * Evaluate a constant to the corresponding ContextValue.
-   *
-   * The constant variant of the method will not create allocations and
-   * modify the registered globals table. The non const variant may do so.
-   */
-  std::optional<ContextValue>
-  evaluate_constant_const(llvm::Constant* constant) const;
-  ContextValue evaluate_constant(llvm::Constant* constant);
-
-  template <typename ContextType>
-  friend ContextValue evaluate_global(ContextType ctx,
-                                      llvm::GlobalVariable* global);
-
   // TODO: Temporary until context redesign is completed
   friend class ExprEvaluator;
 };
