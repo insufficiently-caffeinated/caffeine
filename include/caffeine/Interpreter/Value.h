@@ -190,6 +190,8 @@ template <typename F, typename... Vs>
 ContextValue transform_value(F&& func, const Vs&... values);
 
 std::ostream& operator<<(std::ostream& os, const ContextValue& value);
+std::ostream& operator<<(std::ostream& os, const LLVMScalar& value);
+std::ostream& operator<<(std::ostream& os, const LLVMValue& value);
 
 } // namespace caffeine
 
