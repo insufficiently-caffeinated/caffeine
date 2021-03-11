@@ -1,6 +1,7 @@
 #include "caffeine/Interpreter/Context.h"
 #include "caffeine/IR/Operation.h"
 #include "caffeine/IR/Type.h"
+#include "caffeine/Interpreter/ExprEval.h"
 #include "caffeine/Interpreter/StackFrame.h"
 
 #include <boost/algorithm/string.hpp>
@@ -103,17 +104,18 @@ void Context::add(Assertion&& assertion) {
 }
 
 std::optional<ContextValue> Context::lookup_const(llvm::Value* value) const {
-  if (auto* constant = llvm::dyn_cast_or_null<llvm::Constant>(value))
-    return evaluate_constant_const(constant);
+  ExprEvaluator::Options options;
+  options.create_allocations = false;
 
-  return stack_top().lookup(value);
+  // The const cast is a bit ugly here but ExprEvaluator will not modify the
+  // context if we have specified create_allocations = false.
+  if (auto v = ExprEvaluator{const_cast<Context*>(this)}.try_visit(value))
+    return (ContextValue)*v;
+  return std::nullopt;
 }
 
 ContextValue Context::lookup(llvm::Value* value) {
-  if (auto* constant = llvm::dyn_cast_or_null<llvm::Constant>(value))
-    return evaluate_constant(constant);
-
-  return stack_top().lookup(value);
+  return (ContextValue)ExprEvaluator{this}.visit(value);
 }
 
 SolverResult Context::check(const Assertion& extra) {
