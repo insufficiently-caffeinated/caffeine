@@ -22,13 +22,10 @@ void StackFrame::insert(llvm::Value* value, const OpRef& expr) {
   insert(value, ContextValue{expr});
 }
 void StackFrame::insert(llvm::Value* value, const ContextValue& exprs) {
-  variables.insert_or_assign(value, exprs);
+  variables.insert_or_assign(value, (LLVMValue)exprs);
 }
-
-ContextValue StackFrame::lookup(llvm::Value* value) const {
-  auto it = variables.find(value);
-  CAFFEINE_ASSERT(it != variables.end(), "Tried to access unknown variable");
-  return it->second;
+void StackFrame::insert(llvm::Value* value, const LLVMValue& exprs) {
+  variables.insert_or_assign(value, exprs);
 }
 
 } // namespace caffeine

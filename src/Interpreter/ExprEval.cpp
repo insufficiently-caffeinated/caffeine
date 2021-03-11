@@ -52,7 +52,7 @@ LLVMValue ExprEvaluator::visit(llvm::Value* val) {
   const auto& frame = ctx->stack_top();
   auto it = frame.variables.find(val);
   if (it != frame.variables.end())
-    return static_cast<LLVMValue>(it->second);
+    return it->second;
 
   if (auto* inst = llvm::dyn_cast<llvm::Instruction>(val))
     return BaseType::visit(inst);
