@@ -28,15 +28,15 @@ enum class AllocationKind { Alloca, Malloc, Global };
 /**
  * A memory allocation (either alive or dead).
  *
- * In general, an allocation is a tuple (address, size, data, dead) where
+ * In general, an allocation is a tuple (address, size, data, kind) where
  * - address is the pointer to the start of the allocation.
  * - size is the size in bytes of the allocation.
  * - data is an array containing the bytes of the allocation.
- * - dead indicates whether this allocation has been freed.
+ * - kind indicates the general location of the allocation (heap, stack, global,
+ *   etc.)
  *
  * Any of address, size, or data may be either concrete, symbolic, or, for data,
- * some combination of the two. With the current design, dead will never be
- * symbolic.
+ * some combination of the two.
  *
  * See the docs for MemHeap for the invariants that are asserted for a new
  * allocation and the procedure that is used for resolving a pointer to an
