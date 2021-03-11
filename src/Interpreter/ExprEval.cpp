@@ -447,6 +447,7 @@ LLVMValue ExprEvaluator::visitFNeg(llvm::UnaryOperator& op) {
 }
 
 LLVMValue ExprEvaluator::visitPtrToInt(llvm::PtrToIntInst& inst) {
+  const auto& layout = ctx->mod->getDataLayout();
   return transform_elements(
       [&](const LLVMScalar& value) {
         return LLVMScalar(UnaryOp::CreateTruncOrZExt(
