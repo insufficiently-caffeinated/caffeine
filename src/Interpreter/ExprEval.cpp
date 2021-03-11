@@ -196,7 +196,7 @@ LLVMValue ExprEvaluator::visitConstantFP(llvm::ConstantFP& cnst) {
 }
 LLVMValue
 ExprEvaluator::visitConstantPointerNull(llvm::ConstantPointerNull& null) {
-  const auto& layout = ctx->llvm_module()->getDataLayout();
+  const auto& layout = ctx->mod->getDataLayout();
   unsigned bitwidth =
       layout.getPointerSizeInBits(null.getType()->getPointerAddressSpace());
 
@@ -257,7 +257,7 @@ LLVMValue ExprEvaluator::visitUndefValue(llvm::UndefValue& undef) {
   }
 
   if (type->isPointerTy()) {
-    const auto& layout = ctx->llvm_module()->getDataLayout();
+    const auto& layout = ctx->mod->getDataLayout();
     unsigned bitwidth =
         layout.getPointerSizeInBits(type->getPointerAddressSpace());
 
@@ -327,7 +327,7 @@ LLVMValue ExprEvaluator::visitGlobalVariable(llvm::GlobalVariable& global) {
       visitGlobalData(*global.getInitializer(), global.getAddressSpace());
   const auto& array = llvm::cast<ArrayBase>(*data);
 
-  const llvm::DataLayout& layout = ctx->llvm_module()->getDataLayout();
+  const llvm::DataLayout& layout = ctx->mod->getDataLayout();
   unsigned bitwidth = layout.getPointerSizeInBits();
   unsigned alignment = global.getAlignment();
 
@@ -345,7 +345,7 @@ LLVMValue ExprEvaluator::visitGlobalVariable(llvm::GlobalVariable& global) {
 
 OpRef ExprEvaluator::visitGlobalData(llvm::Constant& constant, unsigned AS) {
   llvm::Type* type = constant.getType();
-  const llvm::DataLayout& layout = ctx->llvm_module()->getDataLayout();
+  const llvm::DataLayout& layout = ctx->mod->getDataLayout();
   unsigned bitwidth = layout.getPointerSizeInBits(AS);
 
   LLVMValue value = visit(&constant);
@@ -447,6 +447,7 @@ LLVMValue ExprEvaluator::visitFNeg(llvm::UnaryOperator& op) {
 }
 
 LLVMValue ExprEvaluator::visitPtrToInt(llvm::PtrToIntInst& inst) {
+  const auto& layout = ctx->mod->getDataLayout();
   return transform_elements(
       [&](const LLVMScalar& value) {
         return LLVMScalar(
@@ -473,7 +474,7 @@ LLVMValue ExprEvaluator::visitBitCast(llvm::BitCastInst& inst) {
 }
 
 LLVMValue ExprEvaluator::visitGetElementPtr(llvm::GetElementPtrInst& inst) {
-  const llvm::DataLayout& layout = ctx->llvm_module()->getDataLayout();
+  const llvm::DataLayout& layout = ctx->mod->getDataLayout();
 
   size_t offset_elements = 1;
   for (auto it = llvm::gep_type_begin(inst), end = llvm::gep_type_end(inst);
