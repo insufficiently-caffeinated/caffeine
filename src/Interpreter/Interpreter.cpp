@@ -1,4 +1,5 @@
 #include "caffeine/Interpreter/Interpreter.h"
+#include "caffeine/Interpreter/ExprEval.h"
 #include "caffeine/Interpreter/StackFrame.h"
 #include "caffeine/Interpreter/Value.h"
 #include "caffeine/Support/Assert.h"
@@ -59,36 +60,38 @@ ExecutionResult Interpreter::visitInstruction(llvm::Instruction& inst) {
       fmt::format("Instruction '{}' not implemented!", inst.getOpcodeName()));
 }
 
-ExecutionResult Interpreter::visitAdd(llvm::BinaryOperator& op) {
-  StackFrame& frame = ctx->stack_top();
+#define DEF_SIMPLE_OP(opname, optype)                                          \
+  ExecutionResult Interpreter::visit##opname(llvm::optype& op) {               \
+    ctx->stack_top().insert(&op, ExprEvaluator(this->ctx).evaluate(op));       \
+    return ExecutionResult::Continue;                                          \
+  }                                                                            \
+  static_assert(true)
 
-  auto lhs = ctx->lookup(op.getOperand(0));
-  auto rhs = ctx->lookup(op.getOperand(1));
+DEF_SIMPLE_OP(Add, BinaryOperator);
+DEF_SIMPLE_OP(Sub, BinaryOperator);
+DEF_SIMPLE_OP(Mul, BinaryOperator);
 
-  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateAdd), lhs, rhs));
+DEF_SIMPLE_OP(Shl, BinaryOperator);
+DEF_SIMPLE_OP(LShr, BinaryOperator);
+DEF_SIMPLE_OP(AShr, BinaryOperator);
+DEF_SIMPLE_OP(And, BinaryOperator);
+DEF_SIMPLE_OP(Or, BinaryOperator);
+DEF_SIMPLE_OP(Xor, BinaryOperator);
 
-  return ExecutionResult::Continue;
-}
-ExecutionResult Interpreter::visitSub(llvm::BinaryOperator& op) {
-  StackFrame& frame = ctx->stack_top();
+DEF_SIMPLE_OP(FAdd, BinaryOperator);
+DEF_SIMPLE_OP(FSub, BinaryOperator);
+DEF_SIMPLE_OP(FMul, BinaryOperator);
+DEF_SIMPLE_OP(FDiv, BinaryOperator);
 
-  auto lhs = ctx->lookup(op.getOperand(0));
-  auto rhs = ctx->lookup(op.getOperand(1));
+DEF_SIMPLE_OP(Trunc, TruncInst);
+DEF_SIMPLE_OP(SExt, SExtInst);
+DEF_SIMPLE_OP(ZExt, ZExtInst);
+DEF_SIMPLE_OP(IntToPtrInst, IntToPtrInst);
+DEF_SIMPLE_OP(PtrToIntInst, PtrToIntInst);
+DEF_SIMPLE_OP(BitCastInst, BitCastInst);
 
-  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateSub), lhs, rhs));
+DEF_SIMPLE_OP(GetElementPtrInst, GetElementPtrInst);
 
-  return ExecutionResult::Continue;
-}
-ExecutionResult Interpreter::visitMul(llvm::BinaryOperator& op) {
-  StackFrame& frame = ctx->stack_top();
-
-  auto lhs = ctx->lookup(op.getOperand(0));
-  auto rhs = ctx->lookup(op.getOperand(1));
-
-  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateMul), lhs, rhs));
-
-  return ExecutionResult::Continue;
-}
 ExecutionResult Interpreter::visitUDiv(llvm::BinaryOperator& op) {
   StackFrame& frame = ctx->stack_top();
 
@@ -196,113 +199,12 @@ ExecutionResult Interpreter::visitURem(llvm::BinaryOperator& op) {
   return ExecutionResult::Continue;
 }
 
-ExecutionResult Interpreter::visitShl(llvm::BinaryOperator& op) {
-  StackFrame& frame = ctx->stack_top();
-
-  auto lhs = ctx->lookup(op.getOperand(0));
-  auto rhs = ctx->lookup(op.getOperand(1));
-
-  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateShl), lhs, rhs));
-
-  return ExecutionResult::Continue;
-}
-ExecutionResult Interpreter::visitLShr(llvm::BinaryOperator& op) {
-  StackFrame& frame = ctx->stack_top();
-
-  auto lhs = ctx->lookup(op.getOperand(0));
-  auto rhs = ctx->lookup(op.getOperand(1));
-
-  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateLShr), lhs, rhs));
-
-  return ExecutionResult::Continue;
-}
-ExecutionResult Interpreter::visitAShr(llvm::BinaryOperator& op) {
-  StackFrame& frame = ctx->stack_top();
-
-  auto lhs = ctx->lookup(op.getOperand(0));
-  auto rhs = ctx->lookup(op.getOperand(1));
-
-  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateAShr), lhs, rhs));
-
-  return ExecutionResult::Continue;
-}
-ExecutionResult Interpreter::visitAnd(llvm::BinaryOperator& op) {
-  StackFrame& frame = ctx->stack_top();
-
-  auto lhs = ctx->lookup(op.getOperand(0));
-  auto rhs = ctx->lookup(op.getOperand(1));
-
-  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateAnd), lhs, rhs));
-
-  return ExecutionResult::Continue;
-}
-ExecutionResult Interpreter::visitOr(llvm::BinaryOperator& op) {
-  StackFrame& frame = ctx->stack_top();
-
-  auto lhs = ctx->lookup(op.getOperand(0));
-  auto rhs = ctx->lookup(op.getOperand(1));
-
-  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateOr), lhs, rhs));
-
-  return ExecutionResult::Continue;
-}
-ExecutionResult Interpreter::visitXor(llvm::BinaryOperator& op) {
-  StackFrame& frame = ctx->stack_top();
-
-  auto lhs = ctx->lookup(op.getOperand(0));
-  auto rhs = ctx->lookup(op.getOperand(1));
-
-  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateXor), lhs, rhs));
-
-  return ExecutionResult::Continue;
-}
 ExecutionResult Interpreter::visitNot(llvm::BinaryOperator& op) {
   StackFrame& frame = ctx->stack_top();
 
   auto operand = ctx->lookup(op.getOperand(0));
 
   frame.insert(&op, transform(WRAP_FUNC(UnaryOp::CreateNot), operand));
-
-  return ExecutionResult::Continue;
-}
-
-ExecutionResult Interpreter::visitFAdd(llvm::BinaryOperator& op) {
-  StackFrame& frame = ctx->stack_top();
-
-  auto lhs = ctx->lookup(op.getOperand(0));
-  auto rhs = ctx->lookup(op.getOperand(1));
-
-  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateFAdd), lhs, rhs));
-
-  return ExecutionResult::Continue;
-}
-ExecutionResult Interpreter::visitFSub(llvm::BinaryOperator& op) {
-  StackFrame& frame = ctx->stack_top();
-
-  auto lhs = ctx->lookup(op.getOperand(0));
-  auto rhs = ctx->lookup(op.getOperand(1));
-
-  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateFSub), lhs, rhs));
-
-  return ExecutionResult::Continue;
-}
-ExecutionResult Interpreter::visitFMul(llvm::BinaryOperator& op) {
-  StackFrame& frame = ctx->stack_top();
-
-  auto lhs = ctx->lookup(op.getOperand(0));
-  auto rhs = ctx->lookup(op.getOperand(1));
-
-  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateFMul), lhs, rhs));
-
-  return ExecutionResult::Continue;
-}
-ExecutionResult Interpreter::visitFDiv(llvm::BinaryOperator& op) {
-  StackFrame& frame = ctx->stack_top();
-
-  auto lhs = ctx->lookup(op.getOperand(0));
-  auto rhs = ctx->lookup(op.getOperand(1));
-
-  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateFAdd), lhs, rhs));
 
   return ExecutionResult::Continue;
 }
@@ -424,84 +326,6 @@ ExecutionResult Interpreter::visitFCmpInst(llvm::FCmpInst& fcmp) {
 
 #undef FCMP_CASE
 #undef FCMP_CASE_DEF
-}
-
-ExecutionResult Interpreter::visitTrunc(llvm::TruncInst& trunc) {
-  auto& frame = ctx->stack_top();
-  auto operand = ctx->lookup(trunc.getOperand(0));
-
-  auto func = [&](const auto& operand) {
-    return UnaryOp::CreateTrunc(
-        Type::int_ty(trunc.getType()->getIntegerBitWidth()), operand);
-  };
-  frame.insert(&trunc, transform(func, operand));
-
-  return ExecutionResult::Continue;
-}
-
-ExecutionResult Interpreter::visitSExt(llvm::SExtInst& sext) {
-  auto& frame = ctx->stack_top();
-  auto operand = ctx->lookup(sext.getOperand(0));
-
-  auto func = [&](const auto& operand) {
-    return UnaryOp::CreateSExt(
-        Type::int_ty(sext.getType()->getIntegerBitWidth()), operand);
-  };
-  frame.insert(&sext, transform(func, operand));
-
-  return ExecutionResult::Continue;
-}
-ExecutionResult Interpreter::visitZExt(llvm::ZExtInst& zext) {
-  auto& frame = ctx->stack_top();
-  auto operand = ctx->lookup(zext.getOperand(0));
-
-  auto func = [&](const auto& operand) {
-    return UnaryOp::CreateZExt(
-        Type::int_ty(zext.getType()->getIntegerBitWidth()), operand);
-  };
-  frame.insert(&zext, transform(func, operand));
-
-  return ExecutionResult::Continue;
-}
-ExecutionResult Interpreter::visitIntToPtrInst(llvm::IntToPtrInst& inttoptr) {
-  auto& frame = ctx->stack_top();
-  auto operand = ctx->lookup(inttoptr.getOperand(0));
-  const llvm::DataLayout& layout = inttoptr.getModule()->getDataLayout();
-
-  auto func = [&](const ContextValue& operand) {
-    return ContextValue(Pointer(UnaryOp::CreateTruncOrZExt(
-        Type::int_ty(layout.getPointerSizeInBits(
-            inttoptr.getType()->getPointerAddressSpace())),
-        operand.scalar())));
-  };
-  frame.insert(&inttoptr, transform_value(func, operand));
-
-  return ExecutionResult::Continue;
-}
-ExecutionResult Interpreter::visitPtrToIntInst(llvm::PtrToIntInst& ptrtoint) {
-  auto& frame = ctx->stack_top();
-  auto type = Type::from_llvm(ptrtoint.getType());
-  auto operand = ctx->lookup(ptrtoint.getOperand(0));
-
-  auto func = [&](const ContextValue& operand) {
-    const Pointer& ptr = operand.pointer();
-
-    return ContextValue(UnaryOp::CreateTruncOrZExt(type, ptr.value(ctx->heap)));
-  };
-  frame.insert(&ptrtoint, transform_value(func, operand));
-
-  return ExecutionResult::Continue;
-}
-
-ExecutionResult Interpreter::visitBitCastInst(llvm::BitCastInst& bitcast) {
-  auto& frame = ctx->stack_top();
-
-  CAFFEINE_ASSERT(bitcast.getType()->isPointerTy(),
-                  "non-pointer bitcasts are not yet supported");
-
-  frame.insert(&bitcast, ctx->lookup(bitcast.getOperand(0)));
-
-  return ExecutionResult::Continue;
 }
 
 ExecutionResult Interpreter::visitPHINode(llvm::PHINode& node) {
@@ -734,61 +558,6 @@ Interpreter::visitShuffleVectorInst(llvm::ShuffleVectorInst& inst) {
   return ExecutionResult::Continue;
 }
 
-static llvm::Type* vector_inner_type(llvm::Type* type) {
-  while (type->isVectorTy())
-    type = type->getVectorElementType();
-  return type;
-}
-
-ExecutionResult
-Interpreter::visitGetElementPtrInst(llvm::GetElementPtrInst& inst) {
-  auto& frame = ctx->stack_top();
-
-  const llvm::DataLayout& layout = inst.getModule()->getDataLayout();
-  llvm::Value* ptr_op = inst.getOperand(0);
-  llvm::Type* ptr_ty = vector_inner_type(ptr_op->getType());
-
-  auto offset_width =
-      layout.getPointerSizeInBits(ptr_ty->getPointerAddressSpace());
-  auto offset = ConstantInt::Create(llvm::APInt(offset_width, 0));
-
-  auto end = llvm::gep_type_end(&inst);
-  for (auto it = llvm::gep_type_begin(&inst); it != end; ++it) {
-    if (llvm::StructType* sty = it.getStructTypeOrNull()) {
-      auto slo = layout.getStructLayout(sty);
-      unsigned index =
-          llvm::cast<llvm::ConstantInt>(it.getOperand())->getZExtValue();
-
-      offset = BinaryOp::CreateAdd(offset, slo->getElementOffset(index));
-    } else {
-      auto value = UnaryOp::CreateTruncOrSExt(
-          Type::int_ty(offset_width), ctx->lookup(it.getOperand()).scalar());
-
-      auto itemoffset = BinaryOp::CreateMul(
-          value, layout.getTypeAllocSize(it.getIndexedType()));
-
-      offset = BinaryOp::CreateAdd(offset, itemoffset);
-    }
-  }
-
-  auto result = transform_value(
-      [&](const ContextValue& value) {
-        const auto& ptr = value.pointer();
-
-        if (inst.isInBounds() && ptr.is_resolved()) {
-          return ContextValue(
-              Pointer(ptr.alloc(), BinaryOp::CreateAdd(ptr.offset(), offset)));
-        } else {
-          return ContextValue(
-              Pointer(BinaryOp::CreateAdd(ptr.value(ctx->heap), offset)));
-        }
-      },
-      ctx->lookup(ptr_op));
-
-  frame.insert(&inst, result);
-
-  return ExecutionResult::Continue;
-}
 ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
   // Note: This treats atomic loads as regular ones since we only model
   //       single-threaded code. If that ever changes then this will need to be
