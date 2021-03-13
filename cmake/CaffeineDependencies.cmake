@@ -1,5 +1,7 @@
 
-find_package(magic_enum 0.7.2 QUIET)
+if (NOT magic_enum_NO_PACKAGE_FOUND)
+  find_package(magic_enum 0.7.2 QUIET)
+endif()
 
 if (NOT magic_enum_FOUND)
   include(FetchContent)
@@ -12,4 +14,6 @@ if (NOT magic_enum_FOUND)
   )
 
   FetchContent_MakeAvailable(magic_enum)
+
+  set(magic_enum_NO_PACKAGE_FOUND TRUE CACHE INTERNAL "")
 endif()
