@@ -502,7 +502,7 @@ LLVMValue ExprEvaluator::visitGetElementPtr(llvm::GetElementPtrInst& inst) {
                          BinaryOp::CreateAdd(ptr.offset(), offset.expr()));
         } else {
           return Pointer(
-              BinaryOp::CreateAdd(ptr.value(ctx->heap), offset.expr()));
+              BinaryOp::CreateAdd(ptr.value(ctx->heap()), offset.expr()));
         }
       },
       base, offsets);
