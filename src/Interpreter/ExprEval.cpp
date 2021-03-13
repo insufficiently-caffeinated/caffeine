@@ -54,6 +54,13 @@ LLVMValue ExprEvaluator::visit(llvm::Value* val) {
   if (it != frame.variables.end())
     return it->second;
 
+  return evaluate(val);
+}
+LLVMValue ExprEvaluator::visit(llvm::Value& val) {
+  return visit(&val);
+}
+
+LLVMValue ExprEvaluator::evaluate(llvm::Value* val) {
   if (auto* inst = llvm::dyn_cast<llvm::Instruction>(val))
     return BaseType::visit(inst);
 
@@ -97,8 +104,8 @@ LLVMValue ExprEvaluator::visit(llvm::Value* val) {
 
   CAFFEINE_ABORT(msg);
 }
-LLVMValue ExprEvaluator::visit(llvm::Value& val) {
-  return visit(&val);
+LLVMValue ExprEvaluator::evaluate(llvm::Value& val) {
+  return evaluate(&val);
 }
 
 std::optional<LLVMValue> ExprEvaluator::try_visit(llvm::Value* val) {
