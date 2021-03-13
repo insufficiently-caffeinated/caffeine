@@ -110,6 +110,7 @@ public:
   LLVMValue visitFNeg(llvm::UnaryOperator& op);
 
   LLVMValue visitICmp(llvm::ICmpInst& op);
+  LLVMValue visitFCmp(llvm::FCmpInst& op);
 
   LLVMValue visitTrunc(llvm::CastInst& op);
   LLVMValue visitSExt(llvm::CastInst& op);
