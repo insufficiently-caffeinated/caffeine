@@ -395,22 +395,23 @@ LLVMValue ExprEvaluator::visitFNeg(llvm::UnaryOperator& op) {
 }
 
 LLVMValue ExprEvaluator::visitPtrToInt(llvm::PtrToIntInst& inst) {
-  const auto& layout = ctx->llvm_module()->getDataLayout();
-  return transform_elements(
-      [&](const LLVMScalar& value) {
-        return LLVMScalar(Pointer(UnaryOp::CreateTruncOrZExt(
-            Type::int_ty(layout.getPointerSizeInBits(
-                inst.getType()->getPointerAddressSpace())),
-            value.expr())));
-      },
-      visit(inst.getOperand(0)));
-}
-LLVMValue ExprEvaluator::visitIntToPtr(llvm::IntToPtrInst& inst) {
   return transform_elements(
       [&](const LLVMScalar& value) {
         return LLVMScalar(
             UnaryOp::CreateTruncOrZExt(Type::from_llvm(inst.getType()),
                                        value.pointer().value(ctx->heap())));
+      },
+      visit(inst.getOperand(0)));
+}
+LLVMValue ExprEvaluator::visitIntToPtr(llvm::IntToPtrInst& inst) {
+  const auto& layout = ctx->llvm_module()->getDataLayout();
+
+  unsigned pointer_size =
+      layout.getPointerSizeInBits(inst.getType()->getPointerAddressSpace());
+  return transform_elements(
+      [&](const LLVMScalar& value) {
+        return LLVMScalar(Pointer(UnaryOp::CreateTruncOrZExt(
+            Type::int_ty(pointer_size), value.expr())));
       },
       visit(inst.getOperand(0)));
 }
