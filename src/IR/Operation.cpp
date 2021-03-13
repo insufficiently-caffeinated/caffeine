@@ -215,7 +215,7 @@ std::ostream& operator<<(std::ostream& os, const Operation& op) {
   }
 
   os << '(' << name;
-  size_t nops  = op.num_operands();
+  size_t nops = op.num_operands();
   for (size_t i = 0; i < nops; ++i) {
     os << ' ' << op[i];
   }
