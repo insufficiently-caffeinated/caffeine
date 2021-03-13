@@ -490,8 +490,13 @@ LLVMValue ExprEvaluator::visitGetElementPtr(llvm::GetElementPtrInst& inst) {
       [&](const LLVMScalar& base, const LLVMScalar& offset) -> LLVMScalar {
         const Pointer& ptr = base.pointer();
 
-        return Pointer(ptr.alloc(),
-                       BinaryOp::CreateAdd(ptr.offset(), offset.expr()));
+        if (inst.isInBounds()) {
+          return Pointer(ptr.alloc(),
+                         BinaryOp::CreateAdd(ptr.offset(), offset.expr()));
+        } else {
+          return Pointer(
+              BinaryOp::CreateAdd(ptr.value(ctx->heap), offset.expr()));
+        }
       },
       base, offsets);
 }
