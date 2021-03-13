@@ -214,18 +214,12 @@ std::ostream& operator<<(std::ostream& os, const Operation& op) {
     name += cmp;
   }
 
-  switch (op.num_operands()) {
-  case 0:
-    return print_cons(os, name);
-  case 1:
-    return print_cons(os, name, op[0]);
-  case 2:
-    return print_cons(os, name, op[0], op[1]);
-  case 3:
-    return print_cons(os, name, op[0], op[1], op[2]);
+  os << '(' << name;
+  size_t nops  = op.num_operands();
+  for (size_t i = 0; i < nops; ++i) {
+    os << ' ' << op[i];
   }
-
-  CAFFEINE_UNREACHABLE();
+  return os << ')';
 }
 
 /***************************************************
