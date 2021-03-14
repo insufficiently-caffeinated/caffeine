@@ -41,7 +41,7 @@ void simplify(std::vector<Assertion>& assertions) {
       if (j == i)
         continue;
 
-      auto changed = rebuild(assertions[i].value(), [&](const OpRef& op) {
+      auto changed = rebuild(assertions[j].value(), [&](const OpRef& op) {
         const auto* cnst = llvm::dyn_cast<Constant>(op.get());
         if (!cnst)
           return op;
@@ -52,7 +52,7 @@ void simplify(std::vector<Assertion>& assertions) {
         return value;
       });
 
-      assertions[i].value() = changed;
+      assertions[j].value() = changed;
     }
   }
 }
