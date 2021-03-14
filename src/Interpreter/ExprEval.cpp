@@ -447,20 +447,18 @@ LLVMValue ExprEvaluator::visitFNeg(llvm::UnaryOperator& op) {
 }
 
 LLVMValue ExprEvaluator::visitPtrToInt(llvm::PtrToIntInst& inst) {
-  const auto& layout = ctx->mod->getDataLayout();
   return transform_elements(
       [&](const LLVMScalar& value) {
-        return LLVMScalar(
-            UnaryOp::CreateTruncOrZExt(Type::from_llvm(inst.getType()),
-                                       value.pointer().value(ctx->heap)));
+        return LLVMScalar(UnaryOp::CreateTruncOrZExt(
+            Type::from_llvm(inst.getType()), value.pointer().value(ctx->heap)));
       },
       visit(inst.getOperand(0)));
 }
 LLVMValue ExprEvaluator::visitIntToPtr(llvm::IntToPtrInst& inst) {
-  const auto& layout = ctx->llvm_module()->getDataLayout();
-
+  const auto& layout = ctx->mod->getDataLayout();
   unsigned pointer_size =
       layout.getPointerSizeInBits(inst.getType()->getPointerAddressSpace());
+
   return transform_elements(
       [&](const LLVMScalar& value) {
         return LLVMScalar(Pointer(UnaryOp::CreateTruncOrZExt(
@@ -546,7 +544,7 @@ LLVMValue ExprEvaluator::visitGetElementPtr(llvm::GetElementPtrInst& inst) {
                          BinaryOp::CreateAdd(ptr.offset(), offset.expr()));
         } else {
           return Pointer(
-              BinaryOp::CreateAdd(ptr.value(ctx->heap()), offset.expr()));
+              BinaryOp::CreateAdd(ptr.value(ctx->heap), offset.expr()));
         }
       },
       base, offsets);
