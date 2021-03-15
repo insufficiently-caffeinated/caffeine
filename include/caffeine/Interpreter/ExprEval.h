@@ -129,6 +129,10 @@ public:
 
   LLVMValue visitSelectInst(llvm::SelectInst& op);
 
+  LLVMValue visitInsertElement(llvm::InsertElementInst& inst);
+  LLVMValue visitExtractElement(llvm::ExtractElementInst& inst);
+  LLVMValue visitShuffleVector(llvm::ShuffleVectorInst& inst);
+
 private:
   OpRef scalarize(const LLVMScalar& scalar) const;
 
