@@ -674,4 +674,80 @@ LLVMValue ExprEvaluator::visitSelectInst(llvm::SelectInst& op) {
       cond, t_val, f_val);
 }
 
+LLVMValue ExprEvaluator::visitInsertElement(llvm::InsertElementInst& inst) {
+  auto vec_ = visit(inst.getOperand(0));
+  auto vec = vec_.vector();
+
+  auto elt = scalarize(visit(inst.getOperand(1)).scalar());
+  auto idx = visit(inst.getOperand(2)).scalar().expr();
+
+  LLVMValue::OpVector result;
+  result.reserve(vec.size());
+  for (size_t i = 0; i < vec.size(); ++i) {
+    result.emplace_back(SelectOp::Create(
+        ICmpOp::CreateICmp(ICmpOpcode::EQ, idx, i), elt, scalarize(vec[i])));
+  }
+
+  return LLVMValue(std::move(result));
+}
+LLVMValue ExprEvaluator::visitExtractElement(llvm::ExtractElementInst& inst) {
+  auto vec_ = visit(inst.getOperand(0));
+  auto vec = vec_.vector();
+
+  auto idx = visit(inst.getOperand(1)).scalar().expr();
+
+  OpRef result = Undef::Create(Type::from_llvm(inst.getType()));
+  for (size_t i = 0; i < vec.size(); ++i) {
+    result = SelectOp::Create(ICmpOp::CreateICmp(ICmpOpcode::EQ, idx, i),
+                              scalarize(vec[i]), result);
+  }
+
+  return LLVMValue(result);
+}
+LLVMValue ExprEvaluator::visitShuffleVector(llvm::ShuffleVectorInst& inst) {
+  auto vec1_ = visit(inst.getOperand(0));
+  auto vec2_ = visit(inst.getOperand(1));
+  auto mask_ = visit(inst.getOperand(2));
+
+  auto vec1 = vec1_.vector();
+  auto vec2 = vec2_.vector();
+  auto mask = mask_.vector();
+
+  auto type = inst.getType();
+  auto elem_type = type->getVectorElementType();
+
+  LLVMValue::OpVector results;
+  results.reserve(vec1.size());
+
+  /**
+   * The semantics of shufflevector end up basically being an array lookup.
+   * Given two vectors x, y and a mask m, we form one big vector z by
+   * concatenating z = x||y. Then the values in m are used as indices in z
+   * to get the final vector value.
+   *
+   * We emulate these semantics by creating nested select chains. All masks are
+   * either constant or undef so we rely on constant-folding to produce the
+   * correct set of efficient expressions.
+   */
+  for (size_t i = 0; i < mask.size(); ++i) {
+    OpRef value = Undef::Create(Type::from_llvm(elem_type));
+
+    for (size_t j = 0; j < mask.size(); ++j) {
+      value = SelectOp::Create(
+          ICmpOp::CreateICmp(ICmpOpcode::EQ, mask[i].expr(), j),
+          scalarize(vec1[j]), value);
+    }
+
+    for (size_t j = 0; j < mask.size(); ++j) {
+      value = SelectOp::Create(
+          ICmpOp::CreateICmp(ICmpOpcode::EQ, mask[i].expr(), j + mask.size()),
+          scalarize(vec2[j]), value);
+    }
+
+    results.push_back(value);
+  }
+
+  return LLVMValue(std::move(results));
+}
+
 } // namespace caffeine
