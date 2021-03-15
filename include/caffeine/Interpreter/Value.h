@@ -14,7 +14,6 @@ namespace caffeine {
 
 class ContextValue;
 class LLVMValue;
-
 /**
  * A LLVM value that is not an aggregate or a vector.
  *

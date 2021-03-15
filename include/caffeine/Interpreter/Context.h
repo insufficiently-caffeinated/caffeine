@@ -148,6 +148,9 @@ private:
   template <typename ContextType>
   friend ContextValue evaluate_global(ContextType ctx,
                                       llvm::GlobalVariable* global);
+
+  // TODO: Temporary until context redesign is completed
+  friend class ExprEvaluator;
 };
 
 } // namespace caffeine
