@@ -17,14 +17,6 @@
 
 namespace caffeine {
 
-namespace {
-  OpRef scalarize(const LLVMScalar& scalar, const MemHeap& heap) {
-    if (scalar.is_expr())
-      return scalar.expr();
-    return scalar.pointer().value(heap);
-  }
-} // namespace
-
 ExprEvaluator::Unevaluatable::Unevaluatable(llvm::Value* expr,
                                             const char* context)
     : expr_(expr), context_(context) {
@@ -46,6 +38,12 @@ llvm::Value* ExprEvaluator::Unevaluatable::expr() const {
 
 ExprEvaluator::ExprEvaluator(Context* ctx, Options options)
     : ctx(ctx), options(options) {}
+
+OpRef ExprEvaluator::scalarize(const LLVMScalar& scalar) const {
+  if (scalar.is_expr())
+    return scalar.expr();
+  return scalar.pointer().value(ctx->heap);
+}
 
 LLVMValue ExprEvaluator::visit(llvm::Value* val) {
   const auto& frame = ctx->stack_top();
@@ -379,9 +377,7 @@ LLVMValue ExprEvaluator::visitInstruction(llvm::Instruction& inst) {
                                                                                \
     return transform_elements(                                                 \
         [&](const LLVMScalar& lhs, const LLVMScalar& rhs) -> LLVMScalar {      \
-          const auto& heap = ctx->heap;                                        \
-          return BinaryOp::Create##opcode(scalarize(lhs, heap),                \
-                                          scalarize(rhs, heap));               \
+          return BinaryOp::Create##opcode(scalarize(lhs), scalarize(rhs));     \
         },                                                                     \
         lhs, rhs);                                                             \
   }                                                                            \
@@ -542,6 +538,24 @@ LLVMValue ExprEvaluator::visitGetElementPtr(llvm::GetElementPtrInst& inst) {
         }
       },
       base, offsets);
+}
+
+LLVMValue ExprEvaluator::visitSelectInst(llvm::SelectInst& op) {
+  auto cond = visit(op.getCondition());
+  auto t_val = visit(op.getTrueValue());
+  auto f_val = visit(op.getFalseValue());
+
+  if (cond.is_scalar()) {
+    cond = cond.scalar().broadcast(t_val.num_elements());
+  }
+
+  return transform_elements(
+      [&](const auto& cond, const auto& t_val,
+          const auto& f_val) -> LLVMScalar {
+        return SelectOp::Create(cond.expr(), scalarize(t_val),
+                                scalarize(f_val));
+      },
+      cond, t_val, f_val);
 }
 
 } // namespace caffeine

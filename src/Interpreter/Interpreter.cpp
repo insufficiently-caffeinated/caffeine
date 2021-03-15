@@ -90,6 +90,7 @@ DEF_SIMPLE_OP(IntToPtrInst, IntToPtrInst);
 DEF_SIMPLE_OP(PtrToIntInst, PtrToIntInst);
 DEF_SIMPLE_OP(BitCastInst, BitCastInst);
 
+DEF_SIMPLE_OP(SelectInst, SelectInst);
 DEF_SIMPLE_OP(GetElementPtrInst, GetElementPtrInst);
 
 ExecutionResult Interpreter::visitUDiv(llvm::BinaryOperator& op) {
@@ -420,15 +421,6 @@ ExecutionResult Interpreter::visitCallInst(llvm::CallInst& call) {
   }
 
   ctx->push(std::move(callee));
-
-  return ExecutionResult::Continue;
-}
-ExecutionResult Interpreter::visitSelectInst(llvm::SelectInst& inst) {
-  auto& frame = ctx->stack_top();
-  auto cond = ctx->lookup(inst.getCondition());
-  auto trueVal = ctx->lookup(inst.getTrueValue());
-  auto falseVal = ctx->lookup(inst.getFalseValue());
-  frame.insert(&inst, transform(SelectOp::Create, cond, trueVal, falseVal));
 
   return ExecutionResult::Continue;
 }

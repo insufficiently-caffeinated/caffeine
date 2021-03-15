@@ -9,6 +9,7 @@ namespace caffeine {
 
 class Context;
 class LLVMValue;
+class LLVMScalar;
 
 /**
  * LLVM IR expression evaluator.
@@ -125,6 +126,11 @@ public:
   LLVMValue visitBitCast(llvm::BitCastInst& op);
 
   LLVMValue visitGetElementPtr(llvm::GetElementPtrInst& op);
+
+  LLVMValue visitSelectInst(llvm::SelectInst& op);
+
+private:
+  OpRef scalarize(const LLVMScalar& scalar) const;
 
 private:
   Context* ctx;
