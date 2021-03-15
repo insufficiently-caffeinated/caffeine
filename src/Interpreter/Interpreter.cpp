@@ -67,28 +67,9 @@ ExecutionResult Interpreter::visitInstruction(llvm::Instruction& inst) {
   }                                                                            \
   static_assert(true)
 
-DEF_SIMPLE_OP(Add, BinaryOperator);
-DEF_SIMPLE_OP(Sub, BinaryOperator);
-DEF_SIMPLE_OP(Mul, BinaryOperator);
-
-DEF_SIMPLE_OP(Shl, BinaryOperator);
-DEF_SIMPLE_OP(LShr, BinaryOperator);
-DEF_SIMPLE_OP(AShr, BinaryOperator);
-DEF_SIMPLE_OP(And, BinaryOperator);
-DEF_SIMPLE_OP(Or, BinaryOperator);
-DEF_SIMPLE_OP(Xor, BinaryOperator);
-
-DEF_SIMPLE_OP(FAdd, BinaryOperator);
-DEF_SIMPLE_OP(FSub, BinaryOperator);
-DEF_SIMPLE_OP(FMul, BinaryOperator);
-DEF_SIMPLE_OP(FDiv, BinaryOperator);
-
-DEF_SIMPLE_OP(Trunc, TruncInst);
-DEF_SIMPLE_OP(SExt, SExtInst);
-DEF_SIMPLE_OP(ZExt, ZExtInst);
-DEF_SIMPLE_OP(IntToPtrInst, IntToPtrInst);
-DEF_SIMPLE_OP(PtrToIntInst, PtrToIntInst);
-DEF_SIMPLE_OP(BitCastInst, BitCastInst);
+DEF_SIMPLE_OP(BinaryOperator, BinaryOperator);
+DEF_SIMPLE_OP(UnaryOperator, UnaryOperator);
+DEF_SIMPLE_OP(CastInst, CastInst);
 
 DEF_SIMPLE_OP(GetElementPtrInst, GetElementPtrInst);
 
@@ -195,16 +176,6 @@ ExecutionResult Interpreter::visitURem(llvm::BinaryOperator& op) {
       lhs, rhs);
 
   frame.insert(&op, std::move(result));
-
-  return ExecutionResult::Continue;
-}
-
-ExecutionResult Interpreter::visitNot(llvm::BinaryOperator& op) {
-  StackFrame& frame = ctx->stack_top();
-
-  auto operand = ctx->lookup(op.getOperand(0));
-
-  frame.insert(&op, transform(WRAP_FUNC(UnaryOp::CreateNot), operand));
 
   return ExecutionResult::Continue;
 }
