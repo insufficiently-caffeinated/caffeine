@@ -55,6 +55,11 @@ void decompose(std::vector<Assertion>& assertions);
 void canonicalize(std::vector<Assertion>& assertions);
 
 /**
+ * Generic simplication transform.
+ */
+void simplify(std::vector<Assertion>& assertions);
+
+/**
  * Rebuild an expression tree using the transform applied by the visitor. This
  * will traverse the tree in a depth-first order and apply the transform to each
  * node. If no changes are made then existing expression nodes will be reused.

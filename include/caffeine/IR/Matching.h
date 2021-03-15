@@ -340,7 +340,7 @@ namespace matching {
       ICmpMatcher(T1&& lhs, T2&& rhs)
           : lhs(std::forward<T1>(lhs)), rhs(std::forward<T2>(rhs)) {}
 
-      bool matches(const ref<Operation>& op) const {
+      bool matches(const OpRef& op) const {
         const auto* icmp = llvm::dyn_cast<ICmpOp>(op.get());
         if (!icmp)
           return false;
@@ -350,7 +350,7 @@ namespace matching {
 
         return lhs.matches(icmp->lhs()) && rhs.matches(icmp->rhs());
       }
-      void on_match(const ref<Operation>& op) const {
+      void on_match(const OpRef& op) const {
         lhs.on_match(op->operand_at(0));
         rhs.on_match(op->operand_at(1));
       }

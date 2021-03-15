@@ -3,7 +3,9 @@
 
 #include "caffeine/Solver/Solver.h"
 
+#include <memory>
 #include <tuple>
+#include <type_traits>
 
 namespace caffeine {
 
@@ -66,6 +68,13 @@ private:
   static_assert(sizeof...(Ts) != 0);
   static_assert((... && std::is_base_of_v<Solver, Ts>));
 };
+
+template <typename... Ts>
+std::shared_ptr<SequenceSolver<std::decay_t<Ts>...>>
+make_sequence_solver(Ts&&... solvers) {
+  return std::make_shared<SequenceSolver<std::decay_t<Ts>...>>(
+      std::forward<Ts>(solvers)...);
+}
 
 } // namespace caffeine
 

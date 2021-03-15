@@ -115,6 +115,7 @@ ExprEvaluator::visitConstantAggregateZero(llvm::ConstantAggregateZero& zero) {
 
   return visitConstant(zero);
 }
+
 LLVMValue
 ExprEvaluator::visitConstantDataVector(llvm::ConstantDataVector& vec) {
   auto type = vec.getType();
@@ -136,12 +137,15 @@ ExprEvaluator::visitConstantDataVector(llvm::ConstantDataVector& vec) {
 
   return LLVMValue(std::move(values));
 }
+
 LLVMValue ExprEvaluator::visitConstantInt(llvm::ConstantInt& cnst) {
   return LLVMValue(ConstantInt::Create(cnst.getValue()));
 }
+
 LLVMValue ExprEvaluator::visitConstantFP(llvm::ConstantFP& cnst) {
   return LLVMValue(ConstantFloat::Create(cnst.getValueAPF()));
 }
+
 LLVMValue
 ExprEvaluator::visitConstantPointerNull(llvm::ConstantPointerNull& null) {
   const auto& layout = ctx->llvm_module()->getDataLayout();
@@ -151,6 +155,7 @@ ExprEvaluator::visitConstantPointerNull(llvm::ConstantPointerNull& null) {
   return LLVMValue(
       Pointer(ConstantInt::Create(llvm::APInt::getNullValue(bitwidth))));
 }
+
 LLVMValue ExprEvaluator::visitUndefValue(llvm::UndefValue& undef) {
   auto type = undef.getType();
 
@@ -228,6 +233,7 @@ LLVMValue ExprEvaluator::visitConstantArray(llvm::ConstantArray& cnst) {
 
   return LLVMValue(std::move(values));
 }
+
 LLVMValue ExprEvaluator::visitConstantStruct(llvm::ConstantStruct& cnst) {
   auto type = cnst.getType();
   size_t count = type->getStructNumElements();
@@ -241,6 +247,7 @@ LLVMValue ExprEvaluator::visitConstantStruct(llvm::ConstantStruct& cnst) {
 
   return LLVMValue(std::move(values));
 }
+
 LLVMValue ExprEvaluator::visitConstantVector(llvm::ConstantVector& vec) {
   auto type = vec.getType();
   CAFFEINE_ASSERT(!type->isScalable(), "Scalable vectors are not supported");
