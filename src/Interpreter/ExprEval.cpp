@@ -401,4 +401,30 @@ LLVMValue ExprEvaluator::visitFNeg(llvm::UnaryOperator& op) {
       value);
 }
 
+LLVMValue ExprEvaluator::visitPtrToInt(llvm::PtrToIntInst& inst) {
+  return transform_elements(
+      [&](const LLVMScalar& value) {
+        return LLVMScalar(
+            UnaryOp::CreateTruncOrZExt(Type::from_llvm(inst.getType()),
+                                       value.pointer().value(ctx->heap())));
+      },
+      visit(inst.getOperand(0)));
+}
+LLVMValue ExprEvaluator::visitIntToPtr(llvm::IntToPtrInst& inst) {
+  const auto& layout = ctx->llvm_module()->getDataLayout();
+
+  unsigned pointer_size =
+      layout.getPointerSizeInBits(inst.getType()->getPointerAddressSpace());
+  return transform_elements(
+      [&](const LLVMScalar& value) {
+        return LLVMScalar(Pointer(UnaryOp::CreateTruncOrZExt(
+            Type::int_ty(pointer_size), value.expr())));
+      },
+      visit(inst.getOperand(0)));
+}
+
+LLVMValue ExprEvaluator::visitBitCast(llvm::BitCastInst& inst) {
+  return visit(inst.getOperand(0));
+}
+
 } // namespace caffeine

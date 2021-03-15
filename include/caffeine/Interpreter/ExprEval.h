@@ -115,6 +115,11 @@ public:
   LLVMValue visitFPToUI(llvm::CastInst& op);
   LLVMValue visitFPToSI(llvm::CastInst& op);
 
+  LLVMValue visitPtrToInt(llvm::PtrToIntInst& op);
+  LLVMValue visitIntToPtr(llvm::IntToPtrInst& op);
+
+  LLVMValue visitBitCast(llvm::BitCastInst& op);
+
 private:
   Context* ctx;
   Options options;
