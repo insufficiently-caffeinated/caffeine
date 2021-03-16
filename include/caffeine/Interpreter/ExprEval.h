@@ -120,6 +120,8 @@ public:
 
   LLVMValue visitBitCast(llvm::BitCastInst& op);
 
+  LLVMValue visitGetElementPtr(llvm::GetElementPtrInst& op);
+
 private:
   Context* ctx;
   Options options;

@@ -5,6 +5,8 @@
 #include "caffeine/Memory/MemHeap.h"
 #include <fmt/format.h>
 #include <llvm/IR/Constants.h>
+#include <llvm/IR/GetElementPtrTypeIterator.h>
+#include <llvm/IR/GlobalVariable.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/Support/raw_ostream.h>
 
@@ -425,6 +427,85 @@ LLVMValue ExprEvaluator::visitIntToPtr(llvm::IntToPtrInst& inst) {
 
 LLVMValue ExprEvaluator::visitBitCast(llvm::BitCastInst& inst) {
   return visit(inst.getOperand(0));
+}
+
+LLVMValue ExprEvaluator::visitGetElementPtr(llvm::GetElementPtrInst& inst) {
+  const llvm::DataLayout& layout = ctx->llvm_module()->getDataLayout();
+
+  size_t offset_elements = 1;
+  for (auto it = llvm::gep_type_begin(inst), end = llvm::gep_type_end(inst);
+       it != end; ++it) {
+    auto type = it.getOperand()->getType();
+
+    if (type->isVectorTy()) {
+      CAFFEINE_ASSERT(!type->getVectorIsScalable(),
+                      "Scalable vectors are not supported");
+      CAFFEINE_ASSERT(offset_elements == 1 ||
+                      type->getVectorNumElements() == offset_elements);
+
+      offset_elements = type->getVectorNumElements();
+    }
+  }
+
+  auto type = inst.getType();
+  auto ptr_width = layout.getPointerSizeInBits(type->getPointerAddressSpace());
+  auto offsets =
+      LLVMScalar(ConstantInt::CreateZero(ptr_width)).broadcast(offset_elements);
+
+  for (auto it = llvm::gep_type_begin(inst), end = llvm::gep_type_end(inst);
+       it != end; ++it) {
+    std::optional<LLVMValue> newoffset;
+
+    if (llvm::StructType* sty = it.getStructTypeOrNull()) {
+      auto slo = layout.getStructLayout(sty);
+
+      unsigned member_index =
+          llvm::cast<llvm::ConstantInt>(it.getOperand())->getZExtValue();
+      OpRef member_offset = ConstantInt::Create(
+          llvm::APInt(ptr_width, slo->getElementOffset(member_index)));
+
+      newoffset = LLVMScalar(member_offset).broadcast(offset_elements);
+    } else {
+      newoffset = transform_elements(
+          [&](const LLVMScalar& value) {
+            OpRef index = UnaryOp::CreateTruncOrSExt(Type::int_ty(ptr_width),
+                                                     value.expr());
+            return BinaryOp::CreateMul(
+                index, layout.getTypeAllocSize(it.getIndexedType()));
+          },
+          visit(it.getOperand()));
+    }
+
+    offsets = transform_elements(
+        [](const LLVMScalar& a, const LLVMScalar& b) {
+          return BinaryOp::CreateAdd(a.expr(), b.expr());
+        },
+        offsets, *newoffset);
+  }
+
+  LLVMValue base = visit(inst.getOperand(0));
+
+  if (base.is_scalar()) {
+    base = base.scalar().broadcast(offset_elements);
+  } else if (offsets.is_scalar()) {
+    offsets = offsets.scalar().broadcast(base.num_elements());
+  }
+
+  CAFFEINE_ASSERT(base.num_elements() == offsets.num_elements());
+
+  return transform_elements(
+      [&](const LLVMScalar& base, const LLVMScalar& offset) -> LLVMScalar {
+        const Pointer& ptr = base.pointer();
+
+        if (inst.isInBounds()) {
+          return Pointer(ptr.alloc(),
+                         BinaryOp::CreateAdd(ptr.offset(), offset.expr()));
+        } else {
+          return Pointer(
+              BinaryOp::CreateAdd(ptr.value(ctx->heap()), offset.expr()));
+        }
+      },
+      base, offsets);
 }
 
 } // namespace caffeine
