@@ -60,6 +60,7 @@ public:
   // Subclasses of ConstantData
   LLVMValue visitConstantAggregateZero(llvm::ConstantAggregateZero& cnst);
   LLVMValue visitConstantDataVector(llvm::ConstantDataVector& cnst);
+  LLVMValue visitConstantDataArray(llvm::ConstantDataArray& cnst);
   LLVMValue visitConstantInt(llvm::ConstantInt& cnst);
   LLVMValue visitConstantFP(llvm::ConstantFP& cnst);
   LLVMValue visitConstantPointerNull(llvm::ConstantPointerNull& cnst);

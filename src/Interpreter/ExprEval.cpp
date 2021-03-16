@@ -9,6 +9,9 @@
 #include <llvm/IR/GlobalVariable.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/Support/raw_ostream.h>
+#include <magic_enum.hpp>
+
+#include <iostream>
 
 namespace caffeine {
 
@@ -54,9 +57,43 @@ LLVMValue ExprEvaluator::visit(llvm::Value* val) {
   if (auto* inst = llvm::dyn_cast<llvm::Instruction>(val))
     return BaseType::visit(inst);
 
+  if (auto* expr = llvm::dyn_cast<llvm::ConstantExpr>(val))
+    return visitConstantExpr(*expr);
+
+  // Subclasses of ConstantData
+  if (auto* cnst = llvm::dyn_cast<llvm::ConstantInt>(val))
+    return visitConstantInt(*cnst);
+  if (auto* cnst = llvm::dyn_cast<llvm::ConstantFP>(val))
+    return visitConstantFP(*cnst);
+  if (auto* cnst = llvm::dyn_cast<llvm::ConstantPointerNull>(val))
+    return visitConstantPointerNull(*cnst);
+  if (auto* cnst = llvm::dyn_cast<llvm::ConstantAggregateZero>(val))
+    return visitConstantAggregateZero(*cnst);
+  if (auto* cnst = llvm::dyn_cast<llvm::ConstantDataVector>(val))
+    return visitConstantDataVector(*cnst);
+  if (auto* cnst = llvm::dyn_cast<llvm::ConstantDataArray>(val))
+    return visitConstantDataArray(*cnst);
+  if (auto* cnst = llvm::dyn_cast<llvm::UndefValue>(val))
+    return visitUndefValue(*cnst);
+
+  // Subclasses of ConstantAggregate
+  if (auto* cnst = llvm::dyn_cast<llvm::ConstantArray>(val))
+    return visitConstantArray(*cnst);
+  if (auto* cnst = llvm::dyn_cast<llvm::ConstantStruct>(val))
+    return visitConstantStruct(*cnst);
+  if (auto* cnst = llvm::dyn_cast<llvm::ConstantVector>(val))
+    return visitConstantVector(*cnst);
+
+  // Subclasses of GlobalValue
+  if (auto* cnst = llvm::dyn_cast<llvm::GlobalVariable>(val))
+    return visitGlobalVariable(*cnst);
+
   std::string msg = "Unsupported expression: ";
   llvm::raw_string_ostream os{msg};
   val->print(os, true);
+
+  std::cout << magic_enum::enum_name((llvm::Value::ValueTy)val->getValueID())
+            << std::endl;
 
   CAFFEINE_ABORT(msg);
 }
@@ -139,7 +176,19 @@ ExprEvaluator::visitConstantDataVector(llvm::ConstantDataVector& vec) {
 
   return LLVMValue(std::move(values));
 }
+LLVMValue ExprEvaluator::visitConstantDataArray(llvm::ConstantDataArray& arr) {
+  auto type = arr.getType();
+  size_t count = type->getArrayNumElements();
 
+  std::vector<LLVMValue> values;
+  values.reserve(count);
+
+  for (size_t i = 0; i < count; ++i) {
+    values.push_back(visit(arr.getElementAsConstant(i)));
+  }
+
+  return LLVMValue(std::move(values));
+}
 LLVMValue ExprEvaluator::visitConstantInt(llvm::ConstantInt& cnst) {
   return LLVMValue(ConstantInt::Create(cnst.getValue()));
 }
