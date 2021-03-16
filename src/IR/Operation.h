@@ -296,6 +296,14 @@ public:
 
     return this->visitBinaryOp(op);
   }
+  OpRef visitFIsNaN(const UnaryOp& op) {
+    if (const auto* val = llvm::dyn_cast<ConstantFloat>(op.operand().get())) {
+      const llvm::APFloat& apf = val->value();
+      return ConstantInt::Create(apf.isNaN());
+    }
+
+    return this->visitUnaryOp(op);
+  }
 
   OpRef visitNot(const UnaryOp& op) {
     if (const auto* val = llvm::dyn_cast<ConstantInt>(op.operand().get()))
