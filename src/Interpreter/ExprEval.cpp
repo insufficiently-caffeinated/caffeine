@@ -446,45 +446,6 @@ LLVMValue ExprEvaluator::visitFNeg(llvm::UnaryOperator& op) {
       value);
 }
 
-LLVMValue ExprEvaluator::visitICmp(llvm::ICmpInst& icmp) {
-  using llvm::ICmpInst;
-
-#define ICMP_CASE(op)                                                          \
-  case ICmpInst::ICMP_##op:                                                    \
-    opcode = ICmpOpcode::op;                                                   \
-    break
-
-  ICmpOpcode opcode;
-  switch (icmp.getPredicate()) {
-    ICMP_CASE(EQ);
-    ICMP_CASE(NE);
-    ICMP_CASE(UGT);
-    ICMP_CASE(UGE);
-    ICMP_CASE(ULT);
-    ICMP_CASE(ULE);
-    ICMP_CASE(SGT);
-    ICMP_CASE(SGE);
-    ICMP_CASE(SLT);
-    ICMP_CASE(SLE);
-  default:
-    CAFFEINE_UNREACHABLE();
-  }
-#undef ICMP_CASE
-
-  auto as_expr = [&](const LLVMScalar& value) {
-    if (value.is_expr())
-      return value.expr();
-    return value.pointer().value(ctx->heap);
-  };
-
-  return transform_elements(
-      [&](const LLVMScalar& lhs, const LLVMScalar& rhs) -> LLVMScalar {
-        return LLVMScalar(
-            ICmpOp::CreateICmp(opcode, as_expr(lhs), as_expr(rhs)));
-      },
-      visit(icmp.getOperand(0)), visit(icmp.getOperand(1)));
-}
-
 LLVMValue ExprEvaluator::visitPtrToInt(llvm::PtrToIntInst& inst) {
   return transform_elements(
       [&](const LLVMScalar& value) {
