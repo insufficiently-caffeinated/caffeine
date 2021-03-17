@@ -107,6 +107,9 @@ public:
 template <typename F, typename... Vals>
 LLVMValue transform_elements(F&& func, const Vals&... values);
 
+template <typename F, typename... Vals>
+LLVMValue transform_exprs(F&& func, const Vals&... values);
+
 /**
  * An LLVM value as represented within a stack frame.
  *
