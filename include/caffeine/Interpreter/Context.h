@@ -22,7 +22,7 @@ namespace caffeine {
 class Context {
 public:
   std::vector<StackFrame> stack;
-  std::unordered_map<llvm::GlobalVariable*, ContextValue> globals;
+  std::unordered_map<llvm::GlobalVariable*, LLVMValue> globals;
   std::shared_ptr<Solver> solver;
   MemHeap heap;
   std::vector<Assertion> assertions;
@@ -95,8 +95,8 @@ public:
    * The constant variant of the method will not create allocations and
    * modify the registered globals table. The non const variant may do so.
    */
-  std::optional<ContextValue> lookup_const(llvm::Value* value) const;
-  ContextValue lookup(llvm::Value* value);
+  std::optional<LLVMValue> lookup_const(llvm::Value* value) const;
+  LLVMValue lookup(llvm::Value* value);
 
   /**
    * Validate whether the set of assertions combined with the extra assertion is

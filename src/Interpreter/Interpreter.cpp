@@ -55,6 +55,12 @@ void Interpreter::execute() {
   } while (exec == ExecutionResult::Continue);
 }
 
+OpRef Interpreter::scalarize(const LLVMScalar& scalar) const {
+  if (scalar.is_expr())
+    return scalar.expr();
+  return scalar.pointer().value(ctx->heap);
+}
+
 ExecutionResult Interpreter::visitInstruction(llvm::Instruction& inst) {
   CAFFEINE_ABORT(
       fmt::format("Instruction '{}' not implemented!", inst.getOpcodeName()));
@@ -85,7 +91,7 @@ ExecutionResult Interpreter::visitUDiv(llvm::BinaryOperator& op) {
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
 
-  auto result = transform(
+  auto result = transform_exprs(
       [&](const auto& lhs, const auto& rhs) {
         Assertion assertion = ICmpOp::CreateICmp(ICmpOpcode::NE, rhs, 0);
         auto model = ctx->resolve(!assertion);
@@ -107,7 +113,7 @@ ExecutionResult Interpreter::visitSDiv(llvm::BinaryOperator& op) {
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
 
-  auto result = transform(
+  auto result = transform_exprs(
       [&](const auto& lhs, const auto& rhs) {
         auto cmp1 = ICmpOp::CreateICmp(ICmpOpcode::EQ, rhs, 0);
         auto cmp2 = ICmpOp::CreateICmp(
@@ -138,7 +144,7 @@ ExecutionResult Interpreter::visitSRem(llvm::BinaryOperator& op) {
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
 
-  auto result = transform(
+  auto result = transform_exprs(
       [&](const auto& lhs, const auto& rhs) {
         auto cmp1 = ICmpOp::CreateICmp(ICmpOpcode::EQ, rhs, 0);
         auto cmp2 = ICmpOp::CreateICmp(
@@ -169,7 +175,7 @@ ExecutionResult Interpreter::visitURem(llvm::BinaryOperator& op) {
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
 
-  auto result = transform(
+  auto result = transform_exprs(
       [&](const auto& lhs, const auto& rhs) {
         Assertion assertion = ICmpOp::CreateICmp(ICmpOpcode::NE, rhs, 0);
         auto model = ctx->resolve(!assertion);
@@ -204,7 +210,7 @@ ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst& inst) {
   }
 
   auto cond_ = ctx->lookup(inst.getCondition());
-  auto cond = cond_.scalar();
+  auto cond = cond_.scalar().expr();
 
   auto assertion = Assertion(cond);
   auto is_t = ctx->check(assertion);
@@ -240,7 +246,7 @@ ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst& inst) {
   }
 }
 ExecutionResult Interpreter::visitReturnInst(llvm::ReturnInst& inst) {
-  std::optional<ContextValue> result = std::nullopt;
+  std::optional<LLVMValue> result = std::nullopt;
   if (inst.getNumOperands() != 0)
     result = ctx->lookup(inst.getOperand(0));
 
@@ -306,7 +312,7 @@ ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
   const llvm::DataLayout& layout = inst.getModule()->getDataLayout();
 
   // TODO: What are the vector semantics for loads?
-  const Pointer& pointer = operand.pointer();
+  const Pointer& pointer = operand.scalar().pointer();
 
   auto assertion =
       ctx->heap.check_valid(pointer, layout.getTypeStoreSize(inst.getType()));
@@ -344,7 +350,7 @@ ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
   auto op_ty = inst.getOperand(0)->getType();
 
   const llvm::DataLayout& layout = inst.getModule()->getDataLayout();
-  const Pointer& pointer = dest.pointer();
+  const Pointer& pointer = dest.scalar().pointer();
 
   auto assertion = ctx->heap.check_valid(
       pointer, layout.getTypeStoreSize(inst.getOperand(0)->getType()));
@@ -390,9 +396,8 @@ ExecutionResult Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {
       AllocOp::Create(size_op, ConstantInt::Create(llvm::APInt(8, 0xDD))),
       AllocationKind::Alloca, *ctx);
 
-  frame.insert(&inst,
-               ContextValue(Pointer(
-                   alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
+  frame.insert(&inst, LLVMValue(Pointer(alloc, ConstantInt::Create(llvm::APInt(
+                                                   ptr_width, 0)))));
   frame.allocations.push_back(alloc);
 
   return ExecutionResult::Continue;
@@ -462,7 +467,7 @@ ExecutionResult Interpreter::visitAssume(llvm::CallInst& call) {
   CAFFEINE_ASSERT(call.getNumArgOperands() == 1);
 
   auto cond = ctx->lookup(call.getArgOperand(0));
-  ctx->add(cond.scalar());
+  ctx->add(cond.scalar().expr());
 
   // Don't check whether adding the assumption causes this path to become
   // dead since assumptions are rare, solver calls are expensive, and it'll
@@ -473,7 +478,7 @@ ExecutionResult Interpreter::visitAssert(llvm::CallInst& call) {
   CAFFEINE_ASSERT(call.getNumArgOperands() == 1);
 
   auto cond = ctx->lookup(call.getArgOperand(0));
-  auto assertion = Assertion(cond.scalar());
+  auto assertion = Assertion(cond.scalar().expr());
 
   auto model = ctx->resolve(!assertion);
   if (model->result() == SolverResult::SAT)
@@ -512,8 +517,8 @@ std::optional<std::string> readSymbolicName(Context* ctx, const Pointer& ptr) {
 }
 
 ExecutionResult Interpreter::visitSymbolicAlloca(llvm::CallInst& call) {
-  auto size = ctx->lookup(call.getArgOperand(0)).scalar();
-  auto name = ctx->lookup(call.getArgOperand(1)).pointer();
+  auto size = ctx->lookup(call.getArgOperand(0)).scalar().expr();
+  auto name = ctx->lookup(call.getArgOperand(1)).scalar().pointer();
 
   auto resolved = ctx->heap.resolve(name, *ctx);
 
@@ -532,9 +537,8 @@ ExecutionResult Interpreter::visitSymbolicAlloca(llvm::CallInst& call) {
       AllocationKind::Alloca, *ctx);
 
   auto& frame = ctx->stack_top();
-  frame.insert(&call,
-               ContextValue(Pointer(
-                   alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
+  frame.insert(&call, LLVMValue(Pointer(alloc, ConstantInt::Create(llvm::APInt(
+                                                   ptr_width, 0)))));
   frame.allocations.push_back(alloc);
 
   return ExecutionResult::Continue;
@@ -548,7 +552,7 @@ ExecutionResult Interpreter::visitMalloc(llvm::CallInst& call) {
   CAFFEINE_ASSERT(call.getNumArgOperands() == 1, "Invalid malloc signature");
   CAFFEINE_ASSERT(call.getType()->isPointerTy(), "Invalid malloc signature");
 
-  auto size = ctx->lookup(call.getArgOperand(0)).scalar();
+  auto size = ctx->lookup(call.getArgOperand(0)).scalar().expr();
   const llvm::DataLayout& layout = call.getModule()->getDataLayout();
 
   CAFFEINE_ASSERT(size->type().is_int(), "Invalid malloc signature");
@@ -564,7 +568,7 @@ ExecutionResult Interpreter::visitMalloc(llvm::CallInst& call) {
     Context forked = ctx->fork();
     forked.stack_top().insert(
         &call,
-        ContextValue(Pointer(ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
+        LLVMValue(Pointer(ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
     queue->add_context(std::move(forked));
   }
 
@@ -576,7 +580,7 @@ ExecutionResult Interpreter::visitMalloc(llvm::CallInst& call) {
       AllocationKind::Malloc, *ctx);
 
   ctx->stack_top().insert(
-      &call, ContextValue(Pointer(
+      &call, LLVMValue(Pointer(
                  alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
 
   return ExecutionResult::Continue;
@@ -585,7 +589,7 @@ ExecutionResult Interpreter::visitCalloc(llvm::CallInst& call) {
   CAFFEINE_ASSERT(call.getNumArgOperands() == 1, "Invalid calloc signature");
   CAFFEINE_ASSERT(call.getType()->isPointerTy(), "Invalid calloc signature");
 
-  auto size = ctx->lookup(call.getArgOperand(0)).scalar();
+  auto size = ctx->lookup(call.getArgOperand(0)).scalar().expr();
   const llvm::DataLayout& layout = call.getModule()->getDataLayout();
 
   CAFFEINE_ASSERT(size->type().is_int(), "Invalid calloc signature");
@@ -601,7 +605,7 @@ ExecutionResult Interpreter::visitCalloc(llvm::CallInst& call) {
     Context forked = ctx->fork();
     forked.stack_top().insert(
         &call,
-        ContextValue(Pointer(ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
+        LLVMValue(Pointer(ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
     queue->add_context(std::move(forked));
   }
 
@@ -613,7 +617,7 @@ ExecutionResult Interpreter::visitCalloc(llvm::CallInst& call) {
       AllocationKind::Malloc, *ctx);
 
   ctx->stack_top().insert(
-      &call, ContextValue(Pointer(
+      &call, LLVMValue(Pointer(
                  alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
 
   return ExecutionResult::Continue;
@@ -629,7 +633,7 @@ ExecutionResult Interpreter::visitFree(llvm::CallInst& call) {
                   "Invalid free signature");
 
   auto& heap = ctx->heap;
-  auto memptr = ctx->lookup(call.getArgOperand(0)).pointer();
+  auto memptr = ctx->lookup(call.getArgOperand(0)).scalar().pointer();
 
   auto is_valid_ptr = heap.check_starts_allocation(memptr);
   auto model = ctx->resolve(!is_valid_ptr);
@@ -673,8 +677,8 @@ ExecutionResult Interpreter::visitFree(llvm::CallInst& call) {
 }
 
 ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallInst& call) {
-  auto mem = ctx->lookup(call.getArgOperand(0)).pointer();
-  auto size = ctx->lookup(call.getArgOperand(1)).scalar();
+  auto mem = ctx->lookup(call.getArgOperand(0)).scalar().pointer();
+  auto size = ctx->lookup(call.getArgOperand(1)).scalar().expr();
 
   auto assertion = ctx->heap.check_valid(mem, size);
   auto model = ctx->resolve(!assertion);
@@ -691,13 +695,13 @@ ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallInst& call) {
   auto resolved = ctx->heap.resolve(mem, *ctx);
 
   if (resolved.size() == 1) {
-    ctx->stack_top().insert(&call, ContextValue(resolved[0]));
+    ctx->stack_top().insert(&call, LLVMValue(resolved[0]));
     return ExecutionResult::Continue;
   }
 
   for (const auto& ptr : resolved) {
     Context forked = ctx->fork();
-    forked.stack_top().insert(&call, ContextValue(ptr));
+    forked.stack_top().insert(&call, LLVMValue(ptr));
     queue->add_context(std::move(forked));
   }
 

@@ -76,6 +76,8 @@ private:
   ExecutionResult visitFree(llvm::CallInst& inst);
 
   ExecutionResult visitBuiltinResolve(llvm::CallInst& inst);
+
+  OpRef scalarize(const LLVMScalar& scalar) const;
 };
 
 } // namespace caffeine
