@@ -37,6 +37,7 @@ public:
   ExecutionResult visitBinaryOperator(llvm::BinaryOperator& op);
   ExecutionResult visitUnaryOperator(llvm::UnaryOperator& op);
   ExecutionResult visitCastInst(llvm::CastInst& op);
+  ExecutionResult visitCmpInst(llvm::CmpInst& op);
 
   ExecutionResult visitUDiv(llvm::BinaryOperator& op);
   ExecutionResult visitSDiv(llvm::BinaryOperator& op);
