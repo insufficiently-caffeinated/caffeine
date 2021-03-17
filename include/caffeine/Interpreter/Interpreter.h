@@ -44,8 +44,6 @@ public:
   ExecutionResult visitURem(llvm::BinaryOperator& op);
   ExecutionResult visitSRem(llvm::BinaryOperator& op);
 
-  ExecutionResult visitFCmpInst(llvm::FCmpInst& fcmp);
-
   ExecutionResult visitPHINode(llvm::PHINode& node);
   ExecutionResult visitBranchInst(llvm::BranchInst& inst);
   ExecutionResult visitReturnInst(llvm::ReturnInst& inst);
