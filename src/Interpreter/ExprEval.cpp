@@ -107,6 +107,12 @@ std::optional<LLVMValue> ExprEvaluator::try_visit(llvm::Value* val) {
   } catch (Unevaluatable&) { return std::nullopt; }
 }
 
+OpRef ExprEvaluator::scalarize(const LLVMScalar& scalar) const {
+  if (scalar.is_expr())
+    return scalar.expr();
+  return scalar.pointer().value(ctx->heap);
+}
+
 /*********************************************
  * Constant visitor methods                  *
  *********************************************/
