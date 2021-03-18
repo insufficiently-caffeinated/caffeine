@@ -110,60 +110,6 @@ LLVMValue transform_elements(F&& func, const Vals&... values);
 template <typename F, typename... Vals>
 LLVMValue transform_exprs(F&& func, const Vals&... values);
 
-/**
- * An LLVM value as represented within a stack frame.
- *
- * Can be either
- * - a single value (scalar), or
- * - a recursive array of values (vector)
- */
-class /* [[deprecated]] */ ContextValue {
-public:
-  enum Kind { Scalar, Vector, Ptr };
-
-private:
-  struct slice {
-    const ContextValue* data;
-    size_t size;
-
-    constexpr slice() : data(nullptr), size(0) {}
-    constexpr slice(const ContextValue* data, size_t size)
-        : data(data), size(size) {}
-  };
-
-  std::variant<OpRef, std::vector<ContextValue>, slice, Pointer> inner_;
-
-public:
-  explicit ContextValue(const OpRef& op);
-  explicit ContextValue(const std::vector<ContextValue>& data);
-  explicit ContextValue(std::vector<ContextValue>&& data);
-  explicit ContextValue(const Pointer& ptr);
-  ContextValue(const ContextValue* data, size_t size);
-
-  ContextValue(const ContextValue&) = default;
-  ContextValue(ContextValue&&) = default;
-
-  ContextValue& operator=(const ContextValue&) = default;
-  ContextValue& operator=(ContextValue&&) = default;
-
-  ContextValue to_ref() const;
-  ContextValue into_owned() &&;
-
-  bool is_vector() const;
-  bool is_scalar() const;
-  bool is_pointer() const;
-
-  Kind kind() const;
-
-  const OpRef& scalar() const;
-  llvm::ArrayRef<ContextValue> vector() const;
-  const Pointer& pointer() const;
-
-public:
-  explicit operator LLVMScalar() const;
-  explicit operator LLVMValue() const;
-};
-
 std::ostream& operator<<(std::ostream& os, const LLVMScalar& value);
 std::ostream& operator<<(std::ostream& os, const LLVMValue& value);
 

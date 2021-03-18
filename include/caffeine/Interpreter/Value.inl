@@ -91,16 +91,6 @@ inline llvm::ArrayRef<LLVMValue> LLVMValue::members() const {
   return aggregate();
 }
 
-inline bool ContextValue::is_vector() const {
-  return kind() == Vector;
-}
-inline bool ContextValue::is_scalar() const {
-  return kind() == Scalar;
-}
-inline bool ContextValue::is_pointer() const {
-  return kind() == Ptr;
-}
-
 namespace detail {
   template <typename F, typename... Ts, size_t... Idxs>
   auto tuple_foreach_(F&& func, std::tuple<Ts...>& tuple,
