@@ -3,7 +3,9 @@
 #include "caffeine/Interpreter/Context.h"
 #include "caffeine/Interpreter/Value.h"
 #include "caffeine/Memory/MemHeap.h"
+#include "caffeine/Support/LLVMFmt.h"
 #include <fmt/format.h>
+#include <fmt/ostream.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/GetElementPtrTypeIterator.h>
 #include <llvm/IR/GlobalVariable.h>
@@ -31,12 +33,9 @@ ExprEvaluator::Unevaluatable::Unevaluatable(llvm::Value* expr,
 
 const char* ExprEvaluator::Unevaluatable::what() const throw() {
   if (msg_cache_.empty()) {
-    std::string printed;
-    llvm::raw_string_ostream os{printed};
-    expr_->print(os, true);
-
     msg_cache_ = fmt::format(
-        "Unable to evaluate expression: {}. Expression: {}", context_, printed);
+        FMT_STRING("Unable to evaluate expression: {}. Expression: {}"),
+        context_, *expr_);
   }
 
   return msg_cache_.c_str();
@@ -54,6 +53,13 @@ LLVMValue ExprEvaluator::visit(llvm::Value* val) {
   if (it != frame.variables.end())
     return it->second;
 
+  return evaluate(val);
+}
+LLVMValue ExprEvaluator::visit(llvm::Value& val) {
+  return visit(&val);
+}
+
+LLVMValue ExprEvaluator::evaluate(llvm::Value* val) {
   if (auto* inst = llvm::dyn_cast<llvm::Instruction>(val))
     return BaseType::visit(inst);
 
@@ -88,17 +94,13 @@ LLVMValue ExprEvaluator::visit(llvm::Value* val) {
   if (auto* cnst = llvm::dyn_cast<llvm::GlobalVariable>(val))
     return visitGlobalVariable(*cnst);
 
-  std::string msg = "Unsupported expression: ";
-  llvm::raw_string_ostream os{msg};
-  val->print(os, true);
-
   std::cout << magic_enum::enum_name((llvm::Value::ValueTy)val->getValueID())
             << std::endl;
 
-  CAFFEINE_ABORT(msg);
+  CAFFEINE_ABORT(fmt::format("Unsupported expression: {}", *val));
 }
-LLVMValue ExprEvaluator::visit(llvm::Value& val) {
-  return visit(&val);
+LLVMValue ExprEvaluator::evaluate(llvm::Value& val) {
+  return evaluate(&val);
 }
 
 std::optional<LLVMValue> ExprEvaluator::try_visit(llvm::Value* val) {
@@ -112,12 +114,8 @@ std::optional<LLVMValue> ExprEvaluator::try_visit(llvm::Value* val) {
  *********************************************/
 
 LLVMValue ExprEvaluator::visitConstant(llvm::Constant& cnst) {
-  std::string msg = "";
-  llvm::raw_string_ostream os{msg};
-  cnst.print(os, true);
-
   CAFFEINE_ABORT(
-      fmt::format("Unable to evaluate constant expression: {}", msg));
+      fmt::format("Unable to evaluate constant expression: {}", cnst));
 }
 
 LLVMValue
@@ -375,13 +373,9 @@ LLVMValue ExprEvaluator::visitConstantExpr(llvm::ConstantExpr& expr) {
  *********************************************/
 
 LLVMValue ExprEvaluator::visitInstruction(llvm::Instruction& inst) {
-  std::string msg = "";
-  llvm::raw_string_ostream os{msg};
-  inst.print(os, true);
-
   CAFFEINE_ABORT(
       fmt::format("Instruction '{}' not implemented! Full expression: {}",
-                  inst.getOpcodeName(), msg));
+                  inst.getOpcodeName(), inst));
 }
 
 #define DECL_BINARY_OP_VISIT(opcode)                                           \

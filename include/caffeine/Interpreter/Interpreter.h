@@ -34,38 +34,17 @@ public:
 
   ExecutionResult visitInstruction(llvm::Instruction& inst);
 
-  ExecutionResult visitAdd(llvm::BinaryOperator& op);
-  ExecutionResult visitSub(llvm::BinaryOperator& op);
-  ExecutionResult visitMul(llvm::BinaryOperator& op);
+  ExecutionResult visitBinaryOperator(llvm::BinaryOperator& op);
+  ExecutionResult visitUnaryOperator(llvm::UnaryOperator& op);
+  ExecutionResult visitCastInst(llvm::CastInst& op);
+
   ExecutionResult visitUDiv(llvm::BinaryOperator& op);
   ExecutionResult visitSDiv(llvm::BinaryOperator& op);
   ExecutionResult visitURem(llvm::BinaryOperator& op);
   ExecutionResult visitSRem(llvm::BinaryOperator& op);
 
-  ExecutionResult visitShl(llvm::BinaryOperator& op);
-  ExecutionResult visitLShr(llvm::BinaryOperator& op);
-  ExecutionResult visitAShr(llvm::BinaryOperator& op);
-  ExecutionResult visitAnd(llvm::BinaryOperator& op);
-  ExecutionResult visitOr(llvm::BinaryOperator& op);
-  ExecutionResult visitXor(llvm::BinaryOperator& op);
-  ExecutionResult visitNot(llvm::BinaryOperator& op);
-
-  ExecutionResult visitFAdd(llvm::BinaryOperator& op);
-  ExecutionResult visitFSub(llvm::BinaryOperator& op);
-  ExecutionResult visitFMul(llvm::BinaryOperator& op);
-  ExecutionResult visitFDiv(llvm::BinaryOperator& op);
-
   ExecutionResult visitICmpInst(llvm::ICmpInst& icmp);
   ExecutionResult visitFCmpInst(llvm::FCmpInst& fcmp);
-
-  ExecutionResult visitTrunc(llvm::TruncInst& trunc);
-
-  ExecutionResult visitSExt(llvm::SExtInst& sext);
-  ExecutionResult visitZExt(llvm::ZExtInst& zext);
-  ExecutionResult visitIntToPtrInst(llvm::IntToPtrInst& inttoptr);
-  ExecutionResult visitPtrToIntInst(llvm::PtrToIntInst& ptrtoint);
-
-  ExecutionResult visitBitCastInst(llvm::BitCastInst& bitcast);
 
   ExecutionResult visitPHINode(llvm::PHINode& node);
   ExecutionResult visitBranchInst(llvm::BranchInst& inst);
