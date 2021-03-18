@@ -37,13 +37,13 @@ public:
   ExecutionResult visitBinaryOperator(llvm::BinaryOperator& op);
   ExecutionResult visitUnaryOperator(llvm::UnaryOperator& op);
   ExecutionResult visitCastInst(llvm::CastInst& op);
+  ExecutionResult visitCmpInst(llvm::CmpInst& op);
 
   ExecutionResult visitUDiv(llvm::BinaryOperator& op);
   ExecutionResult visitSDiv(llvm::BinaryOperator& op);
   ExecutionResult visitURem(llvm::BinaryOperator& op);
   ExecutionResult visitSRem(llvm::BinaryOperator& op);
 
-  ExecutionResult visitICmpInst(llvm::ICmpInst& icmp);
   ExecutionResult visitFCmpInst(llvm::FCmpInst& fcmp);
 
   ExecutionResult visitPHINode(llvm::PHINode& node);
