@@ -55,12 +55,6 @@ void Interpreter::execute() {
   } while (exec == ExecutionResult::Continue);
 }
 
-OpRef Interpreter::scalarize(const LLVMScalar& scalar) const {
-  if (scalar.is_expr())
-    return scalar.expr();
-  return scalar.pointer().value(ctx->heap);
-}
-
 ExecutionResult Interpreter::visitInstruction(llvm::Instruction& inst) {
   CAFFEINE_ABORT(
       fmt::format("Instruction '{}' not implemented!", inst.getOpcodeName()));
