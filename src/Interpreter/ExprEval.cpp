@@ -484,6 +484,77 @@ LLVMValue ExprEvaluator::visitICmp(llvm::ICmpInst& icmp) {
       },
       visit(icmp.getOperand(0)), visit(icmp.getOperand(1)));
 }
+LLVMValue ExprEvaluator::visitFCmp(llvm::FCmpInst& fcmp) {
+  using llvm::FCmpInst;
+
+  FCmpOpcode opcode;
+  bool ordered = llvm::FCmpInst::isOrdered(fcmp.getPredicate());
+
+#define FCMP_CASE(source, op)                                                  \
+  case llvm::FCmpInst::FCMP_##source:                                          \
+    opcode = FCmpOpcode::op;                                                   \
+    break
+  switch (fcmp.getPredicate()) {
+    FCMP_CASE(OEQ, EQ);
+    FCMP_CASE(OGT, GT);
+    FCMP_CASE(OGE, GE);
+    FCMP_CASE(OLT, LT);
+    FCMP_CASE(OLE, LE);
+    FCMP_CASE(ONE, NE);
+    // The 'unordered' instructions return true if either arg is NaN
+    FCMP_CASE(UEQ, EQ);
+    FCMP_CASE(UGT, GT);
+    FCMP_CASE(UGE, GE);
+    FCMP_CASE(ULT, LT);
+    FCMP_CASE(ULE, LE);
+    FCMP_CASE(UNE, NE);
+
+  case FCmpInst::FCMP_UNO:
+    return transform_elements(
+        [&](const LLVMScalar& lhs, const LLVMScalar& rhs) -> LLVMScalar {
+          // isnan(lhs) || isnan(rhs)
+          return BinaryOp::CreateOr(UnaryOp::CreateFIsNaN(lhs.expr()),
+                                    UnaryOp::CreateFIsNaN(rhs.expr()));
+        },
+        visit(fcmp.getOperand(0)), visit(fcmp.getOperand(1)));
+  case FCmpInst::FCMP_ORD:
+    return transform_elements(
+        [&](const LLVMScalar& lhs, const LLVMScalar& rhs) -> LLVMScalar {
+          // ! ( isnan(lhs) || isnan(rhs) )
+          return UnaryOp::CreateNot(
+              BinaryOp::CreateOr(UnaryOp::CreateFIsNaN(lhs.expr()),
+                                 UnaryOp::CreateFIsNaN(rhs.expr())));
+        },
+        visit(fcmp.getOperand(0)), visit(fcmp.getOperand(1)));
+
+  case FCmpInst::FCMP_TRUE:
+    return transform_elements(
+        [&](const auto&) -> LLVMScalar { return ConstantInt::Create(true); },
+        visit(fcmp.getOperand(0)));
+  case FCmpInst::FCMP_FALSE:
+    return transform_elements(
+        [&](const auto&) -> LLVMScalar { return ConstantInt::Create(false); },
+        visit(fcmp.getOperand(0)));
+
+  default:
+    CAFFEINE_UNREACHABLE();
+  }
+#undef FCMP_CASE
+
+  return transform_elements(
+      [&](const LLVMScalar& lhs, const LLVMScalar& rhs) -> LLVMScalar {
+        OpRef checkord = BinaryOp::CreateOr(UnaryOp::CreateFIsNaN(lhs.expr()),
+                                            UnaryOp::CreateFIsNaN(rhs.expr()));
+        OpRef cmp = FCmpOp::CreateFCmp(opcode, lhs.expr(), rhs.expr());
+
+        if (ordered) {
+          return BinaryOp::CreateAnd(UnaryOp::CreateNot(checkord), cmp);
+        } else {
+          return BinaryOp::CreateOr(checkord, cmp);
+        }
+      },
+      visit(fcmp.getOperand(0)), visit(fcmp.getOperand(1)));
+}
 
 LLVMValue ExprEvaluator::visitPtrToInt(llvm::PtrToIntInst& inst) {
   return transform_elements(
