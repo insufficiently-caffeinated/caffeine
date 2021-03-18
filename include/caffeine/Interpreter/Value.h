@@ -117,7 +117,7 @@ LLVMValue transform_exprs(F&& func, const Vals&... values);
  * - a single value (scalar), or
  * - a recursive array of values (vector)
  */
-class [[deprecated]] ContextValue {
+class /* [[deprecated]] */ ContextValue {
 public:
   enum Kind { Scalar, Vector, Ptr };
 
