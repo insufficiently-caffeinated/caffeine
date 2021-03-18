@@ -75,6 +75,10 @@ DEF_SIMPLE_OP(CmpInst, CmpInst);
 DEF_SIMPLE_OP(SelectInst, SelectInst);
 DEF_SIMPLE_OP(GetElementPtrInst, GetElementPtrInst);
 
+DEF_SIMPLE_OP(InsertElementInst, InsertElementInst);
+DEF_SIMPLE_OP(ExtractElementInst, ExtractElementInst);
+DEF_SIMPLE_OP(ShuffleVectorInst, ShuffleVectorInst);
+
 ExecutionResult Interpreter::visitUDiv(llvm::BinaryOperator& op) {
   StackFrame& frame = ctx->stack_top();
 
@@ -291,116 +295,6 @@ ExecutionResult Interpreter::visitIntrinsicInst(llvm::IntrinsicInst& intrin) {
 
   CAFFEINE_ABORT(fmt::format("Intrinsic function '{}' is not supported",
                              intrin.getCalledFunction()->getName().str()));
-}
-
-ExecutionResult
-Interpreter::visitInsertElementInst(llvm::InsertElementInst& inst) {
-  auto& frame = ctx->stack_top();
-
-  auto vec_ = ctx->lookup(inst.getOperand(0));
-  auto vec = vec_.vector();
-  auto elt = ctx->lookup(inst.getOperand(1)).scalar();
-  auto idx = ctx->lookup(inst.getOperand(2)).scalar();
-
-  std::vector<ContextValue> result;
-  result.reserve(vec.size());
-
-  for (size_t i = 0; i < vec.size(); ++i) {
-    result.push_back(transform(
-        [&](const auto& op) {
-          return SelectOp::Create(ICmpOp::CreateICmp(ICmpOpcode::EQ, idx, i),
-                                  elt, op);
-        },
-        vec[i]));
-  }
-
-  frame.insert(&inst, ContextValue(std::move(result)));
-
-  return ExecutionResult::Continue;
-}
-ExecutionResult
-Interpreter::visitExtractElementInst(llvm::ExtractElementInst& inst) {
-  auto& frame = ctx->stack_top();
-
-  auto vec_ = ctx->lookup(inst.getOperand(0));
-  auto vec = vec_.vector();
-  auto idx = ctx->lookup(inst.getOperand(1)).scalar();
-
-  CAFFEINE_ASSERT(vec.size() != 0);
-
-  ContextValue result =
-      transform([](const auto& v) { return Undef::Create(v->type()); }, vec[0]);
-
-  for (size_t i = 0; i < vec.size(); ++i) {
-    result = transform(
-        [&](const auto& r, const auto& v) {
-          return SelectOp::Create(ICmpOp::CreateICmp(ICmpOpcode::EQ, idx, i), v,
-                                  r);
-        },
-        result, vec[i]);
-  }
-
-  frame.insert(&inst, std::move(result));
-
-  return ExecutionResult::Continue;
-}
-ExecutionResult
-Interpreter::visitShuffleVectorInst(llvm::ShuffleVectorInst& inst) {
-  auto& frame = ctx->stack_top();
-
-  auto vec1_ = ctx->lookup(inst.getOperand(0));
-  auto vec2_ = ctx->lookup(inst.getOperand(1));
-  auto mask_ = ctx->lookup(inst.getOperand(2));
-
-  auto vec1 = vec1_.vector();
-  auto vec2 = vec2_.vector();
-  auto mask = mask_.vector();
-
-  std::vector<ContextValue> result;
-  result.reserve(vec1.size());
-
-  /**
-   * The semantics of shufflevector end up basically being an array lookup.
-   * Given two vectors x, y and a mask m, we form one big vector z by
-   * concatenating z = x||y. Then the values in m are used as indices in z
-   * to get the final vector value.
-   *
-   * We emulate these semantics by creating nested select chains. For constant
-   * masks we rely on constant-folding to make these more efficient.
-   */
-  for (size_t i = 0; i < mask.size(); ++i) {
-    // Any non-specified index is undef
-    ContextValue value = transform(
-        [&](const auto& v1, const auto& v2) {
-          CAFFEINE_ASSERT(v1->type() == v2->type());
-          return Undef::Create(v1->type());
-        },
-        vec1[i], vec2[i]);
-
-    for (size_t j = 0; j < mask.size(); ++j) {
-      value = transform(
-          [&](const auto& r, const auto& v, const auto& m) {
-            return SelectOp::Create(ICmpOp::CreateICmp(ICmpOpcode::EQ, m, j), v,
-                                    r);
-          },
-          value, vec1[j], mask[i]);
-    }
-
-    for (size_t j = 0; j < mask.size(); ++j) {
-      value = transform(
-          [&](const auto& r, const auto& v, const auto& m) {
-            return SelectOp::Create(
-                ICmpOp::CreateICmp(ICmpOpcode::EQ, m, j + mask.size()), v, r);
-          },
-          value, vec2[j], mask[i]);
-    }
-
-    result.push_back(value);
-  }
-
-  frame.insert(&inst, ContextValue(std::move(result)));
-
-  return ExecutionResult::Continue;
 }
 
 ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
