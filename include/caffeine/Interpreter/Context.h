@@ -20,15 +20,17 @@ class GlobalVariable;
 namespace caffeine {
 
 class Context {
+public:
+  std::vector<StackFrame> stack;
+  std::unordered_map<llvm::GlobalVariable*, ContextValue> globals;
+  std::shared_ptr<Solver> solver;
+  MemHeap heap;
+  std::vector<Assertion> assertions;
+
+  llvm::Module* mod;
+
 private:
-  std::vector<StackFrame> stack_;
-  // The current set of invariants for this context
-  std::vector<Assertion> assertions_;
-  std::unordered_map<llvm::GlobalVariable*, ContextValue> globals_;
-  std::shared_ptr<Solver> solver_;
   uint64_t constant_num_ = 0;
-  MemHeap heap_;
-  llvm::Module* module_;
 
 public:
   Context(llvm::Function* func, std::shared_ptr<Solver> solver);
@@ -49,8 +51,6 @@ public:
   const StackFrame& stack_top() const;
   StackFrame& stack_top();
 
-  const std::vector<StackFrame>& stack() const;
-
   // Utility methods for adding/removing stack frames
   /**
    * Note: This method also deallocates all stack-allocated allocations within
@@ -63,11 +63,6 @@ public:
   // Does this context have any stack frames?
   bool empty() const;
 
-  std::shared_ptr<Solver> solver() const;
-
-  llvm::iterator_range<std::vector<Assertion>::const_iterator>
-  assertions() const;
-
   /**
    * Get a unique constant number among all of the ones in this context.
    *
@@ -76,20 +71,6 @@ public:
    * from run to run.
    */
   uint64_t next_constant();
-
-  /**
-   * Access the context heap.
-   */
-  MemHeap& heap() {
-    return heap_;
-  }
-  const MemHeap& heap() const {
-    return heap_;
-  }
-
-  llvm::Module* llvm_module() const {
-    return module_;
-  }
 
   /**
    * Add a new assertion to this context.

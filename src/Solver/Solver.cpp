@@ -131,7 +131,7 @@ Value Model::evaluate(const ContextValue& expr, Context& ctx) const {
   if (expr.is_scalar()) {
     return ExprEvaluator(this).visit(*expr.scalar());
   } else if (expr.is_pointer()) {
-    auto ptr_val = expr.pointer().value(ctx.heap());
+    auto ptr_val = expr.pointer().value(ctx.heap);
     return ExprEvaluator(this).visit(*ptr_val);
   } else if (expr.is_vector()) {
     const auto& vec = expr.vector();

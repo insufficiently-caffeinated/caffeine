@@ -52,7 +52,7 @@ LLVMValue ExprEvaluator::visit(llvm::Value* val) {
   const auto& frame = ctx->stack_top();
   auto it = frame.variables.find(val);
   if (it != frame.variables.end())
-    return static_cast<LLVMValue>(it->second);
+    return it->second;
 
   if (auto* inst = llvm::dyn_cast<llvm::Instruction>(val))
     return BaseType::visit(inst);
@@ -199,7 +199,7 @@ LLVMValue ExprEvaluator::visitConstantFP(llvm::ConstantFP& cnst) {
 
 LLVMValue
 ExprEvaluator::visitConstantPointerNull(llvm::ConstantPointerNull& null) {
-  const auto& layout = ctx->llvm_module()->getDataLayout();
+  const auto& layout = ctx->mod->getDataLayout();
   unsigned bitwidth =
       layout.getPointerSizeInBits(null.getType()->getPointerAddressSpace());
 
@@ -261,7 +261,7 @@ LLVMValue ExprEvaluator::visitUndefValue(llvm::UndefValue& undef) {
   }
 
   if (type->isPointerTy()) {
-    const auto& layout = ctx->llvm_module()->getDataLayout();
+    const auto& layout = ctx->mod->getDataLayout();
     unsigned bitwidth =
         layout.getPointerSizeInBits(type->getPointerAddressSpace());
 
@@ -316,8 +316,8 @@ LLVMValue ExprEvaluator::visitConstantVector(llvm::ConstantVector& vec) {
 }
 
 LLVMValue ExprEvaluator::visitGlobalVariable(llvm::GlobalVariable& global) {
-  auto it = ctx->globals_.find(&global);
-  if (it != ctx->globals_.end())
+  auto it = ctx->globals.find(&global);
+  if (it != ctx->globals.end())
     return (LLVMValue)it->second;
 
   if (!options.create_allocations) {
@@ -333,25 +333,25 @@ LLVMValue ExprEvaluator::visitGlobalVariable(llvm::GlobalVariable& global) {
       visitGlobalData(*global.getInitializer(), global.getAddressSpace());
   const auto& array = llvm::cast<ArrayBase>(*data);
 
-  const llvm::DataLayout& layout = ctx->llvm_module()->getDataLayout();
+  const llvm::DataLayout& layout = ctx->mod->getDataLayout();
   unsigned bitwidth = layout.getPointerSizeInBits();
   unsigned alignment = global.getAlignment();
 
-  auto alloc = ctx->heap().allocate(
+  auto alloc = ctx->heap.allocate(
       array.size(), ConstantInt::Create(llvm::APInt(bitwidth, alignment)), data,
       AllocationKind::Global, *ctx);
 
   auto pointer = LLVMValue(
       Pointer(alloc, ConstantInt::Create(llvm::APInt::getNullValue(bitwidth))));
 
-  ctx->globals_.emplace(&global, (ContextValue)pointer);
+  ctx->globals.emplace(&global, (ContextValue)pointer);
 
   return pointer;
 }
 
 OpRef ExprEvaluator::visitGlobalData(llvm::Constant& constant, unsigned AS) {
   llvm::Type* type = constant.getType();
-  const llvm::DataLayout& layout = ctx->llvm_module()->getDataLayout();
+  const llvm::DataLayout& layout = ctx->mod->getDataLayout();
   unsigned bitwidth = layout.getPointerSizeInBits(AS);
 
   LLVMValue value = visit(&constant);
@@ -361,7 +361,7 @@ OpRef ExprEvaluator::visitGlobalData(llvm::Constant& constant, unsigned AS) {
   Allocation alloc{ConstantInt::CreateZero(bitwidth), size,
                    AllocOp::Create(size, ConstantInt::CreateZero(8)),
                    AllocationKind::Alloca};
-  alloc.write(ConstantInt::CreateZero(bitwidth), type, value, ctx->heap(),
+  alloc.write(ConstantInt::CreateZero(bitwidth), type, value, ctx->heap,
               layout);
 
   return alloc.data();
@@ -391,7 +391,7 @@ LLVMValue ExprEvaluator::visitInstruction(llvm::Instruction& inst) {
                                                                                \
     return transform_elements(                                                 \
         [&](const LLVMScalar& lhs, const LLVMScalar& rhs) -> LLVMScalar {      \
-          const auto& heap = ctx->heap();                                      \
+          const auto& heap = ctx->heap;                                        \
           return BinaryOp::Create##opcode(scalarize(lhs, heap),                \
                                           scalarize(rhs, heap));               \
         },                                                                     \
@@ -455,17 +455,16 @@ LLVMValue ExprEvaluator::visitFNeg(llvm::UnaryOperator& op) {
 LLVMValue ExprEvaluator::visitPtrToInt(llvm::PtrToIntInst& inst) {
   return transform_elements(
       [&](const LLVMScalar& value) {
-        return LLVMScalar(
-            UnaryOp::CreateTruncOrZExt(Type::from_llvm(inst.getType()),
-                                       value.pointer().value(ctx->heap())));
+        return LLVMScalar(UnaryOp::CreateTruncOrZExt(
+            Type::from_llvm(inst.getType()), value.pointer().value(ctx->heap)));
       },
       visit(inst.getOperand(0)));
 }
 LLVMValue ExprEvaluator::visitIntToPtr(llvm::IntToPtrInst& inst) {
-  const auto& layout = ctx->llvm_module()->getDataLayout();
-
+  const auto& layout = ctx->mod->getDataLayout();
   unsigned pointer_size =
       layout.getPointerSizeInBits(inst.getType()->getPointerAddressSpace());
+
   return transform_elements(
       [&](const LLVMScalar& value) {
         return LLVMScalar(Pointer(UnaryOp::CreateTruncOrZExt(
@@ -479,7 +478,7 @@ LLVMValue ExprEvaluator::visitBitCast(llvm::BitCastInst& inst) {
 }
 
 LLVMValue ExprEvaluator::visitGetElementPtr(llvm::GetElementPtrInst& inst) {
-  const llvm::DataLayout& layout = ctx->llvm_module()->getDataLayout();
+  const llvm::DataLayout& layout = ctx->mod->getDataLayout();
 
   size_t offset_elements = 1;
   for (auto it = llvm::gep_type_begin(inst), end = llvm::gep_type_end(inst);
@@ -551,7 +550,7 @@ LLVMValue ExprEvaluator::visitGetElementPtr(llvm::GetElementPtrInst& inst) {
                          BinaryOp::CreateAdd(ptr.offset(), offset.expr()));
         } else {
           return Pointer(
-              BinaryOp::CreateAdd(ptr.value(ctx->heap()), offset.expr()));
+              BinaryOp::CreateAdd(ptr.value(ctx->heap), offset.expr()));
         }
       },
       base, offsets);
