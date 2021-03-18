@@ -193,30 +193,6 @@ void Allocation::write(const OpRef& offset, const OpRef& value_,
     overwrite(StoreOp::Create(data(), index, byte));
   }
 }
-void Allocation::write(const OpRef& offset, llvm::Type* type,
-                       const ContextValue& value, const MemHeap& heap,
-                       const llvm::DataLayout& layout) {
-  if (value.is_pointer()) {
-    write(offset, value.pointer().value(heap), layout);
-    return;
-  }
-
-  if (value.is_scalar()) {
-    write(offset, value.scalar(), layout);
-    return;
-  }
-
-  CAFFEINE_ASSERT(value.is_vector());
-  const auto& values = value.vector();
-  llvm::Type* elem_ty = type->getVectorElementType();
-
-  CAFFEINE_ASSERT(values.size() == type->getVectorNumElements());
-
-  for (size_t i = 0; i < values.size(); ++i) {
-    write(BinaryOp::CreateAdd(offset, i * layout.getTypeAllocSize(elem_ty)),
-          elem_ty, values[i], heap, layout);
-  }
-}
 void Allocation::write(const OpRef& offset, const LLVMScalar& value,
                        const MemHeap& heap, const llvm::DataLayout& layout) {
   if (value.is_pointer()) {

@@ -164,37 +164,6 @@ public:
   explicit operator LLVMValue() const;
 };
 
-/**
- * Map the OpRef elements of any number of ContextValues
- * to form a new ContextValue with the same shape.
- *
- * For this to work all ContextValues must have the same "shape"
- * (i.e. scalars cannot be combined with vectors, vectors must have
- * the same size) recursively.
- *
- * This generally is meant to match the semantics needed when implementing
- * LLVM opcodes.
- */
-template <typename F, typename... Vs>
-ContextValue transform(F&& func, const Vs&... values);
-
-/**
- * Map the non-vector elements of any number of ContextValues to form a
- * new ContextValue with the same shape. This is a more general version
- * of transform that supports non-scalar context values (e.g. ones that
- * contain allocations).
- *
- * For this to work all ContextValues must have the same "shape"
- * (i.e. scalars cannot be combined with vectors, vectors must have
- * the same size) recursively.
- *
- * This generally is meant to match the semantics needed when implementing
- * LLVM opcodes.
- */
-template <typename F, typename... Vs>
-ContextValue transform_value(F&& func, const Vs&... values);
-
-std::ostream& operator<<(std::ostream& os, const ContextValue& value);
 std::ostream& operator<<(std::ostream& os, const LLVMScalar& value);
 std::ostream& operator<<(std::ostream& os, const LLVMValue& value);
 
