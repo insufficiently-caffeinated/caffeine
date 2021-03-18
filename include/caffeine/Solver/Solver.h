@@ -46,7 +46,8 @@ public:
    * expression in the given model.
    */
   Value evaluate(const Operation& expr) const;
-  Value evaluate(const ContextValue& expr, Context& ctx) const;
+  Value evaluate(const LLVMScalar& expr, Context& ctx) const;
+  Value evaluate(const LLVMValue& expr, Context& ctx) const;
 
 protected:
   /**
