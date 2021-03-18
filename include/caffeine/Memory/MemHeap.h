@@ -92,7 +92,7 @@ public:
    */
   OpRef read(const OpRef& offset, const Type& t,
              const llvm::DataLayout& layout) const;
-  ContextValue read(const OpRef& offset, llvm::Type* type,
+  LLVMValue read(const OpRef& offset, llvm::Type* type,
                     const llvm::DataLayout& layout);
 
   /**
