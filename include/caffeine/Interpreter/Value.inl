@@ -163,11 +163,11 @@ inline LLVMValue transform_elements(F&& func, const Vs&... values) {
   return LLVMValue(std::move(results));
 }
 
-template<typename F, typename... Vs>
+template <typename F, typename... Vs>
 inline LLVMValue transform_exprs(F&& func, const Vs&... values) {
-  return transform_elements([&](const auto&... args) {
-    return LLVMScalar(func(args.expr()...));
-  }, values...);
+  return transform_elements(
+      [&](const auto&... args) { return LLVMScalar(func(args.expr()...)); },
+      values...);
 }
 
 } // namespace caffeine

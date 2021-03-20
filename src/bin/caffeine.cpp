@@ -169,15 +169,10 @@ int main(int argc, char** argv) {
       caffeine::Z3Solver());
   auto logger = CountingFailureLogger{std::cout, function};
 
-  Executor exec;
+  Executor exec(&logger);
   exec.add_context(Context{function, solver});
 
-  while (exec.has_next()) {
-    auto ctx = exec.next_context();
-    Interpreter interp{&exec, &ctx, &logger};
-
-    interp.execute();
-  }
+  exec.run();
 
   if (logger.num_failures == 0)
     return 0;
