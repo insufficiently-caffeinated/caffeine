@@ -127,21 +127,40 @@ Value Model::evaluate(const Operation& expr) const {
   return ExprEvaluator(this).visit(expr);
 }
 
-Value Model::evaluate(const ContextValue& expr, Context& ctx) const {
-  if (expr.is_scalar()) {
-    return ExprEvaluator(this).visit(*expr.scalar());
-  } else if (expr.is_pointer()) {
-    auto ptr_val = expr.pointer().value(ctx.heap);
-    return ExprEvaluator(this).visit(*ptr_val);
-  } else if (expr.is_vector()) {
-    const auto& vec = expr.vector();
-    std::vector<Value> nested_arr;
-    nested_arr.resize(vec.size());
+Value Model::evaluate(const LLVMScalar& scalar, Context& ctx) const {
+  ExprEvaluator evaluator{this};
 
-    std::transform(vec.begin(), vec.end(), nested_arr.begin(),
-                   [&](const auto& i) -> Value { return evaluate(i, ctx); });
+  if (scalar.is_pointer())
+    return evaluator.visit(*scalar.pointer().value(ctx.heap));
+  return evaluator.visit(*scalar.expr());
+}
 
-    return Value(std::move(nested_arr));
+Value Model::evaluate(const LLVMValue& expr, Context& ctx) const {
+  ExprEvaluator evaluator{this};
+
+  if (expr.is_scalar())
+    return evaluate(expr.scalar(), ctx);
+
+  if (expr.is_vector()) {
+    std::vector<Value> nested;
+    nested.reserve(expr.num_elements());
+
+    auto elems = expr.elements();
+    std::transform(elems.begin(), elems.end(), std::back_inserter(nested),
+                   [&](const auto& e) { return evaluate(e, ctx); });
+    
+    return Value(std::move(nested));
+  }
+
+  if (expr.is_aggregate()) {
+    std::vector<Value> nested;
+    nested.reserve(expr.num_members());
+
+    auto elems = expr.members();
+    std::transform(elems.begin(), elems.end(), std::back_inserter(nested),
+                   [&](const auto& e) { return evaluate(e, ctx); });
+    
+    return Value(std::move(nested));
   }
 
   CAFFEINE_UNREACHABLE();
