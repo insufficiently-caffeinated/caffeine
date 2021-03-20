@@ -19,10 +19,7 @@ void StackFrame::jump_to(llvm::BasicBlock* block) {
 }
 
 void StackFrame::insert(llvm::Value* value, const OpRef& expr) {
-  insert(value, ContextValue{expr});
-}
-void StackFrame::insert(llvm::Value* value, const ContextValue& exprs) {
-  variables.insert_or_assign(value, (LLVMValue)exprs);
+  insert(value, LLVMValue{expr});
 }
 void StackFrame::insert(llvm::Value* value, const LLVMValue& exprs) {
   variables.insert_or_assign(value, exprs);

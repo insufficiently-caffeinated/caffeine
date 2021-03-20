@@ -91,16 +91,6 @@ inline llvm::ArrayRef<LLVMValue> LLVMValue::members() const {
   return aggregate();
 }
 
-inline bool ContextValue::is_vector() const {
-  return kind() == Vector;
-}
-inline bool ContextValue::is_scalar() const {
-  return kind() == Scalar;
-}
-inline bool ContextValue::is_pointer() const {
-  return kind() == Ptr;
-}
-
 namespace detail {
   template <typename F, typename... Ts, size_t... Idxs>
   auto tuple_foreach_(F&& func, std::tuple<Ts...>& tuple,
@@ -173,57 +163,11 @@ inline LLVMValue transform_elements(F&& func, const Vs&... values) {
   return LLVMValue(std::move(results));
 }
 
-template <typename F, typename... Vs>
-inline ContextValue transform_value(F&& func, const Vs&... values) {
-  static_assert((... && std::is_same_v<Vs, ContextValue>),
-                "transform may only be called with ContextValues");
-
-  const ContextValue& v1 = detail::first(values...);
-
-  CAFFEINE_ASSERT((... && (v1.kind() == values.kind())));
-
-  if (!v1.is_vector())
-    return func(values...);
-
-  auto vecs = std::make_tuple(values.vector()...);
-
-  CAFFEINE_ASSERT(std::apply(
-                      [&](const auto&... values) -> bool {
-                        const auto& v1 = detail::first(values...);
-                        return (... && (v1.size() == values.size()));
-                      },
-                      vecs),
-                  "transform arguments must all have the same size");
-
-  auto its =
-      detail::tuple_foreach([](const auto& v) { return std::begin(v); }, vecs);
-  auto ends =
-      detail::tuple_foreach([](const auto& v) { return std::end(v); }, vecs);
-
-  std::vector<ContextValue> result;
-  result.reserve(std::get<0>(vecs).size());
-
-  while (std::apply(
-      [](auto... v) { return (... && v); },
-      detail::tuple_combine([](const auto& a, const auto& b) { return a != b; },
-                            its, ends))) {
-    result.push_back(std::apply(
-        [&](const auto&... values) { return transform_value(func, values...); },
-        detail::tuple_foreach([](const auto& it) { return *it; }, its)));
-
-    detail::tuple_foreach([](auto& it) { return ++it, 0; }, its);
-  }
-
-  return ContextValue(std::move(result));
-}
-
-template <typename F, typename... Vs>
-inline ContextValue transform(F&& func, const Vs&... values) {
-  return transform_value(
-      [&](const auto&... vals) -> ContextValue {
-        return ContextValue(func(vals.scalar()...));
-      },
-      values...);
+template<typename F, typename... Vs>
+inline LLVMValue transform_exprs(F&& func, const Vs&... values) {
+  return transform_elements([&](const auto&... args) {
+    return LLVMScalar(func(args.expr()...));
+  }, values...);
 }
 
 } // namespace caffeine

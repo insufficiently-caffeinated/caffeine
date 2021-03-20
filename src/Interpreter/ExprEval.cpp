@@ -340,7 +340,7 @@ LLVMValue ExprEvaluator::visitGlobalVariable(llvm::GlobalVariable& global) {
   auto pointer = LLVMValue(
       Pointer(alloc, ConstantInt::Create(llvm::APInt::getNullValue(bitwidth))));
 
-  ctx->globals.emplace(&global, (ContextValue)pointer);
+  ctx->globals.emplace(&global, pointer);
 
   return pointer;
 }
