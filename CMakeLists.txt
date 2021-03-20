@@ -71,6 +71,7 @@ if (CAFFEINE_ENABLE_BUILD)
 
   add_subdirectory(src)
   add_subdirectory(libraries)
+  add_subdirectory(tools)
 
   if (CAFFEINE_ENABLE_TESTS)
     add_subdirectory(test)
