@@ -3,7 +3,7 @@
 
 namespace caffeine {
 
-Executor::Executor(FailureLogger* logger) : logger{logger} { }
+Executor::Executor(FailureLogger* logger) : logger{logger} {}
 
 void Executor::add_context(Context&& ctx) {
   contexts.push_back(std::move(ctx));

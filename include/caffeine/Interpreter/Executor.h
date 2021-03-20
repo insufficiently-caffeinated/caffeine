@@ -20,6 +20,7 @@ private:
    * Get the next context to be executed.
    */
   Context next_context();
+
 public:
   Executor(FailureLogger* logger);
 

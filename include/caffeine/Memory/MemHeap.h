@@ -92,7 +92,7 @@ public:
   OpRef read(const OpRef& offset, const Type& t,
              const llvm::DataLayout& layout) const;
   LLVMValue read(const OpRef& offset, llvm::Type* type,
-                    const llvm::DataLayout& layout);
+                 const llvm::DataLayout& layout);
 
   /**
    * Write the value to the array at the given offset.

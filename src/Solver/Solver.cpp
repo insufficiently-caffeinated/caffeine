@@ -148,7 +148,7 @@ Value Model::evaluate(const LLVMValue& expr, Context& ctx) const {
     auto elems = expr.elements();
     std::transform(elems.begin(), elems.end(), std::back_inserter(nested),
                    [&](const auto& e) { return evaluate(e, ctx); });
-    
+
     return Value(std::move(nested));
   }
 
@@ -159,7 +159,7 @@ Value Model::evaluate(const LLVMValue& expr, Context& ctx) const {
     auto elems = expr.members();
     std::transform(elems.begin(), elems.end(), std::back_inserter(nested),
                    [&](const auto& e) { return evaluate(e, ctx); });
-    
+
     return Value(std::move(nested));
   }
 
