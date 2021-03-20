@@ -1,4 +1,5 @@
 #include "caffeine/Interpreter/Interpreter.h"
+#include "caffeine/Interpreter/ExprEval.h"
 #include "caffeine/Interpreter/StackFrame.h"
 #include "caffeine/Interpreter/Value.h"
 #include "caffeine/Support/Assert.h"
@@ -59,43 +60,32 @@ ExecutionResult Interpreter::visitInstruction(llvm::Instruction& inst) {
       fmt::format("Instruction '{}' not implemented!", inst.getOpcodeName()));
 }
 
-ExecutionResult Interpreter::visitAdd(llvm::BinaryOperator& op) {
-  StackFrame& frame = ctx->stack_top();
+#define DEF_SIMPLE_OP(opname, optype)                                          \
+  ExecutionResult Interpreter::visit##opname(llvm::optype& op) {               \
+    ctx->stack_top().insert(&op, ExprEvaluator(this->ctx).evaluate(op));       \
+    return ExecutionResult::Continue;                                          \
+  }                                                                            \
+  static_assert(true)
 
-  auto lhs = ctx->lookup(op.getOperand(0));
-  auto rhs = ctx->lookup(op.getOperand(1));
+DEF_SIMPLE_OP(BinaryOperator, BinaryOperator);
+DEF_SIMPLE_OP(UnaryOperator, UnaryOperator);
+DEF_SIMPLE_OP(CastInst, CastInst);
+DEF_SIMPLE_OP(CmpInst, CmpInst);
 
-  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateAdd), lhs, rhs));
+DEF_SIMPLE_OP(SelectInst, SelectInst);
+DEF_SIMPLE_OP(GetElementPtrInst, GetElementPtrInst);
 
-  return ExecutionResult::Continue;
-}
-ExecutionResult Interpreter::visitSub(llvm::BinaryOperator& op) {
-  StackFrame& frame = ctx->stack_top();
+DEF_SIMPLE_OP(InsertElementInst, InsertElementInst);
+DEF_SIMPLE_OP(ExtractElementInst, ExtractElementInst);
+DEF_SIMPLE_OP(ShuffleVectorInst, ShuffleVectorInst);
 
-  auto lhs = ctx->lookup(op.getOperand(0));
-  auto rhs = ctx->lookup(op.getOperand(1));
-
-  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateSub), lhs, rhs));
-
-  return ExecutionResult::Continue;
-}
-ExecutionResult Interpreter::visitMul(llvm::BinaryOperator& op) {
-  StackFrame& frame = ctx->stack_top();
-
-  auto lhs = ctx->lookup(op.getOperand(0));
-  auto rhs = ctx->lookup(op.getOperand(1));
-
-  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateMul), lhs, rhs));
-
-  return ExecutionResult::Continue;
-}
 ExecutionResult Interpreter::visitUDiv(llvm::BinaryOperator& op) {
   StackFrame& frame = ctx->stack_top();
 
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
 
-  auto result = transform(
+  auto result = transform_exprs(
       [&](const auto& lhs, const auto& rhs) {
         Assertion assertion = ICmpOp::CreateICmp(ICmpOpcode::NE, rhs, 0);
         auto model = ctx->resolve(!assertion);
@@ -117,7 +107,7 @@ ExecutionResult Interpreter::visitSDiv(llvm::BinaryOperator& op) {
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
 
-  auto result = transform(
+  auto result = transform_exprs(
       [&](const auto& lhs, const auto& rhs) {
         auto cmp1 = ICmpOp::CreateICmp(ICmpOpcode::EQ, rhs, 0);
         auto cmp2 = ICmpOp::CreateICmp(
@@ -148,7 +138,7 @@ ExecutionResult Interpreter::visitSRem(llvm::BinaryOperator& op) {
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
 
-  auto result = transform(
+  auto result = transform_exprs(
       [&](const auto& lhs, const auto& rhs) {
         auto cmp1 = ICmpOp::CreateICmp(ICmpOpcode::EQ, rhs, 0);
         auto cmp2 = ICmpOp::CreateICmp(
@@ -179,7 +169,7 @@ ExecutionResult Interpreter::visitURem(llvm::BinaryOperator& op) {
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
 
-  auto result = transform(
+  auto result = transform_exprs(
       [&](const auto& lhs, const auto& rhs) {
         Assertion assertion = ICmpOp::CreateICmp(ICmpOpcode::NE, rhs, 0);
         auto model = ctx->resolve(!assertion);
@@ -192,314 +182,6 @@ ExecutionResult Interpreter::visitURem(llvm::BinaryOperator& op) {
       lhs, rhs);
 
   frame.insert(&op, std::move(result));
-
-  return ExecutionResult::Continue;
-}
-
-ExecutionResult Interpreter::visitShl(llvm::BinaryOperator& op) {
-  StackFrame& frame = ctx->stack_top();
-
-  auto lhs = ctx->lookup(op.getOperand(0));
-  auto rhs = ctx->lookup(op.getOperand(1));
-
-  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateShl), lhs, rhs));
-
-  return ExecutionResult::Continue;
-}
-ExecutionResult Interpreter::visitLShr(llvm::BinaryOperator& op) {
-  StackFrame& frame = ctx->stack_top();
-
-  auto lhs = ctx->lookup(op.getOperand(0));
-  auto rhs = ctx->lookup(op.getOperand(1));
-
-  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateLShr), lhs, rhs));
-
-  return ExecutionResult::Continue;
-}
-ExecutionResult Interpreter::visitAShr(llvm::BinaryOperator& op) {
-  StackFrame& frame = ctx->stack_top();
-
-  auto lhs = ctx->lookup(op.getOperand(0));
-  auto rhs = ctx->lookup(op.getOperand(1));
-
-  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateAShr), lhs, rhs));
-
-  return ExecutionResult::Continue;
-}
-ExecutionResult Interpreter::visitAnd(llvm::BinaryOperator& op) {
-  StackFrame& frame = ctx->stack_top();
-
-  auto lhs = ctx->lookup(op.getOperand(0));
-  auto rhs = ctx->lookup(op.getOperand(1));
-
-  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateAnd), lhs, rhs));
-
-  return ExecutionResult::Continue;
-}
-ExecutionResult Interpreter::visitOr(llvm::BinaryOperator& op) {
-  StackFrame& frame = ctx->stack_top();
-
-  auto lhs = ctx->lookup(op.getOperand(0));
-  auto rhs = ctx->lookup(op.getOperand(1));
-
-  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateOr), lhs, rhs));
-
-  return ExecutionResult::Continue;
-}
-ExecutionResult Interpreter::visitXor(llvm::BinaryOperator& op) {
-  StackFrame& frame = ctx->stack_top();
-
-  auto lhs = ctx->lookup(op.getOperand(0));
-  auto rhs = ctx->lookup(op.getOperand(1));
-
-  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateXor), lhs, rhs));
-
-  return ExecutionResult::Continue;
-}
-ExecutionResult Interpreter::visitNot(llvm::BinaryOperator& op) {
-  StackFrame& frame = ctx->stack_top();
-
-  auto operand = ctx->lookup(op.getOperand(0));
-
-  frame.insert(&op, transform(WRAP_FUNC(UnaryOp::CreateNot), operand));
-
-  return ExecutionResult::Continue;
-}
-
-ExecutionResult Interpreter::visitFAdd(llvm::BinaryOperator& op) {
-  StackFrame& frame = ctx->stack_top();
-
-  auto lhs = ctx->lookup(op.getOperand(0));
-  auto rhs = ctx->lookup(op.getOperand(1));
-
-  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateFAdd), lhs, rhs));
-
-  return ExecutionResult::Continue;
-}
-ExecutionResult Interpreter::visitFSub(llvm::BinaryOperator& op) {
-  StackFrame& frame = ctx->stack_top();
-
-  auto lhs = ctx->lookup(op.getOperand(0));
-  auto rhs = ctx->lookup(op.getOperand(1));
-
-  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateFSub), lhs, rhs));
-
-  return ExecutionResult::Continue;
-}
-ExecutionResult Interpreter::visitFMul(llvm::BinaryOperator& op) {
-  StackFrame& frame = ctx->stack_top();
-
-  auto lhs = ctx->lookup(op.getOperand(0));
-  auto rhs = ctx->lookup(op.getOperand(1));
-
-  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateFMul), lhs, rhs));
-
-  return ExecutionResult::Continue;
-}
-ExecutionResult Interpreter::visitFDiv(llvm::BinaryOperator& op) {
-  StackFrame& frame = ctx->stack_top();
-
-  auto lhs = ctx->lookup(op.getOperand(0));
-  auto rhs = ctx->lookup(op.getOperand(1));
-
-  frame.insert(&op, transform(WRAP_FUNC(BinaryOp::CreateFAdd), lhs, rhs));
-
-  return ExecutionResult::Continue;
-}
-
-ExecutionResult Interpreter::visitICmpInst(llvm::ICmpInst& icmp) {
-  using llvm::ICmpInst;
-
-  auto& frame = ctx->stack_top();
-
-  auto lhs = ctx->lookup(icmp.getOperand(0));
-  auto rhs = ctx->lookup(icmp.getOperand(1));
-
-  // Normalize the ContextValue to a comparable value
-  auto to_scalar = [&](const ContextValue& value) {
-    if (value.is_scalar())
-      return value.scalar();
-    if (value.is_pointer())
-      return value.pointer().value(ctx->heap);
-    CAFFEINE_UNREACHABLE();
-  };
-
-#define ICMP_CASE(op)                                                          \
-  case ICmpInst::ICMP_##op:                                                    \
-    frame.insert(&icmp,                                                        \
-                 transform_value(                                              \
-                     [&](const auto& lhs, const auto& rhs) {                   \
-                       return ContextValue(ICmpOp::CreateICmp(                 \
-                           ICmpOpcode::op, to_scalar(lhs), to_scalar(rhs)));   \
-                     },                                                        \
-                     lhs, rhs));                                               \
-    return ExecutionResult::Continue
-
-  switch (icmp.getPredicate()) {
-    ICMP_CASE(EQ);
-    ICMP_CASE(NE);
-    ICMP_CASE(UGT);
-    ICMP_CASE(UGE);
-    ICMP_CASE(ULT);
-    ICMP_CASE(ULE);
-    ICMP_CASE(SGT);
-    ICMP_CASE(SGE);
-    ICMP_CASE(SLT);
-    ICMP_CASE(SLE);
-  default:
-    CAFFEINE_UNREACHABLE();
-  }
-#undef ICMP_CASE
-} // namespace caffeine
-ExecutionResult Interpreter::visitFCmpInst(llvm::FCmpInst& fcmp) {
-  using llvm::FCmpInst;
-
-  auto& frame = ctx->stack_top();
-
-  auto lhs = ctx->lookup(fcmp.getOperand(0));
-  auto rhs = ctx->lookup(fcmp.getOperand(1));
-
-// `result` is the boolean value to return if either the lhs or rhs is a NaN
-#define FCMP_CASE(op, ourOp, result)                                           \
-  case FCmpInst::FCMP_##op:                                                    \
-    frame.insert(&fcmp, transform(                                             \
-                            [](const auto& lhs, const auto& rhs) {             \
-                              OpRef def = ConstantInt::Create(result);         \
-                              OpRef thenFcmp = FCmpOp::CreateFCmp(             \
-                                  FCmpOpcode::ourOp, lhs, rhs);                \
-                              OpRef neitherIsNaN = SelectOp::Create(           \
-                                  UnaryOp::CreateFIsNaN(lhs), def,             \
-                                  SelectOp::Create(UnaryOp::CreateFIsNaN(rhs), \
-                                                   def, thenFcmp));            \
-                              return neitherIsNaN;                             \
-                            },                                                 \
-                            lhs, rhs));                                        \
-    return ExecutionResult::Continue;
-
-  switch (fcmp.getPredicate()) {
-    FCMP_CASE(OEQ, EQ, false);
-    FCMP_CASE(OGT, GT, false);
-    FCMP_CASE(OGE, GE, false);
-    FCMP_CASE(OLT, LT, false);
-    FCMP_CASE(OLE, LE, false);
-    FCMP_CASE(ONE, NE, false);
-    // The 'unordered' instructions return true if either arg is NaN
-    FCMP_CASE(UEQ, EQ, true);
-    FCMP_CASE(UGT, GT, true);
-    FCMP_CASE(UGE, GE, true);
-    FCMP_CASE(ULT, LT, true);
-    FCMP_CASE(ULE, LE, true);
-    FCMP_CASE(UNE, NE, true);
-
-  case FCmpInst::FCMP_UNO:
-    frame.insert(&fcmp,
-                 transform(
-                     [](const auto& lhs, const auto& rhs) {
-                       // isnan(lhs) || isnan(rhs)
-                       return BinaryOp::CreateOr(UnaryOp::CreateFIsNaN(lhs),
-                                                 UnaryOp::CreateFIsNaN(rhs));
-                     },
-                     rhs, lhs));
-    return ExecutionResult::Continue;
-  case FCmpInst::FCMP_ORD:
-    frame.insert(&fcmp, transform(
-                            [](const auto& lhs, const auto& rhs) {
-                              // ! ( isnan(lhs) || isnan(rhs) )
-                              return UnaryOp::CreateNot(BinaryOp::CreateOr(
-                                  UnaryOp::CreateFIsNaN(lhs),
-                                  UnaryOp::CreateFIsNaN(rhs)));
-                            },
-                            rhs, lhs));
-    return ExecutionResult::Continue;
-  case FCmpInst::FCMP_TRUE:
-    frame.insert(&fcmp, ConstantInt::Create(true));
-    return ExecutionResult::Continue;
-  case FCmpInst::FCMP_FALSE:
-    frame.insert(&fcmp, ConstantInt::Create(false));
-    return ExecutionResult::Continue;
-
-  default:
-    CAFFEINE_UNREACHABLE();
-  }
-
-#undef FCMP_CASE
-#undef FCMP_CASE_DEF
-}
-
-ExecutionResult Interpreter::visitTrunc(llvm::TruncInst& trunc) {
-  auto& frame = ctx->stack_top();
-  auto operand = ctx->lookup(trunc.getOperand(0));
-
-  auto func = [&](const auto& operand) {
-    return UnaryOp::CreateTrunc(
-        Type::int_ty(trunc.getType()->getIntegerBitWidth()), operand);
-  };
-  frame.insert(&trunc, transform(func, operand));
-
-  return ExecutionResult::Continue;
-}
-
-ExecutionResult Interpreter::visitSExt(llvm::SExtInst& sext) {
-  auto& frame = ctx->stack_top();
-  auto operand = ctx->lookup(sext.getOperand(0));
-
-  auto func = [&](const auto& operand) {
-    return UnaryOp::CreateSExt(
-        Type::int_ty(sext.getType()->getIntegerBitWidth()), operand);
-  };
-  frame.insert(&sext, transform(func, operand));
-
-  return ExecutionResult::Continue;
-}
-ExecutionResult Interpreter::visitZExt(llvm::ZExtInst& zext) {
-  auto& frame = ctx->stack_top();
-  auto operand = ctx->lookup(zext.getOperand(0));
-
-  auto func = [&](const auto& operand) {
-    return UnaryOp::CreateZExt(
-        Type::int_ty(zext.getType()->getIntegerBitWidth()), operand);
-  };
-  frame.insert(&zext, transform(func, operand));
-
-  return ExecutionResult::Continue;
-}
-ExecutionResult Interpreter::visitIntToPtrInst(llvm::IntToPtrInst& inttoptr) {
-  auto& frame = ctx->stack_top();
-  auto operand = ctx->lookup(inttoptr.getOperand(0));
-  const llvm::DataLayout& layout = inttoptr.getModule()->getDataLayout();
-
-  auto func = [&](const ContextValue& operand) {
-    return ContextValue(Pointer(UnaryOp::CreateTruncOrZExt(
-        Type::int_ty(layout.getPointerSizeInBits(
-            inttoptr.getType()->getPointerAddressSpace())),
-        operand.scalar())));
-  };
-  frame.insert(&inttoptr, transform_value(func, operand));
-
-  return ExecutionResult::Continue;
-}
-ExecutionResult Interpreter::visitPtrToIntInst(llvm::PtrToIntInst& ptrtoint) {
-  auto& frame = ctx->stack_top();
-  auto type = Type::from_llvm(ptrtoint.getType());
-  auto operand = ctx->lookup(ptrtoint.getOperand(0));
-
-  auto func = [&](const ContextValue& operand) {
-    const Pointer& ptr = operand.pointer();
-
-    return ContextValue(UnaryOp::CreateTruncOrZExt(type, ptr.value(ctx->heap)));
-  };
-  frame.insert(&ptrtoint, transform_value(func, operand));
-
-  return ExecutionResult::Continue;
-}
-
-ExecutionResult Interpreter::visitBitCastInst(llvm::BitCastInst& bitcast) {
-  auto& frame = ctx->stack_top();
-
-  CAFFEINE_ASSERT(bitcast.getType()->isPointerTy(),
-                  "non-pointer bitcasts are not yet supported");
-
-  frame.insert(&bitcast, ctx->lookup(bitcast.getOperand(0)));
 
   return ExecutionResult::Continue;
 }
@@ -522,7 +204,7 @@ ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst& inst) {
   }
 
   auto cond_ = ctx->lookup(inst.getCondition());
-  auto cond = cond_.scalar();
+  auto cond = cond_.scalar().expr();
 
   auto assertion = Assertion(cond);
   auto is_t = ctx->check(assertion);
@@ -558,7 +240,7 @@ ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst& inst) {
   }
 }
 ExecutionResult Interpreter::visitReturnInst(llvm::ReturnInst& inst) {
-  std::optional<ContextValue> result = std::nullopt;
+  std::optional<LLVMValue> result = std::nullopt;
   if (inst.getNumOperands() != 0)
     result = ctx->lookup(inst.getOperand(0));
 
@@ -599,15 +281,6 @@ ExecutionResult Interpreter::visitCallInst(llvm::CallInst& call) {
 
   return ExecutionResult::Continue;
 }
-ExecutionResult Interpreter::visitSelectInst(llvm::SelectInst& inst) {
-  auto& frame = ctx->stack_top();
-  auto cond = ctx->lookup(inst.getCondition());
-  auto trueVal = ctx->lookup(inst.getTrueValue());
-  auto falseVal = ctx->lookup(inst.getFalseValue());
-  frame.insert(&inst, transform(SelectOp::Create, cond, trueVal, falseVal));
-
-  return ExecutionResult::Continue;
-}
 ExecutionResult Interpreter::visitIntrinsicInst(llvm::IntrinsicInst& intrin) {
   namespace Intrinsic = llvm::Intrinsic;
 
@@ -624,171 +297,6 @@ ExecutionResult Interpreter::visitIntrinsicInst(llvm::IntrinsicInst& intrin) {
                              intrin.getCalledFunction()->getName().str()));
 }
 
-ExecutionResult
-Interpreter::visitInsertElementInst(llvm::InsertElementInst& inst) {
-  auto& frame = ctx->stack_top();
-
-  auto vec_ = ctx->lookup(inst.getOperand(0));
-  auto vec = vec_.vector();
-  auto elt = ctx->lookup(inst.getOperand(1)).scalar();
-  auto idx = ctx->lookup(inst.getOperand(2)).scalar();
-
-  std::vector<ContextValue> result;
-  result.reserve(vec.size());
-
-  for (size_t i = 0; i < vec.size(); ++i) {
-    result.push_back(transform(
-        [&](const auto& op) {
-          return SelectOp::Create(ICmpOp::CreateICmp(ICmpOpcode::EQ, idx, i),
-                                  elt, op);
-        },
-        vec[i]));
-  }
-
-  frame.insert(&inst, ContextValue(std::move(result)));
-
-  return ExecutionResult::Continue;
-}
-ExecutionResult
-Interpreter::visitExtractElementInst(llvm::ExtractElementInst& inst) {
-  auto& frame = ctx->stack_top();
-
-  auto vec_ = ctx->lookup(inst.getOperand(0));
-  auto vec = vec_.vector();
-  auto idx = ctx->lookup(inst.getOperand(1)).scalar();
-
-  CAFFEINE_ASSERT(vec.size() != 0);
-
-  ContextValue result =
-      transform([](const auto& v) { return Undef::Create(v->type()); }, vec[0]);
-
-  for (size_t i = 0; i < vec.size(); ++i) {
-    result = transform(
-        [&](const auto& r, const auto& v) {
-          return SelectOp::Create(ICmpOp::CreateICmp(ICmpOpcode::EQ, idx, i), v,
-                                  r);
-        },
-        result, vec[i]);
-  }
-
-  frame.insert(&inst, std::move(result));
-
-  return ExecutionResult::Continue;
-}
-ExecutionResult
-Interpreter::visitShuffleVectorInst(llvm::ShuffleVectorInst& inst) {
-  auto& frame = ctx->stack_top();
-
-  auto vec1_ = ctx->lookup(inst.getOperand(0));
-  auto vec2_ = ctx->lookup(inst.getOperand(1));
-  auto mask_ = ctx->lookup(inst.getOperand(2));
-
-  auto vec1 = vec1_.vector();
-  auto vec2 = vec2_.vector();
-  auto mask = mask_.vector();
-
-  std::vector<ContextValue> result;
-  result.reserve(vec1.size());
-
-  /**
-   * The semantics of shufflevector end up basically being an array lookup.
-   * Given two vectors x, y and a mask m, we form one big vector z by
-   * concatenating z = x||y. Then the values in m are used as indices in z
-   * to get the final vector value.
-   *
-   * We emulate these semantics by creating nested select chains. For constant
-   * masks we rely on constant-folding to make these more efficient.
-   */
-  for (size_t i = 0; i < mask.size(); ++i) {
-    // Any non-specified index is undef
-    ContextValue value = transform(
-        [&](const auto& v1, const auto& v2) {
-          CAFFEINE_ASSERT(v1->type() == v2->type());
-          return Undef::Create(v1->type());
-        },
-        vec1[i], vec2[i]);
-
-    for (size_t j = 0; j < mask.size(); ++j) {
-      value = transform(
-          [&](const auto& r, const auto& v, const auto& m) {
-            return SelectOp::Create(ICmpOp::CreateICmp(ICmpOpcode::EQ, m, j), v,
-                                    r);
-          },
-          value, vec1[j], mask[i]);
-    }
-
-    for (size_t j = 0; j < mask.size(); ++j) {
-      value = transform(
-          [&](const auto& r, const auto& v, const auto& m) {
-            return SelectOp::Create(
-                ICmpOp::CreateICmp(ICmpOpcode::EQ, m, j + mask.size()), v, r);
-          },
-          value, vec2[j], mask[i]);
-    }
-
-    result.push_back(value);
-  }
-
-  frame.insert(&inst, ContextValue(std::move(result)));
-
-  return ExecutionResult::Continue;
-}
-
-static llvm::Type* vector_inner_type(llvm::Type* type) {
-  while (type->isVectorTy())
-    type = type->getVectorElementType();
-  return type;
-}
-
-ExecutionResult
-Interpreter::visitGetElementPtrInst(llvm::GetElementPtrInst& inst) {
-  auto& frame = ctx->stack_top();
-
-  const llvm::DataLayout& layout = inst.getModule()->getDataLayout();
-  llvm::Value* ptr_op = inst.getOperand(0);
-  llvm::Type* ptr_ty = vector_inner_type(ptr_op->getType());
-
-  auto offset_width =
-      layout.getPointerSizeInBits(ptr_ty->getPointerAddressSpace());
-  auto offset = ConstantInt::Create(llvm::APInt(offset_width, 0));
-
-  auto end = llvm::gep_type_end(&inst);
-  for (auto it = llvm::gep_type_begin(&inst); it != end; ++it) {
-    if (llvm::StructType* sty = it.getStructTypeOrNull()) {
-      auto slo = layout.getStructLayout(sty);
-      unsigned index =
-          llvm::cast<llvm::ConstantInt>(it.getOperand())->getZExtValue();
-
-      offset = BinaryOp::CreateAdd(offset, slo->getElementOffset(index));
-    } else {
-      auto value = UnaryOp::CreateTruncOrSExt(
-          Type::int_ty(offset_width), ctx->lookup(it.getOperand()).scalar());
-
-      auto itemoffset = BinaryOp::CreateMul(
-          value, layout.getTypeAllocSize(it.getIndexedType()));
-
-      offset = BinaryOp::CreateAdd(offset, itemoffset);
-    }
-  }
-
-  auto result = transform_value(
-      [&](const ContextValue& value) {
-        const auto& ptr = value.pointer();
-
-        if (inst.isInBounds() && ptr.is_resolved()) {
-          return ContextValue(
-              Pointer(ptr.alloc(), BinaryOp::CreateAdd(ptr.offset(), offset)));
-        } else {
-          return ContextValue(
-              Pointer(BinaryOp::CreateAdd(ptr.value(ctx->heap), offset)));
-        }
-      },
-      ctx->lookup(ptr_op));
-
-  frame.insert(&inst, result);
-
-  return ExecutionResult::Continue;
-}
 ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
   // Note: This treats atomic loads as regular ones since we only model
   //       single-threaded code. If that ever changes then this will need to be
@@ -798,7 +306,7 @@ ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
   const llvm::DataLayout& layout = inst.getModule()->getDataLayout();
 
   // TODO: What are the vector semantics for loads?
-  const Pointer& pointer = operand.pointer();
+  const Pointer& pointer = operand.scalar().pointer();
 
   auto assertion =
       ctx->heap.check_valid(pointer, layout.getTypeStoreSize(inst.getType()));
@@ -836,7 +344,7 @@ ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
   auto op_ty = inst.getOperand(0)->getType();
 
   const llvm::DataLayout& layout = inst.getModule()->getDataLayout();
-  const Pointer& pointer = dest.pointer();
+  const Pointer& pointer = dest.scalar().pointer();
 
   auto assertion = ctx->heap.check_valid(
       pointer, layout.getTypeStoreSize(inst.getOperand(0)->getType()));
@@ -882,9 +390,8 @@ ExecutionResult Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {
       AllocOp::Create(size_op, ConstantInt::Create(llvm::APInt(8, 0xDD))),
       AllocationKind::Alloca, *ctx);
 
-  frame.insert(&inst,
-               ContextValue(Pointer(
-                   alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
+  frame.insert(&inst, LLVMValue(Pointer(alloc, ConstantInt::Create(llvm::APInt(
+                                                   ptr_width, 0)))));
   frame.allocations.push_back(alloc);
 
   return ExecutionResult::Continue;
@@ -954,7 +461,7 @@ ExecutionResult Interpreter::visitAssume(llvm::CallInst& call) {
   CAFFEINE_ASSERT(call.getNumArgOperands() == 1);
 
   auto cond = ctx->lookup(call.getArgOperand(0));
-  ctx->add(cond.scalar());
+  ctx->add(cond.scalar().expr());
 
   // Don't check whether adding the assumption causes this path to become
   // dead since assumptions are rare, solver calls are expensive, and it'll
@@ -965,7 +472,7 @@ ExecutionResult Interpreter::visitAssert(llvm::CallInst& call) {
   CAFFEINE_ASSERT(call.getNumArgOperands() == 1);
 
   auto cond = ctx->lookup(call.getArgOperand(0));
-  auto assertion = Assertion(cond.scalar());
+  auto assertion = Assertion(cond.scalar().expr());
 
   auto model = ctx->resolve(!assertion);
   if (model->result() == SolverResult::SAT)
@@ -1004,8 +511,8 @@ std::optional<std::string> readSymbolicName(Context* ctx, const Pointer& ptr) {
 }
 
 ExecutionResult Interpreter::visitSymbolicAlloca(llvm::CallInst& call) {
-  auto size = ctx->lookup(call.getArgOperand(0)).scalar();
-  auto name = ctx->lookup(call.getArgOperand(1)).pointer();
+  auto size = ctx->lookup(call.getArgOperand(0)).scalar().expr();
+  auto name = ctx->lookup(call.getArgOperand(1)).scalar().pointer();
 
   auto resolved = ctx->heap.resolve(name, *ctx);
 
@@ -1024,9 +531,8 @@ ExecutionResult Interpreter::visitSymbolicAlloca(llvm::CallInst& call) {
       AllocationKind::Alloca, *ctx);
 
   auto& frame = ctx->stack_top();
-  frame.insert(&call,
-               ContextValue(Pointer(
-                   alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
+  frame.insert(&call, LLVMValue(Pointer(alloc, ConstantInt::Create(llvm::APInt(
+                                                   ptr_width, 0)))));
   frame.allocations.push_back(alloc);
 
   return ExecutionResult::Continue;
@@ -1040,7 +546,7 @@ ExecutionResult Interpreter::visitMalloc(llvm::CallInst& call) {
   CAFFEINE_ASSERT(call.getNumArgOperands() == 1, "Invalid malloc signature");
   CAFFEINE_ASSERT(call.getType()->isPointerTy(), "Invalid malloc signature");
 
-  auto size = ctx->lookup(call.getArgOperand(0)).scalar();
+  auto size = ctx->lookup(call.getArgOperand(0)).scalar().expr();
   const llvm::DataLayout& layout = call.getModule()->getDataLayout();
 
   CAFFEINE_ASSERT(size->type().is_int(), "Invalid malloc signature");
@@ -1056,7 +562,7 @@ ExecutionResult Interpreter::visitMalloc(llvm::CallInst& call) {
     Context forked = ctx->fork();
     forked.stack_top().insert(
         &call,
-        ContextValue(Pointer(ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
+        LLVMValue(Pointer(ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
     queue->add_context(std::move(forked));
   }
 
@@ -1068,7 +574,7 @@ ExecutionResult Interpreter::visitMalloc(llvm::CallInst& call) {
       AllocationKind::Malloc, *ctx);
 
   ctx->stack_top().insert(
-      &call, ContextValue(Pointer(
+      &call, LLVMValue(Pointer(
                  alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
 
   return ExecutionResult::Continue;
@@ -1077,7 +583,7 @@ ExecutionResult Interpreter::visitCalloc(llvm::CallInst& call) {
   CAFFEINE_ASSERT(call.getNumArgOperands() == 1, "Invalid calloc signature");
   CAFFEINE_ASSERT(call.getType()->isPointerTy(), "Invalid calloc signature");
 
-  auto size = ctx->lookup(call.getArgOperand(0)).scalar();
+  auto size = ctx->lookup(call.getArgOperand(0)).scalar().expr();
   const llvm::DataLayout& layout = call.getModule()->getDataLayout();
 
   CAFFEINE_ASSERT(size->type().is_int(), "Invalid calloc signature");
@@ -1093,7 +599,7 @@ ExecutionResult Interpreter::visitCalloc(llvm::CallInst& call) {
     Context forked = ctx->fork();
     forked.stack_top().insert(
         &call,
-        ContextValue(Pointer(ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
+        LLVMValue(Pointer(ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
     queue->add_context(std::move(forked));
   }
 
@@ -1105,7 +611,7 @@ ExecutionResult Interpreter::visitCalloc(llvm::CallInst& call) {
       AllocationKind::Malloc, *ctx);
 
   ctx->stack_top().insert(
-      &call, ContextValue(Pointer(
+      &call, LLVMValue(Pointer(
                  alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
 
   return ExecutionResult::Continue;
@@ -1121,7 +627,7 @@ ExecutionResult Interpreter::visitFree(llvm::CallInst& call) {
                   "Invalid free signature");
 
   auto& heap = ctx->heap;
-  auto memptr = ctx->lookup(call.getArgOperand(0)).pointer();
+  auto memptr = ctx->lookup(call.getArgOperand(0)).scalar().pointer();
 
   auto is_valid_ptr = heap.check_starts_allocation(memptr);
   auto model = ctx->resolve(!is_valid_ptr);
@@ -1165,8 +671,8 @@ ExecutionResult Interpreter::visitFree(llvm::CallInst& call) {
 }
 
 ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallInst& call) {
-  auto mem = ctx->lookup(call.getArgOperand(0)).pointer();
-  auto size = ctx->lookup(call.getArgOperand(1)).scalar();
+  auto mem = ctx->lookup(call.getArgOperand(0)).scalar().pointer();
+  auto size = ctx->lookup(call.getArgOperand(1)).scalar().expr();
 
   auto assertion = ctx->heap.check_valid(mem, size);
   auto model = ctx->resolve(!assertion);
@@ -1183,13 +689,13 @@ ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallInst& call) {
   auto resolved = ctx->heap.resolve(mem, *ctx);
 
   if (resolved.size() == 1) {
-    ctx->stack_top().insert(&call, ContextValue(resolved[0]));
+    ctx->stack_top().insert(&call, LLVMValue(resolved[0]));
     return ExecutionResult::Continue;
   }
 
   for (const auto& ptr : resolved) {
     Context forked = ctx->fork();
-    forked.stack_top().insert(&call, ContextValue(ptr));
+    forked.stack_top().insert(&call, LLVMValue(ptr));
     queue->add_context(std::move(forked));
   }
 

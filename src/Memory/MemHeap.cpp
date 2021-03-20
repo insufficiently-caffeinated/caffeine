@@ -100,29 +100,62 @@ OpRef Allocation::read(const OpRef& offset, const Type& t,
 
   return UnaryOp::CreateBitcast(t, bitresult);
 }
-ContextValue Allocation::read(const OpRef& offset, llvm::Type* type,
-                              const llvm::DataLayout& layout) {
+LLVMValue Allocation::read(const OpRef& offset, llvm::Type* type,
+                           const llvm::DataLayout& layout) {
   if (type->isPointerTy()) {
-    return ContextValue(Pointer(
+    return LLVMValue(Pointer(
         read(offset, Type::int_ty(layout.getPointerSizeInBits()), layout)));
   }
 
-  if (!type->isVectorTy()) {
-    return ContextValue(read(offset, Type::from_llvm(type), layout));
+  if (type->isArrayTy()) {
+    std::vector<LLVMValue> members;
+    members.reserve(type->getArrayNumElements());
+    llvm::Type* elem_ty = type->getArrayElementType();
+
+    for (size_t i = 0; i < type->getArrayNumElements(); ++i) {
+      OpRef newoffset =
+          BinaryOp::CreateAdd(offset, i * layout.getTypeAllocSize(elem_ty));
+
+      members.push_back(read(newoffset, elem_ty, layout));
+    }
+
+    return LLVMValue(std::move(members));
   }
 
-  CAFFEINE_ASSERT(!type->getVectorIsScalable(),
-                  "scalable vectors are not supported yet");
+  if (type->isStructTy()) {
+    std::vector<LLVMValue> members;
+    members.reserve(type->getStructNumElements());
 
-  llvm::Type* elem_ty = type->getVectorElementType();
-  std::vector<ContextValue> values;
-  for (unsigned i = 0; i < type->getVectorNumElements(); ++i) {
-    values.push_back(
-        read(BinaryOp::CreateAdd(offset, layout.getTypeAllocSize(elem_ty) * i),
-             elem_ty, layout));
+    size_t elem_offset = 0;
+    for (size_t i = 0; i < type->getStructNumElements(); ++i) {
+      llvm::Type* elem_ty = type->getStructElementType(i);
+      OpRef newoffset = BinaryOp::CreateAdd(offset, elem_offset);
+
+      members.push_back(read(newoffset, elem_ty, layout));
+      elem_offset += layout.getTypeAllocSize(elem_ty);
+    }
+
+    return LLVMValue(std::move(members));
   }
 
-  return ContextValue(std::move(values));
+  if (type->isVectorTy()) {
+    CAFFEINE_ASSERT(!type->getVectorIsScalable(),
+                    "scalable vectors are not supported yet");
+    LLVMValue::OpVector members;
+    members.reserve(type->getVectorNumElements());
+    llvm::Type* elem_ty = type->getVectorElementType();
+
+    for (size_t i = 0; i < type->getVectorNumElements(); ++i) {
+      OpRef newoffset =
+          BinaryOp::CreateAdd(offset, i * layout.getTypeAllocSize(elem_ty));
+
+      members.push_back(read(newoffset, elem_ty, layout).scalar());
+    }
+
+    return LLVMValue(std::move(members));
+  }
+
+  return LLVMValue(read(offset, Type::from_llvm(type), layout));
 }
 
 void Allocation::write(const OpRef& offset, const OpRef& value_,
@@ -158,30 +191,6 @@ void Allocation::write(const OpRef& offset, const OpRef& value_,
     auto index = BinaryOp::CreateAdd(offset, i);
 
     overwrite(StoreOp::Create(data(), index, byte));
-  }
-}
-void Allocation::write(const OpRef& offset, llvm::Type* type,
-                       const ContextValue& value, const MemHeap& heap,
-                       const llvm::DataLayout& layout) {
-  if (value.is_pointer()) {
-    write(offset, value.pointer().value(heap), layout);
-    return;
-  }
-
-  if (value.is_scalar()) {
-    write(offset, value.scalar(), layout);
-    return;
-  }
-
-  CAFFEINE_ASSERT(value.is_vector());
-  const auto& values = value.vector();
-  llvm::Type* elem_ty = type->getVectorElementType();
-
-  CAFFEINE_ASSERT(values.size() == type->getVectorNumElements());
-
-  for (size_t i = 0; i < values.size(); ++i) {
-    write(BinaryOp::CreateAdd(offset, i * layout.getTypeAllocSize(elem_ty)),
-          elem_ty, values[i], heap, layout);
   }
 }
 void Allocation::write(const OpRef& offset, const LLVMScalar& value,

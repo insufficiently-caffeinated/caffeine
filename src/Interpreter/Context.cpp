@@ -90,19 +90,19 @@ void Context::add(Assertion&& assertion) {
   assertions.push_back(std::move(assertion));
 }
 
-std::optional<ContextValue> Context::lookup_const(llvm::Value* value) const {
+std::optional<LLVMValue> Context::lookup_const(llvm::Value* value) const {
   ExprEvaluator::Options options;
   options.create_allocations = false;
 
   // The const cast is a bit ugly here but ExprEvaluator will not modify the
   // context if we have specified create_allocations = false.
   if (auto v = ExprEvaluator{const_cast<Context*>(this)}.try_visit(value))
-    return (ContextValue)*v;
+    return (LLVMValue)*v;
   return std::nullopt;
 }
 
-ContextValue Context::lookup(llvm::Value* value) {
-  return (ContextValue)ExprEvaluator{this}.visit(value);
+LLVMValue Context::lookup(llvm::Value* value) {
+  return (LLVMValue)ExprEvaluator{this}.visit(value);
 }
 
 SolverResult Context::check(const Assertion& extra) {

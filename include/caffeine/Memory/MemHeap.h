@@ -12,7 +12,6 @@
 namespace caffeine {
 
 class Context;
-class ContextValue;
 class Assertion;
 class MemHeap;
 class LLVMScalar;
@@ -92,7 +91,7 @@ public:
    */
   OpRef read(const OpRef& offset, const Type& t,
              const llvm::DataLayout& layout) const;
-  ContextValue read(const OpRef& offset, llvm::Type* type,
+  LLVMValue read(const OpRef& offset, llvm::Type* type,
                     const llvm::DataLayout& layout);
 
   /**
@@ -103,8 +102,6 @@ public:
    */
   void write(const OpRef& offset, const OpRef& value,
              const llvm::DataLayout& layout);
-  void write(const OpRef& offset, llvm::Type* type, const ContextValue& value,
-             const MemHeap& heap, const llvm::DataLayout& layout);
   void write(const OpRef& offset, const LLVMScalar& value, const MemHeap& heap,
              const llvm::DataLayout& layout);
   void write(const OpRef& offset, llvm::Type* type, const LLVMValue& value,

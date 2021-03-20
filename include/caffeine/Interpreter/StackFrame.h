@@ -44,7 +44,6 @@ public:
    * is already in the current stack frame then it overwrites it.
    */
   void insert(llvm::Value* value, const OpRef& expr);
-  void insert(llvm::Value* value, const ContextValue& exprs);
   void insert(llvm::Value* value, const LLVMValue& exprs);
 };
 

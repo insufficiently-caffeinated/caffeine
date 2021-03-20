@@ -3,7 +3,9 @@
 #include "caffeine/Interpreter/Context.h"
 #include "caffeine/Interpreter/Value.h"
 #include "caffeine/Memory/MemHeap.h"
+#include "caffeine/Support/LLVMFmt.h"
 #include <fmt/format.h>
+#include <fmt/ostream.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/GetElementPtrTypeIterator.h>
 #include <llvm/IR/GlobalVariable.h>
@@ -15,14 +17,6 @@
 
 namespace caffeine {
 
-namespace {
-  OpRef scalarize(const LLVMScalar& scalar, const MemHeap& heap) {
-    if (scalar.is_expr())
-      return scalar.expr();
-    return scalar.pointer().value(heap);
-  }
-} // namespace
-
 ExprEvaluator::Unevaluatable::Unevaluatable(llvm::Value* expr,
                                             const char* context)
     : expr_(expr), context_(context) {
@@ -31,12 +25,9 @@ ExprEvaluator::Unevaluatable::Unevaluatable(llvm::Value* expr,
 
 const char* ExprEvaluator::Unevaluatable::what() const throw() {
   if (msg_cache_.empty()) {
-    std::string printed;
-    llvm::raw_string_ostream os{printed};
-    expr_->print(os, true);
-
     msg_cache_ = fmt::format(
-        "Unable to evaluate expression: {}. Expression: {}", context_, printed);
+        FMT_STRING("Unable to evaluate expression: {}. Expression: {}"),
+        context_, *expr_);
   }
 
   return msg_cache_.c_str();
@@ -48,12 +39,25 @@ llvm::Value* ExprEvaluator::Unevaluatable::expr() const {
 ExprEvaluator::ExprEvaluator(Context* ctx, Options options)
     : ctx(ctx), options(options) {}
 
+OpRef ExprEvaluator::scalarize(const LLVMScalar& scalar) const {
+  if (scalar.is_expr())
+    return scalar.expr();
+  return scalar.pointer().value(ctx->heap);
+}
+
 LLVMValue ExprEvaluator::visit(llvm::Value* val) {
   const auto& frame = ctx->stack_top();
   auto it = frame.variables.find(val);
   if (it != frame.variables.end())
     return it->second;
 
+  return evaluate(val);
+}
+LLVMValue ExprEvaluator::visit(llvm::Value& val) {
+  return visit(&val);
+}
+
+LLVMValue ExprEvaluator::evaluate(llvm::Value* val) {
   if (auto* inst = llvm::dyn_cast<llvm::Instruction>(val))
     return BaseType::visit(inst);
 
@@ -88,17 +92,13 @@ LLVMValue ExprEvaluator::visit(llvm::Value* val) {
   if (auto* cnst = llvm::dyn_cast<llvm::GlobalVariable>(val))
     return visitGlobalVariable(*cnst);
 
-  std::string msg = "Unsupported expression: ";
-  llvm::raw_string_ostream os{msg};
-  val->print(os, true);
-
   std::cout << magic_enum::enum_name((llvm::Value::ValueTy)val->getValueID())
             << std::endl;
 
-  CAFFEINE_ABORT(msg);
+  CAFFEINE_ABORT(fmt::format("Unsupported expression: {}", *val));
 }
-LLVMValue ExprEvaluator::visit(llvm::Value& val) {
-  return visit(&val);
+LLVMValue ExprEvaluator::evaluate(llvm::Value& val) {
+  return evaluate(&val);
 }
 
 std::optional<LLVMValue> ExprEvaluator::try_visit(llvm::Value* val) {
@@ -112,12 +112,8 @@ std::optional<LLVMValue> ExprEvaluator::try_visit(llvm::Value* val) {
  *********************************************/
 
 LLVMValue ExprEvaluator::visitConstant(llvm::Constant& cnst) {
-  std::string msg = "";
-  llvm::raw_string_ostream os{msg};
-  cnst.print(os, true);
-
   CAFFEINE_ABORT(
-      fmt::format("Unable to evaluate constant expression: {}", msg));
+      fmt::format("Unable to evaluate constant expression: {}", cnst));
 }
 
 LLVMValue
@@ -344,7 +340,7 @@ LLVMValue ExprEvaluator::visitGlobalVariable(llvm::GlobalVariable& global) {
   auto pointer = LLVMValue(
       Pointer(alloc, ConstantInt::Create(llvm::APInt::getNullValue(bitwidth))));
 
-  ctx->globals.emplace(&global, (ContextValue)pointer);
+  ctx->globals.emplace(&global, pointer);
 
   return pointer;
 }
@@ -375,13 +371,9 @@ LLVMValue ExprEvaluator::visitConstantExpr(llvm::ConstantExpr& expr) {
  *********************************************/
 
 LLVMValue ExprEvaluator::visitInstruction(llvm::Instruction& inst) {
-  std::string msg = "";
-  llvm::raw_string_ostream os{msg};
-  inst.print(os, true);
-
   CAFFEINE_ABORT(
       fmt::format("Instruction '{}' not implemented! Full expression: {}",
-                  inst.getOpcodeName(), msg));
+                  inst.getOpcodeName(), inst));
 }
 
 #define DECL_BINARY_OP_VISIT(opcode)                                           \
@@ -391,9 +383,7 @@ LLVMValue ExprEvaluator::visitInstruction(llvm::Instruction& inst) {
                                                                                \
     return transform_elements(                                                 \
         [&](const LLVMScalar& lhs, const LLVMScalar& rhs) -> LLVMScalar {      \
-          const auto& heap = ctx->heap;                                        \
-          return BinaryOp::Create##opcode(scalarize(lhs, heap),                \
-                                          scalarize(rhs, heap));               \
+          return BinaryOp::Create##opcode(scalarize(lhs), scalarize(rhs));     \
         },                                                                     \
         lhs, rhs);                                                             \
   }                                                                            \
@@ -450,6 +440,116 @@ LLVMValue ExprEvaluator::visitFNeg(llvm::UnaryOperator& op) {
         return UnaryOp::CreateFNeg(value.expr());
       },
       value);
+}
+
+LLVMValue ExprEvaluator::visitICmp(llvm::ICmpInst& icmp) {
+  using llvm::ICmpInst;
+
+#define ICMP_CASE(op)                                                          \
+  case ICmpInst::ICMP_##op:                                                    \
+    opcode = ICmpOpcode::op;                                                   \
+    break
+
+  ICmpOpcode opcode;
+  switch (icmp.getPredicate()) {
+    ICMP_CASE(EQ);
+    ICMP_CASE(NE);
+    ICMP_CASE(UGT);
+    ICMP_CASE(UGE);
+    ICMP_CASE(ULT);
+    ICMP_CASE(ULE);
+    ICMP_CASE(SGT);
+    ICMP_CASE(SGE);
+    ICMP_CASE(SLT);
+    ICMP_CASE(SLE);
+  default:
+    CAFFEINE_UNREACHABLE();
+  }
+#undef ICMP_CASE
+
+  auto as_expr = [&](const LLVMScalar& value) {
+    if (value.is_expr())
+      return value.expr();
+    return value.pointer().value(ctx->heap);
+  };
+
+  return transform_elements(
+      [&](const LLVMScalar& lhs, const LLVMScalar& rhs) -> LLVMScalar {
+        return LLVMScalar(
+            ICmpOp::CreateICmp(opcode, as_expr(lhs), as_expr(rhs)));
+      },
+      visit(icmp.getOperand(0)), visit(icmp.getOperand(1)));
+}
+LLVMValue ExprEvaluator::visitFCmp(llvm::FCmpInst& fcmp) {
+  using llvm::FCmpInst;
+
+  FCmpOpcode opcode;
+  bool ordered = llvm::FCmpInst::isOrdered(fcmp.getPredicate());
+
+#define FCMP_CASE(source, op)                                                  \
+  case llvm::FCmpInst::FCMP_##source:                                          \
+    opcode = FCmpOpcode::op;                                                   \
+    break
+  switch (fcmp.getPredicate()) {
+    FCMP_CASE(OEQ, EQ);
+    FCMP_CASE(OGT, GT);
+    FCMP_CASE(OGE, GE);
+    FCMP_CASE(OLT, LT);
+    FCMP_CASE(OLE, LE);
+    FCMP_CASE(ONE, NE);
+    // The 'unordered' instructions return true if either arg is NaN
+    FCMP_CASE(UEQ, EQ);
+    FCMP_CASE(UGT, GT);
+    FCMP_CASE(UGE, GE);
+    FCMP_CASE(ULT, LT);
+    FCMP_CASE(ULE, LE);
+    FCMP_CASE(UNE, NE);
+
+  case FCmpInst::FCMP_UNO:
+    return transform_elements(
+        [&](const LLVMScalar& lhs, const LLVMScalar& rhs) -> LLVMScalar {
+          // isnan(lhs) || isnan(rhs)
+          return BinaryOp::CreateOr(UnaryOp::CreateFIsNaN(lhs.expr()),
+                                    UnaryOp::CreateFIsNaN(rhs.expr()));
+        },
+        visit(fcmp.getOperand(0)), visit(fcmp.getOperand(1)));
+  case FCmpInst::FCMP_ORD:
+    return transform_elements(
+        [&](const LLVMScalar& lhs, const LLVMScalar& rhs) -> LLVMScalar {
+          // ! ( isnan(lhs) || isnan(rhs) )
+          return UnaryOp::CreateNot(
+              BinaryOp::CreateOr(UnaryOp::CreateFIsNaN(lhs.expr()),
+                                 UnaryOp::CreateFIsNaN(rhs.expr())));
+        },
+        visit(fcmp.getOperand(0)), visit(fcmp.getOperand(1)));
+
+  case FCmpInst::FCMP_TRUE:
+    return transform_elements(
+        [&](const auto&) -> LLVMScalar { return ConstantInt::Create(true); },
+        visit(fcmp.getOperand(0)));
+  case FCmpInst::FCMP_FALSE:
+    return transform_elements(
+        [&](const auto&) -> LLVMScalar { return ConstantInt::Create(false); },
+        visit(fcmp.getOperand(0)));
+
+  default:
+    CAFFEINE_UNREACHABLE();
+  }
+#undef FCMP_CASE
+
+  return transform_elements(
+      [&](const LLVMScalar& lhs, const LLVMScalar& rhs) -> LLVMScalar {
+        OpRef checkord = BinaryOp::CreateOr(UnaryOp::CreateFIsNaN(lhs.expr()),
+                                            UnaryOp::CreateFIsNaN(rhs.expr()));
+        OpRef cmp = FCmpOp::CreateFCmp(opcode, lhs.expr(), rhs.expr());
+
+        if (ordered) {
+          return BinaryOp::CreateAnd(UnaryOp::CreateNot(checkord), cmp);
+        } else {
+          return BinaryOp::CreateOr(checkord, cmp);
+        }
+      },
+      visit(fcmp.getOperand(0)), visit(fcmp.getOperand(1)));
 }
 
 LLVMValue ExprEvaluator::visitPtrToInt(llvm::PtrToIntInst& inst) {
@@ -554,6 +654,100 @@ LLVMValue ExprEvaluator::visitGetElementPtr(llvm::GetElementPtrInst& inst) {
         }
       },
       base, offsets);
+}
+
+LLVMValue ExprEvaluator::visitSelectInst(llvm::SelectInst& op) {
+  auto cond = visit(op.getCondition());
+  auto t_val = visit(op.getTrueValue());
+  auto f_val = visit(op.getFalseValue());
+
+  if (cond.is_scalar()) {
+    cond = cond.scalar().broadcast(t_val.num_elements());
+  }
+
+  return transform_elements(
+      [&](const auto& cond, const auto& t_val,
+          const auto& f_val) -> LLVMScalar {
+        return SelectOp::Create(cond.expr(), scalarize(t_val),
+                                scalarize(f_val));
+      },
+      cond, t_val, f_val);
+}
+
+LLVMValue ExprEvaluator::visitInsertElement(llvm::InsertElementInst& inst) {
+  auto vec_ = visit(inst.getOperand(0));
+  auto vec = vec_.vector();
+
+  auto elt = scalarize(visit(inst.getOperand(1)).scalar());
+  auto idx = visit(inst.getOperand(2)).scalar().expr();
+
+  LLVMValue::OpVector result;
+  result.reserve(vec.size());
+  for (size_t i = 0; i < vec.size(); ++i) {
+    result.emplace_back(SelectOp::Create(
+        ICmpOp::CreateICmp(ICmpOpcode::EQ, idx, i), elt, scalarize(vec[i])));
+  }
+
+  return LLVMValue(std::move(result));
+}
+LLVMValue ExprEvaluator::visitExtractElement(llvm::ExtractElementInst& inst) {
+  auto vec_ = visit(inst.getOperand(0));
+  auto vec = vec_.vector();
+
+  auto idx = visit(inst.getOperand(1)).scalar().expr();
+
+  OpRef result = Undef::Create(Type::from_llvm(inst.getType()));
+  for (size_t i = 0; i < vec.size(); ++i) {
+    result = SelectOp::Create(ICmpOp::CreateICmp(ICmpOpcode::EQ, idx, i),
+                              scalarize(vec[i]), result);
+  }
+
+  return LLVMValue(result);
+}
+LLVMValue ExprEvaluator::visitShuffleVector(llvm::ShuffleVectorInst& inst) {
+  auto vec1_ = visit(inst.getOperand(0));
+  auto vec2_ = visit(inst.getOperand(1));
+  auto mask_ = visit(inst.getOperand(2));
+
+  auto vec1 = vec1_.vector();
+  auto vec2 = vec2_.vector();
+  auto mask = mask_.vector();
+
+  auto type = inst.getType();
+  auto elem_type = type->getVectorElementType();
+
+  LLVMValue::OpVector results;
+  results.reserve(vec1.size());
+
+  /**
+   * The semantics of shufflevector end up basically being an array lookup.
+   * Given two vectors x, y and a mask m, we form one big vector z by
+   * concatenating z = x||y. Then the values in m are used as indices in z
+   * to get the final vector value.
+   *
+   * We emulate these semantics by creating nested select chains. All masks are
+   * either constant or undef so we rely on constant-folding to produce the
+   * correct set of efficient expressions.
+   */
+  for (size_t i = 0; i < mask.size(); ++i) {
+    OpRef value = Undef::Create(Type::from_llvm(elem_type));
+
+    for (size_t j = 0; j < mask.size(); ++j) {
+      value = SelectOp::Create(
+          ICmpOp::CreateICmp(ICmpOpcode::EQ, mask[i].expr(), j),
+          scalarize(vec1[j]), value);
+    }
+
+    for (size_t j = 0; j < mask.size(); ++j) {
+      value = SelectOp::Create(
+          ICmpOp::CreateICmp(ICmpOpcode::EQ, mask[i].expr(), j + mask.size()),
+          scalarize(vec2[j]), value);
+    }
+
+    results.push_back(value);
+  }
+
+  return LLVMValue(std::move(results));
 }
 
 } // namespace caffeine
