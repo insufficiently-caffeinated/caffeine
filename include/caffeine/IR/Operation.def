@@ -1,0 +1,171 @@
+
+/**
+ * This file is meant to be similar to LLVM's Instruction.def. Users can define
+ * HANDLE_OP or HANDLE_OPCLASS and then template out code for each of the
+ * defined opertions.
+ *
+ * A quick guide to working with this:
+ * - If you want to handle every opcode use HANDLE_OP
+ * - If you want to handle every operation name (i.e. grouping together FCmp,
+ *   Constant, and ICmp variants) then use HANDLE_OPCLASS
+ * - If you also want the properties of the opcodes (and can't extract them from
+ *   Operation::Opcode for some reason) then use HANDLE_FULL_OP
+ *
+ * Implementation notes:
+ * - Most values are defined using HANDLE_FULL_OP
+ * - If there are multiple opcodes that share a name use HANDLE_REPT_OP for all
+ *   but the first one. This ensures that HANDLE_OPCLASS works properly.
+ */
+
+#undef CAFFEINE_ICMP_BASE
+#undef CAFFEINE_FCMP_BASE
+
+#define CAFFEINE_ICMP_BASE 5
+#define CAFFEINE_FCMP_BASE 4
+
+#ifndef HANDLE_REPT_OP
+#ifdef HANDLE_OPCLASS
+#define HANDLE_REPT_OP(opcode, opname, opclass, op_base, op_nargs, op_aux)
+#else
+#define HANDLE_REPT_OP(opcode, opname, opclass, op_base, op_nargs, op_aux)     \
+  HANDLE_FULL_OP(opcode, opname, opclass, op_base, op_nargs, op_aux)
+#endif
+#endif
+
+#ifndef HANDLE_FULL_OP
+#define HANDLE_FULL_OP(opcode, opname, opclass, op_base, op_nargs, op_aux)     \
+  HANDLE_OP(opcode, opname, opclass)
+#endif
+
+#ifndef HANDLE_BINARY_OP_LAST
+#define HANDLE_BINARY_OP_LAST()
+#endif
+#ifndef HANDLE_BINARY_OP_FIRST
+#define HANDLE_BINARY_OP_FIRST(opcode)
+#endif
+
+#ifndef HANDLE_UNARY_OP_LAST
+#define HANDLE_UNARY_OP_LAST()
+#endif
+#ifndef HANDLE_UNARY_OP_FIRST
+#define HANDLE_UNARY_OP_FIRST(opcode)
+#endif
+
+#ifndef HANDLE_OP
+#define HANDLE_OP(opcode, opname, opclass) HANDLE_OPCLASS(opname, opclass)
+#endif
+
+#ifndef HANDLE_OPCLASS
+#define HANDLE_OPCLASS(opname, opclass)
+#endif
+
+// clang-format off
+
+// Constants
+HANDLE_FULL_OP(ConstantNamed,     Constant,       Constant,       1, 0, 0)
+HANDLE_REPT_OP(ConstantNumbered,  Constant,       Constant,       1, 0, 1)
+HANDLE_FULL_OP(ConstantInt,       ConstantInt,    ConstantInt,    1, 0, 5)
+HANDLE_FULL_OP(ConstantFloat,     ConstantFloat,  ConstantFloat,  1, 0, 6)
+HANDLE_FULL_OP(ConstantArray,     ConstantArray,  ConstantArray,  1, 1, 7)
+
+/**
+ * An unnamed symbolic constant that can have any value whenever it is
+ * used. Has the same semantics as LLVM's undef.
+ *
+ * It is valid for solvers to have any value for the undef constant.
+ */
+HANDLE_FULL_OP(Undef, Undef, Undef, 1, 0, 15)
+
+// Binary Opcodes
+HANDLE_FULL_OP(Add,  Add,  BinaryOp, 2, 2, 0)
+HANDLE_FULL_OP(Sub,  Sub,  BinaryOp, 2, 2, 1)
+HANDLE_FULL_OP(Mul,  Mul,  BinaryOp, 2, 2, 2)
+HANDLE_FULL_OP(UDiv, UDiv, BinaryOp, 2, 2, 3)
+HANDLE_FULL_OP(SDiv, SDiv, BinaryOp, 2, 2, 4)
+HANDLE_FULL_OP(URem, URem, BinaryOp, 2, 2, 5)
+HANDLE_FULL_OP(SRem, SRem, BinaryOp, 2, 2, 6)
+
+HANDLE_FULL_OP(And,  And,  BinaryOp, 2, 2, 7)
+HANDLE_FULL_OP(Or,   Or,   BinaryOp, 2, 2, 8)
+HANDLE_FULL_OP(Xor,  Xor,  BinaryOp, 2, 2, 9)
+HANDLE_FULL_OP(Shl,  Shl,  BinaryOp, 2, 2, 10)
+HANDLE_FULL_OP(LShr, LShr, BinaryOp, 2, 2, 11)
+HANDLE_FULL_OP(AShr, AShr, BinaryOp, 2, 2, 12)
+
+// Floating-point opcodes
+HANDLE_FULL_OP(FAdd, FAdd, BinaryOp, 3, 2, 0)
+HANDLE_FULL_OP(FSub, FSub, BinaryOp, 3, 2, 1)
+HANDLE_FULL_OP(FMul, FMul, BinaryOp, 3, 2, 2)
+HANDLE_FULL_OP(FDiv, FDiv, BinaryOp, 3, 2, 3)
+HANDLE_FULL_OP(FRem, FRem, BinaryOp, 3, 2, 4)
+
+// Integer comparison operations
+HANDLE_FULL_OP(ICmpEq,  ICmp, ICmpOp, CAFFEINE_ICMP_BASE, 2, 0x08)
+HANDLE_REPT_OP(ICmpNe,  ICmp, ICmpOp, CAFFEINE_ICMP_BASE, 2, 0x09)
+HANDLE_REPT_OP(ICmpUgt, ICmp, ICmpOp, CAFFEINE_ICMP_BASE, 2, ((0 << 2) | 0x0))
+HANDLE_REPT_OP(ICmpUge, ICmp, ICmpOp, CAFFEINE_ICMP_BASE, 2, ((0 << 2) | 0x1))
+HANDLE_REPT_OP(ICmpUlt, ICmp, ICmpOp, CAFFEINE_ICMP_BASE, 2, ((0 << 2) | 0x2))
+HANDLE_REPT_OP(ICmpUle, ICmp, ICmpOp, CAFFEINE_ICMP_BASE, 2, ((0 << 2) | 0x3))
+HANDLE_REPT_OP(ICmpSgt, ICmp, ICmpOp, CAFFEINE_ICMP_BASE, 2, ((1 << 2) | 0x0))
+HANDLE_REPT_OP(ICmpSge, ICmp, ICmpOp, CAFFEINE_ICMP_BASE, 2, ((1 << 2) | 0x1))
+HANDLE_REPT_OP(ICmpSlt, ICmp, ICmpOp, CAFFEINE_ICMP_BASE, 2, ((1 << 2) | 0x2))
+HANDLE_REPT_OP(ICmpSle, ICmp, ICmpOp, CAFFEINE_ICMP_BASE, 2, ((1 << 2) | 0x3))
+
+// Floating-point comparison operations
+HANDLE_FULL_OP(FCmpEq, FCmp, FCmpOp, CAFFEINE_FCMP_BASE, 2, 0)
+HANDLE_REPT_OP(FCmpGt, FCmp, FCmpOp, CAFFEINE_FCMP_BASE, 2, 1)
+HANDLE_REPT_OP(FCmpGe, FCmp, FCmpOp, CAFFEINE_FCMP_BASE, 2, 2)
+HANDLE_REPT_OP(FCmpLt, FCmp, FCmpOp, CAFFEINE_FCMP_BASE, 2, 3)
+HANDLE_REPT_OP(FCmpLe, FCmp, FCmpOp, CAFFEINE_FCMP_BASE, 2, 4)
+HANDLE_REPT_OP(FCmpNe, FCmp, FCmpOp, CAFFEINE_FCMP_BASE, 2, 5)
+
+HANDLE_BINARY_OP_LAST()
+HANDLE_BINARY_OP_FIRST(Add)
+
+// Unary opcodes
+HANDLE_FULL_OP(Not,     Not,    UnaryOp,  10, 1, 0)
+HANDLE_FULL_OP(FNeg,    FNeg,   UnaryOp,  10, 1, 1)
+HANDLE_FULL_OP(FIsNaN,  FIsNaN, UnaryOp,  10, 1, 2)
+
+// Conversion opcodes
+HANDLE_FULL_OP(Trunc,   Trunc,    UnaryOp,  11, 1, 0)
+HANDLE_FULL_OP(SExt,    SExt,     UnaryOp,  11, 1, 1)
+HANDLE_FULL_OP(ZExt,    ZExt,     UnaryOp,  11, 1, 2)
+HANDLE_FULL_OP(FpTrunc, FpTrunc,  UnaryOp,  11, 1, 3)
+HANDLE_FULL_OP(FpExt,   FpExt,    UnaryOp,  11, 1, 4)
+HANDLE_FULL_OP(FpToUI,  FpToUI,   UnaryOp,  11, 1, 5)
+HANDLE_FULL_OP(FpToSI,  FpToSI,   UnaryOp,  11, 1, 6)
+HANDLE_FULL_OP(UIToFp,  UIToFp,   UnaryOp,  11, 1, 7)
+HANDLE_FULL_OP(SIToFp,  SIToFp,   UnaryOp,  11, 1, 8)
+HANDLE_FULL_OP(Bitcast, Bitcast,  UnaryOp,  11, 1, 9)
+
+HANDLE_UNARY_OP_LAST()
+HANDLE_UNARY_OP_FIRST(Not)
+
+// Other instructions
+HANDLE_FULL_OP(Select,     Select,     SelectOp,   20, 3, 0)
+HANDLE_FULL_OP(FixedArray, FixedArray, FixedArray, 21, 0, 0)
+
+// Allocation instructions
+/**
+ * Create a new symbolic array that is filled with a default value.
+ *
+ * This is mean to be used for malloc and alloca. Constant arrays with
+ * prefilled data should use FixedArray instead.
+ */
+HANDLE_FULL_OP(Alloc,   Alloc,  AllocOp,  21, 2, 0)
+// Store a byte to a position within an array.
+HANDLE_FULL_OP(Store,   Store,  StoreOp,  21, 3, 1)
+// Load a byte from a position within an array
+HANDLE_FULL_OP(Load,    Load,   LoadOp,   21, 2, 2)
+
+#undef HANDLE_OP
+#undef HANDLE_FULL_OP
+#undef HANDLE_REPT_OP
+#undef HANDLE_OPCLASS
+
+#undef HANDLE_BINARY_OP_FIRST
+#undef HANDLE_BINARY_OP_LAST
+
+#undef HANDLE_UNARY_OP_FIRST
+#undef HANDLE_UNARY_OP_LAST
