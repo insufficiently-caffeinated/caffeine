@@ -25,6 +25,8 @@ set(CLANG_LINK_SCRIPT "${CMAKE_SOURCE_DIR}/cmake/clang-link.cmake")
 set_if_unset(CLANG     "${LLVM_TOOLS_BINARY_DIR}/clang")
 set_if_unset(CLANGXX   "${LLVM_TOOLS_BINARY_DIR}/clang++")
 set_if_unset(LLVM_LINK "${LLVM_TOOLS_BINARY_DIR}/llvm-link")
+set_if_unset(LLVM_OPT  "${LLVM_TOOLS_BINARY_DIR}/opt")
+set_if_unset(LLVM_DIS  "${LLVM_TOOLS_BINARY_DIR}/llvm-dis")
 
 set_if_unset(IR_USE_BITCODE OFF)
 
@@ -112,4 +114,254 @@ function(add_llvm_ir_library TARGET_NAME)
   target_compile_options(${TARGET_NAME} PUBLIC "-I$<JOIN:$<TARGET_PROPERTY:INCLUDE_DIRECTORIES>,;-I>")
 endfunction()
 
+define_property(
+  DIRECTORY PROPERTY LLVM_COMPILE_OPTIONS INHERITED
+  BRIEF_DOCS "TODO"
+  FULL_DOCS "TODO"
+)
+define_property(
+  TARGET PROPERTY LLVM_COMPILE_OPTIONS INHERITED
+  BRIEF_DOCS "TODO"
+  FULL_DOCS "TODO"
+)
+define_property(
+  SOURCE PROPERTY LLVM_COMPILE_OPTIONS
+  BRIEF_DOCS "TODO"
+  FULL_DOCS "TODO"
+)
+
+define_property(
+  TARGET PROPERTY LLVM_INTERFACE_COMPILE_OPTIONS
+  BRIEF_DOCS "TODO"
+  FULL_DOCS "TODO"
+)
+
+define_property(
+  DIRECTORY PROPERTY LLVM_LINK_OPTIONS INHERITED
+  BRIEF_DOCS "TODO"
+  FULL_DOCS "TODO"
+)
+define_property(
+  TARGET PROPERTY LLVM_LINK_OPTIONS INHERITED
+  BRIEF_DOCS "TODO"
+  FULL_DOCS "TODO"
+)
+
+function(llvm_library TARGET_NAME)
+  set(sources "${ARGN}")
+  set(intermediate_dir "${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.dir")
+
+  make_directory("${intermediate_dir}")
+
+  function(genexpr_prefix OUT EXPR PREFIX)
+    set(
+      "${OUT}"
+      "$<$<NOT:$<STREQUAL,${EXPR},>>:${PREFIX}$<JOIN:${EXPR},;${PREFIX}>>"
+      PARENT_SCOPE
+    )
+  endfunction()
+
+  set(objects "")
+  set(counter 0)
+  string(CONCAT library 
+    "$<GENEX_EVAL:$<TARGET_PROPERTY:${TARGET_NAME},LIBRARY_OUTPUT_PATH>>"
+    "/"
+    "$<GENEX_EVAL:$<TARGET_PROPERTY:${TARGET_NAME},LIBRARY_OUTPUT_NAME>>"
+  )
+
+  add_custom_target(
+    "${TARGET_NAME}" ALL
+    DEPENDS "${library}"
+    SOURCES ${sources}
+  )
+
+  set_target_properties(
+    "${TARGET_NAME}"
+    PROPERTIES
+    OUTPUT_NAME         "${TARGET_NAME}.ll"
+    LIBRARY_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}"
+    LIBRARY_OUTPUT_NAME "$<TARGET_GENEX_EVAL:${TARGET_NAME},$<TARGET_PROPERTY:${TARGET_NAME},OUTPUT_NAME>>"
+    IS_LLVM_LIBRARY     TRUE
+  )
+
+  foreach(source ${sources})
+    get_property(source_language SOURCE "${source}" PROPERTY LANGUAGE)
+    get_filename_component(source_ext "${source}" LAST_EXT)
+    get_filename_component(source_base "${source}" NAME)
+
+    if (source_ext STREQUAL .ll OR source_ext STREQUAL .bc)
+      list(APPEND objects "${source}")
+      continue()
+    endif()
+
+    set(object "${intermediate_dir}/${source_base}.${counter}.bc")
+
+    if (NOT source_language STREQUAL "C")
+      message(ERROR "Unable to compile ${source} to bitcode. Need language to be C or CXX")
+    endif()
+
+    list(APPEND objects "${object}")
+
+    genexpr_prefix(
+      sys_includes
+      "$<TARGET_PROPERTY:${TARGET_NAME},SYSTEM_INCLUDE_DIRECTORIES>"
+      "-isystem;"
+    )
+    genexpr_prefix(
+      tgt_includes
+      "$<TARGET_PROPERTY:${TARGET_NAME},INCLUDE_DIRECTORIES>"
+      "-I"
+    )
+    
+    get_source_file_property(includes "${source}" INCLUDE_DIRECTORIES)
+    get_source_file_property(options "${source}" LLVM_COMPILE_OPTIONS)
+
+    string(CONCAT COMPILER 
+      "$<$<STREQUAL:${source_language}:C>:${CLANG}>"
+      "$<$<STREQUAL:${source_language}:CXX>:${CLANGXX}>"
+    )
+
+    get_source_file_property(includes "${source}" INCLUDE_DIRECTORIES)
+    get_source_file_property(options "${source}" LLVM_COMPILE_OPTIONS)
+    
+    genexpr_prefix(src_includes "${includes}" "-I")
+
+    add_custom_command(
+      OUTPUT "${object}"
+      COMMAND "${COMPILER}" ARGS
+        -emit-llvm
+        "$<GENEX_EVAL:${sys_includes}>"
+        "$<GENEX_EVAL:${tgt_includes}>"
+        "$<GENEX_EVAL:${src_includes}>"
+        "$<GENEX_EVAL:$<TARGET_PROPERTY:${TARGET_NAME},LLVM_COMPILE_OPTIONS>>"
+        "$<GENEX_EVAL:${options}>"
+        "${source}"
+        -o "${object}"
+      MAIN_DEPENDENCY "${source}"
+      IMPLICIT_DEPENDS "${source}"
+      COMMENT "Compiling LLVM_${source_language} file ${source}"
+      COMMAND_EXPAND_LISTS
+    )
+
+    math(EXPR counter "${counter} + 1")
+  endforeach()
+
+  add_custom_command(
+    OUTPUT "${library}"
+    COMMAND "${LLVM_LINK}" ARGS
+      "$<GENEX_EVAL:$<TARGET_PROPERTY:${TARGET_NAME},LLVM_LINK_OPTIONS>>"
+      "$<GENEX_EVAL:$<TARGET_PROPERTY:${TARGET_NAME},LLVM_LINK_LIBRARIES>>"
+      "${objects}"
+      -o "${library}"
+    DEPENDS "${objects}"
+    COMMENT Linking BITCODE library "${TARGET_NAME}"
+    COMMAND_EXPAND_LISTS
+  )
+endfunction()
+
+function(llvm_compile_options TARGET_NAME VISIBILITY)
+  set(options "${CMAKE_ARGN}")
+
+  if (VISIBILITY STREQUAL "PRIVATE" OR VISIBILITY STREQUAL "PUBLIC")
+    set_property(
+      TARGET ${TARGET_NAME} APPEND
+      PROPERTY LLVM_COMPILE_OPTIONS ${options}
+    )
+  endif()
+
+  if (VISIBILITY STREQUAL "PUBLIC" OR VISIBILITY STREQUAL "INTERFACE")
+    set_property(
+      TARGET ${TARGET_NAME} APPEND
+      PROPERTY LLVM_INTERFACE_COMPILE_OPTIONS ${options} 
+    )
+  endif()
+endfunction()
+
+function(llvm_include_directories TARGET_NAME VISIBILITY)
+  set(DIRS "${CMAKE_ARGN}")
+
+  if (VISIBILITY STREQUAL "PRIVATE" OR VISIBILITY STREQUAL "PUBLIC")
+    set_property(
+      TARGET ${TARGET_NAME} APPEND
+      PROPERTY INCLUDE_DIRECTORIES "${DIRS}"
+    )
+  endif()
+
+  if (VISIBILITY STREQUAL "INTERFACE" OR VISIBILITY STREQUAL "PUBLIC")
+    set_property(
+      TARGET ${TARGET_NAME} APPEND
+      PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${DIRS}"
+    )
+  endif()
+endfunction()
+
+function(llvm_link_libraries TARGET_NAME VISIBILITY)
+  set(LIBS "${CMAKE_ARGN}")
+
+  foreach(library ${LIBS})
+    if (TARGET "${library}")
+      if (VISIBILITY STREQUAL "PRIVATE" OR VISIBILITY STREQUAL "PUBLIC")
+        set_property(
+          TARGET ${TARGET_NAME} APPEND
+          PROPERTY INCLUDE_DIRECTORIES 
+          "$<TARGET_PROPERTY:${library},INTERFACE_INCLUDE_DIRECTORIES>"
+        )
+        set_property(
+          TARGET ${TARGET_NAME} APPEND
+          PROPERTY LLVM_COMPILE_OPTIONS 
+          "$<TARGET_PROPERTY:${library},LLVM_INTERFACE_COMPILE_OPTIONS>"
+        )
+        set_property(
+          TARGET ${TARGET_NAME} APPEND
+          PROPERTY LLVM_LINK_OPTIONS 
+          "$<TARGET_PROPERTY:${library},LLVM_INTERFACE_LINK_OPTIONS>"
+        )
+        set_property(
+          TARGET ${TARGET_NAME} APPEND
+          PROPERTY LLVM_LINK_LIBRARIES 
+          "$<TARGET_PROPERTY:${library},LLVM_INTERFACE_LINK_LIBRARIES>"
+        )
+      endif()
+
+      if (VISIBILITY STREQUAL "INTERFACE" OR VISIBILITY STREQUAL "PUBLIC")
+        set_property(
+          TARGET ${TARGET_NAME} APPEND
+          PROPERTY INTERFACE_INCLUDE_DIRECTORIES 
+          "$<TARGET_PROPERTY:${library},INTERFACE_INCLUDE_DIRECTORIES>"
+        )
+        set_property(
+          TARGET ${TARGET_NAME} APPEND
+          PROPERTY LLVM_INTERFACE_COMPILE_OPTIONS 
+          "$<TARGET_PROPERTY:${library},LLVM_INTERFACE_COMPILE_OPTIONS>"
+        )
+        set_property(
+          TARGET ${TARGET_NAME} APPEND
+          PROPERTY LLVM_INTERFACE_LINK_OPTIONS 
+          "$<TARGET_PROPERTY:${library},LLVM_INTERFACE_LINK_OPTIONS>"
+        )
+        set_property(
+          TARGET ${TARGET_NAME} APPEND
+          PROPERTY LLVM_INTERFACE_LINK_LIBRARIES 
+          "$<TARGET_PROPERTY:${library},LLVM_INTERFACE_LINK_LIBRARIES>"
+        )
+      endif()
+    else()
+      if (VISIBILITY STREQUAL "PRIVATE" OR VISIBILITY STREQUAL "PUBLIC")
+        set_property(
+          TARGET ${TARGET_NAME} APPEND
+          PROPERTY LLVM_LINK_LIBRARIES 
+          "${library}"
+        )
+      endif()
+
+      if (VISIBILITY STREQUAL "INTERFACE" OR VISIBILITY STREQUAL "PUBLIC")
+        set_property(
+          TARGET ${TARGET_NAME} APPEND
+          PROPERTY LLVM_INTERFACE_LINK_LIBRARIES 
+          "${library}"
+        )
+      endif()
+    endif()
+  endforeach()
+endfunction()
 
