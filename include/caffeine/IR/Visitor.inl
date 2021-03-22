@@ -75,6 +75,13 @@ RetTy OpVisitorBase<Transform, SubClass, RetTy>::visit(
     DELEGATE(Trunc, UnaryOp);
     DELEGATE(SExt, UnaryOp);
     DELEGATE(ZExt, UnaryOp);
+    DELEGATE(FpTrunc, UnaryOp);
+    DELEGATE(FpExt, UnaryOp);
+    DELEGATE(FpToUI, UnaryOp);
+    DELEGATE(FpToSI, UnaryOp);
+    DELEGATE(UIToFp, UnaryOp);
+    DELEGATE(SIToFp, UnaryOp);
+    DELEGATE(Bitcast, UnaryOp);
 
     DELEGATE(Alloc, AllocOp, AllocOp);
     DELEGATE(Store, StoreOp, StoreOp);
