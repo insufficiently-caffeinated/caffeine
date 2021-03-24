@@ -5,6 +5,7 @@
 
 #include <llvm/IR/InstVisitor.h>
 #include <llvm/Support/Casting.h>
+#include <string_view>
 
 namespace caffeine {
 
@@ -90,60 +91,27 @@ public:
   // clang-format off
   RetTy visitArrayBase(transform_t<ArrayBase>& O) { return CAFFEINE_OP_DELEGATE(Operation); }
 
-  RetTy visitConstant     (transform_t<Constant>     & O) { return CAFFEINE_OP_DELEGATE(Operation); }
-  RetTy visitConstantInt  (transform_t<ConstantInt>  & O) { return CAFFEINE_OP_DELEGATE(Operation); }
-  RetTy visitConstantFloat(transform_t<ConstantFloat>& O) { return CAFFEINE_OP_DELEGATE(Operation); }
-  RetTy visitUndef        (transform_t<Undef>        & O) { return CAFFEINE_OP_DELEGATE(Operation); }
-  RetTy visitFixedArray   (transform_t<FixedArray>   & O) { return CAFFEINE_OP_DELEGATE(ArrayBase); }
-  RetTy visitConstantArray(transform_t<ConstantArray>& O) { return CAFFEINE_OP_DELEGATE(ArrayBase); }
-
+  // visit methods for operation classes
   RetTy visitBinaryOp(transform_t<BinaryOp>& O) { return CAFFEINE_OP_DELEGATE(Operation); }
   RetTy visitUnaryOp (transform_t<UnaryOp> & O) { return CAFFEINE_OP_DELEGATE(Operation); }
   RetTy visitSelectOp(transform_t<SelectOp>& O) { return CAFFEINE_OP_DELEGATE(Operation); }
+  RetTy visitAllocOp (transform_t<AllocOp> & O) { return CAFFEINE_OP_DELEGATE(ArrayBase); }
+  RetTy visitStoreOp (transform_t<StoreOp> & O) { return CAFFEINE_OP_DELEGATE(ArrayBase); }
+  RetTy visitLoadOp  (transform_t<LoadOp>  & O) { return CAFFEINE_OP_DELEGATE(Operation); }
 
-  RetTy visitAllocOp(transform_t<AllocOp>& O) { return CAFFEINE_OP_DELEGATE(ArrayBase); }
-  RetTy visitStoreOp(transform_t<StoreOp>& O) { return CAFFEINE_OP_DELEGATE(ArrayBase); }
-  RetTy visitLoadOp (transform_t<LoadOp>&  O) { return CAFFEINE_OP_DELEGATE(Operation); }
-
-  // Binary operations
-  RetTy visitAdd (transform_t<BinaryOp>& O) { return CAFFEINE_OP_DELEGATE(BinaryOp); }
-  RetTy visitSub (transform_t<BinaryOp>& O) { return CAFFEINE_OP_DELEGATE(BinaryOp); }
-  RetTy visitMul (transform_t<BinaryOp>& O) { return CAFFEINE_OP_DELEGATE(BinaryOp); }
-  RetTy visitUDiv(transform_t<BinaryOp>& O) { return CAFFEINE_OP_DELEGATE(BinaryOp); }
-  RetTy visitSDiv(transform_t<BinaryOp>& O) { return CAFFEINE_OP_DELEGATE(BinaryOp); }
-  RetTy visitURem(transform_t<BinaryOp>& O) { return CAFFEINE_OP_DELEGATE(BinaryOp); }
-  RetTy visitSRem(transform_t<BinaryOp>& O) { return CAFFEINE_OP_DELEGATE(BinaryOp); }
-  RetTy visitAnd (transform_t<BinaryOp>& O) { return CAFFEINE_OP_DELEGATE(BinaryOp); }
-  RetTy visitOr  (transform_t<BinaryOp>& O) { return CAFFEINE_OP_DELEGATE(BinaryOp); }
-  RetTy visitXor (transform_t<BinaryOp>& O) { return CAFFEINE_OP_DELEGATE(BinaryOp); }
-  RetTy visitShl (transform_t<BinaryOp>& O) { return CAFFEINE_OP_DELEGATE(BinaryOp); }
-  RetTy visitLShr(transform_t<BinaryOp>& O) { return CAFFEINE_OP_DELEGATE(BinaryOp); }
-  RetTy visitAShr(transform_t<BinaryOp>& O) { return CAFFEINE_OP_DELEGATE(BinaryOp); }
-  RetTy visitFAdd(transform_t<BinaryOp>& O) { return CAFFEINE_OP_DELEGATE(BinaryOp); }
-  RetTy visitFSub(transform_t<BinaryOp>& O) { return CAFFEINE_OP_DELEGATE(BinaryOp); }
-  RetTy visitFMul(transform_t<BinaryOp>& O) { return CAFFEINE_OP_DELEGATE(BinaryOp); }
-  RetTy visitFDiv(transform_t<BinaryOp>& O) { return CAFFEINE_OP_DELEGATE(BinaryOp); }
-  RetTy visitFRem(transform_t<BinaryOp>& O) { return CAFFEINE_OP_DELEGATE(BinaryOp); }
-
-  RetTy visitICmp(transform_t<ICmpOp>& O) { return CAFFEINE_OP_DELEGATE(BinaryOp); }
-  RetTy visitFCmp(transform_t<FCmpOp>& O) { return CAFFEINE_OP_DELEGATE(BinaryOp); }
-
-  // Unary operations
-  RetTy visitNot (transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }
-  RetTy visitFNeg(transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }
-  RetTy visitFIsNaN(transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }
-
-  RetTy visitTrunc  (transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }
-  RetTy visitZExt   (transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }
-  RetTy visitSExt   (transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }
-  RetTy visitFpTrunc(transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }
-  RetTy visitFpExt  (transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }
-  RetTy visitFpToUI (transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }
-  RetTy visitFpToSI (transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }
-  RetTy visitUIToFp (transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }
-  RetTy visitSIToFp (transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }
-  RetTy visitBitcast(transform_t<UnaryOp>& O) { return CAFFEINE_OP_DELEGATE(UnaryOp); }
+  RetTy visitFCmpOp  (transform_t<FCmpOp>  & O) { return CAFFEINE_OP_DELEGATE(BinaryOp); }
+  RetTy visitICmpOp  (transform_t<ICmpOp>  & O) { return CAFFEINE_OP_DELEGATE(BinaryOp); }
   // clang-format on
+
+#define HANDLE_OPCLASS(opname, opclass)                                        \
+  RetTy visit##opname(transform_t<opclass>& O) {                               \
+    if constexpr (std::is_base_of_v<FixedArray, opclass>)                      \
+      return CAFFEINE_OP_DELEGATE(ArrayBase);                                  \
+    if constexpr (std::string_view(#opname) == #opclass)                       \
+      return CAFFEINE_OP_DELEGATE(Operation);                                  \
+    return CAFFEINE_OP_DELEGATE(opclass);                                      \
+  }
+#include "caffeine/IR/Operation.def"
 
   RetTy visit(transform_t<Operation>* O);
   RetTy visit(transform_t<Operation>& O);

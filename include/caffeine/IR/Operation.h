@@ -21,6 +21,9 @@
 #include "caffeine/Support/Assert.h"
 #include "caffeine/Support/CopyVTable.h"
 
+// Get definitions of CAFFEINE_FCMP_BASE and CAFFEINE_ICMP_BASE
+#include "caffeine/IR/Operation.def"
+
 namespace caffeine {
 
 namespace detail {
@@ -53,6 +56,7 @@ class Operation;
 typedef ref<const Operation> OpRef;
 
 enum class ICmpOpcode : uint8_t {
+// Note: The values here need to be kept in sync with the ones in Operation.def
   EQ = 0x8,
   NE = 0x9,
   UGT = (0 << 2) | 0x0,
@@ -66,6 +70,7 @@ enum class ICmpOpcode : uint8_t {
 };
 
 enum class FCmpOpcode : uint8_t {
+// Note: The values here need to be kept in sync with the ones in Operation.def
   EQ = 000,
   GT = 001,
   GE = 002,
@@ -150,9 +155,9 @@ std::ostream& operator<<(std::ostream& os, const Symbol& symbol);
 class Operation : private CopyVTable {
 protected:
   // Base opcode used for FCmp opcodes
-  static constexpr uint16_t fcmp_base = 4;
+  static constexpr uint16_t fcmp_base = CAFFEINE_FCMP_BASE;
   // Base opcode used for ICmp opcodes
-  static constexpr uint16_t icmp_base = 5;
+  static constexpr uint16_t icmp_base = CAFFEINE_ICMP_BASE;
 
 public:
   /**
@@ -167,110 +172,14 @@ public:
   enum Opcode : uint16_t {
     Invalid = 0,
 
-    // Constants
-    ConstantNamed = detail::opcode(1, 0, 0),
-    ConstantNumbered = detail::opcode(1, 0, 1),
-    ConstantInt = detail::opcode(1, 0, 5),
-    ConstantFloat = detail::opcode(1, 0, 6),
-    ConstantArray = detail::opcode(1, 1, 7),
+#define HANDLE_FULL_OP(opcode_, opname, opclass, op_base, op_nargs, op_aux) \
+    opcode_ = detail::opcode(op_base, op_nargs, op_aux),
+#define HANDLE_UNARY_OP_LAST() UnaryOpLast,
+#define HANDLE_UNARY_OP_FIRST(op) UnaryOpFirst = op,
+#define HANDLE_BINARY_OP_LAST() BinaryOpLast,
+#define HANDLE_BINARY_OP_FIRST(op) BinaryOpFirst = op,
 
-    /**
-     * An unnamed symbolic constant that can have any value whenever it is
-     * used. Has the same semantics as LLVM's undef.
-     *
-     * It is valid for solvers to have any value for the undef constant.
-     */
-    Undef = detail::opcode(1, 0, 15),
-
-    /* Binary Opcodes */
-    Add = detail::opcode(2, 2, 0),
-    Sub = detail::opcode(2, 2, 1),
-    Mul = detail::opcode(2, 2, 2),
-    UDiv = detail::opcode(2, 2, 3),
-    SDiv = detail::opcode(2, 2, 4),
-    URem = detail::opcode(2, 2, 5),
-    SRem = detail::opcode(2, 2, 6),
-
-    And = detail::opcode(2, 2, 7),
-    Or = detail::opcode(2, 2, 8),
-    Xor = detail::opcode(2, 2, 9),
-    Shl = detail::opcode(2, 2, 10),
-    LShr = detail::opcode(2, 2, 11),
-    AShr = detail::opcode(2, 2, 12),
-
-    // Floating-point opcodes
-    FAdd = detail::opcode(3, 2, 0),
-    FSub = detail::opcode(3, 2, 1),
-    FMul = detail::opcode(3, 2, 2),
-    FDiv = detail::opcode(3, 2, 4),
-    FRem = detail::opcode(3, 2, 5),
-
-    // Integer comparison operations
-    ICmpEq = detail::opcode(icmp_base, 2, (uint16_t)ICmpOpcode::EQ),
-    ICmpNe = detail::opcode(icmp_base, 2, (uint16_t)ICmpOpcode::NE),
-    ICmpUgt = detail::opcode(icmp_base, 2, (uint16_t)ICmpOpcode::UGT),
-    ICmpUge = detail::opcode(icmp_base, 2, (uint16_t)ICmpOpcode::UGE),
-    ICmpUlt = detail::opcode(icmp_base, 2, (uint16_t)ICmpOpcode::ULT),
-    ICmpUle = detail::opcode(icmp_base, 2, (uint16_t)ICmpOpcode::ULE),
-    ICmpSgt = detail::opcode(icmp_base, 2, (uint16_t)ICmpOpcode::SGT),
-    ICmpSge = detail::opcode(icmp_base, 2, (uint16_t)ICmpOpcode::SGE),
-    ICmpSlt = detail::opcode(icmp_base, 2, (uint16_t)ICmpOpcode::SLT),
-    ICmpSle = detail::opcode(icmp_base, 2, (uint16_t)ICmpOpcode::SLE),
-
-    // Floating-point comparison operations
-    // See the corresponding predicates in llvm's CmpInst to understand
-    // what each of these mean.
-    // TODO: Should these be broken down?
-    FCmpEq = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::EQ),
-    FCmpGt = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::GT),
-    FCmpGe = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::GE),
-    FCmpLt = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::LT),
-    FCmpLe = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::LE),
-    FCmpNe = detail::opcode(fcmp_base, 2, (uint16_t)FCmpOpcode::NE),
-
-    BinaryOpLast,
-    BinaryOpFirst = Add,
-
-    /* Unary Opcodes */
-    Not = detail::opcode(10, 1, 0),
-    FNeg = detail::opcode(10, 1, 1),
-    FIsNaN = detail::opcode(10, 1, 2),
-
-    // Conversion opcodes
-    Trunc = detail::opcode(11, 1, 0),
-    SExt = detail::opcode(11, 1, 1),
-    ZExt = detail::opcode(11, 1, 2),
-    FpTrunc = detail::opcode(11, 1, 3),
-    FpExt = detail::opcode(11, 1, 4),
-    FpToUI = detail::opcode(11, 1, 5),
-    FpToSI = detail::opcode(11, 1, 6),
-    UIToFp = detail::opcode(11, 1, 7),
-    SIToFp = detail::opcode(11, 1, 8),
-    Bitcast = detail::opcode(11, 1, 9),
-
-    UnaryOpLast,
-    UnaryOpFirst = Not,
-
-    // Other instructions
-    Select = detail::opcode(20, 3),
-    FixedArray = detail::opcode(21, 0),
-
-    // Allocation instructions
-    /**
-     * Create a new symbolic array that is filled with a default value.
-     *
-     * This is mean to be used for malloc and alloca. Constant arrays with
-     * prefilled data should use FixedArray instead.
-     */
-    Alloc = detail::opcode(21, 2, 0),
-    /**
-     * Store a byte to a position within an array.
-     */
-    Store = detail::opcode(21, 3, 1),
-    /**
-     * Load a byte from a position within an array.
-     */
-    Load = detail::opcode(21, 2, 2),
+#include "caffeine/IR/Operation.def"
 
     // This one should be last
     OpLast
