@@ -4,7 +4,8 @@
 #include <stdint.h>
 #include <string.h>
 
-static void __attribute__((optnone)) caffeine_builtin_memcpy_nocheck(void* dst_, void* src_, size_t size) {
+static void caffeine_builtin_memcpy_nocheck(void* dst_, void* src_,
+                                            size_t size) {
   char* dst = (char*)caffeine_builtin_resolve(dst_, size);
   char* src = (char*)caffeine_builtin_resolve(src_, size);
 
@@ -15,7 +16,8 @@ static void __attribute__((optnone)) caffeine_builtin_memcpy_nocheck(void* dst_,
 
 // This function is called implicitly by the interpreter to implement the memcpy
 // intrinsic.
-void __attribute__((optnone, used)) caffeine_builtin_memcpy(void* dst, void* src, size_t size) {
+void __attribute__((used))
+caffeine_builtin_memcpy(void* dst, void* src, size_t size) {
   // Assert that the ranges don't overlap
   caffeine_assert(dst + size <= src || src + size <= dst);
 
@@ -24,7 +26,8 @@ void __attribute__((optnone, used)) caffeine_builtin_memcpy(void* dst, void* src
 
 // This function is called implicitly by the interpreter to implement the
 // memmove intrinsic.
-void __attribute__((optnone, used)) caffeine_builtin_memmove(void* dst_, void* src_, size_t size) {
+void __attribute__((used))
+caffeine_builtin_memmove(void* dst_, void* src_, size_t size) {
   char* dst = (char*)caffeine_builtin_resolve(dst_, size);
   char* src = (char*)caffeine_builtin_resolve(src_, size);
 
