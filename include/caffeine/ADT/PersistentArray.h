@@ -7,6 +7,8 @@
 #include <llvm/ADT/Hashing.h>
 
 #include <initializer_list>
+#include <mutex>
+#include <shared_mutex>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -67,10 +69,41 @@ public:
 private:
   struct Node;
 
+  mutable std::shared_mutex mutex_;
   size_t size_ = 0;
   ref<Node> data_;
 
+  constexpr size_t size_unsafe_() const noexcept {
+    return size_;
+  }
+
+  /// Check whether the current array directly contains the underlying
+  /// std::vector instance. Must be called by method which has a reader or
+  /// writer lock
+  bool is_base_unsafe_() const noexcept {
+    return data_ && data_->kind() == Node::Base;
+  }
+  /// Check whether the current array contains a diff to the underlying
+  /// std::vector instance. Must be called by method which has a reader or
+  /// writer lock
+  bool is_diff_unsafe_() const noexcept {
+    return data_ && data_->kind() == Node::Diff;
+  }
+
 public:
+#define COPY(other)                                                            \
+  if (&other != this) {                                                        \
+    std::shared_lock lock1(other.mutex_, std::defer_lock);                     \
+    std::unique_lock lock2(mutex_, std::defer_lock);                           \
+                                                                               \
+    /* lock both locks without deadlock */                                     \
+    std::lock(lock1, lock2);                                                   \
+                                                                               \
+    size_ = other.size_;                                                       \
+    data_ = other.data_;                                                       \
+  }                                                                            \
+  static_assert(true)
+
   constexpr PersistentArray() = default;
   ~PersistentArray() = default;
 
@@ -81,13 +114,17 @@ public:
   PersistentArray(std::initializer_list<T> list)
       : size_(list.size()), data_(make_ref<Node>(std::vector<T>(list))) {}
   PersistentArray(llvm::ArrayRef<T> array) : PersistentArray(array.vec()) {}
+  PersistentArray(const PersistentArray<T>& other) {
+    COPY(other);
+  }
 
   template <typename It>
   PersistentArray(It begin, It end)
       : PersistentArray(std::vector<T>(begin, end)) {}
 
   constexpr size_t size() const noexcept {
-    return size_;
+    std::shared_lock lock(mutex_);
+    return size_unsafe_();
   }
   constexpr bool empty() const noexcept {
     return size() == 0;
@@ -96,12 +133,14 @@ public:
   /// Check whether the current array directly contains the underlying
   /// std::vector instance.
   bool is_base() const noexcept {
-    return data_ && data_->kind() == Node::Base;
+    std::shared_lock lock(mutex_);
+    return is_base_unsafe_();
   }
   /// Check whether the current array contains a diff to the underlying
   /// std::vector instance.
   bool is_diff() const noexcept {
-    return data_ && data_->kind() == Node::Diff;
+    std::shared_lock lock(mutex_);
+    return is_diff();
   }
 
   /**
@@ -112,6 +151,7 @@ public:
    */
   template <typename... Us>
   void set(size_t i, Us&&... args) {
+    std::unique_lock lock(mutex_);
     if (i >= size_)
       throw_out_of_range(i);
 
@@ -134,6 +174,7 @@ public:
   /// Like set, except does not modify the underlying representation.
   template <typename... Us>
   void set_direct(size_t i, Us&&... args) {
+    std::unique_lock lock(mutex_);
     if (i >= size_)
       throw_out_of_range(i);
 
@@ -160,6 +201,7 @@ public:
    * end up changing the value behind the reference.
    */
   const T& get(size_t i) const {
+    std::shared_lock lock(mutex_);
     if (i >= size_)
       throw_out_of_range(i);
     return data_->get(i);
@@ -173,6 +215,7 @@ public:
    * the inner representation.
    */
   void reroot() const {
+    std::unique_lock lock(mutex_);
     if (data_) {
       const_cast<Node*>(data_.get())->reroot();
     }
@@ -180,6 +223,7 @@ public:
 
   /// Copy the elements within this PersistentVector to a std::vector.
   std::vector<T> vec() const {
+    std::shared_lock lock(mutex_);
     return std::vector<T>(begin(), end());
   }
   /// Does the same thing as vec() but will move the vector out of this
@@ -188,9 +232,10 @@ public:
   /// If the data is moved out of this PersistentArray then it will be left
   /// empty, otherwise there will be no change in what it stores.
   std::vector<T> take_vec() {
+    std::unique_lock lock(mutex_);
     using std::swap;
 
-    if (!is_base() || data_.refcount() != 1)
+    if (!is_base_unsafe_() || data_.refcount() != 1)
       return vec();
 
     ref<Node> inner;
@@ -205,6 +250,7 @@ public:
    * nullptr otherwise.
    */
   const std::vector<T>* underlying_vec() const {
+    std::shared_lock lock(mutex_);
     if (!data_)
       return nullptr;
 
@@ -212,9 +258,11 @@ public:
   }
 
   const T& operator[](size_t i) const {
+    std::shared_lock lock(mutex_);
     return get(i);
   }
   ElementAccessor operator[](size_t i) {
+    std::shared_lock lock(mutex_);
     if (i >= size())
       throw_out_of_range(i);
 
@@ -227,11 +275,13 @@ public:
    * necessarily result in getting the a reference to the same location.
    */
   T& element_reference(size_t i) {
+    std::shared_lock lock(mutex_);
     data_ = make_ref<Node>(data_, i, get(i));
     return std::get<Node::Diff>(data_->data).value;
   }
 
   bool operator==(const PersistentArray<T>& array) const {
+    std::shared_lock lock(mutex_);
     if (size() != array.size())
       return false;
 
@@ -243,13 +293,16 @@ public:
     return true;
   }
   bool operator!=(const PersistentArray<T>& array) const {
+    std::shared_lock lock(mutex_);
     return !(*this == array);
   }
 
   const_iterator begin() const {
+    std::shared_lock lock(mutex_);
     return const_iterator(this, 0);
   }
   const_iterator end() const {
+    std::shared_lock lock(mutex_);
     return const_iterator(this, size());
   }
 
@@ -261,10 +314,18 @@ public:
   }
 
   std::reverse_iterator<const_iterator> rbegin() const {
+    std::shared_lock lock(mutex_);
     return std::reverse_iterator<const_iterator>(end());
   }
   std::reverse_iterator<const_iterator> rend() const {
+    std::shared_lock lock(mutex_);
     return std::reverse_iterator<const_iterator>(begin());
+  }
+
+  PersistentArray& operator=(PersistentArray const& other) {
+    COPY(other);
+
+    return *this;
   }
 
 private:
