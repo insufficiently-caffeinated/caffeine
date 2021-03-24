@@ -143,7 +143,7 @@ int main(int argc, char** argv) {
   generate(m.get(), function, make_symbolic);
 
   // NOTE: WriteBitcodeToFile seems to produce something that llvm-dis can't
-  // parse for LLVM 10.0.0. To work around that I'm priting using textual IR.
+  // parse for LLVM 10.0.0. To work around that I'm printing using textual IR.
   if (OutputFilename == "-") {
     m->print(llvm::outs(), nullptr);
     // WriteBitcodeToFile(*m, llvm::outs());
