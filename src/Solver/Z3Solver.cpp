@@ -540,6 +540,32 @@ z3::expr Z3OpVisitor::visitTrunc(const UnaryOp& op) {
 
   return src.extract(op.type().bitwidth() - 1, 0);
 }
+z3::expr Z3OpVisitor::visitBitcast(const UnaryOp& op) {
+  auto src = normalize_to_bv(visit(*op.operand()));
+
+  if (op.type() == op.operand()->type())
+    return src;
+  if (op.type().is_int() && op.operand()->type().is_float()) {
+    z3::expr expr{src.ctx(), Z3_mk_fpa_to_ieee_bv(src.ctx(), src)};
+    ctx->check_error();
+    return expr;
+  }
+  if (op.type().is_float() && op.operand()->type().is_int()) {
+    unsigned ebits = op.type().exponent_bits();
+    unsigned sbits = op.type().mantissa_bits();
+    unsigned tbits = ebits + sbits;
+
+    z3::expr sig = src.extract(sbits - 2, 0);
+    z3::expr exp = src.extract(tbits - 2, sbits - 1);
+    z3::expr sgn = src.extract(tbits - 1, tbits - 1);
+
+    z3::expr expr{src.ctx(), Z3_mk_fpa_fp(src.ctx(), sgn, exp, sig)};
+    ctx->check_error();
+    return expr;
+  }
+
+  CAFFEINE_UNIMPLEMENTED();
+}
 
 z3::expr Z3OpVisitor::visitZExt(const UnaryOp& op) {
   auto operand = visit(*op.operand());

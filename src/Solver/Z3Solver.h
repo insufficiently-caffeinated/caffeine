@@ -90,6 +90,7 @@ public:
   z3::expr visitSelectOp(const SelectOp& op);
 
   z3::expr visitTrunc(const UnaryOp& op);
+  z3::expr visitBitcast(const UnaryOp& op);
 
   z3::expr visitZExt(const UnaryOp& op);
   z3::expr visitSExt(const UnaryOp& op);
