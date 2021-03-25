@@ -140,7 +140,7 @@ public:
   /// std::vector instance.
   bool is_diff() const noexcept {
     std::shared_lock lock(mutex_);
-    return is_diff();
+    return is_diff_unsafe_();
   }
 
   /**
