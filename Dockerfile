@@ -12,6 +12,7 @@ RUN apt-get update \
         llvm-10-dev \
         clang-10 \
         clang++-10 \
+        clang-format \
         libz-dev \
         build-essential \
         gcc-9 \
