@@ -7,7 +7,7 @@ Executor::Executor(FailureLogger* logger, uint32_t num_threads)
     : logger{logger}, num_threads{num_threads} {
   // Silence warning WRT num_threads being unused.
   (void)this->num_threads;
-    }
+}
 
 void Executor::add_context(Context&& ctx) {
   contexts.push_back(std::move(ctx));
