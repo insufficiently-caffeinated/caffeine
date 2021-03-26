@@ -43,9 +43,6 @@ Context::Context(llvm::Function* function, std::shared_ptr<Solver> solver)
     frame.insert(arg1, ConstantInt::Create(llvm::APInt::getNullValue(
                            layout.getPointerSizeInBits(
                                arg1->getType()->getPointerAddressSpace()))));
-
-    fmt::print(stdout, "{}\n{}\n", *arg0, *arg1);
-    fmt::print(stdout, "{:X} {:X}", (uintptr_t)arg0, (uintptr_t)arg1);
   } else {
     size_t i = 0;
     for (auto& arg : function->args()) {
