@@ -574,6 +574,9 @@ LLVMValue ExprEvaluator::visitIntToPtr(llvm::IntToPtrInst& inst) {
 }
 
 LLVMValue ExprEvaluator::visitBitCast(llvm::BitCastInst& inst) {
+  CAFFEINE_ASSERT(inst.getType()->isPointerTy(),
+                  "Non-pointer bitcasts are not implemented");
+
   return visit(inst.getOperand(0));
 }
 
