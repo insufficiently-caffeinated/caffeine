@@ -1,6 +1,7 @@
 #ifndef CAFFEINE_IR_OPERATION_H
 #define CAFFEINE_IR_OPERATION_H
 
+#include <atomic>
 #include <cstdint>
 #include <iosfwd>
 #include <string>
@@ -56,7 +57,8 @@ class Operation;
 typedef ref<const Operation> OpRef;
 
 enum class ICmpOpcode : uint8_t {
-// Note: The values here need to be kept in sync with the ones in Operation.def
+  // Note: The values here need to be kept in sync with the ones in
+  // Operation.def
   EQ = 0x8,
   NE = 0x9,
   UGT = (0 << 2) | 0x0,
@@ -70,7 +72,8 @@ enum class ICmpOpcode : uint8_t {
 };
 
 enum class FCmpOpcode : uint8_t {
-// Note: The values here need to be kept in sync with the ones in Operation.def
+  // Note: The values here need to be kept in sync with the ones in
+  // Operation.def
   EQ = 000,
   GT = 001,
   GE = 002,
@@ -172,8 +175,8 @@ public:
   enum Opcode : uint16_t {
     Invalid = 0,
 
-#define HANDLE_FULL_OP(opcode_, opname, opclass, op_base, op_nargs, op_aux) \
-    opcode_ = detail::opcode(op_base, op_nargs, op_aux),
+#define HANDLE_FULL_OP(opcode_, opname, opclass, op_base, op_nargs, op_aux)    \
+  opcode_ = detail::opcode(op_base, op_nargs, op_aux),
 #define HANDLE_UNARY_OP_LAST() UnaryOpLast,
 #define HANDLE_UNARY_OP_FIRST(op) UnaryOpFirst = op,
 #define HANDLE_BINARY_OP_LAST() BinaryOpLast,
@@ -194,10 +197,11 @@ protected:
 
   uint16_t opcode_;
   uint16_t dummy_ = 0; // Unused, used for padding
-  // When multithreading is implemented this will need to become atomic.
-  //
+
   // Needs to be mutable so that const refs (ref<const Operation>) work.
-  mutable uint32_t refcount = 0;
+  // TODO: investigate if it's safe to use something besides
+  // std::memory_order_seq_cst
+  mutable std::atomic<uint32_t> refcount = 0;
   Type type_;
   Inner inner_;
 

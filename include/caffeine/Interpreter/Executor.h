@@ -1,6 +1,8 @@
 #ifndef CAFFEINE_INTERP_EXECUTOR_H
 #define CAFFEINE_INTERP_EXECUTOR_H
 
+#include <cstdint>
+
 #include "caffeine/Interpreter/Context.h"
 #include "caffeine/Interpreter/FailureLogger.h"
 
@@ -10,6 +12,7 @@ class Executor {
 private:
   FailureLogger* logger;
   std::vector<Context> contexts;
+  uint32_t num_threads;
 
   /**
    * Are there any contexts left?
@@ -22,7 +25,7 @@ private:
   Context next_context();
 
 public:
-  Executor(FailureLogger* logger);
+  Executor(FailureLogger* logger, uint32_t num_threads = 2);
 
   /**
    * The current context has forked and the fork needs to be added
