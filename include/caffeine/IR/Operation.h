@@ -199,6 +199,7 @@ protected:
   uint16_t dummy_ = 0; // Unused, used for padding
 
   // Needs to be mutable so that const refs (ref<const Operation>) work.
+  // TODO: investigate if it's safe to use something besides std::memory_order_seq_cst
   mutable std::atomic<uint32_t> refcount = 0;
   Type type_;
   Inner inner_;
