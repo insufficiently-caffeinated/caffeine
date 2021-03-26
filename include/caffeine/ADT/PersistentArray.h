@@ -70,7 +70,8 @@ public:
 private:
   struct Node;
 
-  mutable std::shared_ptr<std::shared_mutex> mutex_ = std::make_shared<std::shared_mutex>();
+  mutable std::shared_ptr<std::shared_mutex> mutex_ =
+      std::make_shared<std::shared_mutex>();
   size_t size_ = 0;
   ref<Node> data_;
 
