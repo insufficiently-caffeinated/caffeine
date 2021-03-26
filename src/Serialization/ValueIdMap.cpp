@@ -20,6 +20,9 @@ ValueIdMap::ValueIdMap(llvm::Function* func) : func_{func} {
     mapping_.insert({&global, curr});
     curr++;
   }
+
+  // Silence unused field warning
+  (void)this->func_;
 };
 
 std::optional<ValueId> ValueIdMap::getValueId(llvm::Value* val) {
