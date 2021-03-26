@@ -109,19 +109,11 @@ function(llvm_library TARGET_NAME)
   set(counter 0)
   set(library "${ARG_OUTPUT}")
 
-  if (IR_USE_BITCODE)
-    set(target_ext ".bc")
-    set(extra_flags "")
-  else()
-    set(target_ext ".ll")
-    set(extra_flags "-S")
-  endif()
-
   add_custom_target(
     "${TARGET_NAME}" ALL
     DEPENDS "${library}"
     SOURCES ${sources}
-    COMMENT Finalizing BITCODE library "${TARGET_NAME}"
+    COMMENT "Built target ${TARGET_NAME}"
   )
 
   set_target_properties(
@@ -144,7 +136,8 @@ function(llvm_library TARGET_NAME)
       continue()
     endif()
 
-    set(object "${intermediate_dir}/${source_base}.${counter}.bc")
+    set(object  "${intermediate_dir}/${source_base}.${counter}.bc")
+    set(depfile "${intermediate_dir}/${source_base}.${counter}.d")
 
     if (NOT source_language STREQUAL "C")
       continue()
@@ -165,14 +158,12 @@ function(llvm_library TARGET_NAME)
     
     get_source_file_property(includes "${source}" INCLUDE_DIRECTORIES)
     get_source_file_property(options "${source}" LLVM_COMPILE_OPTIONS)
+    file(RELATIVE_PATH object_rel "${CMAKE_SOURCE_DIR}" "${object}")
 
     string(CONCAT COMPILER 
       "$<$<STREQUAL:${source_language},C>:${CLANG}>"
       "$<$<STREQUAL:${source_language},CXX>:${CLANGXX}>"
     )
-
-    get_source_file_property(includes "${source}" INCLUDE_DIRECTORIES)
-    get_source_file_property(options "${source}" LLVM_COMPILE_OPTIONS)
 
     if (NOT includes)
       set(includes "")
@@ -183,10 +174,22 @@ function(llvm_library TARGET_NAME)
 
     genexpr_prefix(src_includes "${includes}" "-I")
 
+    if (CMAKE_GENERATOR STREQUAL "Ninja")
+      set(DEPFILE_ARG DEPFILE "${depfile}")
+    elseif(CMAKE_GENERATOR STREQUAL "Unix Makefiles")
+      if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.20")
+        set(DEPFILE_ARG DEPFILE "${depfile}")
+      else()
+        set(DEPFILE_ARG IMPLICIT_DEPENDS "${source}")
+      endif()
+    else()
+      set(DEPFILE_ARG "")
+    endif()
+
     add_custom_command(
       OUTPUT "${object}"
       COMMAND "${COMPILER}" ARGS
-        -emit-llvm -c
+        -emit-llvm -MMD -c
         "${sys_includes}"
         "${tgt_includes}"
         "${src_includes}"
@@ -195,13 +198,18 @@ function(llvm_library TARGET_NAME)
         "${source}"
         -o "${object}"
       MAIN_DEPENDENCY "${source}"
-      IMPLICIT_DEPENDS "${source}"
-      COMMENT "Building LLVM_${source_language} object ${object}"
+      BYPRODUCTS "${depfile}"
+      COMMENT "Building LLVM_${source_language} object ${object_rel}"
       COMMAND_EXPAND_LISTS
+      ${DEPFILE_ARG}
     )
 
     math(EXPR counter "${counter} + 1")
   endforeach()
+
+  get_filename_component(output_dir "${library}" DIRECTORY)
+  get_filename_component(library_name "${library}" NAME)
+  make_directory("${output_dir}")
 
   add_custom_command(
     OUTPUT "${library}"
@@ -212,7 +220,7 @@ function(llvm_library TARGET_NAME)
       ${extra_flags}
       -o "${library}"
     DEPENDS "${objects}" "$<TARGET_PROPERTY:${TARGET_NAME},LLVM_LINK_DEPENDS>"
-    COMMENT Linking BITCODE library "${library}"
+    COMMENT "Linking BITCODE library ${library_name}"
     COMMAND_EXPAND_LISTS
   )
 endfunction()

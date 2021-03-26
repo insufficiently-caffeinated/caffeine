@@ -48,8 +48,8 @@ function(declare_test TEST_NAME_OUT test)
   get_filename_component(basename   "${test_output}" NAME_WLE)
 
   set(TGT_OUT "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/lib/${test_artifact}")
-  set(GEN_OUT "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/gen/${test_name}.ll")
-  set(OPT_OUT "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/opt/${test_name}.bc")
+  set(GEN_OUT "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/gen/${test_target}.ll")
+  set(OPT_OUT "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/opt/${test_target}.bc")
   set(DIS_OUT "${output_dir}/${basename}${extra_ext}")
 
   make_directory("${output_dir}")
@@ -85,11 +85,13 @@ function(declare_test TEST_NAME_OUT test)
     OUTPUT "${DIS_OUT}"
     COMMAND "${LLVM_DIS}" "${OPT_OUT}" -o "${DIS_OUT}"
     MAIN_DEPENDENCY "${OPT_OUT}"
+    COMMENT "Disassembling test case ${test_name}"
   )
 
   add_custom_target(
     "gen-${test_target}" ALL
     DEPENDS "${DIS_OUT}"
+    COMMENT "Built target gen-${test_target}"
   )
 
   if(should_skip)
