@@ -9,11 +9,10 @@ jobs:
     strategy:
       matrix:
         include:
-          cc: clang
-          cxx: clang++
-        include:
-          cc: gcc
-          cxx: g++
+          - cc: clang
+            cxx: clang++
+          - cc: gcc
+            cxx: g++
     steps:
       - name: Checkout
         uses: actions/checkout@v1
