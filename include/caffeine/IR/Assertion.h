@@ -31,6 +31,8 @@ public:
   Assertion operator!() const;
 
   static Assertion constant(bool value);
+
+  void DebugPrint() const;
 };
 
 std::ostream& operator<<(std::ostream& os, const Assertion& assertion);

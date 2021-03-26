@@ -106,6 +106,8 @@ public:
              const llvm::DataLayout& layout);
   void write(const OpRef& offset, llvm::Type* type, const LLVMValue& value,
              const MemHeap& heap, const llvm::DataLayout& layout);
+
+  void DebugPrint() const;
 };
 
 using AllocId = typename slot_map<Allocation>::key_type;
@@ -174,6 +176,8 @@ public:
    * Get an assertion to check if this pointer is a null pointer.
    */
   Assertion check_null(const MemHeap& heap) const;
+
+  void DebugPrint() const;
 };
 
 class MemHeap {
@@ -250,6 +254,8 @@ public:
    */
   llvm::SmallVector<Pointer, 1> resolve(const Pointer& value,
                                         Context& ctx) const;
+
+  void DebugPrint() const;
 };
 
 } // namespace caffeine
