@@ -1,4 +1,5 @@
 #include "caffeine/IR/Operation.h"
+#include "caffeine/IR/Assertion.h"
 
 #include <iostream>
 
@@ -18,4 +19,9 @@ void Operation::DebugPrint() const {
     std::cout << "NULL" << std::endl;
   }
 }
+
+void Assertion::DebugPrint() const {
+  std::cout << *this << std::endl;
+}
+
 } // namespace caffeine
