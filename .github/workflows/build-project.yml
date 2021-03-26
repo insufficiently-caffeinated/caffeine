@@ -9,8 +9,8 @@ jobs:
     strategy:
       matrix:
         include:
-          - cc: clang
-            cxx: clang++
+          - cc: clang-10
+            cxx: clang++-10
           - cc: gcc
             cxx: g++
       # We explicitly want to run all the compilers
