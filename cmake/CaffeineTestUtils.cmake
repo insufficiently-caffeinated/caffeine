@@ -36,37 +36,71 @@ function(declare_test TEST_NAME_OUT test)
 
   if("${test_ext}" STREQUAL ".ll")
     set(test_output "${CMAKE_BINARY_DIR}/test/${test_name}")
+    set(test_artifact "${test_target}")
   else()
     set(test_output "${CMAKE_BINARY_DIR}/test/${test_name}.ll")
+    set(test_artifact "${test_target}.ll")
   endif()
+  set(extra_ext ".ll")
 
+  get_filename_component(test_artifact_name "${test_artifact}" NAME_WLE)
   get_filename_component(output_dir "${test_output}" DIRECTORY)
   get_filename_component(basename   "${test_output}" NAME_WLE)
-  file(MAKE_DIRECTORY "${output_dir}")
 
-  add_llvm_ir_library("${test_target}" "${test}")
+  set(TGT_OUT "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/lib/${test_artifact}")
+  set(GEN_OUT "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/gen/${test_name}.ll")
+  set(OPT_OUT "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/opt/${test_name}.bc")
+  set(DIS_OUT "${output_dir}/${basename}${extra_ext}")
 
-  add_dependencies("${test_target}" caffeine-builtins)
-  target_include_directories("${test_target}" PRIVATE "$<TARGET_PROPERTY:caffeine-builtins,INCLUDE_DIRECTORIES>")
-  target_link_libraries     ("${test_target}" PRIVATE caffeine-builtins)
-  target_compile_options    ("${test_target}" PRIVATE -O3)
+  make_directory("${output_dir}")
+  make_directory("${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/gen")
+  make_directory("${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/opt")
 
-  set_target_properties(
-    "${test_target}"
-    PROPERTIES
-    OUTPUT_NAME "${basename}"
-    LIBRARY_OUTPUT_DIRECTORY "${output_dir}"
+  llvm_library(
+    "${test_target}" "${test}"
+    OUTPUT "${TGT_OUT}"
+  )
+
+  add_dependencies        ("${test_target}" caffeine-builtins)
+  llvm_include_directories("${test_target}" PRIVATE "$<TARGET_PROPERTY:caffeine-builtins,INCLUDE_DIRECTORIES>")
+  llvm_link_libraries     ("${test_target}" PRIVATE caffeine-builtins)
+  llvm_compile_options    ("${test_target}" PRIVATE -O3)
+
+  add_custom_command(
+    OUTPUT "${GEN_OUT}"
+    COMMAND gen-test-main --skip-if-present -o "${GEN_OUT}" "${TGT_OUT}" test
+    MAIN_DEPENDENCY "${TGT_OUT}"
+    COMMENT Generating main method for "${test_target}"
+  )
+
+  # Remove unused methods
+  add_custom_command(
+    OUTPUT "${OPT_OUT}"
+    COMMAND "${LLVM_OPT}" -internalize -globaldce "${GEN_OUT}" -o "${OPT_OUT}"
+    MAIN_DEPENDENCY "${GEN_OUT}"
+    COMMENT Optimizing "${test_target}"
+  )
+
+  add_custom_command(
+    OUTPUT "${DIS_OUT}"
+    COMMAND "${LLVM_DIS}" "${OPT_OUT}" -o "${DIS_OUT}"
+    MAIN_DEPENDENCY "${OPT_OUT}"
+  )
+
+  add_custom_target(
+    "gen-${test_target}" ALL
+    DEPENDS "${DIS_OUT}"
   )
 
   if(should_skip)
     add_test(
       NAME "${test_name}"
-      COMMAND skip-test "$<TARGET_FILE:${test_target}>"
+      COMMAND skip-test "${DIS_OUT}"
     )
   else()
     add_test(
       NAME "${test_name}"
-      COMMAND caffeine-bin "$<TARGET_FILE:${test_target}>" test
+      COMMAND caffeine-bin "${DIS_OUT}" main
     )
   endif()
 
