@@ -1,5 +1,5 @@
-#include "caffeine/IR/Operation.h"
 #include "caffeine/IR/Assertion.h"
+#include "caffeine/IR/Operation.h"
 
 #include <iostream>
 

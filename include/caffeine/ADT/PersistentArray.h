@@ -108,11 +108,11 @@ public:
   PersistentArray(It begin, It end)
       : PersistentArray(std::vector<T>(begin, end)) {}
 
-  constexpr size_t size() const noexcept {
+  size_t size() const noexcept {
     std::shared_lock lock(*mutex_);
     return size_unsafe_();
   }
-  constexpr bool empty() const noexcept {
+  bool empty() const noexcept {
     return size() == 0;
   }
 
