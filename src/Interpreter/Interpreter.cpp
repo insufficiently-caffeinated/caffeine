@@ -516,6 +516,8 @@ ExecutionResult Interpreter::visitSymbolicAlloca(llvm::CallInst& call) {
 
   auto resolved = ctx->heap.resolve(name, *ctx);
 
+  CAFFEINE_ASSERT(!resolved.empty(),
+                  "caffeine_make_symbolic called with invalid name pointer");
   CAFFEINE_ASSERT(resolved.size() == 1,
                   "caffeine_make_symbolic called with symbolic name");
 

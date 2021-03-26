@@ -282,8 +282,10 @@ AllocId MemHeap::allocate(const OpRef& size, const OpRef& alignment,
       Constant::Create(size->type(), ctx.next_constant()), size, data, kind);
 
   // Ensure that the allocation is properly aligned
-  ctx.add(ICmpOp::CreateICmp(
-      ICmpOpcode::EQ, BinaryOp::CreateURem(newalloc.address(), alignment), 0));
+  auto is_aligned = ICmpOp::CreateICmp(
+      ICmpOpcode::EQ, BinaryOp::CreateURem(newalloc.address(), alignment), 0);
+  auto align_is_zero = ICmpOp::CreateICmp(ICmpOpcode::EQ, alignment, 0);
+  ctx.add(BinaryOp::CreateOr(is_aligned, align_is_zero));
   // The allocation can never wrap around the address space
   ctx.add(ICmpOp::CreateICmp(ICmpOpcode::ULE, newalloc.address(),
                              BinaryOp::CreateAdd(newalloc.address(), size)));
