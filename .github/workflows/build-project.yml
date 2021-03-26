@@ -6,6 +6,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container: insufficientlycaffeinated/bob
+    strategy:
+      matrix:
+        include:
+          cc: clang
+          cxx: clang++
+        include:
+          cc: gcc
+          cxx: g++
     steps:
       - name: Checkout
         uses: actions/checkout@v1
@@ -14,6 +22,9 @@ jobs:
         run: |
           mkdir -p build
           cmake -B build -DCAFFEINE_CI=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
 
       - name: Build
         run: cmake --build "build" -j$(nproc)
