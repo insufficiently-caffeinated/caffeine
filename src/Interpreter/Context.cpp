@@ -3,6 +3,7 @@
 #include "caffeine/IR/Type.h"
 #include "caffeine/Interpreter/ExprEval.h"
 #include "caffeine/Interpreter/StackFrame.h"
+#include "caffeine/Support/LLVMFmt.h"
 
 #include <boost/algorithm/string.hpp>
 #include <fmt/format.h>
@@ -29,19 +30,38 @@ Context::Context(llvm::Function* function, std::shared_ptr<Solver> solver)
   stack.emplace_back(function);
   StackFrame& frame = stack_top();
 
-  size_t i = 0;
-  for (auto& arg : function->args()) {
-    assert_valid_arg(arg.getType());
+  if (function->getName() == "main") {
+    const llvm::DataLayout& layout = mod->getDataLayout();
 
-    std::string name = arg.getName().str();
-    boost::trim(name);
+    auto arg0 = function->arg_begin();
+    auto arg1 = arg0 + 1;
 
-    if (name.empty())
-      name = fmt::format("arg{}", i);
+    CAFFEINE_ASSERT(function->arg_size() == 2);
 
-    frame.insert(&arg, Constant::Create(Type::from_llvm(arg.getType()), name));
+    frame.insert(arg0, ConstantInt::Create(llvm::APInt::getNullValue(
+                           arg0->getType()->getIntegerBitWidth())));
+    frame.insert(arg1, ConstantInt::Create(llvm::APInt::getNullValue(
+                           layout.getPointerSizeInBits(
+                               arg1->getType()->getPointerAddressSpace()))));
 
-    i += 1;
+    fmt::print(stdout, "{}\n{}\n", *arg0, *arg1);
+    fmt::print(stdout, "{:X} {:X}", (uintptr_t)arg0, (uintptr_t)arg1);
+  } else {
+    size_t i = 0;
+    for (auto& arg : function->args()) {
+      assert_valid_arg(arg.getType());
+
+      std::string name = arg.getName().str();
+      boost::trim(name);
+
+      if (name.empty())
+        name = fmt::format("arg{}", i);
+
+      frame.insert(&arg,
+                   Constant::Create(Type::from_llvm(arg.getType()), name));
+
+      i += 1;
+    }
   }
 }
 
