@@ -36,11 +36,6 @@ public:
   void log_failure(const caffeine::Model& model, const caffeine::Context& ctx,
                    const caffeine::Failure& failure) override {
     num_failures += 1;
-
-    for (auto& arg : func->args()) {
-      ctx.lookup_const(&arg);
-    }
-
     caffeine::PrintingFailureLogger::log_failure(model, ctx, failure);
   }
 };
