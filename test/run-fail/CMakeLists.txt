@@ -11,4 +11,4 @@ foreach(test ${tests})
   )
 endforeach()
 
-target_compile_options(run-fail_mem_alloca-escaped.c PRIVATE -Wno-return-stack-address)
+llvm_compile_options(run-fail_mem_alloca-escaped.c PRIVATE -Wno-return-stack-address)
