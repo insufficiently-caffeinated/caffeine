@@ -36,6 +36,44 @@ private:
   llvm::SmallVector<Context, 2> contexts_;
 };
 
+class ExecutionPolicy {
+public:
+  enum ExitStatus { Success, Fail, Dead };
+
+public:
+  ExecutionPolicy() = default;
+  virtual ~ExecutionPolicy() = default;
+
+  /**
+   * Called when a context forks to determine whether we should continue
+   * executing that branch.
+   *
+   * Note that this method does not control whether dead branches continue to
+   * execute. Those will be pruned irregardless of what this method returns.
+   */
+  virtual bool should_queue_path(Context* ctx) = 0;
+
+  // Called when a context is forked into multiple contexts.
+  //
+  // Note that assertion failures do not cause a path to be forked.
+  virtual void on_path_forked(Context* ctx);
+  // Called when a context is removed from the queue to be executed.
+  virtual void on_path_dequeued(Context* ctx);
+  // Called when a path completes along with the status of how that path
+  // completed.
+  //
+  // Note that when the exit status is `Fail` the context will continue to be
+  // used for the non-failure path if it is valid.
+  virtual void on_path_complete(const Context* ctx, ExitStatus status);
+
+protected:
+  ExecutionPolicy(ExecutionPolicy&&) = default;
+  ExecutionPolicy(const ExecutionPolicy&) = default;
+
+  ExecutionPolicy& operator=(ExecutionPolicy&&) = default;
+  ExecutionPolicy& operator=(const ExecutionPolicy&) = default;
+};
+
 class Interpreter : public llvm::InstVisitor<Interpreter, ExecutionResult> {
 private:
   Context* ctx;
