@@ -214,7 +214,7 @@ ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst& inst) {
   //       equivalent to sat. Maybe future branches will bring the
   //       equation back to being solvable.
   if (is_t != SolverResult::UNSAT && is_f != SolverResult::UNSAT) {
-    auto fork = ctx->fork();
+    auto fork = ctx->fork_once();
 
     // In cases where both conditions are possible we follow the
     // false path. This should be enough to get us out of most loops
@@ -324,7 +324,7 @@ ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
   auto resolved = ctx->heap.resolve(pointer, *ctx);
 
   for (const Pointer& ptr : resolved) {
-    Context forked = ctx->fork();
+    Context forked = ctx->fork_once();
 
     Allocation& alloc = ctx->heap[ptr.alloc()];
     forked.add(alloc.check_inbounds(ptr.offset(),
@@ -361,7 +361,7 @@ ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
 
   auto resolved = ctx->heap.resolve(pointer, *ctx);
   for (const Pointer& ptr : resolved) {
-    Context forked = ctx->fork();
+    Context forked = ctx->fork_once();
 
     Allocation& alloc = forked.heap[ptr.alloc()];
     forked.add(
@@ -561,7 +561,7 @@ ExecutionResult Interpreter::visitMalloc(llvm::CallInst& call) {
       layout.getPointerSizeInBits(call.getType()->getPointerAddressSpace());
 
   if (options.malloc_can_return_null) {
-    Context forked = ctx->fork();
+    Context forked = ctx->fork_once();
     forked.stack_top().insert(
         &call,
         LLVMValue(Pointer(ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
@@ -598,7 +598,7 @@ ExecutionResult Interpreter::visitCalloc(llvm::CallInst& call) {
       layout.getPointerSizeInBits(call.getType()->getPointerAddressSpace());
 
   if (options.malloc_can_return_null) {
-    Context forked = ctx->fork();
+    Context forked = ctx->fork_once();
     forked.stack_top().insert(
         &call,
         LLVMValue(Pointer(ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
@@ -644,7 +644,7 @@ ExecutionResult Interpreter::visitFree(llvm::CallInst& call) {
   CAFFEINE_ASSERT(!resolved.empty());
 
   for (size_t i = 1; i < resolved.size(); ++i) {
-    Context forked = ctx->fork();
+    Context forked = ctx->fork_once();
 
     Allocation& alloc = forked.heap[resolved[i].alloc()];
 
@@ -696,7 +696,7 @@ ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallInst& call) {
   }
 
   for (const auto& ptr : resolved) {
-    Context forked = ctx->fork();
+    Context forked = ctx->fork_once();
     forked.stack_top().insert(&call, LLVMValue(ptr));
     queue->add_context(std::move(forked));
   }

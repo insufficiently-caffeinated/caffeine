@@ -62,7 +62,7 @@ Context::Context(llvm::Function* function, std::shared_ptr<Solver> solver)
   }
 }
 
-Context Context::fork() const {
+Context Context::fork_once() const {
   return Context{*this};
 }
 

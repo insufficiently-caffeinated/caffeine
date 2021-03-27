@@ -39,7 +39,7 @@ public:
    * Create a new context that is independent from this
    * one but has the same state.
    */
-  Context fork() const;
+  Context fork_once() const;
 
   /**
    * Get the top frame of the stack.
