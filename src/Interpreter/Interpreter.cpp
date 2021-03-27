@@ -21,6 +21,12 @@ ExecutionResult::ExecutionResult(Status status) : status_(status) {}
 ExecutionResult::ExecutionResult(llvm::SmallVector<Context, 2>&& contexts)
     : status_(Dead), contexts_(std::move(contexts)) {}
 
+void ExecutionContextStore::add_context_multi(Context* ctxs, size_t count) {
+  for (size_t i = 0; i < count; ++i) {
+    add_context(std::move(ctxs[i]));
+  }
+}
+
 Interpreter::Interpreter(Executor* queue, Context* ctx, FailureLogger* logger,
                          const InterpreterOptions& options)
     : ctx{ctx}, queue{queue}, logger{logger}, options(options) {}
