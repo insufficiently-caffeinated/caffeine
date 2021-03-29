@@ -66,7 +66,7 @@ Context Context::fork_once() const {
   return Context{*this};
 }
 
-llvm::SmallVector<Context, 2> Context::fork(size_t count) && {
+llvm::SmallVector<Context, 2> Context::fork(size_t count) {
   if (count == 0)
     return {};
 

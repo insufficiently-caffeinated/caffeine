@@ -47,7 +47,7 @@ public:
    *
    * After calling this method the original context is no longer available.
    */
-  llvm::SmallVector<Context, 2> fork(size_t count) &&;
+  llvm::SmallVector<Context, 2> fork(size_t count);
 
   /**
    * Get the top frame of the stack.
