@@ -43,24 +43,37 @@ void Interpreter::execute() {
     ExecutionResult res = visit(inst);
 
     if (!res.contexts().empty()) {
-      store->add_context_multi(res.contexts().data(), res.contexts().size());
-      break;
+      auto& ctxs = res.contexts();
+
+      auto it =
+          std::remove_if(ctxs.begin(), ctxs.end(), [&](const Context& ctx) {
+            bool prune = !policy->should_queue_path(ctx);
+            if (prune)
+              policy->on_path_complete(ctx, ExecutionPolicy::Removed);
+            return prune;
+          });
+      ctxs.erase(it, ctxs.end());
+
+      store->add_context_multi(ctxs.data(), ctxs.size());
+      return;
     }
 
     if (res.status() != ExecutionResult::Continue) {
       switch (res.status()) {
       case ExecutionResult::Dead:
-        policy->on_path_complete(ctx, ExecutionPolicy::Dead);
-        break;
+        policy->on_path_complete(*ctx, ExecutionPolicy::Dead);
+        return;
       case ExecutionResult::Stop:
-        policy->on_path_complete(ctx, ExecutionPolicy::Success);
-        break;
+        policy->on_path_complete(*ctx, ExecutionPolicy::Success);
+        return;
 
       case ExecutionResult::Continue:
         CAFFEINE_UNREACHABLE();
       }
 
-      break;
+      CAFFEINE_UNREACHABLE(
+          fmt::format(FMT_STRING("Unexpected ExecutionResult value: {}"),
+                      magic_enum::enum_name(res.status())));
     }
   }
 }

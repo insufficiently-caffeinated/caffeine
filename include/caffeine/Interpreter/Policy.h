@@ -14,7 +14,19 @@ class Context;
  */
 class ExecutionPolicy {
 public:
-  enum ExitStatus { Success, Fail, Dead };
+  enum ExitStatus {
+    // The context returned from the top-level function.
+    Success,
+    // The context failed an assertion. Note that the context may continue to be
+    // run with !fail_condition added to the path spec.
+    Fail,
+    // The context has an unsatisfiable path condition so there is no point in
+    // running it any further.
+    Dead,
+    // The context was removed because the policy indicated that it should not
+    // be queued.
+    Removed
+  };
 
 public:
   ExecutionPolicy() = default;
