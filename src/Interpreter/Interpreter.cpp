@@ -36,9 +36,7 @@ Interpreter::Interpreter(Executor* queue, Context* ctx, FailureLogger* logger,
     : ctx{ctx}, queue{queue}, logger{logger}, options(options) {}
 
 void Interpreter::execute() {
-  ExecutionResult exec;
-
-  do {
+  while (true) {
     StackFrame& frame = ctx->stack_top();
 
     CAFFEINE_ASSERT(frame.current != frame.current_block->end(),
@@ -51,8 +49,29 @@ void Interpreter::execute() {
     //       modify the current position (e.g. branch, call, etc.)
     ++frame.current;
 
-    exec = visit(inst);
-  } while (exec == ExecutionResult::Continue);
+    ExecutionResult res = visit(inst);
+
+    if (!res.contexts().empty()) {
+      store->add_context_multi(res.contexts().data(), res.contexts().size());
+      break;
+    }
+
+    if (res.status() != ExecutionResult::Continue) {
+      switch (res.status()) {
+      case ExecutionResult::Dead:
+        policy->on_path_complete(ctx, ExecutionPolicy::Dead);
+        break;
+      case ExecutionResult::Stop:
+        policy->on_path_complete(ctx, ExecutionPolicy::Success);
+        break;
+
+      case ExecutionResult::Continue:
+        CAFFEINE_UNREACHABLE();
+      }
+
+      break;
+    }
+  }
 }
 
 ExecutionResult Interpreter::visitInstruction(llvm::Instruction& inst) {
@@ -203,41 +222,36 @@ ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst& inst) {
     return ExecutionResult::Continue;
   }
 
-  auto cond_ = ctx->lookup(inst.getCondition());
-  auto cond = cond_.scalar().expr();
-
+  auto cond = ctx->lookup(inst.getCondition()).scalar().expr();
   auto assertion = Assertion(cond);
   auto is_t = ctx->check(assertion);
   auto is_f = ctx->check(!assertion);
 
+  size_t count = 0;
+  count += is_t != SolverResult::UNSAT;
+  count += is_f != SolverResult::UNSAT;
+
+  auto forks = ctx->fork(count);
+  size_t idx = 0;
+
   // Note: For the purposes of branching we consider unknown to be
   //       equivalent to sat. Maybe future branches will bring the
   //       equation back to being solvable.
-  if (is_t != SolverResult::UNSAT && is_f != SolverResult::UNSAT) {
-    auto fork = ctx->fork_once();
+  if (is_t != SolverResult::UNSAT) {
+    auto& fork = forks[idx++];
 
-    // In cases where both conditions are possible we follow the
-    // false path. This should be enough to get us out of most loops
-    // and actually exploring the rest of the program.
     fork.add(assertion);
-    ctx->add(!assertion);
-
     fork.stack_top().jump_to(inst.getSuccessor(0));
-    ctx->stack_top().jump_to(inst.getSuccessor(1));
-
-    queue->add_context(std::move(fork));
-    return ExecutionResult::Continue;
-  } else if (is_t != SolverResult::UNSAT) {
-    ctx->add(assertion);
-    ctx->stack_top().jump_to(inst.getSuccessor(0));
-    return ExecutionResult::Continue;
-  } else if (is_f != SolverResult::UNSAT) {
-    ctx->add(!assertion);
-    ctx->stack_top().jump_to(inst.getSuccessor(1));
-    return ExecutionResult::Continue;
-  } else {
-    return ExecutionResult::Stop;
   }
+
+  if (is_f != SolverResult::UNSAT) {
+    auto& fork = forks[idx++];
+
+    fork.add(!assertion);
+    fork.stack_top().jump_to(inst.getSuccessor(1));
+  }
+
+  return forks;
 }
 ExecutionResult Interpreter::visitReturnInst(llvm::ReturnInst& inst) {
   std::optional<LLVMValue> result = std::nullopt;
