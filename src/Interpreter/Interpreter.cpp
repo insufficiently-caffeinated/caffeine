@@ -1,5 +1,6 @@
 #include "caffeine/Interpreter/Interpreter.h"
 #include "caffeine/Interpreter/ExprEval.h"
+#include "caffeine/Interpreter/Policy.h"
 #include "caffeine/Interpreter/StackFrame.h"
 #include "caffeine/Interpreter/Value.h"
 #include "caffeine/Support/Assert.h"
@@ -19,10 +20,6 @@ namespace caffeine {
 ExecutionResult::ExecutionResult(Status status) : status_(status) {}
 ExecutionResult::ExecutionResult(llvm::SmallVector<Context, 2>&& contexts)
     : status_(Dead), contexts_(std::move(contexts)) {}
-
-void ExecutionPolicy::on_path_forked(Context*) {}
-void ExecutionPolicy::on_path_dequeued(Context*) {}
-void ExecutionPolicy::on_path_complete(const Context*, ExitStatus) {}
 
 Interpreter::Interpreter(Executor* queue, Context* ctx, FailureLogger* logger,
                          const InterpreterOptions& options)
