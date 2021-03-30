@@ -16,6 +16,10 @@
 
 namespace caffeine {
 
+ExecutionResult::ExecutionResult(Status status) : status_(status) {}
+ExecutionResult::ExecutionResult(llvm::SmallVector<Context, 2>&& contexts)
+    : status_(Dead), contexts_(std::move(contexts)) {}
+
 /**
  * Combine the two provided iterators into a single one which
  * yields std::pair.
@@ -52,23 +56,13 @@ void Interpreter::execute() {
     ExecutionResult res = visit(inst);
 
     if (!res.contexts().empty()) {
-      store->add_context_multi(res.contexts().data(), res.contexts().size());
+      for (Context& ctx : res.contexts()) {
+        queue->add_context(std::move(ctx));
+      }
       break;
     }
 
     if (res.status() != ExecutionResult::Continue) {
-      switch (res.status()) {
-      case ExecutionResult::Dead:
-        policy->on_path_complete(ctx, ExecutionPolicy::Dead);
-        break;
-      case ExecutionResult::Stop:
-        policy->on_path_complete(ctx, ExecutionPolicy::Success);
-        break;
-
-      case ExecutionResult::Continue:
-        CAFFEINE_UNREACHABLE();
-      }
-
       break;
     }
   }
