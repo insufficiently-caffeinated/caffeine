@@ -102,6 +102,9 @@ void PrintingFailureLogger::log_failure(const Model& model, const Context& ctx,
   *os << "Backtrace:\n";
   print_context_backtrace(*os, ctx);
 
+  if (!failure.message.empty())
+    *os << "Reason:\n  " << failure.message << '\n';
+
   *os << std::flush;
 }
 
