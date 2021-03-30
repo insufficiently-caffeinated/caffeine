@@ -26,6 +26,16 @@ Interpreter::Interpreter(Executor* queue, Context* ctx, FailureLogger* logger,
                          const InterpreterOptions& options)
     : ctx{ctx}, queue{queue}, logger{logger}, options(options) {}
 
+void Interpreter::logFailure(Context& ctx, const Assertion& assertion,
+                             std::string_view message) {
+  auto model = ctx.resolve(assertion);
+  if (model->result() != SolverResult::SAT)
+    return;
+
+  logger->log_failure(*model, ctx, Failure(assertion, message));
+  policy->on_path_complete(ctx, ExecutionPolicy::Fail);
+}
+
 void Interpreter::execute() {
   while (true) {
     StackFrame& frame = ctx->stack_top();
@@ -111,9 +121,8 @@ ExecutionResult Interpreter::visitUDiv(llvm::BinaryOperator& op) {
   auto result = transform_exprs(
       [&](const auto& lhs, const auto& rhs) {
         Assertion assertion = ICmpOp::CreateICmp(ICmpOpcode::NE, rhs, 0);
-        auto model = ctx->resolve(!assertion);
-        if (model->result() == SolverResult::SAT)
-          logger->log_failure(*model, *ctx, Failure(!assertion));
+        if (ctx->check(!assertion) == SolverResult::SAT)
+          logFailure(*ctx, !assertion, "udiv by 0");
         ctx->add(assertion);
 
         return BinaryOp::CreateUDiv(lhs, rhs);
@@ -142,9 +151,8 @@ ExecutionResult Interpreter::visitSDiv(llvm::BinaryOperator& op) {
         // lhs == 0 || (lhs == INT_MIN && rhs == -1)
         Assertion assertion =
             BinaryOp::CreateOr(cmp1, BinaryOp::CreateAnd(cmp2, cmp3));
-        auto model = ctx->resolve(assertion);
-        if (model->result() == SolverResult::SAT)
-          logger->log_failure(*model, *ctx, Failure(!assertion));
+        if (ctx->check(assertion) == SolverResult::SAT)
+          logFailure(*ctx, assertion, "sdiv fault (div by 0 or overflow)");
         ctx->add(!assertion);
 
         return BinaryOp::CreateSDiv(lhs, rhs);
@@ -173,9 +181,8 @@ ExecutionResult Interpreter::visitSRem(llvm::BinaryOperator& op) {
         // lhs == 0 || (lhs == INT_MIN && rhs == -1)
         Assertion assertion =
             BinaryOp::CreateOr(cmp1, BinaryOp::CreateAnd(cmp2, cmp3));
-        auto model = ctx->resolve(assertion);
-        if (model->result() == SolverResult::SAT)
-          logger->log_failure(*model, *ctx, Failure(assertion));
+        if (ctx->check(assertion) == SolverResult::SAT)
+          logFailure(*ctx, assertion, "srem fault (div by 0 or overflow)");
         ctx->add(!assertion);
 
         return BinaryOp::CreateSRem(lhs, rhs);
@@ -195,9 +202,8 @@ ExecutionResult Interpreter::visitURem(llvm::BinaryOperator& op) {
   auto result = transform_exprs(
       [&](const auto& lhs, const auto& rhs) {
         Assertion assertion = ICmpOp::CreateICmp(ICmpOpcode::NE, rhs, 0);
-        auto model = ctx->resolve(!assertion);
-        if (model->result() == SolverResult::SAT)
-          logger->log_failure(*model, *ctx, Failure(!assertion));
+        if (ctx->check(!assertion) == SolverResult::SAT)
+          logFailure(*ctx, !assertion, "urem fault (div by 0)");
         ctx->add(assertion);
 
         return BinaryOp::CreateURem(lhs, rhs);
@@ -326,15 +332,14 @@ ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
 
   auto assertion =
       ctx->heap.check_valid(pointer, layout.getTypeStoreSize(inst.getType()));
-  auto model = ctx->resolve(!assertion);
-  if (model->result() == SolverResult::SAT) {
-    logger->log_failure(*model, *ctx, Failure(!assertion));
+  if (ctx->check(!assertion) == SolverResult::SAT) {
+    logFailure(*ctx, !assertion, "invalid pointer load");
 
     // If we're getting an out-of-bounds access then there's a pretty good
     // chance that we'll find that we can overlap with just about any other
     // allocation. This isn't likely to produce useful bugs so we'll kill the
     // context here.
-    return ExecutionResult::Stop;
+    return ExecutionResult::Dead;
   }
 
   auto resolved = ctx->heap.resolve(pointer, *ctx);
@@ -361,15 +366,14 @@ ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
 
   auto assertion = ctx->heap.check_valid(
       pointer, layout.getTypeStoreSize(inst.getOperand(0)->getType()));
-  auto model = ctx->resolve(!assertion);
-  if (model->result() == SolverResult::SAT) {
-    logger->log_failure(*model, *ctx, Failure(!assertion));
+  if (ctx->check(!assertion) == SolverResult::SAT) {
+    logFailure(*ctx, !assertion, "invalid pointer store");
 
     // If we're getting an out-of-bounds access then there's a pretty good
     // chance that we'll find that we can overlap with just about any other
     // allocation. This isn't likely to produce useful bugs so we'll kill the
     // context here.
-    return ExecutionResult::Stop;
+    return ExecutionResult::Dead;
   }
 
   auto resolved = ctx->heap.resolve(pointer, *ctx);
@@ -485,9 +489,8 @@ ExecutionResult Interpreter::visitAssert(llvm::CallInst& call) {
   auto cond = ctx->lookup(call.getArgOperand(0));
   auto assertion = Assertion(cond.scalar().expr());
 
-  auto model = ctx->resolve(!assertion);
-  if (model->result() == SolverResult::SAT)
-    logger->log_failure(*model, *ctx, Failure(!assertion));
+  if (ctx->check(!assertion))
+    logFailure(*ctx, !assertion, "assertion failure");
 
   ctx->add(assertion);
 
@@ -643,12 +646,10 @@ ExecutionResult Interpreter::visitFree(llvm::CallInst& call) {
   auto memptr = ctx->lookup(call.getArgOperand(0)).scalar().pointer();
 
   auto is_valid_ptr = heap.check_starts_allocation(memptr);
-  auto model = ctx->resolve(!is_valid_ptr);
-  if (model->result() == SolverResult::SAT) {
-    logger->log_failure(
-        *model, *ctx,
-        Failure(is_valid_ptr, "Attempted to free an invalid pointer"));
-    return ExecutionResult::Stop;
+  if (ctx->check(!is_valid_ptr) == SolverResult::SAT) {
+    logFailure(*ctx, !is_valid_ptr, "free called with an invalid pointer");
+
+    return ExecutionResult::Dead;
   }
 
   auto resolved = heap.resolve(memptr, *ctx);
@@ -659,16 +660,14 @@ ExecutionResult Interpreter::visitFree(llvm::CallInst& call) {
 
         auto assertion = Assertion(ICmpOp::CreateICmp(
             ICmpOpcode::EQ, ptr.value(ctx->heap), alloc.address()));
-        auto model = ctx->resolve(assertion);
+        if (ctx->check(!assertion) == SolverResult::SAT) {
+          logFailure(*ctx, Assertion::constant(true),
+                     "free called with a pointer not allocated by malloc");
 
-        if (model->result() == SolverResult::SAT) {
-          logger->log_failure(*model, *ctx,
-                              Failure(Assertion::constant(true),
-                                      "Attempted to free a pointer that "
-                                      "was not allocated by malloc"));
+          return true;
         }
 
-        return model->result() == SolverResult::SAT;
+        return false;
       });
   resolved.erase(err_start, resolved.end());
 
@@ -689,15 +688,14 @@ ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallInst& call) {
   auto size = ctx->lookup(call.getArgOperand(1)).scalar().expr();
 
   auto assertion = ctx->heap.check_valid(mem, size);
-  auto model = ctx->resolve(!assertion);
-  if (model->result() == SolverResult::SAT) {
-    logger->log_failure(*model, *ctx, Failure(!assertion));
+  if (ctx->check(!assertion) == SolverResult::SAT) {
+    logFailure(*ctx, !assertion, "invalid pointer");
 
     // If we're getting an out-of-bounds access then there's a pretty good
     // chance that we'll find that we can overlap with just about any other
     // allocation. This isn't likely to produce useful bugs so we'll kill the
     // context here.
-    return ExecutionResult::Stop;
+    return ExecutionResult::Dead;
   }
 
   auto resolved = ctx->heap.resolve(mem, *ctx);

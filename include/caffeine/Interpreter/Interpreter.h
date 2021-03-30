@@ -92,7 +92,7 @@ public:
   ExecutionResult visitMemSetInst(llvm::MemSetInst& memset);
 
 private:
-  void logFailure(const Context& ctx, const Assertion& assertion,
+  void logFailure(Context& ctx, const Assertion& assertion,
                   std::string_view message = "");
 
 private:
