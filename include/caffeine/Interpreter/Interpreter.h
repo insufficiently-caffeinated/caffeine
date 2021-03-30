@@ -45,7 +45,6 @@ private:
   ExecutionContextStore* store;
 
   Context* ctx;
-  Executor* queue;
   FailureLogger* logger;
   InterpreterOptions options;
 
@@ -54,7 +53,8 @@ public:
    * The interpreter constructor needs an executor and context as well as a way
    * to log assertion failures.
    */
-  Interpreter(Executor* queue, Context* ctx, FailureLogger* logger,
+  Interpreter(Context* ctx, ExecutionPolicy* policy,
+              ExecutionContextStore* store, FailureLogger* logger,
               const InterpreterOptions& options = InterpreterOptions());
 
   void execute();

@@ -1,5 +1,7 @@
 
 #include "caffeine/Interpreter/Interpreter.h"
+#include "caffeine/Interpreter/Policy.h"
+#include "caffeine/Interpreter/Store.h"
 #include "caffeine/Solver/CanonicalizingSolver.h"
 #include "caffeine/Solver/SequenceSolver.h"
 #include "caffeine/Solver/SimplifyingSolver.h"
@@ -18,6 +20,7 @@
 #include <exception>
 #include <iostream>
 #include <memory>
+#include <thread>
 
 using namespace llvm;
 
@@ -164,8 +167,15 @@ int main(int argc, char** argv) {
       caffeine::Z3Solver());
   auto logger = CountingFailureLogger{std::cout, function};
 
-  Executor exec(&logger);
-  exec.add_context(Context{function, solver});
+  auto options = caffeine::ExecutorOptions{
+      // TODO: Update once we actually support multithreaded execution
+      .num_threads = 1 // std::thread::hardware_concurrency()
+  };
+  auto policy = caffeine::AlwaysAllowExecutionPolicy();
+  auto store = caffeine::QueueingContextStore(options.num_threads);
+  auto exec = caffeine::Executor(&policy, &store, &logger, options);
+
+  store.add_context(Context{function, solver});
 
   exec.run();
 

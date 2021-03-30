@@ -22,9 +22,11 @@ ExecutionResult::ExecutionResult(Status status) : status_(status) {}
 ExecutionResult::ExecutionResult(llvm::SmallVector<Context, 2>&& contexts)
     : status_(Dead), contexts_(std::move(contexts)) {}
 
-Interpreter::Interpreter(Executor* queue, Context* ctx, FailureLogger* logger,
+Interpreter::Interpreter(Context* ctx, ExecutionPolicy* policy,
+                         ExecutionContextStore* store, FailureLogger* logger,
                          const InterpreterOptions& options)
-    : ctx{ctx}, queue{queue}, logger{logger}, options(options) {}
+    : policy(policy), store(store), ctx(ctx), logger(logger), options(options) {
+}
 
 void Interpreter::logFailure(Context& ctx, const Assertion& assertion,
                              std::string_view message) {
