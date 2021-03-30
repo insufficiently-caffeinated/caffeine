@@ -33,8 +33,6 @@ auto zip(R1& range1, R2& range2) {
          });
 }
 
-#define WRAP_FUNC(func) [](const auto&... args) { return (func)(args...); }
-
 Interpreter::Interpreter(Executor* queue, Context* ctx, FailureLogger* logger,
                          const InterpreterOptions& options)
     : ctx{ctx}, queue{queue}, logger{logger}, options(options) {}
