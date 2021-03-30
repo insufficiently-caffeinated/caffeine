@@ -13,7 +13,28 @@
 
 namespace caffeine {
 
-enum class ExecutionResult { Continue, Stop };
+class ExecutionResult {
+public:
+  enum Status { Continue, Dead, Stop };
+
+  ExecutionResult(Status status);
+  ExecutionResult(llvm::SmallVector<Context, 2>&& contexts);
+
+  Status status() const {
+    return status_;
+  }
+
+  llvm::SmallVectorImpl<Context>& contexts() {
+    return contexts_;
+  }
+  const llvm::SmallVectorImpl<Context>& contexts() const {
+    return contexts_;
+  }
+
+private:
+  Status status_;
+  llvm::SmallVector<Context, 2> contexts_;
+};
 
 class Interpreter : public llvm::InstVisitor<Interpreter, ExecutionResult> {
 private:

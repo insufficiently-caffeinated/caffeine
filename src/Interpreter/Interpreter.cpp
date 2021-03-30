@@ -16,6 +16,10 @@
 
 namespace caffeine {
 
+ExecutionResult::ExecutionResult(Status status) : status_(status) {}
+ExecutionResult::ExecutionResult(llvm::SmallVector<Context, 2>&& contexts)
+    : status_(Dead), contexts_(std::move(contexts)) {}
+
 /**
  * Combine the two provided iterators into a single one which
  * yields std::pair.
@@ -36,9 +40,7 @@ Interpreter::Interpreter(Executor* queue, Context* ctx, FailureLogger* logger,
     : ctx{ctx}, queue{queue}, logger{logger}, options(options) {}
 
 void Interpreter::execute() {
-  ExecutionResult exec;
-
-  do {
+  while (true) {
     StackFrame& frame = ctx->stack_top();
 
     CAFFEINE_ASSERT(frame.current != frame.current_block->end(),
@@ -51,8 +53,19 @@ void Interpreter::execute() {
     //       modify the current position (e.g. branch, call, etc.)
     ++frame.current;
 
-    exec = visit(inst);
-  } while (exec == ExecutionResult::Continue);
+    ExecutionResult res = visit(inst);
+
+    if (!res.contexts().empty()) {
+      for (Context& ctx : res.contexts()) {
+        queue->add_context(std::move(ctx));
+      }
+      break;
+    }
+
+    if (res.status() != ExecutionResult::Continue) {
+      break;
+    }
+  }
 }
 
 ExecutionResult Interpreter::visitInstruction(llvm::Instruction& inst) {
@@ -203,41 +216,36 @@ ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst& inst) {
     return ExecutionResult::Continue;
   }
 
-  auto cond_ = ctx->lookup(inst.getCondition());
-  auto cond = cond_.scalar().expr();
-
+  auto cond = ctx->lookup(inst.getCondition()).scalar().expr();
   auto assertion = Assertion(cond);
   auto is_t = ctx->check(assertion);
   auto is_f = ctx->check(!assertion);
 
+  size_t count = 0;
+  count += is_t != SolverResult::UNSAT;
+  count += is_f != SolverResult::UNSAT;
+
+  auto forks = ctx->fork(count);
+  size_t idx = 0;
+
   // Note: For the purposes of branching we consider unknown to be
   //       equivalent to sat. Maybe future branches will bring the
   //       equation back to being solvable.
-  if (is_t != SolverResult::UNSAT && is_f != SolverResult::UNSAT) {
-    auto fork = ctx->fork();
+  if (is_t != SolverResult::UNSAT) {
+    auto& fork = forks[idx++];
 
-    // In cases where both conditions are possible we follow the
-    // false path. This should be enough to get us out of most loops
-    // and actually exploring the rest of the program.
     fork.add(assertion);
-    ctx->add(!assertion);
-
     fork.stack_top().jump_to(inst.getSuccessor(0));
-    ctx->stack_top().jump_to(inst.getSuccessor(1));
-
-    queue->add_context(std::move(fork));
-    return ExecutionResult::Continue;
-  } else if (is_t != SolverResult::UNSAT) {
-    ctx->add(assertion);
-    ctx->stack_top().jump_to(inst.getSuccessor(0));
-    return ExecutionResult::Continue;
-  } else if (is_f != SolverResult::UNSAT) {
-    ctx->add(!assertion);
-    ctx->stack_top().jump_to(inst.getSuccessor(1));
-    return ExecutionResult::Continue;
-  } else {
-    return ExecutionResult::Stop;
   }
+
+  if (is_f != SolverResult::UNSAT) {
+    auto& fork = forks[idx++];
+
+    fork.add(!assertion);
+    fork.stack_top().jump_to(inst.getSuccessor(1));
+  }
+
+  return forks;
 }
 ExecutionResult Interpreter::visitReturnInst(llvm::ReturnInst& inst) {
   std::optional<LLVMValue> result = std::nullopt;
@@ -324,7 +332,7 @@ ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
   auto resolved = ctx->heap.resolve(pointer, *ctx);
 
   for (const Pointer& ptr : resolved) {
-    Context forked = ctx->fork();
+    Context forked = ctx->fork_once();
 
     Allocation& alloc = ctx->heap[ptr.alloc()];
     forked.add(alloc.check_inbounds(ptr.offset(),
@@ -361,7 +369,7 @@ ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
 
   auto resolved = ctx->heap.resolve(pointer, *ctx);
   for (const Pointer& ptr : resolved) {
-    Context forked = ctx->fork();
+    Context forked = ctx->fork_once();
 
     Allocation& alloc = forked.heap[ptr.alloc()];
     forked.add(
@@ -561,7 +569,7 @@ ExecutionResult Interpreter::visitMalloc(llvm::CallInst& call) {
       layout.getPointerSizeInBits(call.getType()->getPointerAddressSpace());
 
   if (options.malloc_can_return_null) {
-    Context forked = ctx->fork();
+    Context forked = ctx->fork_once();
     forked.stack_top().insert(
         &call,
         LLVMValue(Pointer(ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
@@ -598,7 +606,7 @@ ExecutionResult Interpreter::visitCalloc(llvm::CallInst& call) {
       layout.getPointerSizeInBits(call.getType()->getPointerAddressSpace());
 
   if (options.malloc_can_return_null) {
-    Context forked = ctx->fork();
+    Context forked = ctx->fork_once();
     forked.stack_top().insert(
         &call,
         LLVMValue(Pointer(ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
@@ -644,7 +652,7 @@ ExecutionResult Interpreter::visitFree(llvm::CallInst& call) {
   CAFFEINE_ASSERT(!resolved.empty());
 
   for (size_t i = 1; i < resolved.size(); ++i) {
-    Context forked = ctx->fork();
+    Context forked = ctx->fork_once();
 
     Allocation& alloc = forked.heap[resolved[i].alloc()];
 
@@ -696,7 +704,7 @@ ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallInst& call) {
   }
 
   for (const auto& ptr : resolved) {
-    Context forked = ctx->fork();
+    Context forked = ctx->fork_once();
     forked.stack_top().insert(&call, LLVMValue(ptr));
     queue->add_context(std::move(forked));
   }

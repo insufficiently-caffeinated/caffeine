@@ -6,6 +6,7 @@
 #include "caffeine/Memory/MemHeap.h"
 #include "caffeine/Solver/Solver.h"
 
+#include <llvm/ADT/SmallVector.h>
 #include <llvm/IR/Constant.h>
 #include <llvm/IR/Function.h>
 
@@ -39,7 +40,14 @@ public:
    * Create a new context that is independent from this
    * one but has the same state.
    */
-  Context fork() const;
+  Context fork_once() const;
+
+  /**
+   * Create count identical contexts to this one.
+   *
+   * After calling this method the original context is no longer available.
+   */
+  llvm::SmallVector<Context, 2> fork(size_t count);
 
   /**
    * Get the top frame of the stack.

@@ -62,8 +62,21 @@ Context::Context(llvm::Function* function, std::shared_ptr<Solver> solver)
   }
 }
 
-Context Context::fork() const {
+Context Context::fork_once() const {
   return Context{*this};
+}
+
+llvm::SmallVector<Context, 2> Context::fork(size_t count) {
+  if (count == 0)
+    return {};
+
+  llvm::SmallVector<Context, 2> forks;
+  for (size_t i = 0; i < count - 1; ++i) {
+    forks.push_back(*this);
+  }
+
+  forks.push_back(std::move(*this));
+  return forks;
 }
 
 const StackFrame& Context::stack_top() const {
