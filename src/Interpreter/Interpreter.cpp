@@ -35,6 +35,14 @@ void Interpreter::logFailure(Context& ctx, const Assertion& assertion,
   logger->log_failure(*model, ctx, Failure(assertion, message));
   policy->on_path_complete(ctx, ExecutionPolicy::Fail);
 }
+void Interpreter::queueContext(Context&& ctx) {
+  policy->on_path_forked(ctx);
+  if (policy->should_queue_path(ctx)) {
+    store->add_context(std::move(ctx));
+  } else {
+    policy->on_path_complete(ctx, ExecutionPolicy::Removed);
+  }
+}
 
 void Interpreter::execute() {
   while (true) {
@@ -579,7 +587,7 @@ ExecutionResult Interpreter::visitMalloc(llvm::CallInst& call) {
     forked.stack_top().insert(
         &call,
         LLVMValue(Pointer(ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
-    queue->add_context(std::move(forked));
+    queueContext(std::move(forked));
   }
 
   auto size_op = UnaryOp::CreateTruncOrZExt(Type::int_ty(ptr_width), size);
@@ -616,7 +624,7 @@ ExecutionResult Interpreter::visitCalloc(llvm::CallInst& call) {
     forked.stack_top().insert(
         &call,
         LLVMValue(Pointer(ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
-    queue->add_context(std::move(forked));
+    queueContext(std::move(forked));
   }
 
   auto size_op = UnaryOp::CreateTruncOrZExt(Type::int_ty(ptr_width), size);

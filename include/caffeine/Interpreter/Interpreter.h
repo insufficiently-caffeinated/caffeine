@@ -94,6 +94,7 @@ public:
 private:
   void logFailure(Context& ctx, const Assertion& assertion,
                   std::string_view message = "");
+  void queueContext(Context&& ctx);
 
 private:
   ExecutionResult visitExternFunc(llvm::CallInst& inst);
