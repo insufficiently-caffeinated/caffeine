@@ -9,35 +9,11 @@
 #include <type_traits>
 #include <utility>
 
+#include "caffeine/ADT/Guard.h"
+
 namespace caffeine {
 
 namespace detail {
-  /**
-   * RAII class that calls a user-provided function during it's destructor.
-   *
-   * This is useful for ensuring that code is executed even if an exception is
-   * thrown (i.e. it can be used to emulate a try/finally statenent).
-   */
-  template <typename F>
-  class drop_guard : F {
-  public:
-    constexpr drop_guard(F&& func) : F(std::move(func)) {}
-    constexpr drop_guard(const F& func) : F(func) {}
-
-    ~drop_guard() {
-      (*this)();
-    }
-  };
-
-  template <typename F>
-  constexpr drop_guard<F> make_guard(F&& func) {
-    return drop_guard<F>(std::move(func));
-  }
-  template <typename F>
-  constexpr drop_guard<F> make_guard(const F& func) {
-    return drop_guard<F>(func);
-  }
-
   /**
    * Replace a value in the location and return the previous value.
    */
@@ -142,7 +118,7 @@ private:
     void remove(size_t next) {
       assert(has_value);
 
-      auto guard = detail::make_guard([&] {
+      auto guard = make_guard([&] {
         has_value = false;
         this->next = next;
         gen += 1;
