@@ -48,6 +48,9 @@ string(TOUPPER "${CAFFEINE_ENABLE_LTO}" CAFFEINE_ENABLE_LTO)
 set(CAFFEINE_FMTONLY OFF CACHE BOOL "Avoid building the project itself")
 mark_as_advanced(CAFFEINE_FMTONLY)
 
+# Disable messages for targets on makefile generators
+set_property(GLOBAL PROPERTY TARGET_MESSAGES OFF)
+
 if (CAFFEINE_ENABLE_BUILD)
   # TODO: We should have an option to download and build these locally if needed.
   find_package(LLVM 10.0 REQUIRED)

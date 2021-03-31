@@ -70,7 +70,7 @@ function(declare_test TEST_NAME_OUT test)
     OUTPUT "${GEN_OUT}"
     COMMAND gen-test-main --skip-if-present -o "${GEN_OUT}" "${TGT_OUT}" test
     MAIN_DEPENDENCY "${TGT_OUT}"
-    COMMENT Generating main method for "${test_target}"
+    COMMENT "Generating main method for ${test_target}"
   )
 
   # Remove unused methods
@@ -78,7 +78,7 @@ function(declare_test TEST_NAME_OUT test)
     OUTPUT "${OPT_OUT}"
     COMMAND "${LLVM_OPT}" -internalize -globaldce "${GEN_OUT}" -o "${OPT_OUT}"
     MAIN_DEPENDENCY "${GEN_OUT}"
-    COMMENT Optimizing "${test_target}"
+    COMMENT "Optimizing ${test_target}"
   )
 
   add_custom_command(
@@ -91,7 +91,6 @@ function(declare_test TEST_NAME_OUT test)
   add_custom_target(
     "gen-${test_target}" ALL
     DEPENDS "${DIS_OUT}"
-    COMMENT "Built target gen-${test_target}"
   )
 
   if(should_skip)
