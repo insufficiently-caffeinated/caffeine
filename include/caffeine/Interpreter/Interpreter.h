@@ -41,6 +41,9 @@ private:
 
 class Interpreter : public llvm::InstVisitor<Interpreter, ExecutionResult> {
 private:
+  ExecutionPolicy* policy;
+  ExecutionContextStore* store;
+
   Context* ctx;
   Executor* queue;
   FailureLogger* logger;

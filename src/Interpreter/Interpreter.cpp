@@ -43,13 +43,23 @@ void Interpreter::execute() {
     ExecutionResult res = visit(inst);
 
     if (!res.contexts().empty()) {
-      for (Context& ctx : res.contexts()) {
-        queue->add_context(std::move(ctx));
-      }
+      store->add_context_multi(res.contexts().data(), res.contexts().size());
       break;
     }
 
     if (res.status() != ExecutionResult::Continue) {
+      switch (res.status()) {
+      case ExecutionResult::Dead:
+        policy->on_path_complete(ctx, ExecutionPolicy::Dead);
+        break;
+      case ExecutionResult::Stop:
+        policy->on_path_complete(ctx, ExecutionPolicy::Success);
+        break;
+
+      case ExecutionResult::Continue:
+        CAFFEINE_UNREACHABLE();
+      }
+
       break;
     }
   }
@@ -266,9 +276,7 @@ ExecutionResult Interpreter::visitCallInst(llvm::CallInst& call) {
     return visitExternFunc(call);
 
   StackFrame callee{func};
-  for (auto [arg, val] :
-       zip(boost::make_iterator_range(func->arg_begin(), func->arg_end()),
-           boost::make_iterator_range(call.arg_begin(), call.arg_end()))) {
+  for (auto [arg, val] : llvm::zip(func->args(), call.args())) {
     callee.insert(&arg, ctx->lookup(val.get()));
   }
 
@@ -317,21 +325,18 @@ ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
   }
 
   auto resolved = ctx->heap.resolve(pointer, *ctx);
+  auto forks = ctx->fork(resolved.size());
 
-  for (const Pointer& ptr : resolved) {
-    Context forked = ctx->fork_once();
-
-    Allocation& alloc = ctx->heap[ptr.alloc()];
-    forked.add(alloc.check_inbounds(ptr.offset(),
-                                    layout.getTypeStoreSize(inst.getType())));
+  for (auto [fork, ptr] : llvm::zip(forks, resolved)) {
+    Allocation& alloc = fork.heap[ptr.alloc()];
+    fork.add(alloc.check_inbounds(ptr.offset(),
+                                  layout.getTypeStoreSize(inst.getType())));
 
     auto value = alloc.read(ptr.offset(), inst.getType(), layout);
-    forked.stack_top().insert(&inst, value);
-
-    queue->add_context(std::move(forked));
+    fork.stack_top().insert(&inst, value);
   }
 
-  return ExecutionResult::Stop;
+  return forks;
 }
 ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
   auto value = ctx->lookup(inst.getOperand(0));
@@ -355,18 +360,16 @@ ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
   }
 
   auto resolved = ctx->heap.resolve(pointer, *ctx);
-  for (const Pointer& ptr : resolved) {
-    Context forked = ctx->fork_once();
+  auto forks = ctx->fork(resolved.size());
 
-    Allocation& alloc = forked.heap[ptr.alloc()];
-    forked.add(
+  for (auto [fork, ptr] : llvm::zip(forks, resolved)) {
+    Allocation& alloc = fork.heap[ptr.alloc()];
+    fork.add(
         alloc.check_inbounds(ptr.offset(), layout.getTypeStoreSize(op_ty)));
-    alloc.write(ptr.offset(), op_ty, value, ctx->heap, layout);
-
-    queue->add_context(std::move(forked));
+    alloc.write(ptr.offset(), op_ty, value, fork.heap, layout);
   }
 
-  return ExecutionResult::Stop;
+  return forks;
 }
 ExecutionResult Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {
   auto& frame = ctx->stack_top();
@@ -636,35 +639,36 @@ ExecutionResult Interpreter::visitFree(llvm::CallInst& call) {
   }
 
   auto resolved = heap.resolve(memptr, *ctx);
-  CAFFEINE_ASSERT(!resolved.empty());
 
-  for (size_t i = 1; i < resolved.size(); ++i) {
-    Context forked = ctx->fork_once();
+  auto err_start =
+      std::remove_if(resolved.begin(), resolved.end(), [&](const Pointer& ptr) {
+        const Allocation& alloc = ctx->heap[ptr.alloc()];
 
-    Allocation& alloc = forked.heap[resolved[i].alloc()];
+        auto assertion = Assertion(ICmpOp::CreateICmp(
+            ICmpOpcode::EQ, ptr.value(ctx->heap), alloc.address()));
+        auto model = ctx->resolve(assertion);
 
-    forked.add(ICmpOp::CreateICmp(
-        ICmpOpcode::EQ, resolved[i].value(forked.heap), alloc.address()));
+        if (model->result() == SolverResult::SAT) {
+          logger->log_failure(*model, *ctx,
+                              Failure(Assertion::constant(true),
+                                      "Attempted to free a pointer that "
+                                      "was not allocated by malloc"));
+        }
 
-    if (alloc.kind() != AllocationKind::Malloc) {
-      auto model = ctx->resolve();
+        return model->result() == SolverResult::SAT;
+      });
+  resolved.erase(err_start, resolved.end());
 
-      if (model->result() == SolverResult::SAT)
-        logger->log_failure(*model, forked,
-                            Failure(Assertion::constant(true),
-                                    "Attempted to free a pointer that was not "
-                                    "allocated by malloc"));
+  auto forks = ctx->fork(resolved.size());
 
-      continue;
-    }
-
-    forked.heap.deallocate(resolved[i].alloc());
-    queue->add_context(std::move(forked));
+  for (auto [fork, ptr] : llvm::zip(forks, resolved)) {
+    Allocation& alloc = fork.heap[ptr.alloc()];
+    fork.add(ICmpOp::CreateICmp(ICmpOpcode::EQ, ptr.value(fork.heap),
+                                alloc.address()));
+    fork.heap.deallocate(ptr.alloc());
   }
 
-  heap.deallocate(resolved[0].alloc());
-
-  return ExecutionResult::Continue;
+  return forks;
 }
 
 ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallInst& call) {
@@ -690,13 +694,12 @@ ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallInst& call) {
     return ExecutionResult::Continue;
   }
 
-  for (const auto& ptr : resolved) {
-    Context forked = ctx->fork_once();
-    forked.stack_top().insert(&call, LLVMValue(ptr));
-    queue->add_context(std::move(forked));
+  auto forks = ctx->fork(resolved.size());
+  for (auto [fork, ptr] : llvm::zip(forks, resolved)) {
+    fork.stack_top().insert(&call, LLVMValue(ptr));
   }
 
-  return ExecutionResult::Stop;
+  return forks;
 }
 
 } // namespace caffeine
