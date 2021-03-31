@@ -20,19 +20,6 @@ ExecutionResult::ExecutionResult(Status status) : status_(status) {}
 ExecutionResult::ExecutionResult(llvm::SmallVector<Context, 2>&& contexts)
     : status_(Dead), contexts_(std::move(contexts)) {}
 
-/**
- * Combine the two provided iterators into a single one which
- * yields std::pair.
- */
-template <typename R1, typename R2>
-auto zip(R1& range1, R2& range2) {
-  return boost::combine(range1, range2) |
-         boost::adaptors::transformed([](const auto& tuple) {
-           return std::make_pair(tuple.template get<0>(),
-                                 tuple.template get<1>());
-         });
-}
-
 Interpreter::Interpreter(Executor* queue, Context* ctx, FailureLogger* logger,
                          const InterpreterOptions& options)
     : ctx{ctx}, queue{queue}, logger{logger}, options(options) {}
