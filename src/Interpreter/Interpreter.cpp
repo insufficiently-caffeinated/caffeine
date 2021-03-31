@@ -74,7 +74,7 @@ void Interpreter::execute() {
           });
       ctxs.erase(it, ctxs.end());
 
-      store->add_context_multi(ctxs.data(), ctxs.size());
+      store->add_context_multi(ctxs);
       return;
     }
 
