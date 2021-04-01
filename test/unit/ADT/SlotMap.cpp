@@ -2,6 +2,10 @@
 
 #include <gtest/gtest.h>
 
+#include <thread>
+
+#include "caffeine/Memory/MemHeap.h"
+
 using namespace caffeine;
 
 TEST(slotmap, initialized_empty) {
@@ -96,4 +100,12 @@ TEST(slotmap, const_iterate) {
   }
 
   ASSERT_TRUE(success);
+}
+
+void function_that_does_nothing(slot_map<Allocation> map) { }
+
+TEST(slotmap, thread) {
+  slot_map<Allocation> _map;
+
+  std::thread(function_that_does_nothing, _map);
 }
