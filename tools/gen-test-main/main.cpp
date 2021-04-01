@@ -2,6 +2,7 @@
 #include <llvm/Bitcode/BitcodeWriter.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/Function.h>
+#include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
@@ -41,13 +42,16 @@ void generate(llvm::Module* m, llvm::Function* function,
       false);
 
   llvm::Function* main = llvm::Function::Create(
-      functy, llvm::GlobalValue::LinkageTypes::ExternalLinkage, UINT_MAX,
-      "main", m);
+      functy, llvm::GlobalValue::LinkageTypes::ExternalLinkage, "main", m);
 
   llvm::BasicBlock* block = llvm::BasicBlock::Create(m->getContext(), "", main);
   std::vector<llvm::Value*> args;
 
   const DataLayout& layout = m->getDataLayout();
+  llvm::IRBuilder builder{block};
+
+  auto i8_p = Type::getInt8PtrTy(m->getContext());
+  auto intptr = Type::getIntNTy(m->getContext(), layout.getPointerSizeInBits());
 
   size_t i = 0;
   for (const Argument& arg : function->args()) {
@@ -60,30 +64,24 @@ void generate(llvm::Module* m, llvm::Function* function,
                                            Type::getInt8Ty(m->getContext()));
     auto ident = new GlobalVariable(*m, value->getType(), true,
                                     GlobalVariable::InternalLinkage, value);
-    auto idptr =
-        ConstantExpr::getBitCast(ident, Type::getInt8PtrTy(m->getContext()));
+    auto idptr = ConstantExpr::getBitCast(ident, i8_p);
+    auto size =
+        ConstantInt::get(intptr, APInt(layout.getPointerSizeInBits(),
+                                       layout.getTypeStoreSize(arg.getType())));
 
-    auto alloca = new AllocaInst(arg.getType(), 0, "", block);
-    auto casted =
-        new BitCastInst(alloca, Type::getInt8PtrTy(m->getContext()), "", block);
-    auto size = ConstantInt::get(
-        Type::getIntNTy(m->getContext(), layout.getPointerSizeInBits()),
-        APInt(layout.getPointerSizeInBits(),
-              layout.getTypeAllocSize(arg.getType())));
-    CallInst::Create(make_symbolic->getFunctionType(), make_symbolic,
-                     ArrayRef<Value*>{casted, size, idptr}, "", block);
-    auto loaded = new LoadInst(alloca, "", block);
+    auto alloca = builder.CreateAlloca(arg.getType());
+    auto casted = builder.CreateBitCast(alloca, i8_p);
+    builder.CreateCall(make_symbolic, ArrayRef<Value*>{casted, size, idptr});
+    auto loaded = builder.CreateLoad(alloca);
 
     args.push_back(loaded);
 
     i++;
   }
 
-  CallInst::Create(function->getFunctionType(), function, args, "", block);
-  ReturnInst::Create(m->getContext(),
-                     ConstantInt::get(Type::getInt32Ty(m->getContext()),
-                                      APInt::getNullValue(32)),
-                     block);
+  builder.CreateCall(function, args);
+  builder.CreateRet(ConstantInt::get(Type::getInt32Ty(m->getContext()),
+                                     APInt::getNullValue(32)));
 
   appendToUsed(*m, {main});
 }
