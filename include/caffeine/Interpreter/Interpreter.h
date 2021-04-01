@@ -13,6 +13,8 @@
 
 namespace caffeine {
 
+class ExecutionPolicy;
+
 class ExecutionResult {
 public:
   enum Status { Continue, Dead, Stop };
