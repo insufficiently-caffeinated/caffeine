@@ -113,7 +113,6 @@ function(llvm_library TARGET_NAME)
     "${TARGET_NAME}" ALL
     DEPENDS "${library}"
     SOURCES ${sources}
-    COMMENT "Built target ${TARGET_NAME}"
   )
 
   set_target_properties(
@@ -158,7 +157,7 @@ function(llvm_library TARGET_NAME)
     
     get_source_file_property(includes "${source}" INCLUDE_DIRECTORIES)
     get_source_file_property(options "${source}" LLVM_COMPILE_OPTIONS)
-    file(RELATIVE_PATH object_rel "${CMAKE_SOURCE_DIR}" "${object}")
+    file(RELATIVE_PATH object_rel "${CMAKE_BINARY_DIR}" "${object}")
 
     string(CONCAT COMPILER 
       "$<$<STREQUAL:${source_language},C>:${CLANG}>"
@@ -196,11 +195,13 @@ function(llvm_library TARGET_NAME)
         "$<GENEX_EVAL:$<TARGET_PROPERTY:${TARGET_NAME},LLVM_COMPILE_OPTIONS>>"
         "${options}"
         "${source}"
-        -o "${object}"
+        # Needs to be relative to CMAKE_BINARY_DIR otherwise depfiles don't work
+        -o "${object_rel}"
       MAIN_DEPENDENCY "${source}"
       BYPRODUCTS "${depfile}"
       COMMENT "Building LLVM_${source_language} object ${object_rel}"
       COMMAND_EXPAND_LISTS
+      WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
       ${DEPFILE_ARG}
     )
 
@@ -211,6 +212,8 @@ function(llvm_library TARGET_NAME)
   get_filename_component(library_name "${library}" NAME)
   make_directory("${output_dir}")
 
+  file(RELATIVE_PATH library_rel "${CMAKE_BINARY_DIR}" "${library}")
+
   add_custom_command(
     OUTPUT "${library}"
     COMMAND "${LLVM_LINK}" ARGS
@@ -220,7 +223,7 @@ function(llvm_library TARGET_NAME)
       ${extra_flags}
       -o "${library}"
     DEPENDS "${objects}" "$<TARGET_PROPERTY:${TARGET_NAME},LLVM_LINK_DEPENDS>"
-    COMMENT "Linking BITCODE library ${library_name}"
+    COMMENT "Linking BITCODE library ${library_rel}"
     COMMAND_EXPAND_LISTS
   )
 endfunction()
