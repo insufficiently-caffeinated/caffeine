@@ -14,6 +14,7 @@
 namespace caffeine {
 
 class ExecutionPolicy;
+class ExecutionContextStore;
 
 class ExecutionResult {
 public:
@@ -86,6 +87,10 @@ public:
   ExecutionResult visitMemCpyInst(llvm::MemCpyInst& memcpy);
   ExecutionResult visitMemMoveInst(llvm::MemMoveInst& memmove);
   ExecutionResult visitMemSetInst(llvm::MemSetInst& memset);
+
+private:
+  void logFailure(const Context& ctx, const Assertion& assertion,
+                  std::string_view message = "");
 
 private:
   ExecutionResult visitExternFunc(llvm::CallInst& inst);
