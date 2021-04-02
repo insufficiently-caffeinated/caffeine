@@ -41,8 +41,10 @@ private:
 
 class Interpreter : public llvm::InstVisitor<Interpreter, ExecutionResult> {
 private:
+  ExecutionPolicy* policy;
+  ExecutionContextStore* store;
+
   Context* ctx;
-  Executor* queue;
   FailureLogger* logger;
   InterpreterOptions options;
 
@@ -51,7 +53,8 @@ public:
    * The interpreter constructor needs an executor and context as well as a way
    * to log assertion failures.
    */
-  Interpreter(Executor* queue, Context* ctx, FailureLogger* logger,
+  Interpreter(Context* ctx, ExecutionPolicy* policy,
+              ExecutionContextStore* store, FailureLogger* logger,
               const InterpreterOptions& options = InterpreterOptions());
 
   void execute();
@@ -89,8 +92,9 @@ public:
   ExecutionResult visitMemSetInst(llvm::MemSetInst& memset);
 
 private:
-  void logFailure(const Context& ctx, const Assertion& assertion,
+  void logFailure(Context& ctx, const Assertion& assertion,
                   std::string_view message = "");
+  void queueContext(Context&& ctx);
 
 private:
   ExecutionResult visitExternFunc(llvm::CallInst& inst);

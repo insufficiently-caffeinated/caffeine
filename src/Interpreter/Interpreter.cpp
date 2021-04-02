@@ -22,9 +22,29 @@ ExecutionResult::ExecutionResult(Status status) : status_(status) {}
 ExecutionResult::ExecutionResult(llvm::SmallVector<Context, 2>&& contexts)
     : status_(Dead), contexts_(std::move(contexts)) {}
 
-Interpreter::Interpreter(Executor* queue, Context* ctx, FailureLogger* logger,
+Interpreter::Interpreter(Context* ctx, ExecutionPolicy* policy,
+                         ExecutionContextStore* store, FailureLogger* logger,
                          const InterpreterOptions& options)
-    : ctx{ctx}, queue{queue}, logger{logger}, options(options) {}
+    : policy(policy), store(store), ctx(ctx), logger(logger), options(options) {
+}
+
+void Interpreter::logFailure(Context& ctx, const Assertion& assertion,
+                             std::string_view message) {
+  auto model = ctx.resolve(assertion);
+  if (model->result() != SolverResult::SAT)
+    return;
+
+  logger->log_failure(*model, ctx, Failure(assertion, message));
+  policy->on_path_complete(ctx, ExecutionPolicy::Fail);
+}
+void Interpreter::queueContext(Context&& ctx) {
+  policy->on_path_forked(ctx);
+  if (policy->should_queue_path(ctx)) {
+    store->add_context(std::move(ctx));
+  } else {
+    policy->on_path_complete(ctx, ExecutionPolicy::Removed);
+  }
+}
 
 void Interpreter::execute() {
   while (true) {
@@ -43,14 +63,37 @@ void Interpreter::execute() {
     ExecutionResult res = visit(inst);
 
     if (!res.contexts().empty()) {
-      for (Context& ctx : res.contexts()) {
-        queue->add_context(std::move(ctx));
-      }
-      break;
+      auto& ctxs = res.contexts();
+
+      auto it =
+          std::remove_if(ctxs.begin(), ctxs.end(), [&](const Context& ctx) {
+            bool prune = !policy->should_queue_path(ctx);
+            if (prune)
+              policy->on_path_complete(ctx, ExecutionPolicy::Removed);
+            return prune;
+          });
+      ctxs.erase(it, ctxs.end());
+
+      store->add_context_multi(ctxs);
+      return;
     }
 
     if (res.status() != ExecutionResult::Continue) {
-      break;
+      switch (res.status()) {
+      case ExecutionResult::Dead:
+        policy->on_path_complete(*ctx, ExecutionPolicy::Dead);
+        return;
+      case ExecutionResult::Stop:
+        policy->on_path_complete(*ctx, ExecutionPolicy::Success);
+        return;
+
+      case ExecutionResult::Continue:
+        CAFFEINE_UNREACHABLE();
+      }
+
+      CAFFEINE_UNREACHABLE(
+          fmt::format(FMT_STRING("Unexpected ExecutionResult value: {}"),
+                      magic_enum::enum_name(res.status())));
     }
   }
 }
@@ -88,9 +131,8 @@ ExecutionResult Interpreter::visitUDiv(llvm::BinaryOperator& op) {
   auto result = transform_exprs(
       [&](const auto& lhs, const auto& rhs) {
         Assertion assertion = ICmpOp::CreateICmp(ICmpOpcode::NE, rhs, 0);
-        auto model = ctx->resolve(!assertion);
-        if (model->result() == SolverResult::SAT)
-          logger->log_failure(*model, *ctx, Failure(!assertion));
+        if (ctx->check(!assertion) == SolverResult::SAT)
+          logFailure(*ctx, !assertion, "udiv by 0");
         ctx->add(assertion);
 
         return BinaryOp::CreateUDiv(lhs, rhs);
@@ -119,9 +161,8 @@ ExecutionResult Interpreter::visitSDiv(llvm::BinaryOperator& op) {
         // lhs == 0 || (lhs == INT_MIN && rhs == -1)
         Assertion assertion =
             BinaryOp::CreateOr(cmp1, BinaryOp::CreateAnd(cmp2, cmp3));
-        auto model = ctx->resolve(assertion);
-        if (model->result() == SolverResult::SAT)
-          logger->log_failure(*model, *ctx, Failure(!assertion));
+        if (ctx->check(assertion) == SolverResult::SAT)
+          logFailure(*ctx, assertion, "sdiv fault (div by 0 or overflow)");
         ctx->add(!assertion);
 
         return BinaryOp::CreateSDiv(lhs, rhs);
@@ -150,9 +191,8 @@ ExecutionResult Interpreter::visitSRem(llvm::BinaryOperator& op) {
         // lhs == 0 || (lhs == INT_MIN && rhs == -1)
         Assertion assertion =
             BinaryOp::CreateOr(cmp1, BinaryOp::CreateAnd(cmp2, cmp3));
-        auto model = ctx->resolve(assertion);
-        if (model->result() == SolverResult::SAT)
-          logger->log_failure(*model, *ctx, Failure(assertion));
+        if (ctx->check(assertion) == SolverResult::SAT)
+          logFailure(*ctx, assertion, "srem fault (div by 0 or overflow)");
         ctx->add(!assertion);
 
         return BinaryOp::CreateSRem(lhs, rhs);
@@ -172,9 +212,8 @@ ExecutionResult Interpreter::visitURem(llvm::BinaryOperator& op) {
   auto result = transform_exprs(
       [&](const auto& lhs, const auto& rhs) {
         Assertion assertion = ICmpOp::CreateICmp(ICmpOpcode::NE, rhs, 0);
-        auto model = ctx->resolve(!assertion);
-        if (model->result() == SolverResult::SAT)
-          logger->log_failure(*model, *ctx, Failure(!assertion));
+        if (ctx->check(!assertion) == SolverResult::SAT)
+          logFailure(*ctx, !assertion, "urem fault (div by 0)");
         ctx->add(assertion);
 
         return BinaryOp::CreateURem(lhs, rhs);
@@ -266,9 +305,7 @@ ExecutionResult Interpreter::visitCallInst(llvm::CallInst& call) {
     return visitExternFunc(call);
 
   StackFrame callee{func};
-  for (auto [arg, val] :
-       zip(boost::make_iterator_range(func->arg_begin(), func->arg_end()),
-           boost::make_iterator_range(call.arg_begin(), call.arg_end()))) {
+  for (auto [arg, val] : llvm::zip(func->args(), call.args())) {
     callee.insert(&arg, ctx->lookup(val.get()));
   }
 
@@ -305,33 +342,29 @@ ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
 
   auto assertion =
       ctx->heap.check_valid(pointer, layout.getTypeStoreSize(inst.getType()));
-  auto model = ctx->resolve(!assertion);
-  if (model->result() == SolverResult::SAT) {
-    logger->log_failure(*model, *ctx, Failure(!assertion));
+  if (ctx->check(!assertion) == SolverResult::SAT) {
+    logFailure(*ctx, !assertion, "invalid pointer load");
 
     // If we're getting an out-of-bounds access then there's a pretty good
     // chance that we'll find that we can overlap with just about any other
     // allocation. This isn't likely to produce useful bugs so we'll kill the
     // context here.
-    return ExecutionResult::Stop;
+    return ExecutionResult::Dead;
   }
 
   auto resolved = ctx->heap.resolve(pointer, *ctx);
+  auto forks = ctx->fork(resolved.size());
 
-  for (const Pointer& ptr : resolved) {
-    Context forked = ctx->fork_once();
-
-    Allocation& alloc = ctx->heap[ptr.alloc()];
-    forked.add(alloc.check_inbounds(ptr.offset(),
-                                    layout.getTypeStoreSize(inst.getType())));
+  for (auto [fork, ptr] : llvm::zip(forks, resolved)) {
+    Allocation& alloc = fork.heap[ptr.alloc()];
+    fork.add(alloc.check_inbounds(ptr.offset(),
+                                  layout.getTypeStoreSize(inst.getType())));
 
     auto value = alloc.read(ptr.offset(), inst.getType(), layout);
-    forked.stack_top().insert(&inst, value);
-
-    queue->add_context(std::move(forked));
+    fork.stack_top().insert(&inst, value);
   }
 
-  return ExecutionResult::Stop;
+  return forks;
 }
 ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
   auto value = ctx->lookup(inst.getOperand(0));
@@ -343,30 +376,27 @@ ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
 
   auto assertion = ctx->heap.check_valid(
       pointer, layout.getTypeStoreSize(inst.getOperand(0)->getType()));
-  auto model = ctx->resolve(!assertion);
-  if (model->result() == SolverResult::SAT) {
-    logger->log_failure(*model, *ctx, Failure(!assertion));
+  if (ctx->check(!assertion) == SolverResult::SAT) {
+    logFailure(*ctx, !assertion, "invalid pointer store");
 
     // If we're getting an out-of-bounds access then there's a pretty good
     // chance that we'll find that we can overlap with just about any other
     // allocation. This isn't likely to produce useful bugs so we'll kill the
     // context here.
-    return ExecutionResult::Stop;
+    return ExecutionResult::Dead;
   }
 
   auto resolved = ctx->heap.resolve(pointer, *ctx);
-  for (const Pointer& ptr : resolved) {
-    Context forked = ctx->fork_once();
+  auto forks = ctx->fork(resolved.size());
 
-    Allocation& alloc = forked.heap[ptr.alloc()];
-    forked.add(
+  for (auto [fork, ptr] : llvm::zip(forks, resolved)) {
+    Allocation& alloc = fork.heap[ptr.alloc()];
+    fork.add(
         alloc.check_inbounds(ptr.offset(), layout.getTypeStoreSize(op_ty)));
-    alloc.write(ptr.offset(), op_ty, value, ctx->heap, layout);
-
-    queue->add_context(std::move(forked));
+    alloc.write(ptr.offset(), op_ty, value, fork.heap, layout);
   }
 
-  return ExecutionResult::Stop;
+  return forks;
 }
 ExecutionResult Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {
   auto& frame = ctx->stack_top();
@@ -469,9 +499,8 @@ ExecutionResult Interpreter::visitAssert(llvm::CallInst& call) {
   auto cond = ctx->lookup(call.getArgOperand(0));
   auto assertion = Assertion(cond.scalar().expr());
 
-  auto model = ctx->resolve(!assertion);
-  if (model->result() == SolverResult::SAT)
-    logger->log_failure(*model, *ctx, Failure(!assertion));
+  if (ctx->check(!assertion))
+    logFailure(*ctx, !assertion, "assertion failure");
 
   ctx->add(assertion);
 
@@ -560,7 +589,7 @@ ExecutionResult Interpreter::visitMalloc(llvm::CallInst& call) {
     forked.stack_top().insert(
         &call,
         LLVMValue(Pointer(ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
-    queue->add_context(std::move(forked));
+    queueContext(std::move(forked));
   }
 
   auto size_op = UnaryOp::CreateTruncOrZExt(Type::int_ty(ptr_width), size);
@@ -597,7 +626,7 @@ ExecutionResult Interpreter::visitCalloc(llvm::CallInst& call) {
     forked.stack_top().insert(
         &call,
         LLVMValue(Pointer(ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
-    queue->add_context(std::move(forked));
+    queueContext(std::move(forked));
   }
 
   auto size_op = UnaryOp::CreateTruncOrZExt(Type::int_ty(ptr_width), size);
@@ -627,44 +656,41 @@ ExecutionResult Interpreter::visitFree(llvm::CallInst& call) {
   auto memptr = ctx->lookup(call.getArgOperand(0)).scalar().pointer();
 
   auto is_valid_ptr = heap.check_starts_allocation(memptr);
-  auto model = ctx->resolve(!is_valid_ptr);
-  if (model->result() == SolverResult::SAT) {
-    logger->log_failure(
-        *model, *ctx,
-        Failure(is_valid_ptr, "Attempted to free an invalid pointer"));
-    return ExecutionResult::Stop;
+  if (ctx->check(!is_valid_ptr) == SolverResult::SAT) {
+    logFailure(*ctx, !is_valid_ptr, "free called with an invalid pointer");
+
+    return ExecutionResult::Dead;
   }
 
   auto resolved = heap.resolve(memptr, *ctx);
-  CAFFEINE_ASSERT(!resolved.empty());
 
-  for (size_t i = 1; i < resolved.size(); ++i) {
-    Context forked = ctx->fork_once();
+  auto err_start =
+      std::remove_if(resolved.begin(), resolved.end(), [&](const Pointer& ptr) {
+        const Allocation& alloc = ctx->heap[ptr.alloc()];
 
-    Allocation& alloc = forked.heap[resolved[i].alloc()];
+        auto assertion = Assertion(ICmpOp::CreateICmp(
+            ICmpOpcode::EQ, ptr.value(ctx->heap), alloc.address()));
+        if (ctx->check(!assertion) == SolverResult::SAT) {
+          logFailure(*ctx, Assertion::constant(true),
+                     "free called with a pointer not allocated by malloc");
 
-    forked.add(ICmpOp::CreateICmp(
-        ICmpOpcode::EQ, resolved[i].value(forked.heap), alloc.address()));
+          return true;
+        }
 
-    if (alloc.kind() != AllocationKind::Malloc) {
-      auto model = ctx->resolve();
+        return false;
+      });
+  resolved.erase(err_start, resolved.end());
 
-      if (model->result() == SolverResult::SAT)
-        logger->log_failure(*model, forked,
-                            Failure(Assertion::constant(true),
-                                    "Attempted to free a pointer that was not "
-                                    "allocated by malloc"));
+  auto forks = ctx->fork(resolved.size());
 
-      continue;
-    }
-
-    forked.heap.deallocate(resolved[i].alloc());
-    queue->add_context(std::move(forked));
+  for (auto [fork, ptr] : llvm::zip(forks, resolved)) {
+    Allocation& alloc = fork.heap[ptr.alloc()];
+    fork.add(ICmpOp::CreateICmp(ICmpOpcode::EQ, ptr.value(fork.heap),
+                                alloc.address()));
+    fork.heap.deallocate(ptr.alloc());
   }
 
-  heap.deallocate(resolved[0].alloc());
-
-  return ExecutionResult::Continue;
+  return forks;
 }
 
 ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallInst& call) {
@@ -672,15 +698,14 @@ ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallInst& call) {
   auto size = ctx->lookup(call.getArgOperand(1)).scalar().expr();
 
   auto assertion = ctx->heap.check_valid(mem, size);
-  auto model = ctx->resolve(!assertion);
-  if (model->result() == SolverResult::SAT) {
-    logger->log_failure(*model, *ctx, Failure(!assertion));
+  if (ctx->check(!assertion) == SolverResult::SAT) {
+    logFailure(*ctx, !assertion, "invalid pointer");
 
     // If we're getting an out-of-bounds access then there's a pretty good
     // chance that we'll find that we can overlap with just about any other
     // allocation. This isn't likely to produce useful bugs so we'll kill the
     // context here.
-    return ExecutionResult::Stop;
+    return ExecutionResult::Dead;
   }
 
   auto resolved = ctx->heap.resolve(mem, *ctx);
@@ -690,13 +715,12 @@ ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallInst& call) {
     return ExecutionResult::Continue;
   }
 
-  for (const auto& ptr : resolved) {
-    Context forked = ctx->fork_once();
-    forked.stack_top().insert(&call, LLVMValue(ptr));
-    queue->add_context(std::move(forked));
+  auto forks = ctx->fork(resolved.size());
+  for (auto [fork, ptr] : llvm::zip(forks, resolved)) {
+    fork.stack_top().insert(&call, LLVMValue(ptr));
   }
 
-  return ExecutionResult::Stop;
+  return forks;
 }
 
 } // namespace caffeine
