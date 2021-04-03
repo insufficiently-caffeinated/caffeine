@@ -2,10 +2,6 @@
 #include "caffeine/Interpreter/Interpreter.h"
 #include "caffeine/Interpreter/Policy.h"
 #include "caffeine/Interpreter/Store.h"
-#include "caffeine/Solver/CanonicalizingSolver.h"
-#include "caffeine/Solver/SequenceSolver.h"
-#include "caffeine/Solver/SimplifyingSolver.h"
-#include "caffeine/Solver/Z3Solver.h"
 
 #include <boost/core/demangle.hpp>
 #include <llvm/IR/DiagnosticInfo.h>
@@ -162,9 +158,6 @@ int main(int argc, char** argv) {
   // Print out exception messages in std::terminate
   llvm_handler = std::set_terminate(custom_terminate_handler);
 
-  std::shared_ptr<caffeine::Solver> solver = caffeine::make_sequence_solver(
-      caffeine::SimplifyingSolver(), caffeine::CanonicalizingSolver(),
-      caffeine::Z3Solver());
   auto logger = CountingFailureLogger{std::cout, function};
 
   auto options = caffeine::ExecutorOptions{
@@ -175,7 +168,7 @@ int main(int argc, char** argv) {
   auto store = caffeine::QueueingContextStore(options.num_threads);
   auto exec = caffeine::Executor(&policy, &store, &logger, options);
 
-  store.add_context(Context{function, solver});
+  store.add_context(Context{function});
 
   exec.run();
 

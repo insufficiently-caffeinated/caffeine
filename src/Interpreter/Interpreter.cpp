@@ -4,6 +4,10 @@
 #include "caffeine/Interpreter/StackFrame.h"
 #include "caffeine/Interpreter/Store.h"
 #include "caffeine/Interpreter/Value.h"
+#include "caffeine/Solver/CanonicalizingSolver.h"
+#include "caffeine/Solver/SequenceSolver.h"
+#include "caffeine/Solver/SimplifyingSolver.h"
+#include "caffeine/Solver/Z3Solver.h"
 #include "caffeine/Support/Assert.h"
 
 #include <boost/range/adaptor/transformed.hpp>
@@ -12,6 +16,7 @@
 #include <fmt/format.h>
 #include <llvm/IR/GetElementPtrTypeIterator.h>
 #include <llvm/Support/raw_ostream.h>
+#include <z3++.h>
 
 #include <iostream>
 #include <optional>
@@ -26,11 +31,14 @@ Interpreter::Interpreter(Context* ctx, ExecutionPolicy* policy,
                          ExecutionContextStore* store, FailureLogger* logger,
                          const InterpreterOptions& options)
     : policy(policy), store(store), ctx(ctx), logger(logger), options(options) {
+  solver = caffeine::make_sequence_solver(caffeine::SimplifyingSolver(),
+                                          caffeine::CanonicalizingSolver(),
+                                          caffeine::Z3Solver());
 }
 
 void Interpreter::logFailure(Context& ctx, const Assertion& assertion,
                              std::string_view message) {
-  auto model = ctx.resolve(assertion);
+  auto model = ctx.resolve(solver, assertion);
   if (model->result() != SolverResult::SAT)
     return;
 
@@ -131,7 +139,7 @@ ExecutionResult Interpreter::visitUDiv(llvm::BinaryOperator& op) {
   auto result = transform_exprs(
       [&](const auto& lhs, const auto& rhs) {
         Assertion assertion = ICmpOp::CreateICmp(ICmpOpcode::NE, rhs, 0);
-        if (ctx->check(!assertion) == SolverResult::SAT)
+        if (ctx->check(solver, !assertion) == SolverResult::SAT)
           logFailure(*ctx, !assertion, "udiv by 0");
         ctx->add(assertion);
 
@@ -161,7 +169,7 @@ ExecutionResult Interpreter::visitSDiv(llvm::BinaryOperator& op) {
         // lhs == 0 || (lhs == INT_MIN && rhs == -1)
         Assertion assertion =
             BinaryOp::CreateOr(cmp1, BinaryOp::CreateAnd(cmp2, cmp3));
-        if (ctx->check(assertion) == SolverResult::SAT)
+        if (ctx->check(solver, assertion) == SolverResult::SAT)
           logFailure(*ctx, assertion, "sdiv fault (div by 0 or overflow)");
         ctx->add(!assertion);
 
@@ -191,7 +199,7 @@ ExecutionResult Interpreter::visitSRem(llvm::BinaryOperator& op) {
         // lhs == 0 || (lhs == INT_MIN && rhs == -1)
         Assertion assertion =
             BinaryOp::CreateOr(cmp1, BinaryOp::CreateAnd(cmp2, cmp3));
-        if (ctx->check(assertion) == SolverResult::SAT)
+        if (ctx->check(solver, assertion) == SolverResult::SAT)
           logFailure(*ctx, assertion, "srem fault (div by 0 or overflow)");
         ctx->add(!assertion);
 
@@ -212,7 +220,7 @@ ExecutionResult Interpreter::visitURem(llvm::BinaryOperator& op) {
   auto result = transform_exprs(
       [&](const auto& lhs, const auto& rhs) {
         Assertion assertion = ICmpOp::CreateICmp(ICmpOpcode::NE, rhs, 0);
-        if (ctx->check(!assertion) == SolverResult::SAT)
+        if (ctx->check(solver, !assertion) == SolverResult::SAT)
           logFailure(*ctx, !assertion, "urem fault (div by 0)");
         ctx->add(assertion);
 
@@ -244,8 +252,8 @@ ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst& inst) {
 
   auto cond = ctx->lookup(inst.getCondition()).scalar().expr();
   auto assertion = Assertion(cond);
-  auto is_t = ctx->check(assertion);
-  auto is_f = ctx->check(!assertion);
+  auto is_t = ctx->check(solver, assertion);
+  auto is_f = ctx->check(solver, !assertion);
 
   size_t count = 0;
   count += is_t != SolverResult::UNSAT;
@@ -342,7 +350,7 @@ ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
 
   auto assertion =
       ctx->heap.check_valid(pointer, layout.getTypeStoreSize(inst.getType()));
-  if (ctx->check(!assertion) == SolverResult::SAT) {
+  if (ctx->check(solver, !assertion) == SolverResult::SAT) {
     logFailure(*ctx, !assertion, "invalid pointer load");
 
     // If we're getting an out-of-bounds access then there's a pretty good
@@ -352,7 +360,7 @@ ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
     return ExecutionResult::Dead;
   }
 
-  auto resolved = ctx->heap.resolve(pointer, *ctx);
+  auto resolved = ctx->heap.resolve(solver, pointer, *ctx);
   auto forks = ctx->fork(resolved.size());
 
   for (auto [fork, ptr] : llvm::zip(forks, resolved)) {
@@ -376,7 +384,7 @@ ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
 
   auto assertion = ctx->heap.check_valid(
       pointer, layout.getTypeStoreSize(inst.getOperand(0)->getType()));
-  if (ctx->check(!assertion) == SolverResult::SAT) {
+  if (ctx->check(solver, !assertion) == SolverResult::SAT) {
     logFailure(*ctx, !assertion, "invalid pointer store");
 
     // If we're getting an out-of-bounds access then there's a pretty good
@@ -386,7 +394,7 @@ ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
     return ExecutionResult::Dead;
   }
 
-  auto resolved = ctx->heap.resolve(pointer, *ctx);
+  auto resolved = ctx->heap.resolve(solver, pointer, *ctx);
   auto forks = ctx->fork(resolved.size());
 
   for (auto [fork, ptr] : llvm::zip(forks, resolved)) {
@@ -499,7 +507,7 @@ ExecutionResult Interpreter::visitAssert(llvm::CallInst& call) {
   auto cond = ctx->lookup(call.getArgOperand(0));
   auto assertion = Assertion(cond.scalar().expr());
 
-  if (ctx->check(!assertion))
+  if (ctx->check(solver, !assertion))
     logFailure(*ctx, !assertion, "assertion failure");
 
   ctx->add(assertion);
@@ -507,10 +515,11 @@ ExecutionResult Interpreter::visitAssert(llvm::CallInst& call) {
   return ExecutionResult::Continue;
 }
 
-std::optional<std::string> readSymbolicName(Context* ctx, const Pointer& ptr) {
+std::optional<std::string> readSymbolicName(std::shared_ptr<Solver> solver,
+                                            Context* ctx, const Pointer& ptr) {
   const auto& alloc = ctx->heap[ptr.alloc()];
 
-  auto model = ctx->resolve();
+  auto model = ctx->resolve(solver);
   if (model->result() != SolverResult::SAT) {
     return std::nullopt;
   }
@@ -538,14 +547,14 @@ ExecutionResult Interpreter::visitSymbolicAlloca(llvm::CallInst& call) {
   auto size = ctx->lookup(call.getArgOperand(0)).scalar().expr();
   auto name = ctx->lookup(call.getArgOperand(1)).scalar().pointer();
 
-  auto resolved = ctx->heap.resolve(name, *ctx);
+  auto resolved = ctx->heap.resolve(solver, name, *ctx);
 
   CAFFEINE_ASSERT(!resolved.empty(),
                   "caffeine_make_symbolic called with invalid name pointer");
   CAFFEINE_ASSERT(resolved.size() == 1,
                   "caffeine_make_symbolic called with symbolic name");
 
-  auto alloc_name = readSymbolicName(ctx, resolved.front());
+  auto alloc_name = readSymbolicName(solver, ctx, resolved.front());
   if (!alloc_name.has_value())
     return ExecutionResult::Stop;
 
@@ -656,13 +665,13 @@ ExecutionResult Interpreter::visitFree(llvm::CallInst& call) {
   auto memptr = ctx->lookup(call.getArgOperand(0)).scalar().pointer();
 
   auto is_valid_ptr = heap.check_starts_allocation(memptr);
-  if (ctx->check(!is_valid_ptr) == SolverResult::SAT) {
+  if (ctx->check(solver, !is_valid_ptr) == SolverResult::SAT) {
     logFailure(*ctx, !is_valid_ptr, "free called with an invalid pointer");
 
     return ExecutionResult::Dead;
   }
 
-  auto resolved = heap.resolve(memptr, *ctx);
+  auto resolved = heap.resolve(solver, memptr, *ctx);
 
   auto err_start =
       std::remove_if(resolved.begin(), resolved.end(), [&](const Pointer& ptr) {
@@ -670,7 +679,7 @@ ExecutionResult Interpreter::visitFree(llvm::CallInst& call) {
 
         auto assertion = Assertion(ICmpOp::CreateICmp(
             ICmpOpcode::EQ, ptr.value(ctx->heap), alloc.address()));
-        if (ctx->check(!assertion) == SolverResult::SAT) {
+        if (ctx->check(solver, !assertion) == SolverResult::SAT) {
           logFailure(*ctx, Assertion::constant(true),
                      "free called with a pointer not allocated by malloc");
 
@@ -698,7 +707,7 @@ ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallInst& call) {
   auto size = ctx->lookup(call.getArgOperand(1)).scalar().expr();
 
   auto assertion = ctx->heap.check_valid(mem, size);
-  if (ctx->check(!assertion) == SolverResult::SAT) {
+  if (ctx->check(solver, !assertion) == SolverResult::SAT) {
     logFailure(*ctx, !assertion, "invalid pointer");
 
     // If we're getting an out-of-bounds access then there's a pretty good
@@ -708,7 +717,7 @@ ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallInst& call) {
     return ExecutionResult::Dead;
   }
 
-  auto resolved = ctx->heap.resolve(mem, *ctx);
+  auto resolved = ctx->heap.resolve(solver, mem, *ctx);
 
   if (resolved.size() == 1) {
     ctx->stack_top().insert(&call, LLVMValue(resolved[0]));

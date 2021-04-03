@@ -47,6 +47,7 @@ private:
   Context* ctx;
   FailureLogger* logger;
   InterpreterOptions options;
+  std::shared_ptr<Solver> solver;
 
 public:
   /**

@@ -25,8 +25,8 @@ static void assert_valid_arg(llvm::Type* type) {
   CAFFEINE_ABORT(message);
 }
 
-Context::Context(llvm::Function* function, std::shared_ptr<Solver> solver)
-    : solver(std::move(solver)), mod(function->front().getModule()) {
+Context::Context(llvm::Function* function)
+    : mod(function->front().getModule()) {
   stack.emplace_back(function);
   StackFrame& frame = stack_top();
 
@@ -135,10 +135,12 @@ LLVMValue Context::lookup(llvm::Value* value) {
   return (LLVMValue)ExprEvaluator{this}.visit(value);
 }
 
-SolverResult Context::check(const Assertion& extra) {
+SolverResult Context::check(std::shared_ptr<Solver> solver,
+                            const Assertion& extra) {
   return solver->check(assertions, extra);
 }
-std::unique_ptr<Model> Context::resolve(const Assertion& extra) {
+std::unique_ptr<Model> Context::resolve(std::shared_ptr<Solver> solver,
+                                        const Assertion& extra) {
   return solver->resolve(assertions, extra);
 }
 
