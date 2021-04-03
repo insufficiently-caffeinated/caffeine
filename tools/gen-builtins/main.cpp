@@ -46,6 +46,11 @@ int main(int argc, char** argv) {
       caffeine::generateMemset(module.get(), &function);
       continue;
     }
+
+    if (name.startswith("llvm.memcpy.")) {
+      caffeine::generateMemcpy(module.get(), &function);
+      continue;
+    }
   }
 
   // NOTE: WriteBitcodeToFile seems to produce something that llvm-dis can't

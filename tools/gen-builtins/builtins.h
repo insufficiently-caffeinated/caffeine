@@ -16,6 +16,15 @@ namespace caffeine {
 llvm::Function* generateMemset(llvm::Module* mod, llvm::Function* memsetDecl);
 
 /**
+ * Generate an implementation for an instance of the llvm.memcpy.* builtin and
+ * replace the provided function with it within the parent module.
+ *
+ * This function takes a function pointer to a memcpy defintion within the
+ * current module and generates the corresponding implementation.
+ */
+llvm::Function* generateMemcpy(llvm::Module* mod, llvm::Function* memcpyDecl);
+
+/**
  * Get the existing declaration of a variant of the caffeine.resolve builtin. If
  * the requested variant is not available then generate it within the provided
  * module.
@@ -25,5 +34,11 @@ llvm::Function* generateMemset(llvm::Module* mod, llvm::Function* memsetDecl);
  */
 llvm::FunctionCallee generateResolve(llvm::Module* module, llvm::Type* ptr_ty,
                                      llvm::Type* size_ty);
+
+/**
+ * Get the existing declaration of caffeine_assert. Creates one if it doesn't
+ * exist.
+ */
+llvm::FunctionCallee generateAssert(llvm::Module* module);
 
 } // namespace caffeine

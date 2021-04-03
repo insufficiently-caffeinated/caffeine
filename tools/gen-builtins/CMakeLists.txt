@@ -1,6 +1,8 @@
 
 add_executable(gen-builtins
+  assert.cpp
   main.cpp
+  memcpy.cpp
   memset.cpp
   resolve.cpp
 )
