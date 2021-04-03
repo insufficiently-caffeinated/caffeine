@@ -473,7 +473,7 @@ ExecutionResult Interpreter::visitExternFunc(llvm::CallInst& call) {
   if (name == "caffeine_free")
     return visitFree(call);
 
-  if (name == "caffeine_builtin_resolve")
+  if (name == "caffeine_builtin_resolve" || name.startswith("caffeine.resolve."))
     return visitBuiltinResolve(call);
   if (name == "caffeine_builtin_symbolic_alloca")
     return visitSymbolicAlloca(call);
@@ -694,8 +694,12 @@ ExecutionResult Interpreter::visitFree(llvm::CallInst& call) {
 }
 
 ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallInst& call) {
+  const llvm::DataLayout& layout = call.getModule()->getDataLayout();
+
   auto mem = ctx->lookup(call.getArgOperand(0)).scalar().pointer();
-  auto size = ctx->lookup(call.getArgOperand(1)).scalar().expr();
+  auto size = UnaryOp::CreateTruncOrZExt(
+      Type::int_ty(layout.getPointerSizeInBits()),
+      ctx->lookup(call.getArgOperand(1)).scalar().expr());
 
   auto assertion = ctx->heap.check_valid(mem, size);
   if (ctx->check(!assertion) == SolverResult::SAT) {
