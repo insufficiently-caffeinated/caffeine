@@ -22,7 +22,10 @@ jobs:
       - name: Configure
         run: |
           mkdir -p build
-          cmake -B build -DCAFFEINE_CI=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          cmake -B build \
+            -DCAFFEINE_CI=ON \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCAFFEINE_ENABLE_UBSAN=ON
         env:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
