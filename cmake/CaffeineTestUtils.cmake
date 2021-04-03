@@ -85,8 +85,6 @@ function(declare_test TEST_NAME_OUT test)
   set(DIS_OUT "${output_dir}/${basename}${extra_ext}")
 
   make_directory("${output_dir}")
-  make_directory("${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/gen")
-  make_directory("${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/opt")
 
   llvm_library(
     "${test_target}" "${test}"
@@ -100,7 +98,7 @@ function(declare_test TEST_NAME_OUT test)
 
 
   build_command(
-    OUTPUT "${OUT_DIR}/with-main.bc"
+    OUTPUT "${OUT_DIR}/with-main.ll"
     MAIN_DEPENDENCY "${OUT_DIR}/lib.bc"
     COMMAND gen-test-main ARGS --skip-if-present -o <OUTPUT> <MAIN_DEPENDENCY> test
     COMMENT "Generating main method for ${test_target}"
@@ -108,8 +106,15 @@ function(declare_test TEST_NAME_OUT test)
   )
 
   build_command(
+    OUTPUT "${OUT_DIR}/with-intrinsics.ll"
+    MAIN_DEPENDENCY "${OUT_DIR}/with-main.ll"
+    COMMAND gen-builtins ARGS -o <OUTPUT> <MAIN_DEPENDENCY>
+    COMMENT "Generating builtin methods for ${test_target}"
+  )
+
+  build_command(
     OUTPUT "${OUT_DIR}/optimized.bc"
-    MAIN_DEPENDENCY "${OUT_DIR}/with-main.bc"
+    MAIN_DEPENDENCY "${OUT_DIR}/with-intrinsics.ll"
     COMMAND "${LLVM_OPT}" ARGS -internalize -globaldce <MAIN_DEPENDENCY> -o <OUTPUT>
     COMMENT "Optimizing ${test_target}"
   )
