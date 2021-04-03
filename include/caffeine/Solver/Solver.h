@@ -13,6 +13,9 @@ namespace caffeine {
 class Assertion;
 class Operation;
 class Constant;
+class Context;
+class LLVMScalar;
+class LLVMValue;
 class Symbol;
 
 enum SolverResult { UNSAT, SAT, Unknown };

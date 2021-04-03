@@ -24,7 +24,6 @@ class Context {
 public:
   std::vector<StackFrame> stack;
   std::unordered_map<llvm::GlobalVariable*, LLVMValue> globals;
-  std::shared_ptr<Solver> solver;
   MemHeap heap;
   std::vector<Assertion> assertions;
 
@@ -34,7 +33,7 @@ private:
   uint64_t constant_num_ = 0;
 
 public:
-  Context(llvm::Function* func, std::shared_ptr<Solver> solver);
+  Context(llvm::Function* func);
 
   /**
    * Create a new context that is independent from this
@@ -112,7 +111,8 @@ public:
    *
    * See the docs on Solver::check for more details.
    */
-  SolverResult check(const Assertion& extra = Assertion::constant(true));
+  SolverResult check(std::shared_ptr<Solver> solver,
+                     const Assertion& extra = Assertion::constant(true));
 
   /**
    * Validate whether the set of assertions combined with the extra assertion is
@@ -121,7 +121,8 @@ public:
    * See the docs on Solver::resolve for more details.
    */
   std::unique_ptr<Model>
-  resolve(const Assertion& extra = Assertion::constant(true));
+  resolve(std::shared_ptr<Solver> solver,
+          const Assertion& extra = Assertion::constant(true));
 
 private:
   // TODO: Temporary until context redesign is completed

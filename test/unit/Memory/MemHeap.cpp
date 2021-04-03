@@ -42,7 +42,7 @@ protected:
 
 TEST_F(MemHeapTests, resolve_pointer_single) {
   MemHeap heap;
-  Context context{function.get(), solver};
+  Context context{function.get()};
 
   unsigned index_size = layout.getIndexSizeInBits(0);
   auto align = MakeInt(16);
@@ -57,11 +57,13 @@ TEST_F(MemHeapTests, resolve_pointer_single) {
 
   auto ptr = Pointer(BinaryOp::CreateAdd(heap[alloc].address(), offset));
 
-  ASSERT_EQ(context.check(!heap.check_valid(ptr, 0)), SolverResult::UNSAT);
+  ASSERT_EQ(context.check(solver, !heap.check_valid(ptr, 0)),
+            SolverResult::UNSAT);
 
-  auto res = heap.resolve(ptr, context);
+  auto res = heap.resolve(solver, ptr, context);
 
   ASSERT_EQ(res.size(), 1);
   ASSERT_EQ(res[0].alloc(), alloc);
-  ASSERT_EQ(context.check(res[0].check_null(heap)), SolverResult::UNSAT);
+  ASSERT_EQ(context.check(solver, res[0].check_null(heap)),
+            SolverResult::UNSAT);
 }

@@ -393,7 +393,8 @@ Assertion MemHeap::check_starts_allocation(const Pointer& ptr) {
                              result);
 }
 
-llvm::SmallVector<Pointer, 1> MemHeap::resolve(const Pointer& ptr,
+llvm::SmallVector<Pointer, 1> MemHeap::resolve(std::shared_ptr<Solver> solver,
+                                               const Pointer& ptr,
                                                Context& ctx) const {
   llvm::SmallVector<Pointer, 1> results;
 
@@ -402,7 +403,8 @@ llvm::SmallVector<Pointer, 1> MemHeap::resolve(const Pointer& ptr,
       return results;
 
     const Allocation& alloc = (*this)[ptr.alloc()];
-    if (ctx.check(alloc.check_inbounds(ptr.offset(), 0)) == SolverResult::UNSAT)
+    if (ctx.check(solver, alloc.check_inbounds(ptr.offset(), 0)) ==
+        SolverResult::UNSAT)
       return results;
 
     results.push_back(ptr);
@@ -420,7 +422,7 @@ llvm::SmallVector<Pointer, 1> MemHeap::resolve(const Pointer& ptr,
     auto cmp2 = ICmpOp::CreateICmp(ICmpOpcode::ULT, value, end);
     auto assertion = BinaryOp::CreateAnd(cmp1, cmp2);
 
-    if (ctx.check(Assertion(assertion)) != SolverResult::UNSAT) {
+    if (ctx.check(solver, Assertion(assertion)) != SolverResult::UNSAT) {
       results.push_back(
           Pointer(it.key(), BinaryOp::CreateSub(value, alloc.address())));
     }

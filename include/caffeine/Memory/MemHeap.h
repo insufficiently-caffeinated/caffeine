@@ -16,6 +16,7 @@ class Assertion;
 class MemHeap;
 class LLVMScalar;
 class LLVMValue;
+class Solver;
 
 /**
  * An allocation category.
@@ -252,7 +253,8 @@ public:
    * method when an already known allocation can be preserved across multiple
    * uses.
    */
-  llvm::SmallVector<Pointer, 1> resolve(const Pointer& value,
+  llvm::SmallVector<Pointer, 1> resolve(std::shared_ptr<Solver> solver,
+                                        const Pointer& value,
                                         Context& ctx) const;
 
   void DebugPrint() const;
