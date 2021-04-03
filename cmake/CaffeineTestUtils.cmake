@@ -25,6 +25,40 @@ function(should_skip_test RESULT testfile)
   endif()
 endfunction()
 
+function(build_command)
+  cmake_parse_arguments(
+    ARG
+    ""
+    "COMMAND;OUTPUT;MAIN_DEPENDENCY;COMMENT"
+    "ARGS;DEPENDS"
+    ${ARGV}
+  )
+
+  string(REPLACE "<OUTPUT>"          "${ARG_OUTPUT}"          ARG_ARGS "${ARG_ARGS}")
+  string(REPLACE "<MAIN_DEPENDENCY>" "${ARG_MAIN_DEPENDENCY}" ARG_ARGS "${ARG_ARGS}")
+
+  set(DEPENDS "")
+  if (DEFINED ARG_DEPENDS)
+    set(DEPENDS "${ARG_DEPENDS}")
+  endif()
+  if (TARGET "${ARG_COMMAND}")
+    list(APPEND DEPENDS "${ARG_COMMAND}")
+  endif()
+
+  set(COMMENT "")
+  if (DEFINED ARG_COMMENT)
+    set(COMMENT COMMENT "${ARG_COMMENT}")
+  endif()
+
+  add_custom_command(
+    OUTPUT "${ARG_OUTPUT}"
+    COMMAND "${ARG_COMMAND}" ARGS ${ARG_ARGS}
+    MAIN_DEPENDENCY "${ARG_MAIN_DEPENDENCY}"
+    DEPENDS ${DEPENDS}
+    ${COMMENT}
+  )
+endfunction()
+
 # Utility function for declaring a test case
 function(declare_test TEST_NAME_OUT test)
   file(RELATIVE_PATH test_name "${CMAKE_SOURCE_DIR}/test" "${test}")
@@ -47,9 +81,7 @@ function(declare_test TEST_NAME_OUT test)
   get_filename_component(output_dir "${test_output}" DIRECTORY)
   get_filename_component(basename   "${test_output}" NAME_WLE)
 
-  set(TGT_OUT "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/lib/${test_artifact}")
-  set(GEN_OUT "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/gen/${test_target}.ll")
-  set(OPT_OUT "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/opt/${test_target}.bc")
+  set(OUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/${test_target}.dir/gen")
   set(DIS_OUT "${output_dir}/${basename}${extra_ext}")
 
   make_directory("${output_dir}")
@@ -58,7 +90,7 @@ function(declare_test TEST_NAME_OUT test)
 
   llvm_library(
     "${test_target}" "${test}"
-    OUTPUT "${TGT_OUT}"
+    OUTPUT "${OUT_DIR}/lib.bc"
   )
 
   add_dependencies        ("${test_target}" caffeine-builtins)
@@ -66,26 +98,26 @@ function(declare_test TEST_NAME_OUT test)
   llvm_link_libraries     ("${test_target}" PRIVATE caffeine-builtins)
   llvm_compile_options    ("${test_target}" PRIVATE -O3)
 
-  add_custom_command(
-    OUTPUT "${GEN_OUT}"
-    COMMAND gen-test-main ARGS --skip-if-present -o "${GEN_OUT}" "${TGT_OUT}" test
-    MAIN_DEPENDENCY "${TGT_OUT}"
+
+  build_command(
+    OUTPUT "${OUT_DIR}/with-main.bc"
+    MAIN_DEPENDENCY "${OUT_DIR}/lib.bc"
+    COMMAND gen-test-main ARGS --skip-if-present -o <OUTPUT> <MAIN_DEPENDENCY> test
     COMMENT "Generating main method for ${test_target}"
     DEPENDS "$<TARGET_FILE:gen-test-main>"
   )
 
-  # Remove unused methods
-  add_custom_command(
-    OUTPUT "${OPT_OUT}"
-    COMMAND "${LLVM_OPT}" -internalize -globaldce "${GEN_OUT}" -o "${OPT_OUT}"
-    MAIN_DEPENDENCY "${GEN_OUT}"
+  build_command(
+    OUTPUT "${OUT_DIR}/optimized.bc"
+    MAIN_DEPENDENCY "${OUT_DIR}/with-main.bc"
+    COMMAND "${LLVM_OPT}" ARGS -internalize -globaldce <MAIN_DEPENDENCY> -o <OUTPUT>
     COMMENT "Optimizing ${test_target}"
   )
 
-  add_custom_command(
+  build_command(
     OUTPUT "${DIS_OUT}"
-    COMMAND "${LLVM_DIS}" "${OPT_OUT}" -o "${DIS_OUT}"
-    MAIN_DEPENDENCY "${OPT_OUT}"
+    MAIN_DEPENDENCY "${OUT_DIR}/optimized.bc"
+    COMMAND "${LLVM_DIS}" ARGS <MAIN_DEPENDENCY> -o <OUTPUT>
     COMMENT "Disassembling test case ${test_name}"
   )
 
