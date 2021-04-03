@@ -5,9 +5,10 @@ project(caffeine LANGUAGES C CXX)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
 
-option(CAFFEINE_ENABLE_TESTS  "Enable test targets" ON)
-option(CAFFEINE_ENABLE_FORMAT "Enable formatting targets" ON)
-option(CAFFEINE_BUILD_BITCODE "If true compile tests and libraries down to bitcode, otherwise compile them to text IR" OFF)
+option(CAFFEINE_ENABLE_TESTS    "Enable test targets" ON)
+option(CAFFEINE_ENABLE_FORMAT   "Enable formatting targets" ON)
+option(CAFFEINE_BUILD_BITCODE   "If true compile tests and libraries down to bitcode, otherwise compile them to text IR" OFF)
+option(CAFFEINE_ENABLE_IR_TESTS "Enable tests which involve handwritten LLVM IR" ON)
 
 # Optimization settings
 set(CAFFEINE_ENABLE_LTO OFF CACHE STRING "Enable link-time-optimizations. Valid values: ON, OFF, FULL, THIN")
