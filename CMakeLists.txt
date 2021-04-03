@@ -13,6 +13,13 @@ option(CAFFEINE_BUILD_BITCODE "If true compile tests and libraries down to bitco
 set(CAFFEINE_ENABLE_LTO OFF CACHE STRING "Enable link-time-optimizations. Valid values: ON, OFF, FULL, THIN")
 set(CAFFEINE_USE_LINKER ""  CACHE STRING "Add -fuse-ld={name} to the link invocation.")
 
+# Sanitizers
+option(CAFFEINE_ENABLE_TSAN  "Build with ThreadSanitizer"  OFF)
+option(CAFFEINE_ENABLE_ASAN  "Build with AddressSanitizer" OFF)
+option(CAFFEINE_ENABLE_UBSAN "Build with UndefinedBehaviourSanitizer" OFF)
+option(CAFFEINE_ENABLE_MSAN  "Build with MemorySanitizer"  OFF)
+option(CAFFEINE_ENABLE_LSAN  "Build with LeakSanitizer"    OFF)
+
 # Options used within CI but not really useful anywhere else
 option(CAFFEINE_CI            "Enable options that are inconvenient for normal development but are used in CI" OFF)
 option(CAFFEINE_ENABLE_BUILD  "Enable normal build targets" ON)
@@ -64,6 +71,7 @@ if (CAFFEINE_ENABLE_BUILD)
 
   set(IR_USE_BITCODE ${CAFFEINE_BUILD_BITCODE})
 
+  include(CaffeineSanitizers)
   include(CaffeineWarnings)
   include(CaffeineLinking)
   include(LLVMIRUtils)
