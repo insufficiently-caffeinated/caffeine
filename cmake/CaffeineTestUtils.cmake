@@ -68,9 +68,10 @@ function(declare_test TEST_NAME_OUT test)
 
   add_custom_command(
     OUTPUT "${GEN_OUT}"
-    COMMAND gen-test-main --skip-if-present -o "${GEN_OUT}" "${TGT_OUT}" test
+    COMMAND gen-test-main ARGS --skip-if-present -o "${GEN_OUT}" "${TGT_OUT}" test
     MAIN_DEPENDENCY "${TGT_OUT}"
     COMMENT "Generating main method for ${test_target}"
+    DEPENDS "$<TARGET_FILE:gen-test-main>"
   )
 
   # Remove unused methods
