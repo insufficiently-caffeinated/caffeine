@@ -67,6 +67,16 @@ function(declare_test TEST_NAME_OUT test)
   string(REGEX REPLACE "\\\\|/" "_" test_target "${test_name}")
 
   get_filename_component(test_ext "${test_name}" LAST_EXT)
+  
+  if (NOT CAFFEINE_ENABLE_IR_TESTS AND 
+      ("${test_ext}" STREQUAL ".ll" OR "${test_ext}" STREQUAL ".bc"))
+    add_test(
+      NAME "${test_name}"
+      COMMAND skip-test "IR tests are disabled"
+    )
+    set_tests_properties("${test_name}" PROPERTIES SKIP_RETURN_CODE 77)
+    return()
+  endif()
 
   if("${test_ext}" STREQUAL ".ll")
     set(test_output "${CMAKE_BINARY_DIR}/test/${test_name}")
