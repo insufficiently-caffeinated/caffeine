@@ -17,7 +17,6 @@ QueueingContextStore::QueueingContextStore(size_t num_readers)
 
 std::optional<Context> QueueingContextStore::next_context() {
   auto lock = std::unique_lock(mutex);
-
   if (done)
     return std::nullopt;
   if (!queue.empty())

@@ -10,6 +10,13 @@ The first build will take a while as it's going to build all the dependencies
 and install them within a `vcpkg_installed` directory within the repo folder.
 Once that's done you shouldn't have to worry about it anymore.
 
+## Debugging
+Running with TSAN can help detect a bunch of bugs in your code. To configure
+your build to run with TSAN do:
+```
+CC=clang-10 CXX=clang++-10 cmake -DCMAKE_C_FLAGS='-fsanitize=thread' -DCMAKE_CXX_FLAGS='-fsanitize=thread' ..
+```
+
 ## Installation instructions
 
 ### Ubuntu

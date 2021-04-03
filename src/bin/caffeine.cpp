@@ -13,6 +13,7 @@
 #include <llvm/Support/WithColor.h>
 #include <z3++.h>
 
+#include <atomic>
 #include <exception>
 #include <iostream>
 #include <memory>
@@ -26,7 +27,7 @@ using caffeine::Interpreter;
 
 class CountingFailureLogger : public caffeine::PrintingFailureLogger {
 public:
-  uint64_t num_failures = 0;
+  std::atomic<uint64_t> num_failures = 0;
   llvm::Function* func;
 
   CountingFailureLogger(std::ostream& os, llvm::Function* func)
@@ -162,8 +163,7 @@ int main(int argc, char** argv) {
 
   auto options = caffeine::ExecutorOptions{
       // TODO: Update once we actually support multithreaded execution
-      .num_threads = 1 // std::thread::hardware_concurrency()
-  };
+      .num_threads = std::thread::hardware_concurrency()};
   auto policy = caffeine::AlwaysAllowExecutionPolicy();
   auto store = caffeine::QueueingContextStore(options.num_threads);
   auto exec = caffeine::Executor(&policy, &store, &logger, options);
