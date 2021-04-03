@@ -2,20 +2,13 @@
 #include "caffeine/Interpreter/Interpreter.h"
 #include "caffeine/Interpreter/Store.h"
 
-#include <iostream>
 #include <thread>
 
 namespace caffeine {
 
 void run_worker(Executor* exec, FailureLogger* logger,
                 ExecutionContextStore* store) {
-  while (true) {
-    auto ctx = store->next_context();
-
-    if (!ctx.has_value()) {
-      return;
-    }
-
+  while (auto ctx = store->next_context()) {
     Interpreter interp(&ctx.value(), exec->policy, store, logger);
     interp.execute();
   }

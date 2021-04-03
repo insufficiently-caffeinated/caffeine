@@ -162,7 +162,6 @@ int main(int argc, char** argv) {
   auto logger = CountingFailureLogger{std::cout, function};
 
   auto options = caffeine::ExecutorOptions{
-      // TODO: Update once we actually support multithreaded execution
       .num_threads = std::thread::hardware_concurrency()};
   auto policy = caffeine::AlwaysAllowExecutionPolicy();
   auto store = caffeine::QueueingContextStore(options.num_threads);

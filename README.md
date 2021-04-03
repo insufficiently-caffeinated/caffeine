@@ -14,8 +14,13 @@ Once that's done you shouldn't have to worry about it anymore.
 Running with TSAN can help detect a bunch of bugs in your code. To configure
 your build to run with TSAN do:
 ```
-CC=clang-10 CXX=clang++-10 cmake -DCMAKE_C_FLAGS='-fsanitize=thread' -DCMAKE_CXX_FLAGS='-fsanitize=thread' ..
+CC=clang-10 CXX=clang++-10 cmake -DCAFFEINE_ENABLE_TSAN=ON ..
 ```
+
+It's also possible to specify UBSAN, ASAN, and others with the following flags:
+* `CAFFEINE_ENABLE_ASAN`
+* `CAFFEINE_ENABLE_UBSAN`
+* `CAFFEINE_ENABLE_MSAN`
 
 ## Installation instructions
 
