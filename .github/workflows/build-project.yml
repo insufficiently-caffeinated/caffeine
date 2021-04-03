@@ -1,6 +1,12 @@
 
 name: build-and-test
-on: [push, pull_request]
+
+on:
+  # Don't build CI for stackbot internal branches, they are already built for PRs
+  push:
+    branches-ignore:
+      - stackbot/**
+  pull_request:
 
 jobs:
   build:
