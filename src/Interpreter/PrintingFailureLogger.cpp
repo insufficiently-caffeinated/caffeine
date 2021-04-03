@@ -1,8 +1,7 @@
-#include "caffeine/Interpreter/FailureLogger.h"
-
 #include "caffeine/IR/Visitor.h"
-
+#include "caffeine/Interpreter/FailureLogger.h"
 #include <boost/range/adaptor/reversed.hpp>
+#include <cctype>
 #include <iostream>
 #include <unordered_set>
 
@@ -50,14 +49,37 @@ public:
     auto array = model->evaluate(c).array();
     char* data = array.data();
 
-    os << "  " << symbol.name() << " = ";
+    os << "  " << symbol.name() << " = \"";
 
     for (size_t i = 0; i < array.size(); ++i) {
       uint8_t value = data[i];
 
-      os << inttohex(value & 0xF) << inttohex(value >> 4);
+      if (std::isprint(value)) {
+        os << (char)value;
+      } else {
+        switch (value) {
+        case '\\':
+          os << "\\\\";
+          break;
+        case '\n':
+          os << "\\n";
+          break;
+        case '\t':
+          os << "\\t";
+          break;
+        case '\r':
+          os << "\\r";
+          break;
+        case '\0':
+          os << "\\0";
+          break;
+        default:
+          os << "\\x" << inttohex(value >> 4) << inttohex(value & 0xF);
+          break;
+        }
+      }
     }
-    os << "\n";
+    os << "\"\n";
   }
 
 private:
