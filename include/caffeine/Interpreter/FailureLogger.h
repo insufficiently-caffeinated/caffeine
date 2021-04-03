@@ -5,6 +5,7 @@
 #include "caffeine/Solver/Solver.h"
 
 #include <iosfwd>
+#include <mutex>
 
 namespace caffeine {
 
@@ -36,6 +37,7 @@ protected:
 class PrintingFailureLogger : public FailureLogger {
 private:
   std::ostream* os;
+  std::mutex mtx;
 
 public:
   PrintingFailureLogger(std::ostream& os);

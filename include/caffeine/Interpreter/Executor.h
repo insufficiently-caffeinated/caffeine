@@ -5,6 +5,7 @@
 
 #include "caffeine/Interpreter/Context.h"
 #include "caffeine/Interpreter/FailureLogger.h"
+#include "caffeine/Interpreter/Store.h"
 
 namespace caffeine {
 
@@ -23,6 +24,9 @@ private:
   ExecutionContextStore* store;
   FailureLogger* logger;
   ExecutorOptions options;
+
+  friend void run_worker(Executor* exec, FailureLogger* logger,
+                         ExecutionContextStore* store);
 
 public:
   Executor(ExecutionPolicy* policy, ExecutionContextStore* store,

@@ -3,6 +3,7 @@
 #include <boost/range/adaptor/reversed.hpp>
 #include <cctype>
 #include <iostream>
+#include <sstream>
 #include <unordered_set>
 
 namespace caffeine {
@@ -112,22 +113,24 @@ void PrintingFailureLogger::log_failure(const Model& model, const Context& ctx,
                                         const Failure& failure) {
   CAFFEINE_ASSERT(model.result() == SolverResult::SAT);
 
-  ConstantPrinter printer{*os, &model};
+  std::stringstream ss;
+  ConstantPrinter printer{ss, &model};
 
-  *os << "Found assertion failure:\n";
+  ss << "Found assertion failure:\n";
 
   for (const auto& assertion : ctx.assertions) {
     printer.visit(*assertion.value());
   }
   printer.visit(*failure.check.value());
 
-  *os << "Backtrace:\n";
-  print_context_backtrace(*os, ctx);
+  ss << "Backtrace:\n";
+  print_context_backtrace(ss, ctx);
 
   if (!failure.message.empty())
-    *os << "Reason:\n  " << failure.message << '\n';
+    ss << "Reason:\n  " << failure.message << '\n';
 
-  *os << std::flush;
+  std::unique_lock lock(mtx);
+  *os << ss.str() << std::flush;
 }
 
 } // namespace caffeine
