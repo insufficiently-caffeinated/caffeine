@@ -106,3 +106,15 @@ caffeine_dependency(
     -DMAGIC_ENUM_OPT_BUILD_EXAMPLES:BOOL=FALSE
     -DMAGIC_ENUM_OPT_BUILD_TESTS:BOOL=FALSE
 )
+
+caffeine_dependency(
+  # Note: for some reason the generated ImmerConfig.cmake doesn't have a version.
+  #       To make things work here we explicitly set the version to nothing. 
+  Immer          ""
+  GIT_REPOSITORY https://github.com/arximboldi/immer
+  GIT_TAG        v0.6.2
+  GIT_SHALLOW    TRUE
+  PATCH_COMMAND  "${CMAKE_COMMAND}"
+    "${CMAKE_CURRENT_LIST_DIR}/immer.patch"
+    -P "${CMAKE_CURRENT_LIST_DIR}/CaffeinePatch.cmake"
+)
