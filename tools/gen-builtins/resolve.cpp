@@ -19,7 +19,6 @@ llvm::FunctionCallee generateResolve(llvm::Module* module, llvm::Type* ptr_ty,
 
   llvm::AttrBuilder builder;
   builder.addAttribute(Attribute::ReadNone);
-  builder.addAttribute(Attribute::ReadNone);
   builder.addAttribute(Attribute::NoUnwind);
   builder.addAttribute(Attribute::WillReturn);
   builder.addAttribute(Attribute::NoFree);
