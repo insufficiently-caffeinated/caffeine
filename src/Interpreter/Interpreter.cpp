@@ -448,14 +448,10 @@ ExecutionResult Interpreter::visitMemMoveInst(llvm::MemMoveInst& memmove) {
 
   return visitCall(memmove);
 }
-ExecutionResult Interpreter::visitMemSetInst(llvm::MemSetInst& memset) {
-  // memset is implemented by a C function within the builtins library so we
-  // just forward the call to that.
-  auto func = memset.getModule()->getFunction("caffeine_builtin_memset");
-  CAFFEINE_ASSERT(func);
-  memset.setCalledFunction(func);
-
-  return visitCall(memset);
+ExecutionResult Interpreter::visitMemSetInst(llvm::MemSetInst&) {
+  CAFFEINE_ABORT("llvm.memset is not implemented natively within the caffeine "
+                 "interpreter. Run gen-builtins over the input bitcode file "
+                 "first to generate definitions that caffeine can execute.");
 }
 
 /***************************************************
@@ -481,7 +477,8 @@ ExecutionResult Interpreter::visitExternFunc(llvm::CallInst& call) {
   if (name == "caffeine_free")
     return visitFree(call);
 
-  if (name == "caffeine_builtin_resolve" || name.startswith("caffeine.resolve."))
+  if (name == "caffeine_builtin_resolve" ||
+      name.startswith("caffeine.resolve."))
     return visitBuiltinResolve(call);
   if (name == "caffeine_builtin_symbolic_alloca")
     return visitSymbolicAlloca(call);
