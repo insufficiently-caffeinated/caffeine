@@ -52,7 +52,6 @@ int main(int argc, char** argv) {
   // parse for LLVM 10.0.0. To work around that I'm printing using textual IR.
   if (OutputFilename == "-") {
     module->print(llvm::outs(), nullptr);
-    // WriteBitcodeToFile(*m, llvm::outs());
   } else {
     std::error_code EC;
     llvm::raw_fd_ostream os(OutputFilename, EC);
@@ -65,6 +64,5 @@ int main(int argc, char** argv) {
     }
 
     module->print(os, nullptr);
-    // WriteBitcodeToFile(*m, os);
   }
 }
