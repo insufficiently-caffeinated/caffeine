@@ -41,83 +41,83 @@ static_assert(sizeof(FixedArray) == sizeof(Operation));
 static_assert(sizeof(ConstantArray) == sizeof(Operation));
 
 namespace detail {
-  template <typename T>
-  class double_deref_iterator {
+  class operand_iterator {
   private:
-    T* inner;
+    const Operation* op;
+    size_t idx;
 
-    using self = double_deref_iterator<T>;
+    using self = operand_iterator;
 
   public:
     using iterator_category = std::random_access_iterator_tag;
-    using value_type = std::remove_reference_t<decltype(*std::declval<T>())>;
+    using value_type = const Operation;
     using difference_type = std::ptrdiff_t;
     using pointer = value_type*;
     using reference = value_type&;
 
-    double_deref_iterator(T* inner) : inner(inner) {}
+    operand_iterator(const Operation* op, size_t idx) : op(op), idx(idx) {}
 
     reference operator*() const {
-      return **inner;
+      return *op->operand_at(idx);
     }
     pointer operator->() const {
-      return std::addressof(**inner);
+      return std::addressof(**this);
     }
 
     self& operator++() {
-      inner++;
+      idx++;
       return *this;
     }
     self& operator--() {
-      inner--;
+      idx--;
       return *this;
     }
 
     self operator++(int) {
-      return self(inner++);
+      return self(op, idx++);
     }
     self operator--(int) {
-      return self(inner--);
+      return self(op, idx--);
     }
 
     self operator+(difference_type n) const {
-      return self(inner + n);
+      return self(op, idx + n);
     }
     self operator-(difference_type n) const {
-      return self(inner - n);
+      return self(op, idx - n);
     }
 
     self& operator+=(difference_type n) {
-      inner += n;
+      idx += n;
       return *this;
     }
     self& operator-=(difference_type n) {
-      inner -= n;
+      idx -= n;
       return *this;
     }
 
     difference_type operator-(self b) const {
-      return self(inner - b.inner);
+      return idx - b.idx;
     }
 
     bool operator==(self b) const {
-      return inner == b.inner;
+      return idx == b.idx;
     }
     bool operator!=(self b) const {
-      return inner != b.inner;
+      return idx != b.idx;
     }
 
     bool operator<=(self b) const {
-      return inner <= b.inner;
+      return idx <= b.idx;
     }
     bool operator>=(self b) const {
-      return inner >= b.inner;
+      return idx >= b.idx;
     }
     bool operator<(self b) const {
-      return inner < b.inner;
+      return idx < b.idx;
     }
     bool operator>(self b) const {
-      return inner > b.inner;
+      return idx > b.idx;
     }
 
     reference operator[](difference_type n) const {
@@ -125,10 +125,8 @@ namespace detail {
     }
   };
 
-  template <typename T>
-  double_deref_iterator<T>
-  operator+(typename double_deref_iterator<T>::difference_type n,
-            double_deref_iterator<T> a) {
+  inline operand_iterator operator+(operand_iterator::difference_type n,
+                              operand_iterator a) {
     return a + n;
   }
 } // namespace detail
@@ -163,24 +161,11 @@ inline ref<const Operation> Operation::as_ref() const {
   return ref<const Operation>(this);
 }
 
-inline llvm::iterator_range<Operation::operand_iterator> Operation::operands() {
-  if (auto* vec = std::get_if<OpVec>(&inner_))
-    return llvm::iterator_range<Operation::operand_iterator>{
-        operand_iterator(vec->data()),
-        operand_iterator(vec->data() + num_operands())};
-
-  return llvm::iterator_range<Operation::operand_iterator>{
-      operand_iterator(nullptr), operand_iterator(nullptr)};
-}
 inline llvm::iterator_range<Operation::const_operand_iterator>
 Operation::operands() const {
-  if (const auto* vec = std::get_if<OpVec>(&inner_))
-    return llvm::iterator_range<Operation::const_operand_iterator>{
-        const_operand_iterator(vec->data()),
-        const_operand_iterator(vec->data() + num_operands())};
-
   return llvm::iterator_range<Operation::const_operand_iterator>{
-      const_operand_iterator(nullptr), const_operand_iterator(nullptr)};
+      const_operand_iterator(this, 0),
+      const_operand_iterator(this, num_operands())};
 }
 
 inline uint16_t Operation::aux_data() const {
@@ -200,9 +185,6 @@ inline const Operation& Operation::operator[](size_t idx) const {
   return *operand_at(idx);
 }
 
-inline OpRef& Operation::operand_at(size_t idx) {
-  return std::get<OpVec>(inner_)[idx];
-}
 inline const OpRef& Operation::operand_at(size_t idx) const {
   return std::get<OpVec>(inner_)[idx];
 }
@@ -270,9 +252,6 @@ inline bool Constant::is_named() const {
 /***************************************************
  * ConstantInt                                     *
  ***************************************************/
-inline llvm::APInt& ConstantInt::value() {
-  return std::get<llvm::APInt>(inner_);
-}
 inline const llvm::APInt& ConstantInt::value() const {
   return std::get<llvm::APInt>(inner_);
 }
@@ -280,9 +259,6 @@ inline const llvm::APInt& ConstantInt::value() const {
 /***************************************************
  * ConstantFloat                                   *
  ***************************************************/
-inline llvm::APFloat& ConstantFloat::value() {
-  return std::get<llvm::APFloat>(inner_);
-}
 inline const llvm::APFloat& ConstantFloat::value() const {
   return std::get<llvm::APFloat>(inner_);
 }
@@ -296,11 +272,6 @@ inline OpRef ConstantArray::size() const {
 
 inline const Symbol& ConstantArray::symbol() const {
   return std::get<ConstantData>(inner_).first;
-}
-
-inline OpRef& ConstantArray::operand_at(size_t idx) {
-  CAFFEINE_ASSERT(idx == 0, "Accessed out of bounds operand index");
-  return std::get<ConstantData>(inner_).second;
 }
 
 inline const OpRef& ConstantArray::operand_at(size_t idx) const {
@@ -318,19 +289,9 @@ inline const OpRef& BinaryOp::rhs() const {
   return operand_at(1);
 }
 
-inline OpRef& BinaryOp::lhs() {
-  return operand_at(0);
-}
-inline OpRef& BinaryOp::rhs() {
-  return operand_at(1);
-}
-
 /***************************************************
  * UnaryOp                                         *
  ***************************************************/
-inline OpRef& UnaryOp::operand() {
-  return operand_at(0);
-}
 inline const OpRef& UnaryOp::operand() const {
   return operand_at(0);
 }
@@ -338,16 +299,6 @@ inline const OpRef& UnaryOp::operand() const {
 /***************************************************
  * SelectOp                                        *
  ***************************************************/
-inline OpRef& SelectOp::condition() {
-  return operand_at(0);
-}
-inline OpRef& SelectOp::true_value() {
-  return operand_at(1);
-}
-inline OpRef& SelectOp::false_value() {
-  return operand_at(2);
-}
-
 inline const OpRef& SelectOp::condition() const {
   return operand_at(0);
 }
@@ -395,9 +346,6 @@ inline OpRef AllocOp::size() const {
   return operand_at(0);
 }
 
-inline OpRef& AllocOp::default_value() {
-  return operand_at(1);
-}
 inline const OpRef& AllocOp::default_value() const {
   return operand_at(1);
 }
@@ -405,16 +353,10 @@ inline const OpRef& AllocOp::default_value() const {
 /***************************************************
  * LoadOp                                          *
  ***************************************************/
-inline OpRef& LoadOp::data() {
-  return operand_at(0);
-}
 inline const OpRef& LoadOp::data() const {
   return operand_at(0);
 }
 
-inline OpRef& LoadOp::offset() {
-  return operand_at(1);
-}
 inline const OpRef& LoadOp::offset() const {
   return operand_at(1);
 }
@@ -426,23 +368,14 @@ inline OpRef StoreOp::size() const {
   return llvm::cast<ArrayBase>(*data()).size();
 }
 
-inline OpRef& StoreOp::data() {
-  return operand_at(0);
-}
 inline const OpRef& StoreOp::data() const {
   return operand_at(0);
 }
 
-inline OpRef& StoreOp::offset() {
-  return operand_at(1);
-}
 inline const OpRef& StoreOp::offset() const {
   return operand_at(1);
 }
 
-inline OpRef& StoreOp::value() {
-  return operand_at(2);
-}
 inline const OpRef& StoreOp::value() const {
   return operand_at(2);
 }
@@ -450,9 +383,6 @@ inline const OpRef& StoreOp::value() const {
 /***************************************************
  * FixedArray                                      *
  ***************************************************/
-inline PersistentArray<OpRef>& FixedArray::data() {
-  return std::get<PersistentArray<OpRef>>(inner_);
-}
 inline const PersistentArray<OpRef>& FixedArray::data() const {
   return std::get<PersistentArray<OpRef>>(inner_);
 }
@@ -465,9 +395,6 @@ inline size_t FixedArray::num_operands() const {
   return data().size();
 }
 
-inline OpRef& FixedArray::operand_at(size_t i) {
-  return std::get<PersistentArray<OpRef>>(inner_).element_reference(i);
-}
 inline const OpRef& FixedArray::operand_at(size_t i) const {
   return data().get(i);
 }
