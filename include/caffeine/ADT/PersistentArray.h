@@ -31,7 +31,7 @@ namespace detail {
  * between multiple copies. Changes made to one copy will not observable to
  * another copy.
  *
- * This version is a thin wrapper around immer::vector.
+ * This class is a thin wrapper around immer::vector.
  */
 template <typename T>
 class PersistentArray {
@@ -65,9 +65,6 @@ public:
 
   /**
    * Construct a value at index i using the provided arguments.
-   *
-   * This will also reroot the underlying representation to be more efficient
-   * for future sets from this PersistentArray instance.
    */
   void set(size_t i, const T& value) {
     inner_ = std::move(inner_).set(i, value);
@@ -90,48 +87,10 @@ public:
     return inner_;
   }
 
-  /**
-   * Reroot the underlying data array to the version pointed to by the current
-   * reference.
-   *
-   * Semantically this doesn't change the value of the array but it does affect
-   * the inner representation.
-   */
-  [[deprecated]] void reroot() const {}
-
   /// Copy the elements within this PersistentVector to a std::vector.
   std::vector<T> vec() const {
     return std::vector<T>(begin(), end());
   }
-
-  /// Does the same thing as vec() but will move the vector out of this
-  /// PersistentArray if possible.
-  ///
-  /// If the data is moved out of this PersistentArray then it will be left
-  /// empty, otherwise there will be no change in what it stores.
-  [[deprecated]] std::vector<T> take_vec() {
-    return vec();
-  }
-
-  /**
-   * If available, access the underlying vector of this PersistentArray. Returns
-   * nullptr otherwise.
-   */
-  [[deprecated]] const std::vector<T>* underlying_vec() const {
-    return nullptr;
-  }
-
-  // /**
-  //  * Get a modifiable reference to an element. Multiple references can be
-  //  * acquired at a single time but requesting the same reference twice will
-  //  not
-  //  * necessarily result in getting the a reference to the same location.
-  //  */
-  // T& element_reference(size_t i) {
-  //   std::shared_lock lock(*mutex_);
-  //   data_ = make_ref<Node>(data_, i, get(i));
-  //   return std::get<Node::Diff>(data_->data).value;
-  // }
 
   bool operator==(const PersistentArray<T>& array) const {
     return inner_ == array.inner_;
