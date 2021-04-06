@@ -8,13 +8,8 @@
 
 #include <initializer_list>
 #include <iterator>
-#include <memory>
-#include <mutex>
-#include <shared_mutex>
 #include <type_traits>
 #include <utility>
-#include <variant>
-#include <vector>
 
 #include <immer/vector.hpp>
 
@@ -44,11 +39,6 @@ public:
 
   PersistentArray(const immer::vector<T>& vec) : inner_(vec) {}
   PersistentArray(immer::vector<T>&& vec) : inner_(std::move(vec)) {}
-  PersistentArray(const std::vector<T>& vec)
-      : PersistentArray(vec.begin(), vec.end()) {}
-  PersistentArray(std::vector<T>&& vec)
-      : PersistentArray(std::move_iterator(vec.begin()),
-                        std::move_iterator(vec.end())) {}
   PersistentArray(std::initializer_list<T> list) : inner_(list) {}
   PersistentArray(llvm::ArrayRef<T> array)
       : inner_(array.begin(), array.end()) {}
