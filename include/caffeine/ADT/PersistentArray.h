@@ -86,6 +86,10 @@ public:
     return inner_[i];
   }
 
+  const immer::vector<T>& inner() const {
+    return inner_;
+  }
+
   /**
    * Reroot the underlying data array to the version pointed to by the current
    * reference.
