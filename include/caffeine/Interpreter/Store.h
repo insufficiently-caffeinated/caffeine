@@ -1,14 +1,13 @@
 #pragma once
 
 #include "caffeine/ADT/Span.h"
+#include "caffeine/Interpreter/Context.h"
 #include <condition_variable>
 #include <mutex>
 #include <optional>
 #include <queue>
 
 namespace caffeine {
-
-class Context;
 
 /**
  * A store of Contexts that are not currently being executed.

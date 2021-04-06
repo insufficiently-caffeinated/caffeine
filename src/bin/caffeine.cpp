@@ -161,13 +161,14 @@ int main(int argc, char** argv) {
 
   auto logger = CountingFailureLogger{std::cout, function};
 
-  auto options = caffeine::ExecutorOptions{
-      .num_threads = std::thread::hardware_concurrency()};
+  caffeine::ExecutorOptions options;
+  options.num_threads = std::thread::hardware_concurrency();
+
   auto policy = caffeine::AlwaysAllowExecutionPolicy();
   auto store = caffeine::QueueingContextStore(options.num_threads);
   auto exec = caffeine::Executor(&policy, &store, &logger, options);
 
-  store.add_context(Context{function});
+  store.add_context(Context(function));
 
   exec.run();
 
