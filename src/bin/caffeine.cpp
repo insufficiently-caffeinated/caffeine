@@ -44,7 +44,7 @@ cl::opt<std::string> input_filename{cl::Positional};
 cl::opt<std::string> target_method{cl::Positional};
 cl::opt<bool> invert_exitcode{
     "invert-exitcode",
-    cl::desc("invert the exit code. 1 if the program returns a failure, 0 "
+    cl::desc("invert the exit code. 0 if the program returns a failure, 1 "
              "otherwise. All other exit codes remain the same.")};
 
 static ExitOnError exit_on_err;
