@@ -1,0 +1,58 @@
+# Template file used by caffeine_dependency
+#
+# This file is loosely inspired by the dependency management file from the
+# Hunter package manager:
+# https://github.com/cpp-pm/hunter/blob/master/cmake/schemes/url_sha1_cmake.cmake.in
+
+cmake_minimum_required(VERSION @CMAKE_VERSION@)
+
+project(@PACKAGE@-populate NONE)
+
+include(ExternalProject)
+
+set(configuration_types "@PACKAGE_CONFIGURATION_TYPES@")
+set(build_type "@CMAKE_BUILD_TYPE@")
+
+if (NOT "${build_type}" STREQUAL "")
+  set(STEP_TARGET_CONFIG "")
+  set(INSTALL_CONFIG "")
+else()
+  set(step_targets "")
+
+  foreach(config ${configuration_types})
+    list(APPEND step_targets install-${config})
+  endforeach()
+
+  set(INSTALL_CONFIG     INSTALL_COMMAND "")
+  set(STEP_TARGET_CONFIG STEP_TARGET     ${step_targets})
+endif()
+
+ExternalProject_Add(@PACKAGE@
+  @QUOTED_ARGS@
+  PREFIX            @PREFIX@
+  BUILD_COMMAND     ""
+  ${INSTALL_CONFIG}
+  CMAKE_ARGS
+    "-G@CMAKE_GENERATOR@"
+    -Wno-dev
+  CMAKE_CACHE_ARGS
+    "-DCMAKE_INSTALL_PREFIX:STRING=@PACKAGE_INSTALL_PREFIX@"
+    "-DCMAKE_TOOLCHAIN_FILE:STRING=@CMAKE_TOOLCHAIN_FILE@"
+  ${STEP_TARGET_CONFIG}
+  USES_TERMINAL_DOWNLOAD YES
+  USES_TERMINAL_UPDATE   YES
+)
+
+if ("${build_type}" STREQUAL "")
+  foreach(config ${configuration_types})
+    ExternalProject_Add_Step(
+      @PACKAGE@ install-${config}
+      COMMAND @CMAKE_COMMAND@
+        --build "<BINARY_DIR>"
+        --target install
+        --config ${config}
+      DEPENDEES configure
+      ALWAYS
+    )
+  endforeach()
+endif()
