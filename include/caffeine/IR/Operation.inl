@@ -126,7 +126,7 @@ namespace detail {
   };
 
   inline operand_iterator operator+(operand_iterator::difference_type n,
-                              operand_iterator a) {
+                                    operand_iterator a) {
     return a + n;
   }
 } // namespace detail

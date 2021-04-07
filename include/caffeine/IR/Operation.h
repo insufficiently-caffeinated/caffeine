@@ -274,7 +274,6 @@ public:
    */
   OpRef into_ref() const;
 
-
   typedef detail::operand_iterator operand_iterator;
   typedef detail::operand_iterator const_operand_iterator;
 

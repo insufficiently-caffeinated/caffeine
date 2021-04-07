@@ -50,8 +50,8 @@ namespace caffeine {
  * define void @caffeine.memset.p0i8.i32(
  *     i8* %arg_dst, i8 %val, i32 %arg_len, i1* %isvolatile) {
  * entry:
- *   %resolved = call void @caffeine.resolve.p0i8.i32(i8* %arg_dst, i32 %arg_len)
- *   br label %head
+ *   %resolved = call void @caffeine.resolve.p0i8.i32(i8* %arg_dst, i32
+ * %arg_len) br label %head
  *
  * head:
  *   %dst = phi i8* [ %entry, %resolved ], [ %body, %next_dst ]
