@@ -12,15 +12,10 @@
 function(add_regression_test source)
   get_filename_component(basename "${source}" NAME)
 
-  declare_test(TEST_NAME "${source}")
-
+  set(EXPECTED PASS)
   if(basename MATCHES "^issue-[0-9]+\.(pass|fail)\.")
     if(CMAKE_MATCH_1 STREQUAL "fail")
-      set_tests_properties(
-        "${TEST_NAME}"
-        PROPERTIES
-        WILL_FAIL TRUE
-      )
+      set(EXPECTED FAIL)
     endif()
   else()
     message(SEND_ERROR
@@ -31,6 +26,8 @@ function(add_regression_test source)
       "    ${basename}\n"
     )
   endif()
+
+  declare_test(TEST_NAME "${source}" ${EXPECTED})
 endfunction()
 
 file(GLOB tests CONFIGURE_DEPENDS *.c *.ll *.cpp)

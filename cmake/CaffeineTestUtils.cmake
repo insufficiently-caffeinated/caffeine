@@ -60,7 +60,7 @@ function(build_command)
 endfunction()
 
 # Utility function for declaring a test case
-function(declare_test TEST_NAME_OUT test)
+function(declare_test TEST_NAME_OUT test EXPECTED)
   file(RELATIVE_PATH test_name "${CMAKE_SOURCE_DIR}/test" "${test}")
   should_skip_test(should_skip "${test}")
 
@@ -141,6 +141,12 @@ function(declare_test TEST_NAME_OUT test)
     DEPENDS "${DIS_OUT}"
   )
 
+  if ("${EXPECTED}" STREQUAL "FAIL")
+    set(TEST_FLAGS --invert-exitcode)
+  else()
+    set(TEST_FLAGS "")
+  endif()
+
   if(should_skip)
     add_test(
       NAME "${test_name}"
@@ -149,7 +155,7 @@ function(declare_test TEST_NAME_OUT test)
   else()
     add_test(
       NAME "${test_name}"
-      COMMAND caffeine-bin "${DIS_OUT}" main
+      COMMAND caffeine-bin ${TEST_FLAGS} "${DIS_OUT}" main
     )
   endif()
 
