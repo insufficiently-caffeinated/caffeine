@@ -225,6 +225,53 @@ std::ostream& operator<<(std::ostream& os, const Operation& op) {
 }
 
 /***************************************************
+ * OperationCache                                  *
+ ***************************************************/
+OperationCache OperationCache::cache{};
+
+std::pair<size_t, OpRef> OperationCache::find(const Operation& op) {
+  size_t key = (size_t)hash_value(op);
+
+  auto [start, end] = map.equal_range(key);
+  for (auto it = start; it != end;) {
+    auto shared = it->second.lock();
+
+    if (!shared) {
+      it = map.erase(it);
+      continue;
+    }
+
+    if (*shared == op)
+      return {key, shared};
+
+    ++it;
+  }
+
+  return {key, nullptr};
+}
+
+OpRef OperationCache::intern(Operation&& op) {
+  std::unique_lock<std::mutex> lock{mutex};
+  auto [key, cached] = find(op);
+  if (cached)
+    return cached;
+
+  auto shared = std::make_shared<Operation>(std::move(op));
+  map.emplace(key, shared);
+  return shared;
+}
+OpRef OperationCache::intern(const Operation& op) {
+  std::unique_lock<std::mutex> lock{mutex};
+  auto [key, cached] = find(op);
+  if (cached)
+    return cached;
+
+  auto shared = std::make_shared<Operation>(op);
+  map.emplace(key, shared);
+  return shared;
+}
+
+/***************************************************
  * Symbol                                          *
  ***************************************************/
 std::ostream& operator<<(std::ostream& os, const Symbol& symbol) {
