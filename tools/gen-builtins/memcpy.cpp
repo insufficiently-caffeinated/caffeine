@@ -134,7 +134,8 @@ llvm::Function* generateMemcpy(llvm::Module* m, llvm::Function* decl) {
   // We only need to generate this comparison if the pointers are in the same
   // address space. Otherwise they're guaranteed not to overlap.
   if (arg_dst->getType()->getPointerAddressSpace() ==
-      arg_src->getType()->getPointerAddressSpace() && false) {
+          arg_src->getType()->getPointerAddressSpace() &&
+      false) {
     auto iptr = layout.getIntPtrType(arg_dst->getType());
     auto off_dst = entry.CreateGEP(res_dst, ArrayRef<Value*>{arg_len});
     auto off_src = entry.CreateGEP(res_src, ArrayRef<Value*>{arg_len});
