@@ -51,6 +51,8 @@ namespace detail {
 
   template <typename T>
   class double_deref_iterator;
+
+  class operand_iterator;
 } // namespace detail
 
 class Operation;
@@ -272,11 +274,11 @@ public:
    */
   OpRef into_ref() const;
 
-  typedef detail::double_deref_iterator<OpRef> operand_iterator;
-  typedef detail::double_deref_iterator<const OpRef> const_operand_iterator;
+
+  typedef detail::operand_iterator operand_iterator;
+  typedef detail::operand_iterator const_operand_iterator;
 
   virtual size_t num_operands() const;
-  virtual llvm::iterator_range<operand_iterator> operands();
   virtual llvm::iterator_range<const_operand_iterator> operands() const;
 
   const Operation& operator[](size_t idx) const;
@@ -300,7 +302,6 @@ public:
   /**
    * Accessors to operand references.
    */
-  virtual OpRef& operand_at(size_t idx);
   virtual const OpRef& operand_at(size_t idx) const;
 
   // Need to define this since refcount shouldn't be copied/moved.
@@ -388,7 +389,6 @@ private:
   ConstantInt(llvm::APInt&& iconst);
 
 public:
-  llvm::APInt& value();
   const llvm::APInt& value() const;
 
   static OpRef Create(const llvm::APInt& iconst);
@@ -413,7 +413,6 @@ private:
   ConstantFloat(llvm::APFloat&& fconst);
 
 public:
-  llvm::APFloat& value();
   const llvm::APFloat& value() const;
 
   static OpRef Create(const llvm::APFloat& fconst);
@@ -438,12 +437,8 @@ public:
   static OpRef Create(const Symbol& symbol, const OpRef& size);
   static OpRef Create(Symbol&& symbol, const OpRef& size);
 
-  llvm::iterator_range<operand_iterator> operands() override;
-  llvm::iterator_range<const_operand_iterator> operands() const override;
-
   OpRef with_new_operands(llvm::ArrayRef<OpRef> operands) const override;
 
-  OpRef& operand_at(size_t idx) override;
   const OpRef& operand_at(size_t idx) const override;
 
   static bool classof(const Operation* op);
@@ -461,9 +456,6 @@ protected:
 public:
   const OpRef& lhs() const;
   const OpRef& rhs() const;
-
-  OpRef& lhs();
-  OpRef& rhs();
 
   static OpRef Create(Opcode op, const OpRef& lhs, const OpRef& rhs);
 
@@ -525,7 +517,6 @@ protected:
   UnaryOp(Opcode op, Type t, const OpRef& operand);
 
 public:
-  OpRef& operand();
   const OpRef& operand() const;
 
   static OpRef Create(Opcode op, const OpRef& operand);
@@ -567,10 +558,6 @@ protected:
            const OpRef& false_val);
 
 public:
-  OpRef& condition();
-  OpRef& true_value();
-  OpRef& false_value();
-
   const OpRef& condition() const;
   const OpRef& true_value() const;
   const OpRef& false_value() const;
@@ -645,8 +632,6 @@ private:
 
 public:
   OpRef size() const override;
-
-  OpRef& default_value();
   const OpRef& default_value() const;
 
   static OpRef Create(const OpRef& size, const OpRef& defaultval);
@@ -664,10 +649,7 @@ private:
   LoadOp(const OpRef& data, const OpRef& offset);
 
 public:
-  OpRef& data();
   const OpRef& data() const;
-
-  OpRef& offset();
   const OpRef& offset() const;
 
   static OpRef Create(const OpRef& data, const OpRef& offset);
@@ -687,14 +669,8 @@ private:
 
 public:
   OpRef size() const override;
-
-  OpRef& data();
   const OpRef& data() const;
-
-  OpRef& offset();
   const OpRef& offset() const;
-
-  OpRef& value();
   const OpRef& value() const;
 
   static OpRef Create(const OpRef& data, const OpRef& offset,
@@ -728,17 +704,13 @@ private:
   FixedArray(Type t, const PersistentArray<OpRef>& data);
 
 public:
-  PersistentArray<OpRef>& data();
   const PersistentArray<OpRef>& data() const;
   OpRef size() const override;
 
   size_t num_operands() const override;
-  llvm::iterator_range<operand_iterator> operands() override;
-  llvm::iterator_range<const_operand_iterator> operands() const override;
 
   OpRef with_new_operands(llvm::ArrayRef<OpRef> operands) const override;
 
-  OpRef& operand_at(size_t i) override;
   const OpRef& operand_at(size_t i) const override;
 
   static OpRef Create(Type index_ty, const PersistentArray<OpRef>& data);
