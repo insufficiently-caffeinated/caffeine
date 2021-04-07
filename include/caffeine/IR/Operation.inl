@@ -139,26 +139,14 @@ inline uint16_t Operation::opcode() const {
   return opcode_;
 }
 
-inline uint32_t Operation::refcnt() const {
-  return refcount;
-}
-
 inline size_t Operation::num_operands() const {
-  if (const auto* array = llvm::dyn_cast<caffeine::FixedArray>(this))
-    return array->size();
-
   return detail::opcode_nargs(opcode_);
 }
-
-inline OpRef Operation::as_ref() {
-  CAFFEINE_ASSERT(refcount != 0, "Unable to convert non-refcounted Operation "
-                                 "instance to a refcounted one");
-  return OpRef(this);
-}
 inline ref<const Operation> Operation::as_ref() const {
-  CAFFEINE_ASSERT(refcount != 0, "Unable to convert non-refcounted Operation "
-                                 "instance to a refcounted one");
-  return ref<const Operation>(this);
+  CAFFEINE_ASSERT(!weak_from_this().expired(),
+                  "Unable to convert non-refcounted Operation "
+                  "instance to a refcounted one");
+  return shared_from_this();
 }
 
 inline llvm::iterator_range<Operation::const_operand_iterator>
@@ -190,9 +178,11 @@ inline const OpRef& Operation::operand_at(size_t idx) const {
 }
 
 inline OpRef Operation::into_ref() const {
-  if (refcnt() == 0)
-    return make_ref<Operation>(*this);
-  return OpRef(const_cast<Operation*>(this));
+  auto weak = weak_from_this();
+
+  if (auto strong = weak.lock())
+    return strong;
+  return make_ref<Operation>(*this);
 }
 
 /***************************************************
