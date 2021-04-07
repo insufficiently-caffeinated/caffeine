@@ -144,9 +144,6 @@ int main(int argc, char** argv) {
     errs() << argv[0] << ": ";
     WithColor::error() << " loading file '" << input_filename.getValue()
                        << "'\n";
-    // TODO: this is done to make cmake run-fail unit tests fail properly. We
-    //       should really be detecting based on return status.
-    std::abort();
     return 2;
   }
 
@@ -154,9 +151,6 @@ int main(int argc, char** argv) {
   if (!function) {
     errs() << argv[0] << ": ";
     WithColor::error() << " no method '" << target_method.getValue() << "'";
-    // TODO: this is done to make cmake run-fail unit tests fail properly. We
-    //       should really be detecting based on return status.
-    std::abort();
     return 2;
   }
 
@@ -177,7 +171,7 @@ int main(int argc, char** argv) {
   exec.run();
 
   int exitcode = logger.num_failures == 0 ? 0 : 1;
-  
+
   if (invert_exitcode)
     exitcode = !exitcode;
 
