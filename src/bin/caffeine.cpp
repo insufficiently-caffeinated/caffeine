@@ -42,6 +42,10 @@ public:
 
 cl::opt<std::string> input_filename{cl::Positional};
 cl::opt<std::string> target_method{cl::Positional};
+cl::opt<bool> invert_exitcode{
+    "invert-exitcode",
+    cl::desc("invert the exit code. 1 if the program returns a failure, 0 "
+             "otherwise. All other exit codes remain the same.")};
 
 static ExitOnError exit_on_err;
 
@@ -172,7 +176,10 @@ int main(int argc, char** argv) {
 
   exec.run();
 
-  if (logger.num_failures == 0)
-    return 0;
-  return 1;
+  int exitcode = logger.num_failures == 0 ? 0 : 1;
+  
+  if (invert_exitcode)
+    exitcode = !exitcode;
+
+  return exitcode;
 }
