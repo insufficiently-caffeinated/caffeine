@@ -6,6 +6,7 @@
 #include <boost/container_hash/hash.hpp>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
+#include <immer/vector_transient.hpp>
 #include <llvm/ADT/Hashing.h>
 #include <llvm/Support/raw_ostream.h>
 
@@ -705,14 +706,14 @@ OpRef FixedArray::with_new_operands(llvm::ArrayRef<OpRef> operands) const {
   if (equal)
     return into_ref();
 
-  auto array = data();
-  array.reroot();
+  auto transient = data().inner().transient();
   for (size_t i = 0; i < operands.size(); ++i) {
-    if (array[i] != operands[i])
-      array.set(i, operands[i]);
+    if (transient[i] != operands[i])
+      transient.set(i, operands[i]);
   }
 
-  return OpRef(new FixedArray(type(), array));
+  return OpRef(
+      new FixedArray(type(), PersistentArray<OpRef>(transient.persistent())));
 }
 
 OpRef FixedArray::Create(Type index_ty, const PersistentArray<OpRef>& data) {
