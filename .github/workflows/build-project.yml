@@ -32,6 +32,7 @@ jobs:
             -DCAFFEINE_CI=ON \
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
             -DCAFFEINE_ENABLE_UBSAN=ON \
+            -DCAFFEINE_ENABLE_LIBC=ON \
             -DCAFFEINE_ENABLE_ASAN=ON
         env:
           CC: ${{ matrix.cc }}
