@@ -71,6 +71,7 @@ target_link_libraries(caffeine PUBLIC
   LLVMCore
   "${Z3_LIBRARIES}"
   fmt::fmt
+  immer
   magic_enum::magic_enum
   CapnProto::capnp-rpc
 )
