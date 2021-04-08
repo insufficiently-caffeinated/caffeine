@@ -36,6 +36,13 @@ Assertion Assertion::constant(bool value) {
       ConstantInt::Create(llvm::APInt(1, static_cast<uint64_t>(value))));
 }
 
+bool Assertion::operator==(const Assertion& lhs) const {
+  return value() == lhs.value();
+}
+bool Assertion::operator!=(const Assertion& lhs) const {
+  return !(*this == lhs);
+}
+
 std::ostream& operator<<(std::ostream& os, const Assertion& assertion) {
   return os << "(assert " << *assertion.value() << ")";
 }

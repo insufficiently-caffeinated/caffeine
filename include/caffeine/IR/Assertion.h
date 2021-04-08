@@ -30,6 +30,9 @@ public:
 
   Assertion operator!() const;
 
+  bool operator==(const Assertion& lhs) const;
+  bool operator!=(const Assertion& lhs) const;
+
   static Assertion constant(bool value);
 
   void DebugPrint() const;
