@@ -67,8 +67,7 @@ Operation::Operation(const Operation& op)
   copy_vtable(op);
 }
 Operation::Operation(Operation&& op) noexcept
-    : opcode_(op.opcode_), type_(op.type_),
-      inner_(std::move(op.inner_)) {
+    : opcode_(op.opcode_), type_(op.type_), inner_(std::move(op.inner_)) {
   copy_vtable(op);
 }
 

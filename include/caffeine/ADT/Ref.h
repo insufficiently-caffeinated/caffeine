@@ -14,6 +14,6 @@ ref<T> make_ref(Args&&... args) {
   return std::make_shared<T>(std::forward<Args>(args)...);
 }
 
-}
+} // namespace caffeine
 
 #endif
