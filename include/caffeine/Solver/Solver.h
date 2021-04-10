@@ -6,6 +6,7 @@
 
 #include "caffeine/ADT/Ref.h"
 #include "caffeine/IR/Value.h"
+#include "caffeine/Interpreter/AssertionList.h"
 #include "caffeine/Interpreter/Value.h"
 
 namespace caffeine {
@@ -116,10 +117,9 @@ public:
    * modifications to the assertions) as it may be more efficient for some
    * solvers.
    */
-  virtual SolverResult check(std::vector<Assertion>& assertions,
-                             const Assertion& extra);
+  virtual SolverResult check(AssertionList& assertions, const Assertion& extra);
   // Calls check with an empty extra assertion.
-  SolverResult check(std::vector<Assertion>& assertions);
+  SolverResult check(AssertionList& assertions);
 
   /**
    * Validate whether the set of assertions combined with the extra assertion,
@@ -139,10 +139,10 @@ public:
    * care must be taken not to modify expressions that have multiple references
    * (refcount > 1) as that could modify unrelated expressions.
    */
-  virtual std::unique_ptr<Model> resolve(std::vector<Assertion>& assertions,
+  virtual std::unique_ptr<Model> resolve(AssertionList& assertions,
                                          const Assertion& extra) = 0;
   // Calls resolve with an empty extra assertion.
-  std::unique_ptr<Model> resolve(std::vector<Assertion>& assertions);
+  std::unique_ptr<Model> resolve(AssertionList& assertions);
 
   Solver(const Solver&) = default;
   Solver(Solver&&) = default;
