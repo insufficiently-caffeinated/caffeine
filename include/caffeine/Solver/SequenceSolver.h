@@ -25,19 +25,19 @@ public:
   SequenceSolver(Ts&&... solvers) : solvers(std::move(solvers)...) {}
   SequenceSolver(const Ts&... solvers) : solvers(solvers...) {}
 
-  SolverResult check(std::vector<Assertion>& assertions,
+  SolverResult check(AssertionList& assertions,
                      const Assertion& extra) override {
     return check_internal<0>(assertions, extra);
   }
 
-  std::unique_ptr<Model> resolve(std::vector<Assertion>& assertions,
+  std::unique_ptr<Model> resolve(AssertionList& assertions,
                                  const Assertion& extra) override {
     return resolve_internal<0>(assertions, extra);
   }
 
 private:
   template <size_t i>
-  SolverResult check_internal(std::vector<Assertion>& assertions,
+  SolverResult check_internal(AssertionList& assertions,
                               const Assertion& extra) {
     SolverResult result = std::get<i>(solvers).check(assertions, extra);
     if (result != SolverResult::Unknown)
@@ -51,7 +51,7 @@ private:
   }
 
   template <size_t i>
-  std::unique_ptr<Model> resolve_internal(std::vector<Assertion>& assertions,
+  std::unique_ptr<Model> resolve_internal(AssertionList& assertions,
                                           const Assertion& extra) {
     std::unique_ptr<Model> model =
         std::get<i>(solvers).resolve(assertions, extra);
