@@ -10,14 +10,13 @@
 
 namespace caffeine {
 
-SolverResult SimplifyingSolver::check(std::vector<Assertion>& assertions,
+SolverResult SimplifyingSolver::check(AssertionList& assertions,
                                       const Assertion&) {
   transforms::simplify(assertions);
   return SolverResult::Unknown;
 }
-std::unique_ptr<Model>
-SimplifyingSolver::resolve(std::vector<Assertion>& assertions,
-                           const Assertion&) {
+std::unique_ptr<Model> SimplifyingSolver::resolve(AssertionList& assertions,
+                                                  const Assertion&) {
   transforms::simplify(assertions);
   return std::make_unique<EmptyModel>(SolverResult::Unknown);
 }

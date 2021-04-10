@@ -30,6 +30,7 @@
  */
 
 #include "caffeine/IR/Operation.h"
+#include "caffeine/Interpreter/AssertionList.h"
 #include <vector>
 
 namespace caffeine {
@@ -51,7 +52,7 @@ void canonicalize(std::vector<Assertion>& assertions);
 /**
  * Generic simplication transform.
  */
-void simplify(std::vector<Assertion>& assertions);
+void simplify(AssertionList& assertions);
 
 /**
  * Rebuild an expression tree using the transform applied by the visitor. This

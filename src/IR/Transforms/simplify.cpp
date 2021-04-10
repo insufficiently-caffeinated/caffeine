@@ -26,19 +26,25 @@ namespace {
 
 } // namespace
 
-void simplify(std::vector<Assertion>& assertions) {
-  for (size_t i = 0; i < assertions.size(); ++i) {
+void simplify(AssertionList& assertions) {
+  llvm::SmallVector<Assertion, 32> new_unproven;
+  llvm::SmallVector<Assertion, 32> new_proven;
+  llvm::SmallVector<size_t, 32> removed;
+
+  for (const Assertion& unproven : assertions.unproven()) {
     OpRef constant_, value;
-    if (!is_equality_expr(assertions[i], constant_, value))
+    if (!is_equality_expr(unproven, constant_, value))
       continue;
 
     const auto* constant = llvm::cast<Constant>(constant_.get());
 
-    for (size_t j = 0; j < assertions.size(); ++j) {
-      if (j == i)
+    size_t count = 0;
+
+    for (const Assertion& a : assertions) {
+      if (a == unproven)
         continue;
 
-      auto changed = rebuild(assertions[j].value(), [&](const OpRef& op) {
+      auto changed = rebuild(a.value(), [&](const OpRef& op) {
         const auto* cnst = llvm::dyn_cast<Constant>(op.get());
         if (!cnst)
           return op;
@@ -49,8 +55,29 @@ void simplify(std::vector<Assertion>& assertions) {
         return value;
       });
 
-      assertions[j].value() = changed;
+      if (changed == a.value())
+        continue;
+
+      if (count > assertions.proven().size()) {
+        new_proven.push_back(changed);
+      } else {
+        new_unproven.push_back(changed);
+      }
+
+      removed.push_back(count);
+      count += 1;
     }
+  }
+
+  for (size_t rem : removed) {
+    assertions.erase(&assertions[rem]);
+  }
+
+  for (const auto& new_u : new_unproven) {
+    assertions.insert(new_u, AssertionList::Unproven);
+  }
+  for (const auto& new_p : new_proven) {
+    assertions.insert(new_p, AssertionList::Proven);
   }
 }
 
