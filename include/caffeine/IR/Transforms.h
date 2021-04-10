@@ -47,7 +47,7 @@ namespace caffeine::transforms {
  * Currently all it does is apply existing constant-folding and remove exactly
  * duplicate expressions from the vector but in the future it will do more.
  */
-void canonicalize(std::vector<Assertion>& assertions);
+void canonicalize(AssertionList& assertions);
 
 /**
  * Generic simplication transform.
