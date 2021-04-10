@@ -41,7 +41,7 @@ public:
    * care must be taken not to modify expressions that have multiple references
    * (refcount > 1) as that could modify unrelated expressions.
    */
-  std::unique_ptr<Model> resolve(std::vector<Assertion>& assertions,
+  std::unique_ptr<Model> resolve(AssertionList& assertions,
                                  const Assertion& extra) override;
 
   Z3Solver(Z3Solver&&) = default;
