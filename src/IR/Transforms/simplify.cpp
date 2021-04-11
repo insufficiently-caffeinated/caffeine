@@ -27,9 +27,6 @@ namespace {
 } // namespace
 
 void simplify(std::vector<Assertion>& assertions) {
-
-  decompose(assertions);
-
   for (size_t i = 0; i < assertions.size(); ++i) {
     OpRef constant_, value;
     if (!is_equality_expr(assertions[i], constant_, value))
