@@ -6,7 +6,6 @@ namespace caffeine::transforms {
 namespace m = caffeine::matching;
 
 namespace {
-
   bool is_equality_expr(const Assertion& assertion, OpRef& constant,
                         OpRef& value) {
     using namespace caffeine::matching;
@@ -24,27 +23,14 @@ namespace {
     return false;
   }
 
-} // namespace
-
-void simplify(AssertionList& assertions) {
-  llvm::SmallVector<Assertion, 32> new_unproven;
-  llvm::SmallVector<Assertion, 32> new_proven;
-  llvm::SmallVector<size_t, 32> removed;
-
-  for (const Assertion& unproven : assertions.unproven()) {
-    OpRef constant_, value;
-    if (!is_equality_expr(unproven, constant_, value))
-      continue;
-
-    const auto* constant = llvm::cast<Constant>(constant_.get());
-
-    size_t count = 0;
-
-    for (const Assertion& a : assertions) {
-      if (a == unproven)
+  void replace_all(const Assertion* exception, const Constant* constant,
+                   const OpRef& value, AssertionList& assertions,
+                   llvm::SmallVectorImpl<Assertion>& output) {
+    for (auto it = assertions.begin(); it != assertions.end(); ++it) {
+      if (&*it == exception)
         continue;
 
-      auto changed = rebuild(a.value(), [&](const OpRef& op) {
+      auto changed = rebuild(it->value(), [&](const OpRef& op) {
         const auto* cnst = llvm::dyn_cast<Constant>(op.get());
         if (!cnst)
           return op;
@@ -55,30 +41,43 @@ void simplify(AssertionList& assertions) {
         return value;
       });
 
-      if (changed == a.value())
+      if (changed == it->value())
         continue;
 
-      if (count > assertions.proven().size()) {
-        new_proven.push_back(changed);
-      } else {
-        new_unproven.push_back(changed);
-      }
-
-      removed.push_back(count);
-      count += 1;
+      assertions.erase(it);
+      output.push_back(Assertion(changed));
     }
   }
+} // namespace
 
-  for (size_t rem : removed) {
-    assertions.erase(&assertions[rem]);
+void simplify(AssertionList& assertions) {
+  llvm::SmallVector<Assertion, 32> added;
+
+  for (const Assertion& unproven : assertions.unproven()) {
+    OpRef constant_, value;
+    if (!is_equality_expr(unproven, constant_, value))
+      continue;
+
+    const auto* constant = llvm::cast<Constant>(constant_.get());
+    replace_all(&unproven, constant, value, assertions, added);
   }
 
-  for (const auto& new_u : new_unproven) {
-    assertions.insert(new_u, AssertionList::Unproven);
-  }
-  for (const auto& new_p : new_proven) {
-    assertions.insert(new_p, AssertionList::Proven);
-  }
+  do {
+    size_t index = assertions.backing().backing_size();
+    assertions.insert(added);
+    added.clear();
+
+    auto range = llvm::iterator_range(assertions.backing().iterator_at(index),
+                                      assertions.backing().end());
+    for (const Assertion& assertion : range) {
+      OpRef constant_, value;
+      if (!is_equality_expr(assertion, constant_, value))
+        continue;
+
+      const auto* constant = llvm::cast<Constant>(constant_.get());
+      replace_all(&assertion, constant, value, assertions, added);
+    }
+  } while (!added.empty());
 }
 
 } // namespace caffeine::transforms
