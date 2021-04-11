@@ -96,9 +96,8 @@ public:
   }
 
   llvm::iterator_range<const_iterator> unproven() const {
-    return llvm::iterator_range<const_iterator>(
-        list_.iterator_at(mark_),
-        end());
+    return llvm::iterator_range<const_iterator>(list_.iterator_at(mark_),
+                                                end());
   }
 };
 
