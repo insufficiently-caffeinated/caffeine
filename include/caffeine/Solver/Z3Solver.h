@@ -23,6 +23,8 @@ public:
   Z3Solver();
   ~Z3Solver();
 
+  SolverResult check(AssertionList& assertions,
+                     const Assertion& extra) override;
   /**
    * Validate whether the set of assertions combined with the extra assertion,
    * if it isn't empty, is satisfiable and return a model.
