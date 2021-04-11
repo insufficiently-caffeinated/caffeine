@@ -184,7 +184,7 @@ private:
     using pointer = value_type*;
     using reference = value_type&;
     using difference_type = typename It::difference_type;
-    using iterator_category = typename std::bidirectional_iterator_tag;
+    using iterator_category = std::bidirectional_iterator_tag;
 
     reference operator*() const {
       return std::get<T>(*cur);
