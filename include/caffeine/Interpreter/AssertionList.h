@@ -82,8 +82,6 @@ public:
 
   void erase(const_iterator it);
 
-  void compress();
-
   const SparseVector<Assertion>& backing() const {
     return list_;
   }

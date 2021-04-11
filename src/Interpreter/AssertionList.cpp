@@ -16,10 +16,12 @@ AssertionList::AssertionList(llvm::ArrayRef<Assertion> values) {
 void AssertionList::clear() {
   list_.clear();
   lookup_.clear();
+  mark_ = 0;
 }
 
 void AssertionList::mark_sat() {
-  mark_ = list_.backing_size();
+  list_.compress();
+  mark_ = list_.size();
 }
 
 void AssertionList::insert(const Assertion& assertion) {
@@ -64,16 +66,6 @@ void AssertionList::insert(llvm::ArrayRef<Assertion> assertions) {
 
 bool AssertionList::contains(const Assertion& assertion) {
   return lookup_.count(assertion);
-}
-
-void AssertionList::compress() {
-  if (mark_ < list_.backing_size()) {
-    mark_ = std::distance(list_.begin(), ++list_.iterator_at(mark_));
-  } else {
-    mark_ = list_.size();
-  }
-
-  list_.compress();
 }
 
 void AssertionList::erase(const_iterator it) {
