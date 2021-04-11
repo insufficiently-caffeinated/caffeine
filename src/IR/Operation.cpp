@@ -63,12 +63,13 @@ Operation::Operation(Opcode op, Type t, const OpRef& op0, const OpRef& op1,
 }
 
 Operation::Operation(const Operation& op)
-    : opcode_(op.opcode_), refcount(0), type_(op.type_), inner_(op.inner_) {
+    : std::enable_shared_from_this<Operation>(), opcode_(op.opcode_),
+      type_(op.type_), inner_(op.inner_) {
   copy_vtable(op);
 }
 Operation::Operation(Operation&& op) noexcept
-    : opcode_(op.opcode_), refcount(0), type_(op.type_),
-      inner_(std::move(op.inner_)) {
+    : std::enable_shared_from_this<Operation>(), opcode_(op.opcode_),
+      type_(op.type_), inner_(std::move(op.inner_)) {
   copy_vtable(op);
 }
 

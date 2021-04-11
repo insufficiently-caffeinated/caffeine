@@ -157,7 +157,8 @@ std::ostream& operator<<(std::ostream& os, const Symbol& symbol);
  *    Visitor.cpp. This may also require adding new built-in methods to the
  *    Value type.
  */
-class Operation : private CopyVTable {
+class Operation : private CopyVTable,
+                  public std::enable_shared_from_this<Operation> {
 protected:
   // Base opcode used for FCmp opcodes
   static constexpr uint16_t fcmp_base = CAFFEINE_FCMP_BASE;
@@ -200,21 +201,8 @@ protected:
   uint16_t opcode_;
   uint16_t dummy_ = 0; // Unused, used for padding
 
-  // Needs to be mutable so that const refs (ref<const Operation>) work.
-  // TODO: investigate if it's safe to use something besides
-  // std::memory_order_seq_cst
-  mutable std::atomic<uint32_t> refcount = 0;
   Type type_;
   Inner inner_;
-
-  // So ref can get at the refcount field.
-  //
-  // Ideally, this be a friend only for ref<[const] Operation, Deleter>
-  // but C++ doesn't allow friend declarations to refer to partial
-  // specializations we'll have to settle for all ref instances being
-  // friends with us.
-  template <typename T, typename Deleter>
-  friend class ref;
 
   friend llvm::hash_code hash_value(const Operation& op);
 
@@ -251,10 +239,6 @@ public:
   std::string_view opcode_name() const;
   static std::string_view opcode_name(Opcode op);
 
-  // Read-only access to the refcount. If this is 0 then this is not a
-  // reference-counted Operation instance.
-  uint32_t refcnt() const;
-
   // The type of this operation node.
   Type type() const;
 
@@ -265,7 +249,6 @@ public:
    * (i.e. refcnt() > 0). If not, then calling as_ref will cause an assertion
    * failure.
    */
-  OpRef as_ref();
   ref<const Operation> as_ref() const;
 
   /**
