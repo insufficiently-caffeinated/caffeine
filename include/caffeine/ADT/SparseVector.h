@@ -1,9 +1,9 @@
-
 #pragma once
 
 #include "caffeine/Support/Assert.h"
 #include <climits>
 #include <cstddef>
+#include <iterator>
 #include <llvm/ADT/ArrayRef.h>
 #include <variant>
 #include <vector>
@@ -267,6 +267,19 @@ public:
   }
   const_iterator end() const {
     return const_iterator(elements_.end(), this);
+  }
+
+  std::reverse_iterator<iterator> rbegin() {
+    return std::reverse_iterator<iterator>(end());
+  }
+  std::reverse_iterator<iterator> rend() {
+    return std::reverse_iterator<const_iterator>(begin());
+  }
+  std::reverse_iterator<const_iterator> rbegin() const {
+    return std::reverse_iterator<iterator>(end());
+  }
+  std::reverse_iterator<const_iterator> rend() const {
+    return std::reverse_iterator<const_iterator>(begin());
   }
 
   iterator iterator_at(size_t idx) {
