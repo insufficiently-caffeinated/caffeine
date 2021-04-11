@@ -30,6 +30,9 @@ public:
 
   Assertion operator!() const;
 
+  bool operator==(const Assertion& lhs) const;
+  bool operator!=(const Assertion& lhs) const;
+
   static Assertion constant(bool value);
 
   void DebugPrint() const;
@@ -38,6 +41,17 @@ public:
 std::ostream& operator<<(std::ostream& os, const Assertion& assertion);
 
 } // namespace caffeine
+
+namespace std {
+
+template <>
+struct hash<caffeine::Assertion> {
+  size_t operator()(const caffeine::Assertion& assertion) const {
+    return std::hash<caffeine::OpRef>()(assertion.value());
+  }
+};
+
+} // namespace std
 
 #include "caffeine/IR/Assertion.inl"
 
