@@ -54,10 +54,12 @@ TEST_F(MatchingTests, replace_double_not) {
 }
 
 TEST_F(MatchingTests, fixedarray) {
-  auto expr = FixedArray::Create(Type::int_ty(32),
-                                 UnaryOp::CreateNot(UnaryOp::CreateNot(
-                                     Constant::Create(Type::int_ty(1), 0))),
-                                 64);
+  auto expr = FixedArray::Create(
+      Type::int_ty(32),
+      BinaryOp::CreateAnd(
+          UnaryOp::CreateNot(Constant::Create(Type::int_ty(1), 0)),
+          Constant::Create(Type::int_ty(1), 1)),
+      64);
 
-  ASSERT_TRUE(matches_anywhere(expr, Not(Not(Any()))));
+  ASSERT_TRUE(matches_anywhere(expr, And(Not(Any()), Any())));
 }

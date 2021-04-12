@@ -1,5 +1,6 @@
 #pragma once
 
+#include "caffeine/IR/Matching.h"
 #include "caffeine/IR/Operation.h"
 #include "caffeine/IR/Visitor.h"
 
@@ -308,6 +309,10 @@ public:
   OpRef visitNot(const UnaryOp& op) {
     if (const auto* val = llvm::dyn_cast<ConstantInt>(op.operand().get()))
       return ConstantInt::Create(~val->value());
+
+    OpRef value;
+    if (matches(op.operand(), matching::Not(value)))
+      return value;
 
     return this->visitUnaryOp(op);
   }
