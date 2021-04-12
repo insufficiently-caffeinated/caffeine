@@ -39,12 +39,6 @@ class Assertion;
 namespace caffeine::transforms {
 
 /**
- * Attempts to break down large and complex assertions into multiple simpler
- * assertions that are equivalent to the larger one.
- */
-void decompose(std::vector<Assertion>& assertions);
-
-/**
  * Attempts to convert the assertions into a canonical form that is suitable for
  * cache lookups (or one that can be transformed into such a form with little
  * effort).
