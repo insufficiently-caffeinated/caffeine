@@ -42,6 +42,10 @@ public:
 
 cl::opt<std::string> input_filename{cl::Positional};
 cl::opt<std::string> target_method{cl::Positional};
+cl::opt<bool> invert_exitcode{
+    "invert-exitcode",
+    cl::desc("invert the exit code. 0 if the program returns a failure, 1 "
+             "otherwise. All other exit codes remain the same.")};
 
 static ExitOnError exit_on_err;
 
@@ -140,9 +144,6 @@ int main(int argc, char** argv) {
     errs() << argv[0] << ": ";
     WithColor::error() << " loading file '" << input_filename.getValue()
                        << "'\n";
-    // TODO: this is done to make cmake run-fail unit tests fail properly. We
-    //       should really be detecting based on return status.
-    std::abort();
     return 2;
   }
 
@@ -150,9 +151,6 @@ int main(int argc, char** argv) {
   if (!function) {
     errs() << argv[0] << ": ";
     WithColor::error() << " no method '" << target_method.getValue() << "'";
-    // TODO: this is done to make cmake run-fail unit tests fail properly. We
-    //       should really be detecting based on return status.
-    std::abort();
     return 2;
   }
 
@@ -172,7 +170,10 @@ int main(int argc, char** argv) {
 
   exec.run();
 
-  if (logger.num_failures == 0)
-    return 0;
-  return 1;
+  int exitcode = logger.num_failures == 0 ? 0 : 1;
+
+  if (invert_exitcode)
+    exitcode = !exitcode;
+
+  return exitcode;
 }
