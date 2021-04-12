@@ -78,3 +78,18 @@ TEST(SparseVectorTests, iteratorAtEnd) {
 
   ASSERT_EQ(vector.iterator_at(2).index(), 2);
 }
+
+TEST(SparseVectorTests, eraseElementAtIteratorRef) {
+  SparseVector<uint32_t> vector{0, 1};
+
+  auto it = vector.begin();
+
+  ASSERT_EQ(vector[0], 0);
+
+  vector.erase(0);
+
+  try {
+    *it;
+    FAIL();
+  } catch (std::bad_variant_access) {}
+}
