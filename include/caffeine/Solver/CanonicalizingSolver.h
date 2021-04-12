@@ -18,10 +18,10 @@ class CanonicalizingSolver final : public Solver {
 public:
   CanonicalizingSolver() = default;
 
-  SolverResult check(std::vector<Assertion>& assertions,
+  SolverResult check(AssertionList& assertions,
                      const Assertion& extra) override;
 
-  std::unique_ptr<Model> resolve(std::vector<Assertion>& assertions,
+  std::unique_ptr<Model> resolve(AssertionList& assertions,
                                  const Assertion& extra) override;
 };
 

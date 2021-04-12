@@ -8,10 +8,9 @@ using namespace caffeine;
 using namespace caffeine::transforms;
 
 TEST(CanonicalizeTransformTests, canonicalFalseAssertions) {
-  std::vector<Assertion> assertions = {
-      Assertion(ConstantInt::Create(false)),
-      Assertion(ConstantInt::Create(true)),
-      Assertion(Constant::Create(Type::int_ty(1), 0))};
+  AssertionList assertions = {Assertion(ConstantInt::Create(false)),
+                              Assertion(ConstantInt::Create(true)),
+                              Assertion(Constant::Create(Type::int_ty(1), 0))};
 
   canonicalize(assertions);
 

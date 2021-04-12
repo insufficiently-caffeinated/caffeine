@@ -30,6 +30,7 @@
  */
 
 #include "caffeine/IR/Operation.h"
+#include "caffeine/Interpreter/AssertionList.h"
 #include <vector>
 
 namespace caffeine {
@@ -46,12 +47,12 @@ namespace caffeine::transforms {
  * Currently all it does is apply existing constant-folding and remove exactly
  * duplicate expressions from the vector but in the future it will do more.
  */
-void canonicalize(std::vector<Assertion>& assertions);
+void canonicalize(AssertionList& assertions);
 
 /**
  * Generic simplication transform.
  */
-void simplify(std::vector<Assertion>& assertions);
+void simplify(AssertionList& assertions);
 
 /**
  * Rebuild an expression tree using the transform applied by the visitor. This

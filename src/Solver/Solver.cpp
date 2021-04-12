@@ -166,16 +166,15 @@ Value Model::evaluate(const LLVMValue& expr, Context& ctx) const {
   CAFFEINE_UNREACHABLE();
 }
 
-SolverResult Solver::check(std::vector<Assertion>& assertions) {
+SolverResult Solver::check(AssertionList& assertions) {
   return check(assertions, Assertion());
 }
 
-SolverResult Solver::check(std::vector<Assertion>& assertions,
-                           const Assertion& extra) {
+SolverResult Solver::check(AssertionList& assertions, const Assertion& extra) {
   return resolve(assertions, extra)->result();
 }
 
-std::unique_ptr<Model> Solver::resolve(std::vector<Assertion>& assertions) {
+std::unique_ptr<Model> Solver::resolve(AssertionList& assertions) {
   return resolve(assertions, Assertion());
 }
 

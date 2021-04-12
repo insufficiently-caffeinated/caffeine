@@ -114,10 +114,10 @@ bool Context::empty() const {
 }
 
 void Context::add(const Assertion& assertion) {
-  assertions.push_back(assertion);
+  assertions.insert(assertion);
 }
 void Context::add(Assertion&& assertion) {
-  assertions.push_back(std::move(assertion));
+  assertions.insert(std::move(assertion));
 }
 
 std::optional<LLVMValue> Context::lookup_const(llvm::Value* value) const {

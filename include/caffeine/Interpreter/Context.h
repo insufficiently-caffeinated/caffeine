@@ -2,6 +2,7 @@
 #define CAFFEINE_INTERP_CONTEXT_H
 
 #include "caffeine/IR/Assertion.h"
+#include "caffeine/Interpreter/AssertionList.h"
 #include "caffeine/Interpreter/StackFrame.h"
 #include "caffeine/Memory/MemHeap.h"
 #include "caffeine/Solver/Solver.h"
@@ -25,7 +26,7 @@ public:
   std::vector<StackFrame> stack;
   std::unordered_map<llvm::GlobalVariable*, LLVMValue> globals;
   MemHeap heap;
-  std::vector<Assertion> assertions;
+  AssertionList assertions;
 
   llvm::Module* mod;
 
