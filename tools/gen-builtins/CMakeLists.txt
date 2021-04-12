@@ -7,12 +7,12 @@ add_executable(gen-builtins
   resolve.cpp
 )
 
-target_include_directories(gen-builtins
+target_include_directories(gen-builtins SYSTEM
   PRIVATE "${LLVM_INCLUDE_DIRS}"
   PRIVATE "${FMT_INCLUDE_DIRS}"
 )
 
 target_link_libraries(gen-builtins PRIVATE LLVMCore LLVMIRReader LLVMBitWriter)
 target_link_libraries(gen-builtins PRIVATE fmt::fmt)
-target_link_libraries(gen-builtins PRIVATE caffeine)
+target_link_libraries(gen-builtins PRIVATE caffeine-assert)
 

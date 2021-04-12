@@ -1,5 +1,6 @@
 
 add_subdirectory(bin)
+add_subdirectory(Support)
 
 file(
   GLOB subdirs
