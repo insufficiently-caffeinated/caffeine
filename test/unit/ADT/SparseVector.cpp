@@ -87,9 +87,5 @@ TEST(SparseVectorTests, eraseElementAtIteratorRef) {
   ASSERT_EQ(vector[0], 0);
 
   vector.erase(0);
-
-  try {
-    *it;
-    FAIL();
-  } catch (std::bad_variant_access) {}
+  ASSERT_THROW(*it, std::bad_variant_access);
 }
