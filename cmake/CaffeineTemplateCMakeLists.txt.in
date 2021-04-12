@@ -24,7 +24,7 @@ else()
   endforeach()
 
   set(INSTALL_CONFIG     INSTALL_COMMAND "")
-  set(STEP_TARGET_CONFIG STEP_TARGET     ${step_targets})
+  set(STEP_TARGET_CONFIG STEP_TARGETS     ${step_targets})
 endif()
 
 ExternalProject_Add(@PACKAGE@
