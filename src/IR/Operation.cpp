@@ -73,6 +73,10 @@ Operation::Operation(Operation&& op) noexcept
   copy_vtable(op);
 }
 
+Operation::~Operation() {
+  OperationCache::cache.erase(*this);
+}
+
 Operation& Operation::operator=(const Operation& op) {
   // Do inner first for exception safety.
   inner_ = op.inner_;
@@ -250,19 +254,6 @@ std::pair<size_t, OpRef> OperationCache::find(const Operation& op) {
   return {key, nullptr};
 }
 
-void OperationCache::gc_impl() {
-  auto end = map.end();
-  for (auto it = map.begin(); it != end;) {
-    if (it->second.expired()) {
-      it = map.erase(it);
-    } else {
-      ++it;
-    }
-  }
-
-  counter = 0;
-}
-
 OpRef OperationCache::intern(Operation&& op) {
   std::unique_lock<std::mutex> lock{mutex};
   auto [key, cached] = find(op);
@@ -271,9 +262,6 @@ OpRef OperationCache::intern(Operation&& op) {
 
   auto shared = std::make_shared<Operation>(std::move(op));
   map.emplace(key, shared);
-
-  if (++counter > map.size() / 2)
-    gc_impl();
 
   return shared;
 }
@@ -286,15 +274,21 @@ OpRef OperationCache::intern(const Operation& op) {
   auto shared = std::make_shared<Operation>(op);
   map.emplace(key, shared);
 
-  if (++counter > map.size() / 2)
-    gc_impl();
-
   return shared;
 }
 
-void OperationCache::gc() {
+void OperationCache::erase(const Operation& op) {
   std::unique_lock<std::mutex> lock{mutex};
-  gc_impl();
+  auto key = (size_t)hash_value(op);
+  auto [start, end] = map.equal_range(key);
+
+  for (auto it = start; it != end;) {
+    if (it->second.expired()) {
+      it = map.erase(it);
+    } else {
+      ++it;
+    }
+  }
 }
 
 /***************************************************
