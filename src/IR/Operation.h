@@ -96,14 +96,18 @@ class OperationCache {
 private:
   std::mutex mutex;
   std::unordered_multimap<size_t, std::weak_ptr<const Operation>> map;
+  size_t counter = 0;
 
   std::pair<size_t, OpRef> find(const Operation& op);
+  void gc_impl();
 
 public:
   OperationCache() = default;
 
   OpRef intern(Operation&& op);
   OpRef intern(const Operation& op);
+
+  void gc();
 
   static OperationCache cache;
 };
