@@ -125,6 +125,16 @@ public:
   resolve(std::shared_ptr<Solver> solver,
           const Assertion& extra = Assertion::constant(true));
 
+  /**
+   * Replaces instances of the unresolved pointer within the top stack frame
+   * with the resolved one.
+   *
+   * This is meant to reduce the amount of pointer resolutions have to do. At
+   * the same time it balances between the amount of effort in propagating that
+   * resolution.
+   */
+  void backprop(const Pointer& unresolved, const Pointer& resolved);
+
 private:
   // TODO: Temporary until context redesign is completed
   friend class ExprEvaluator;
