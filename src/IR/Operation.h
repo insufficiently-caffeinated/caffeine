@@ -3,8 +3,10 @@
 #include "caffeine/IR/Matching.h"
 #include "caffeine/IR/Operation.h"
 #include "caffeine/IR/Visitor.h"
-
 #include <llvm/Support/MathExtras.h>
+#include <memory>
+#include <mutex>
+#include <unordered_map>
 
 /**
  * This header has a bunch of utility methods for constant folding.
@@ -89,6 +91,24 @@ inline uint64_t ilog2(uint64_t x) {
   bool ispow2 = (x & (x - 1)) == 0;
   return sizeof(x) * CHAR_BIT - llvm::countLeadingZeros(x) - (ispow2 ? 1 : 0);
 }
+
+class OperationCache {
+private:
+  std::mutex mutex;
+  std::unordered_multimap<size_t, std::weak_ptr<const Operation>> map;
+
+  std::pair<size_t, OpRef> find(const Operation& op);
+
+public:
+  OperationCache() = default;
+
+  OpRef intern(Operation&& op);
+  OpRef intern(const Operation& op);
+
+  void erase(const Operation& op);
+
+  static OperationCache cache;
+};
 
 template <bool move_out = false>
 class ConstantFolder : public ConstOpVisitor<ConstantFolder<move_out>, OpRef> {

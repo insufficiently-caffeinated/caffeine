@@ -294,7 +294,7 @@ public:
   Operation& operator=(Operation&& op) noexcept;
 
   // Need to force operation to have a vtable
-  virtual ~Operation() = default;
+  virtual ~Operation();
 
 protected:
   /**
