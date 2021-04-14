@@ -11,10 +11,7 @@ GuidedExecutionPolicy::GuidedExecutionPolicy(AssertionList& list,
 }
 
 bool GuidedExecutionPolicy::should_queue_path(const Context& ctx) {
-  AssertionList combined;
-  for (const auto& i : ctx.assertions) {
-    combined.insert(i);
-  }
+  AssertionList combined = ctx.assertions;
 
   for (const auto& i : requiredAssertions_) {
     combined.insert(i);
