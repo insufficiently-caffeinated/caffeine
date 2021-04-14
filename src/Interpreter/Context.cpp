@@ -137,11 +137,17 @@ LLVMValue Context::lookup(llvm::Value* value) {
 
 SolverResult Context::check(std::shared_ptr<Solver> solver,
                             const Assertion& extra) {
-  return solver->check(assertions, extra);
+  auto result = solver->check(assertions, extra);
+  if (result == SolverResult::SAT)
+    assertions.mark_sat();
+  return result;
 }
 std::unique_ptr<Model> Context::resolve(std::shared_ptr<Solver> solver,
                                         const Assertion& extra) {
-  return solver->resolve(assertions, extra);
+  auto model = solver->resolve(assertions, extra);
+  if (model->result() == SolverResult::SAT)
+    assertions.mark_sat();
+  return model;
 }
 
 uint64_t Context::next_constant() {

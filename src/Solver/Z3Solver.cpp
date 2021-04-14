@@ -207,6 +207,16 @@ Z3Solver::Z3Solver() : ctx(std::make_unique<z3::context>()) {
 
 Z3Solver::~Z3Solver() {}
 
+SolverResult Z3Solver::check(AssertionList& assertions,
+                             const Assertion& extra) {
+  AssertionList list = assertions;
+  list.insert(extra);
+
+  if (list.unproven().empty())
+    return SolverResult::SAT;
+  return resolve(assertions, extra)->result();
+}
+
 std::unique_ptr<Model> Z3Solver::resolve(AssertionList& assertions,
                                          const Assertion& extra) {
   z3::solver solver = z3::tactic(*ctx, "default").mk_solver();
