@@ -259,6 +259,13 @@ Assertion Pointer::check_null(const MemHeap& heap) const {
   return ICmpOp::CreateICmp(ICmpOpcode::EQ, value(heap), 0);
 }
 
+bool Pointer::operator==(const Pointer& p) const {
+  return offset_ == p.offset_ && alloc_ == p.alloc_;
+}
+bool Pointer::operator!=(const Pointer& p) const {
+  return !(*this == p);
+}
+
 /***************************************************
  * MemHeap                                         *
  ***************************************************/

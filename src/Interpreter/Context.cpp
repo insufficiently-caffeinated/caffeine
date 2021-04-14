@@ -153,4 +153,21 @@ uint64_t Context::next_constant() {
   return constant_num_++;
 }
 
+void Context::backprop(const Pointer& unresolved, const Pointer& resolved) {
+  StackFrame& frame = stack_top();
+
+  for (auto& [key, value] : frame.variables) {
+    if (!value.is_scalar())
+      continue;
+
+    auto& scalar = value.scalar();
+    if (!scalar.is_pointer())
+      continue;
+
+    auto& pointer = scalar.pointer();
+    if (pointer == unresolved)
+      value = LLVMValue(resolved);
+  }
+}
+
 } // namespace caffeine

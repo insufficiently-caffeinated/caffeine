@@ -212,6 +212,9 @@ std::unique_ptr<Model> Z3Solver::resolve(AssertionList& assertions,
   z3::solver solver = z3::tactic(*ctx, "default").mk_solver();
   Z3Model::ConstMap constMap;
 
+  if (extra.is_constant_value(false))
+    return std::make_unique<EmptyModel>(SolverResult::UNSAT);
+
   Z3OpVisitor visitor{&solver, constMap};
   for (Assertion assertion : assertions) {
     if (assertion.is_empty()) {

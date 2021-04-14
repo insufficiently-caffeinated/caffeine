@@ -178,6 +178,9 @@ public:
    */
   Assertion check_null(const MemHeap& heap) const;
 
+  bool operator==(const Pointer& p) const;
+  bool operator!=(const Pointer& p) const;
+
   void DebugPrint() const;
 };
 

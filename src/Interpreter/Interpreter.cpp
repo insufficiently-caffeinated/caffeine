@@ -370,6 +370,10 @@ ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
 
     auto value = alloc.read(ptr.offset(), inst.getType(), layout);
     fork.stack_top().insert(&inst, value);
+
+    if (!pointer.is_resolved()) {
+      fork.backprop(pointer, ptr);
+    }
   }
 
   return forks;
@@ -402,6 +406,10 @@ ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
     fork.add(
         alloc.check_inbounds(ptr.offset(), layout.getTypeStoreSize(op_ty)));
     alloc.write(ptr.offset(), op_ty, value, fork.heap, layout);
+
+    if (!pointer.is_resolved()) {
+      fork.backprop(pointer, ptr);
+    }
   }
 
   return forks;
@@ -722,12 +730,21 @@ ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallInst& call) {
 
   if (resolved.size() == 1) {
     ctx->stack_top().insert(&call, LLVMValue(resolved[0]));
+
+    if (!mem.is_resolved()) {
+      ctx->backprop(mem, resolved[0]);
+    }
+
     return ExecutionResult::Continue;
   }
 
   auto forks = ctx->fork(resolved.size());
   for (auto [fork, ptr] : llvm::zip(forks, resolved)) {
     fork.stack_top().insert(&call, LLVMValue(ptr));
+
+    if (!mem.is_resolved()) {
+      fork.backprop(mem, ptr);
+    }
   }
 
   return forks;
