@@ -16,6 +16,7 @@ elseif(CAFFEINE_ENABLE_LTO STREQUAL "THIN")
     set(lto_tmp $<$<NOT:$<CONFIG:Debug>>:-flto=thin>)
 
     add_compile_options("${lto_tmp}")
+    add_link_options("${lto_tmp}")
     list(APPEND LINK_FLAGS "${lto_tmp}")
 
     unset(lto_tmp)
@@ -26,7 +27,7 @@ endif()
 
 if (NOT CAFFEINE_USE_LINKER STREQUAL "")
   if (NOT MSVC)
-    list(APPEND LINK_FLAGS "-fuse-ld=${CAFFEINE_USE_LINKER}")
+    add_link_options("-fuse-ld=${CAFFEINE_USE_LINKER}")
   else()
     message(${CAFFEINE_WARNING} "CAFFEINE_USE_LINKER is not supported for MSVC")
   endif()
