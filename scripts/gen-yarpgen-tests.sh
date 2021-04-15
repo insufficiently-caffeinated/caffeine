@@ -7,53 +7,39 @@ COUNT=${COUNT:-10}
 
 #############################################################
 
-CMAKELISTS_CONTENTS=<< EOM
-include(LLVMIRUtils)
-
-file(GLOB sources *.cpp *.h)
-get_filename_component(testname "${CMAKE_CURRENT_SOURCE_DIR}" NAME)
-
-add_llvm_ir_library("yarpgen/${testname}" ${sources})
-
-target_include_directories("${test_target}" PRIVATE "$<TARGET_PROPERTY:caffeine-builtins,INCLUDE_DIRECTORIES>")
-target_link_libraries     ("${test_target}" PRIVATE caffeine-builtins)
-target_compile_options    ("${test_target}" PRIVATE -O3)
-
-add_test(
-  NAME "yarpgen/${testname}"
-  COMMAND caffeine-bin "$<TARGET_FILE:${test_target}>" main
-)
-EOM
-
 rm -f CMakeLists.txt
 touch CMakeLists.txt
 
 for i in $(seq 0 $COUNT); do
-  OUTDIR=yarpgen_$i
+  OUTDIR=./yarpgen_$i
 
   rm -rf "$OUTDIR"
   mkdir "$OUTDIR"
   "$YARPGEN" -o "$OUTDIR"
 
-  sed -i "s/printf/(void)/g" "$OUTDIR/driver.cpp"
+  clang++ "$OUTDIR/driver.cpp" "$OUTDIR/func.cpp" "-I$OUTDIR" -o "$OUTDIR/prog"
+  seed=$("$OUTDIR/prog")
+  rm "$OUTDIR/prog"
+
+  sed -i '1s;^;#include "caffeine.h"\n;' "$OUTDIR/driver.cpp"
+  sed -i "s;printf[(].*[)];caffeine_assert(seed == $seed);g" "$OUTDIR/driver.cpp"
 
   cat > "$OUTDIR/CMakeLists.txt" <<- "EOM"
-include(LLVMIRUtils)
+include(CaffeineTestUtils)
 
 file(GLOB sources *.cpp *.h)
 get_filename_component(testname "${CMAKE_CURRENT_SOURCE_DIR}" NAME)
 
-set(test_target "yarpgen_${testname}")
+llvm_library("yarpgen-${testname}" ${sources} OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/yarpgen.ll")
 
-add_llvm_ir_library("${test_target}" ${sources})
-
-target_include_directories("${test_target}" PRIVATE "$<TARGET_PROPERTY:caffeine-builtins,INCLUDE_DIRECTORIES>")
-target_link_libraries     ("${test_target}" PRIVATE caffeine-builtins)
-target_compile_options    ("${test_target}" PRIVATE -O3)
+add_dependencies        ("yarpgen-${testname}" caffeine-builtins)
+llvm_include_directories("yarpgen-${testname}" PRIVATE "$<TARGET_PROPERTY:caffeine-builtins,INCLUDE_DIRECTORIES>")
+llvm_link_libraries     ("yarpgen-${testname}" PRIVATE caffeine-builtins)
+llvm_compile_options    ("yarpgen-${testname}" PRIVATE -O3 -w)
 
 add_test(
   NAME "yarpgen/${testname}"
-  COMMAND caffeine-bin "$<TARGET_FILE:${test_target}>" main
+  COMMAND caffeine-bin "${CMAKE_CURRENT_BINARY_DIR}/yarpgen.bc" main
 )
 EOM
 
