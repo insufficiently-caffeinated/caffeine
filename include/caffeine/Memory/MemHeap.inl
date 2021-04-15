@@ -36,6 +36,10 @@ inline AllocationKind Allocation::kind() const {
   return kind_;
 }
 
+inline AllocationPermissions Allocation::permissions() const {
+  return perms_;
+}
+
 /***************************************************
  * Pointer                                         *
  ***************************************************/

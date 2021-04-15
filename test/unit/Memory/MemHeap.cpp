@@ -50,7 +50,7 @@ TEST_F(MemHeapTests, resolve_pointer_single) {
   auto alloc = heap.allocate(
       size, align,
       AllocOp::Create(size, ConstantInt::Create(llvm::APInt(8, 0xDD))),
-      AllocationKind::Alloca, context);
+      AllocationKind::Alloca, AllocationPermissions::ReadWrite, context);
   auto offset = Constant::Create(Type::int_ty(index_size), "offset");
 
   context.add(ICmpOp::CreateICmp(ICmpOpcode::ULT, offset, size));

@@ -28,6 +28,16 @@ class Solver;
 enum class AllocationKind { Alloca, Malloc, Global };
 
 /**
+ * Permisisons for an allocation
+ *
+ * This is used to indicate what kind of operations a user is allowed
+ * to perfom on the requested allocation. As an example, for an allocation
+ * with ReadWrite permissions a user could can read and modify the underlying
+ * memory. For a Read, a user can read the data, but cannot modify the buffer.
+ */
+enum class AllocationPermissions { None, Read, Write, ReadWrite};
+
+/**
  * A memory allocation (either alive or dead).
  *
  * In general, an allocation is a tuple (address, size, data, kind) where
@@ -51,17 +61,20 @@ private:
   OpRef data_;
 
   AllocationKind kind_;
+  AllocationPermissions perms_;
 
 public:
   Allocation(const OpRef& address, const OpRef& size, const OpRef& data,
-             AllocationKind kind);
+             AllocationKind kind, AllocationPermissions permissions);
   Allocation(const OpRef& address, const ConstantInt& size, const OpRef& data,
-             AllocationKind kind);
+             AllocationKind kind, AllocationPermissions permissions);
 
   const OpRef& size() const;
   OpRef& size();
 
   AllocationKind kind() const;
+
+  AllocationPermissions permissions() const;
 
   const OpRef& data() const;
   OpRef& data();
@@ -201,7 +214,7 @@ public:
    * This will add the corresponding assertions to the context as well.
    */
   AllocId allocate(const OpRef& size, const OpRef& alignment, const OpRef& data,
-                   AllocationKind kind, Context& ctx);
+                   AllocationKind kind, AllocationPermissions permissions, Context& ctx);
 
   /**
    * Deallocate an existing allocation.

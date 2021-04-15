@@ -429,7 +429,7 @@ ExecutionResult Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {
   auto alloc = ctx->heap.allocate(
       size_op, ConstantInt::Create(llvm::APInt(ptr_width, align)),
       AllocOp::Create(size_op, ConstantInt::Create(llvm::APInt(8, 0xDD))),
-      AllocationKind::Alloca, *ctx);
+      AllocationKind::Alloca, AllocationPermissions::ReadWrite, *ctx);
 
   frame.insert(&inst, LLVMValue(Pointer(alloc, ConstantInt::Create(llvm::APInt(
                                                    ptr_width, 0)))));
@@ -568,7 +568,7 @@ ExecutionResult Interpreter::visitSymbolicAlloca(llvm::CallInst& call) {
   auto alloc = ctx->heap.allocate(
       size, ConstantInt::Create(llvm::APInt(ptr_width, 1)),
       ConstantArray::Create(Symbol(std::move(*alloc_name)), size),
-      AllocationKind::Alloca, *ctx);
+      AllocationKind::Alloca, AllocationPermissions::ReadWrite, *ctx);
 
   auto& frame = ctx->stack_top();
   frame.insert(&call, LLVMValue(Pointer(alloc, ConstantInt::Create(llvm::APInt(
@@ -611,7 +611,7 @@ ExecutionResult Interpreter::visitMalloc(llvm::CallInst& call) {
       size_op,
       ConstantInt::Create(llvm::APInt(ptr_width, options.malloc_alignment)),
       AllocOp::Create(size_op, ConstantInt::Create(llvm::APInt(8, 0xDD))),
-      AllocationKind::Malloc, *ctx);
+      AllocationKind::Malloc, AllocationPermissions::ReadWrite, *ctx);
 
   ctx->stack_top().insert(
       &call, LLVMValue(Pointer(
@@ -648,7 +648,7 @@ ExecutionResult Interpreter::visitCalloc(llvm::CallInst& call) {
       size_op,
       ConstantInt::Create(llvm::APInt(ptr_width, options.malloc_alignment)),
       AllocOp::Create(size_op, ConstantInt::Create(llvm::APInt(8, 0x00))),
-      AllocationKind::Malloc, *ctx);
+      AllocationKind::Malloc, AllocationPermissions::ReadWrite, *ctx);
 
   ctx->stack_top().insert(
       &call, LLVMValue(Pointer(
