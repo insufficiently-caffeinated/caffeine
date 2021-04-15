@@ -56,6 +56,7 @@ public:
    */
   Interpreter(Context* ctx, ExecutionPolicy* policy,
               ExecutionContextStore* store, FailureLogger* logger,
+              const std::shared_ptr<Solver>& solver,
               const InterpreterOptions& options = InterpreterOptions());
 
   void execute();

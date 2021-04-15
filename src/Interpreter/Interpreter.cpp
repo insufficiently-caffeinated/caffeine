@@ -29,12 +29,10 @@ ExecutionResult::ExecutionResult(llvm::SmallVector<Context, 2>&& contexts)
 
 Interpreter::Interpreter(Context* ctx, ExecutionPolicy* policy,
                          ExecutionContextStore* store, FailureLogger* logger,
+                         const std::shared_ptr<Solver>& solver,
                          const InterpreterOptions& options)
-    : policy(policy), store(store), ctx(ctx), logger(logger), options(options) {
-  solver = caffeine::make_sequence_solver(caffeine::SimplifyingSolver(),
-                                          caffeine::CanonicalizingSolver(),
-                                          caffeine::Z3Solver());
-}
+    : policy(policy), store(store), ctx(ctx), logger(logger), options(options),
+      solver(solver) {}
 
 void Interpreter::logFailure(Context& ctx, const Assertion& assertion,
                              std::string_view message) {

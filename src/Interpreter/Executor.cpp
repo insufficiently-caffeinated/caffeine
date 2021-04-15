@@ -2,14 +2,23 @@
 #include "caffeine/Interpreter/Interpreter.h"
 #include "caffeine/Interpreter/Store.h"
 
+#include "caffeine/Solver/CanonicalizingSolver.h"
+#include "caffeine/Solver/SequenceSolver.h"
+#include "caffeine/Solver/SimplifyingSolver.h"
+#include "caffeine/Solver/Z3Solver.h"
+
 #include <thread>
+#include <z3++.h>
 
 namespace caffeine {
 
 void run_worker(Executor* exec, FailureLogger* logger,
                 ExecutionContextStore* store) {
+  auto solver = caffeine::make_sequence_solver(caffeine::SimplifyingSolver(),
+                                               caffeine::CanonicalizingSolver(),
+                                               caffeine::Z3Solver());
   while (auto ctx = store->next_context()) {
-    Interpreter interp(&ctx.value(), exec->policy, store, logger);
+    Interpreter interp(&ctx.value(), exec->policy, store, logger, solver);
     interp.execute();
   }
 }
