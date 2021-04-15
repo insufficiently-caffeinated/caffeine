@@ -35,7 +35,7 @@ enum class AllocationKind { Alloca, Malloc, Global };
  * with ReadWrite permissions a user could can read and modify the underlying
  * memory. For a Read, a user can read the data, but cannot modify the buffer.
  */
-enum class AllocationPermissions { None, Read, Write, ReadWrite};
+enum class AllocationPermissions { None, Read, Write, ReadWrite };
 
 /**
  * A memory allocation (either alive or dead).
@@ -214,7 +214,8 @@ public:
    * This will add the corresponding assertions to the context as well.
    */
   AllocId allocate(const OpRef& size, const OpRef& alignment, const OpRef& data,
-                   AllocationKind kind, AllocationPermissions permissions, Context& ctx);
+                   AllocationKind kind, AllocationPermissions permissions,
+                   Context& ctx);
 
   /**
    * Deallocate an existing allocation.
