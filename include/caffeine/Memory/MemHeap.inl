@@ -36,6 +36,10 @@ inline AllocationKind Allocation::kind() const {
   return kind_;
 }
 
+inline AllocationPermissions Allocation::permissions() const {
+  return perms_;
+}
+
 /***************************************************
  * Pointer                                         *
  ***************************************************/
@@ -53,6 +57,20 @@ inline bool Pointer::is_resolved() const {
   //       meant to be exposed. It should be fine but if slotmap ever starts
   //       using a different key type then it'll be necessary to rework this.
   return alloc_.second != SIZE_MAX;
+}
+
+/***************************************************
+ * AllocationPermissions                           *
+ ***************************************************/
+
+inline bool operator!(AllocationPermissions perm) {
+  return perm == AllocationPermissions::None;
+}
+
+inline AllocationPermissions operator&(AllocationPermissions lhs,
+                                       AllocationPermissions rhs) {
+  return static_cast<AllocationPermissions>(static_cast<uint>(lhs) &
+                                            static_cast<uint>(rhs));
 }
 
 } // namespace caffeine

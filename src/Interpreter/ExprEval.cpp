@@ -332,10 +332,12 @@ LLVMValue ExprEvaluator::visitGlobalVariable(llvm::GlobalVariable& global) {
   const llvm::DataLayout& layout = ctx->mod->getDataLayout();
   unsigned bitwidth = layout.getPointerSizeInBits();
   unsigned alignment = global.getAlignment();
+  auto perms = global.isConstant() ? AllocationPermissions::Write
+                                   : AllocationPermissions::ReadWrite;
 
   auto alloc = ctx->heap.allocate(
       array.size(), ConstantInt::Create(llvm::APInt(bitwidth, alignment)), data,
-      AllocationKind::Global, *ctx);
+      AllocationKind::Global, perms, *ctx);
 
   auto pointer = LLVMValue(
       Pointer(alloc, ConstantInt::Create(llvm::APInt::getNullValue(bitwidth))));
@@ -356,7 +358,7 @@ OpRef ExprEvaluator::visitGlobalData(llvm::Constant& constant, unsigned AS) {
       bitwidth, layout.getTypeAllocSizeInBits(type).getFixedSize()));
   Allocation alloc{ConstantInt::CreateZero(bitwidth), size,
                    AllocOp::Create(size, ConstantInt::CreateZero(8)),
-                   AllocationKind::Alloca};
+                   AllocationKind::Alloca, AllocationPermissions::ReadWrite};
   alloc.write(ConstantInt::CreateZero(bitwidth), type, value, ctx->heap,
               layout);
 

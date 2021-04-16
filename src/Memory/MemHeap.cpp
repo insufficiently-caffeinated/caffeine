@@ -16,20 +16,27 @@ namespace caffeine {
  ***************************************************/
 
 Allocation::Allocation(const OpRef& address, const OpRef& size,
-                       const OpRef& data, AllocationKind kind)
-    : address_(address), size_(size), data_(data), kind_(kind) {
+                       const OpRef& data, AllocationKind kind,
+                       AllocationPermissions permissions)
+    : address_(address), size_(size), data_(data), kind_(kind),
+      perms_(permissions) {
   CAFFEINE_ASSERT(address->type().is_int());
   CAFFEINE_ASSERT(size->type().is_int());
   CAFFEINE_ASSERT(address->type().bitwidth() == size->type().bitwidth());
 }
 Allocation::Allocation(const OpRef& address, const ConstantInt& size,
-                       const OpRef& data, AllocationKind kind)
-    : Allocation(address, make_ref<Operation>(size), data, kind) {}
+                       const OpRef& data, AllocationKind kind,
+                       AllocationPermissions permissions)
+    : Allocation(address, make_ref<Operation>(size), data, kind, permissions) {}
 
 void Allocation::overwrite(const OpRef& newdata) {
+  CAFFEINE_ASSERT(perms_ & AllocationPermissions::Write,
+                  "tried to write to unwritable allocation");
   data_ = newdata;
 }
 void Allocation::overwrite(OpRef&& newdata) {
+  CAFFEINE_ASSERT(perms_ & AllocationPermissions::Write,
+                  "tried to write to unwritable allocation");
   data_ = std::move(newdata);
 }
 
@@ -166,6 +173,8 @@ void Allocation::write(const OpRef& offset, const OpRef& value_,
 
   CAFFEINE_ASSERT(offset->type().is_int(),
                   "tried to write at non-integer offset");
+  CAFFEINE_ASSERT(perms_ & AllocationPermissions::Write,
+                  "tried to write to unwritable allocation");
 
   auto value = value_;
   Type t = value->type();
@@ -204,6 +213,8 @@ void Allocation::write(const OpRef& offset, const LLVMScalar& value,
 void Allocation::write(const OpRef& offset, llvm::Type* type,
                        const LLVMValue& value, const MemHeap& heap,
                        const llvm::DataLayout& layout) {
+  CAFFEINE_ASSERT(perms_ & AllocationPermissions::Write,
+                  "tried to write to unwritable allocation");
   if (value.is_vector()) {
     if (type->isVectorTy()) {
       CAFFEINE_ASSERT(value.num_elements() == type->getVectorNumElements());
@@ -279,14 +290,15 @@ const Allocation& MemHeap::operator[](const AllocId& alloc) const {
 
 AllocId MemHeap::allocate(const OpRef& size, const OpRef& alignment,
                           const OpRef& data, AllocationKind kind,
-                          Context& ctx) {
+                          AllocationPermissions permissions, Context& ctx) {
   CAFFEINE_ASSERT(size->type() == alignment->type());
   CAFFEINE_ASSERT(size->type().is_int());
   CAFFEINE_ASSERT(data->type().is_array());
   CAFFEINE_ASSERT(data->type().bitwidth() == size->type().bitwidth());
 
-  auto newalloc = Allocation(
-      Constant::Create(size->type(), ctx.next_constant()), size, data, kind);
+  auto newalloc =
+      Allocation(Constant::Create(size->type(), ctx.next_constant()), size,
+                 data, kind, permissions);
 
   // Ensure that the allocation is properly aligned
   auto is_aligned = ICmpOp::CreateICmp(
