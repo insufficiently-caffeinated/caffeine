@@ -62,7 +62,7 @@ set_property(GLOBAL PROPERTY TARGET_MESSAGES OFF)
 
 if (CAFFEINE_ENABLE_BUILD)
   # TODO: We should have an option to download and build these locally if needed.
-  find_package(LLVM 10.0 REQUIRED)
+  find_package(LLVM 11.0 REQUIRED)
   find_package(GTest REQUIRED)
   find_package(Z3 4.8.7 REQUIRED)
   find_package(Boost REQUIRED)
