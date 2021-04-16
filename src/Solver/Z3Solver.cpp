@@ -209,6 +209,11 @@ Z3Solver::~Z3Solver() {}
 
 SolverResult Z3Solver::check(AssertionList& assertions,
                              const Assertion& extra) {
+  if (assertions.unproven().empty() && extra.is_constant_value(true))
+    return SolverResult::SAT;
+  if (extra.is_constant_value(false))
+    return SolverResult::UNSAT;
+
   AssertionList list = assertions;
   list.insert(extra);
 
@@ -219,11 +224,11 @@ SolverResult Z3Solver::check(AssertionList& assertions,
 
 std::unique_ptr<Model> Z3Solver::resolve(AssertionList& assertions,
                                          const Assertion& extra) {
-  z3::solver solver = z3::tactic(*ctx, "default").mk_solver();
-  Z3Model::ConstMap constMap;
-
   if (extra.is_constant_value(false))
     return std::make_unique<EmptyModel>(SolverResult::UNSAT);
+
+  z3::solver solver = z3::tactic(*ctx, "default").mk_solver();
+  Z3Model::ConstMap constMap;
 
   Z3OpVisitor visitor{&solver, constMap};
   for (Assertion assertion : assertions) {
@@ -235,7 +240,7 @@ std::unique_ptr<Model> Z3Solver::resolve(AssertionList& assertions,
     solver.add(normalize_to_bool(exp));
   }
 
-  if (!extra.is_empty()) {
+  if (!extra.is_constant_value(true)) {
     auto exp = visitor.visit(*extra.value());
     solver.add(normalize_to_bool(exp));
   }
