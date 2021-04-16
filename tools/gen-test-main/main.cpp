@@ -55,7 +55,7 @@ void generate(llvm::Module* m, llvm::Function* function,
 
   size_t i = 0;
   for (const Argument& arg : function->args()) {
-    std::string name = arg.getName();
+    std::string name = arg.getName().str();
     if (name.empty()) {
       name = fmt::format("arg{}", i);
     }

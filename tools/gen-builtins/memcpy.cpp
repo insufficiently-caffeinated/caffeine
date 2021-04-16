@@ -126,10 +126,10 @@ llvm::Function* generateMemcpy(llvm::Module* m, llvm::Function* decl) {
   // Entry block
   auto resolve_dst = generateResolve(m, arg_dst->getType(), arg_len->getType());
   auto resolve_src = generateResolve(m, arg_src->getType(), arg_len->getType());
-  auto res_src = entry.CreateCall(resolve_dst.getCallee(),
-                                  ArrayRef<Value*>{arg_src, arg_len});
-  auto res_dst = entry.CreateCall(resolve_src.getCallee(),
-                                  ArrayRef<Value*>{arg_dst, arg_len});
+  auto res_src =
+      entry.CreateCall(resolve_dst, ArrayRef<Value*>{arg_src, arg_len});
+  auto res_dst =
+      entry.CreateCall(resolve_src, ArrayRef<Value*>{arg_dst, arg_len});
 
   // We only need to generate this comparison if the pointers are in the same
   // address space. Otherwise they're guaranteed not to overlap.
@@ -149,7 +149,7 @@ llvm::Function* generateMemcpy(llvm::Module* m, llvm::Function* decl) {
     auto cmp2 = entry.CreateICmpULE(src_int_hi, dst_int_lo);
     auto cond = entry.CreateOr(cmp1, cmp2);
     auto caffeine_assert = generateAssert(m);
-    entry.CreateCall(caffeine_assert.getCallee(), ArrayRef<Value*>{cond});
+    entry.CreateCall(caffeine_assert, ArrayRef<Value*>{cond});
   }
 
   entry.CreateBr(head_);

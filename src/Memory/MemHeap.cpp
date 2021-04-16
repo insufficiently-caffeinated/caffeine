@@ -146,13 +146,13 @@ LLVMValue Allocation::read(const OpRef& offset, llvm::Type* type,
   }
 
   if (type->isVectorTy()) {
-    CAFFEINE_ASSERT(!type->getVectorIsScalable(),
-                    "scalable vectors are not supported yet");
+    auto fixedVectorTy = llvm::dyn_cast<llvm::FixedVectorType>(type);
+    CAFFEINE_ASSERT(fixedVectorTy, "Scalable vectors are not supported yet");
     LLVMValue::OpVector members;
-    members.reserve(type->getVectorNumElements());
-    llvm::Type* elem_ty = type->getVectorElementType();
+    members.reserve(fixedVectorTy->getNumElements());
+    llvm::Type* elem_ty = fixedVectorTy->getElementType();
 
-    for (size_t i = 0; i < type->getVectorNumElements(); ++i) {
+    for (size_t i = 0; i < fixedVectorTy->getNumElements(); ++i) {
       OpRef newoffset =
           BinaryOp::CreateAdd(offset, i * layout.getTypeAllocSize(elem_ty));
 
@@ -217,8 +217,10 @@ void Allocation::write(const OpRef& offset, llvm::Type* type,
                   "tried to write to unwritable allocation");
   if (value.is_vector()) {
     if (type->isVectorTy()) {
-      CAFFEINE_ASSERT(value.num_elements() == type->getVectorNumElements());
-      type = type->getVectorElementType();
+      auto fixedVectorTy = llvm::dyn_cast<llvm::FixedVectorType>(type);
+      CAFFEINE_ASSERT(fixedVectorTy, "Scalable vectors are not supported");
+      CAFFEINE_ASSERT(value.num_elements() == fixedVectorTy->getNumElements());
+      type = fixedVectorTy->getElementType();
     }
 
     for (size_t i = 0; i < value.num_elements(); ++i) {
