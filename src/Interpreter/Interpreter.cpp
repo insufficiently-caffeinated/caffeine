@@ -4,10 +4,6 @@
 #include "caffeine/Interpreter/StackFrame.h"
 #include "caffeine/Interpreter/Store.h"
 #include "caffeine/Interpreter/Value.h"
-#include "caffeine/Solver/CanonicalizingSolver.h"
-#include "caffeine/Solver/SequenceSolver.h"
-#include "caffeine/Solver/SimplifyingSolver.h"
-#include "caffeine/Solver/Z3Solver.h"
 #include "caffeine/Support/Assert.h"
 
 #include <boost/range/adaptor/transformed.hpp>
@@ -16,7 +12,6 @@
 #include <fmt/format.h>
 #include <llvm/IR/GetElementPtrTypeIterator.h>
 #include <llvm/Support/raw_ostream.h>
-#include <z3++.h>
 
 #include <iostream>
 #include <optional>
