@@ -33,16 +33,20 @@ Context::Context(llvm::Function* function)
   if (function->getName() == "main") {
     const llvm::DataLayout& layout = mod->getDataLayout();
 
-    auto arg0 = function->arg_begin();
-    auto arg1 = arg0 + 1;
+    if (function->arg_size() == 2) {
+      auto arg0 = function->arg_begin();
+      auto arg1 = arg0 + 1;
 
-    CAFFEINE_ASSERT(function->arg_size() == 2);
+      CAFFEINE_ASSERT(function->arg_size() == 2);
 
-    frame.insert(arg0, ConstantInt::Create(llvm::APInt::getNullValue(
-                           arg0->getType()->getIntegerBitWidth())));
-    frame.insert(arg1, ConstantInt::Create(llvm::APInt::getNullValue(
-                           layout.getPointerSizeInBits(
-                               arg1->getType()->getPointerAddressSpace()))));
+      frame.insert(arg0, ConstantInt::Create(llvm::APInt::getNullValue(
+                             arg0->getType()->getIntegerBitWidth())));
+      frame.insert(arg1, ConstantInt::Create(llvm::APInt::getNullValue(
+                             layout.getPointerSizeInBits(
+                                 arg1->getType()->getPointerAddressSpace()))));
+    } else {
+      CAFFEINE_ASSERT(function->arg_size() == 0);
+    }
   } else {
     size_t i = 0;
     for (auto& arg : function->args()) {
