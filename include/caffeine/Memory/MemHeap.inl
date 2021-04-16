@@ -67,8 +67,10 @@ inline bool operator!(AllocationPermissions perm) {
   return perm == AllocationPermissions::None;
 }
 
-inline AllocationPermissions operator&(AllocationPermissions lhs, AllocationPermissions rhs) {
-  return static_cast<AllocationPermissions>(static_cast<uint>(lhs) & static_cast<uint>(rhs));
+inline AllocationPermissions operator&(AllocationPermissions lhs,
+                                       AllocationPermissions rhs) {
+  return static_cast<AllocationPermissions>(static_cast<uint>(lhs) &
+                                            static_cast<uint>(rhs));
 }
 
 } // namespace caffeine
