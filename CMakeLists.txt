@@ -76,6 +76,7 @@ if (CAFFEINE_ENABLE_BUILD)
   include(CaffeineSanitizers)
   include(CaffeineWarnings)
   include(CaffeineLinking)
+  include(CaffeineFlags)
   include(LLVMIRUtils)
 
   if (CAFFEINE_ENABLE_TESTS)
