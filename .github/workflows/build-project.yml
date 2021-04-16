@@ -15,8 +15,8 @@ jobs:
     strategy:
       matrix:
         include:
-          - cc: clang-10
-            cxx: clang++-10
+          - cc: clang-11
+            cxx: clang++-11
           - cc: gcc
             cxx: g++
       # We explicitly want to run all the compilers
@@ -40,7 +40,7 @@ jobs:
 
       - name: Build
         run: cmake --build "build" -j$(nproc)
-      
+
       - name: Test
         run: |
           cd build

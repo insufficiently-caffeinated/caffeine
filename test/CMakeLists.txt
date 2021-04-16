@@ -1,6 +1,6 @@
 
-find_program(CLANG   NAMES clang   clang-10)
-find_program(CLANGXX NAMES clang++ clang++-10)
+find_program(CLANG   NAMES clang   clang-11)
+find_program(CLANGXX NAMES clang++ clang++-11)
 
 if ("${CLANG}" STREQUAL "CLANG-NOTFOUND")
   message(${CAFFEINE_WARNING}
