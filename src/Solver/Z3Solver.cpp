@@ -8,6 +8,8 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
+#include <llvm/ADT/SmallString.h>
+
 namespace caffeine {
 
 llvm::APInt z3_to_apint(const z3::expr& expr) {

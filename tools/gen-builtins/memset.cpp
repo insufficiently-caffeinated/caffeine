@@ -96,8 +96,8 @@ llvm::Function* generateMemset(llvm::Module* m, llvm::Function* decl) {
 
   // First build entry block
   auto resolve = generateResolve(m, arg_dst->getType(), arg_len->getType());
-  auto resolved = entry.CreateCall(resolve.getCallee(),
-                                   ArrayRef<llvm::Value*>{arg_dst, arg_len});
+  auto resolved =
+      entry.CreateCall(resolve, ArrayRef<llvm::Value*>{arg_dst, arg_len});
   entry.CreateBr(head_);
 
   // Now build the loop header. We'll fix up the PHIs at the end

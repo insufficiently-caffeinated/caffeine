@@ -109,7 +109,7 @@ caffeine_dependency(
 
 caffeine_dependency(
   # Note: for some reason the generated ImmerConfig.cmake doesn't have a version.
-  #       To make things work here we explicitly set the version to nothing. 
+  #       To make things work here we explicitly set the version to nothing.
   Immer          ""
   GIT_REPOSITORY https://github.com/arximboldi/immer
   GIT_TAG        v0.6.2

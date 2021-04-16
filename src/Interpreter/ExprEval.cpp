@@ -121,10 +121,10 @@ ExprEvaluator::visitConstantAggregateZero(llvm::ConstantAggregateZero& zero) {
   auto type = zero.getType();
 
   if (type->isVectorTy()) {
-    CAFFEINE_ASSERT(!type->getVectorIsScalable(),
-                    "Scalable vectors are not supported");
+    auto fixedVectorTy = llvm::dyn_cast<llvm::FixedVectorType>(type);
+    CAFFEINE_ASSERT(fixedVectorTy, "Scalable vectors are not supported");
 
-    size_t count = type->getVectorNumElements();
+    size_t count = fixedVectorTy->getNumElements();
     LLVMValue::OpVector result;
     result.reserve(count);
 
@@ -154,9 +154,7 @@ ExprEvaluator::visitConstantAggregateZero(llvm::ConstantAggregateZero& zero) {
 LLVMValue
 ExprEvaluator::visitConstantDataVector(llvm::ConstantDataVector& vec) {
   auto type = vec.getType();
-
-  CAFFEINE_ASSERT(!type->isScalable(), "Scalable vectors are not supported");
-  size_t count = type->getVectorNumElements();
+  size_t count = type->getNumElements();
 
   if (vec.isSplat()) {
     return LLVMValue(
@@ -207,15 +205,15 @@ LLVMValue ExprEvaluator::visitUndefValue(llvm::UndefValue& undef) {
   auto type = undef.getType();
 
   if (type->isVectorTy()) {
-    CAFFEINE_ASSERT(!type->getVectorIsScalable(),
-                    "scalable vectors are not supported");
-    size_t count = type->getVectorNumElements();
+    auto fixedVectorTy = llvm::dyn_cast<llvm::FixedVectorType>(type);
+    CAFFEINE_ASSERT(fixedVectorTy, "scalable vectors are not supported");
+    size_t count = fixedVectorTy->getNumElements();
 
     LLVMValue::OpVector result;
     result.reserve(count);
 
     auto inner =
-        visitUndefValue(*llvm::UndefValue::get(type->getVectorElementType()))
+        visitUndefValue(*llvm::UndefValue::get(fixedVectorTy->getElementType()))
             .scalar();
     for (size_t i = 0; i < count; ++i)
       result.push_back(inner);
@@ -297,9 +295,10 @@ LLVMValue ExprEvaluator::visitConstantStruct(llvm::ConstantStruct& cnst) {
 
 LLVMValue ExprEvaluator::visitConstantVector(llvm::ConstantVector& vec) {
   auto type = vec.getType();
-  CAFFEINE_ASSERT(!type->isScalable(), "Scalable vectors are not supported");
+  auto fixedVectorTy = llvm::dyn_cast<llvm::FixedVectorType>(type);
+  CAFFEINE_ASSERT(fixedVectorTy, "Scalable vectors are not supported");
 
-  size_t count = type->getVectorNumElements();
+  size_t count = fixedVectorTy->getNumElements();
 
   LLVMValue::OpVector values;
   values.reserve(count);
@@ -590,12 +589,12 @@ LLVMValue ExprEvaluator::visitGetElementPtr(llvm::GetElementPtrInst& inst) {
     auto type = it.getOperand()->getType();
 
     if (type->isVectorTy()) {
-      CAFFEINE_ASSERT(!type->getVectorIsScalable(),
-                      "Scalable vectors are not supported");
+      auto fixedVectorTy = llvm::dyn_cast<llvm::FixedVectorType>(type);
+      CAFFEINE_ASSERT(fixedVectorTy, "Scalable vectors are not supported");
       CAFFEINE_ASSERT(offset_elements == 1 ||
-                      type->getVectorNumElements() == offset_elements);
+                      fixedVectorTy->getNumElements() == offset_elements);
 
-      offset_elements = type->getVectorNumElements();
+      offset_elements = fixedVectorTy->getNumElements();
     }
   }
 
@@ -711,14 +710,13 @@ LLVMValue ExprEvaluator::visitExtractElement(llvm::ExtractElementInst& inst) {
 LLVMValue ExprEvaluator::visitShuffleVector(llvm::ShuffleVectorInst& inst) {
   auto vec1_ = visit(inst.getOperand(0));
   auto vec2_ = visit(inst.getOperand(1));
-  auto mask_ = visit(inst.getOperand(2));
 
   auto vec1 = vec1_.vector();
   auto vec2 = vec2_.vector();
-  auto mask = mask_.vector();
+  auto mask = inst.getShuffleMask();
 
   auto type = inst.getType();
-  auto elem_type = type->getVectorElementType();
+  auto elem_type = type->getElementType();
 
   LLVMValue::OpVector results;
   results.reserve(vec1.size());
@@ -727,26 +725,24 @@ LLVMValue ExprEvaluator::visitShuffleVector(llvm::ShuffleVectorInst& inst) {
    * The semantics of shufflevector end up basically being an array lookup.
    * Given two vectors x, y and a mask m, we form one big vector z by
    * concatenating z = x||y. Then the values in m are used as indices in z
-   * to get the final vector value.
-   *
-   * We emulate these semantics by creating nested select chains. All masks are
-   * either constant or undef so we rely on constant-folding to produce the
-   * correct set of efficient expressions.
+   * to get the final vector value. As well, since m is constant, we can
+   * perform the whole operation while evaluating the instruction.
    */
-  for (size_t i = 0; i < mask.size(); ++i) {
+  for (int mask_val : mask) {
     OpRef value = Undef::Create(Type::from_llvm(elem_type));
 
-    for (size_t j = 0; j < mask.size(); ++j) {
-      value = SelectOp::Create(
-          ICmpOp::CreateICmp(ICmpOpcode::EQ, mask[i].expr(), j),
-          scalarize(vec1[j]), value);
+    if (mask_val == llvm::UndefMaskElem) {
+      results.push_back(value);
+      continue;
     }
 
-    for (size_t j = 0; j < mask.size(); ++j) {
-      value = SelectOp::Create(
-          ICmpOp::CreateICmp(ICmpOpcode::EQ, mask[i].expr(), j + mask.size()),
-          scalarize(vec2[j]), value);
-    }
+    // Mask must be equal to 0 if it's a scalable array
+    CAFFEINE_ASSERT(llvm::dyn_cast<llvm::FixedVectorType>(type) ||
+                    mask_val == 0);
+
+    value = (size_t)mask_val < vec1.size()
+                ? scalarize(vec1[mask_val])
+                : scalarize(vec2[mask_val - vec1.size()]);
 
     results.push_back(value);
   }
