@@ -39,7 +39,7 @@ llvm_compile_options    ("yarpgen-${testname}" PRIVATE -O3 -w)
 
 add_test(
   NAME "yarpgen/${testname}"
-  COMMAND caffeine-bin "${CMAKE_CURRENT_BINARY_DIR}/yarpgen.bc" main
+  COMMAND caffeine-bin "${CMAKE_CURRENT_BINARY_DIR}/$<TARGET_PROPERTY:yarpgen-${testname},OUTPUT>" main
 )
 EOM
 
