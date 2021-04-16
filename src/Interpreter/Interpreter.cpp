@@ -4,10 +4,6 @@
 #include "caffeine/Interpreter/StackFrame.h"
 #include "caffeine/Interpreter/Store.h"
 #include "caffeine/Interpreter/Value.h"
-#include "caffeine/Solver/CanonicalizingSolver.h"
-#include "caffeine/Solver/SequenceSolver.h"
-#include "caffeine/Solver/SimplifyingSolver.h"
-#include "caffeine/Solver/Z3Solver.h"
 #include "caffeine/Support/Assert.h"
 
 #include <boost/range/adaptor/transformed.hpp>
@@ -16,7 +12,6 @@
 #include <fmt/format.h>
 #include <llvm/IR/GetElementPtrTypeIterator.h>
 #include <llvm/Support/raw_ostream.h>
-#include <z3++.h>
 
 #include <iostream>
 #include <optional>
@@ -29,12 +24,10 @@ ExecutionResult::ExecutionResult(llvm::SmallVector<Context, 2>&& contexts)
 
 Interpreter::Interpreter(Context* ctx, ExecutionPolicy* policy,
                          ExecutionContextStore* store, FailureLogger* logger,
+                         const std::shared_ptr<Solver>& solver,
                          const InterpreterOptions& options)
-    : policy(policy), store(store), ctx(ctx), logger(logger), options(options) {
-  solver = caffeine::make_sequence_solver(caffeine::SimplifyingSolver(),
-                                          caffeine::CanonicalizingSolver(),
-                                          caffeine::Z3Solver());
-}
+    : policy(policy), store(store), ctx(ctx), logger(logger), options(options),
+      solver(solver) {}
 
 void Interpreter::logFailure(Context& ctx, const Assertion& assertion,
                              std::string_view message) {
