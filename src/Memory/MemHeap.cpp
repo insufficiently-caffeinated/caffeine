@@ -30,14 +30,12 @@ Allocation::Allocation(const OpRef& address, const ConstantInt& size,
     : Allocation(address, make_ref<Operation>(size), data, kind, permissions) {}
 
 void Allocation::overwrite(const OpRef& newdata) {
-  CAFFEINE_ASSERT(perms_ == AllocationPermissions::Write ||
-                      perms_ == AllocationPermissions::ReadWrite,
+  CAFFEINE_ASSERT(perms_ & AllocationPermissions::Write,
                   "tried to write to unwritable allocation");
   data_ = newdata;
 }
 void Allocation::overwrite(OpRef&& newdata) {
-  CAFFEINE_ASSERT(perms_ == AllocationPermissions::Write ||
-                      perms_ == AllocationPermissions::ReadWrite,
+  CAFFEINE_ASSERT(perms_ & AllocationPermissions::Write,
                   "tried to write to unwritable allocation");
   data_ = std::move(newdata);
 }
@@ -175,8 +173,7 @@ void Allocation::write(const OpRef& offset, const OpRef& value_,
 
   CAFFEINE_ASSERT(offset->type().is_int(),
                   "tried to write at non-integer offset");
-  CAFFEINE_ASSERT(perms_ == AllocationPermissions::Write ||
-                      perms_ == AllocationPermissions::ReadWrite,
+  CAFFEINE_ASSERT(perms_ & AllocationPermissions::Write,
                   "tried to write to unwritable allocation");
 
   auto value = value_;
@@ -216,8 +213,7 @@ void Allocation::write(const OpRef& offset, const LLVMScalar& value,
 void Allocation::write(const OpRef& offset, llvm::Type* type,
                        const LLVMValue& value, const MemHeap& heap,
                        const llvm::DataLayout& layout) {
-  CAFFEINE_ASSERT(perms_ == AllocationPermissions::Write ||
-                      perms_ == AllocationPermissions::ReadWrite,
+  CAFFEINE_ASSERT(perms_ & AllocationPermissions::Write,
                   "tried to write to unwritable allocation");
   if (value.is_vector()) {
     if (type->isVectorTy()) {

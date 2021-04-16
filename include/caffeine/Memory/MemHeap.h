@@ -35,7 +35,12 @@ enum class AllocationKind { Alloca, Malloc, Global };
  * with ReadWrite permissions a user could can read and modify the underlying
  * memory. For a Read, a user can read the data, but cannot modify the buffer.
  */
-enum class AllocationPermissions { None, Read, Write, ReadWrite };
+enum class AllocationPermissions { 
+  None = 0, 
+  Read = 1, 
+  Write = 2, 
+  ReadWrite = 3,
+};
 
 /**
  * A memory allocation (either alive or dead).
