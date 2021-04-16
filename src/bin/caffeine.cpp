@@ -46,6 +46,8 @@ cl::opt<bool> invert_exitcode{
     "invert-exitcode",
     cl::desc("invert the exit code. 0 if the program returns a failure, 1 "
              "otherwise. All other exit codes remain the same.")};
+cl::opt<size_t> threads{
+    "t", cl::desc("the number of threads to use. 0 means num_cpus")};
 
 static ExitOnError exit_on_err;
 
@@ -160,7 +162,8 @@ int main(int argc, char** argv) {
   auto logger = CountingFailureLogger{std::cout, function};
 
   caffeine::ExecutorOptions options;
-  options.num_threads = std::thread::hardware_concurrency();
+  options.num_threads =
+      threads != 0 ? threads : std::thread::hardware_concurrency();
 
   auto policy = caffeine::AlwaysAllowExecutionPolicy();
   auto store = caffeine::QueueingContextStore(options.num_threads);
