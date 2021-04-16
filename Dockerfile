@@ -9,9 +9,9 @@ ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
     && apt-get -y install \
-        llvm-10-dev \
-        clang-10 \
-        clang++-10 \
+        llvm-11-dev \
+        clang-11 \
+        clang++-11 \
         clang-format \
         libz-dev \
         build-essential \
@@ -28,3 +28,4 @@ RUN apt-get update \
         capnproto \
         pkg-config \
     && rm -rf /var/lib/apt/lists/*
+RUN sudo update-alternatives --install /usr/local/bin/llvm-config llvm-config /usr/bin/llvm-config-11 20
