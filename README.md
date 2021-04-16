@@ -14,7 +14,7 @@ Once that's done you shouldn't have to worry about it anymore.
 Running with TSAN can help detect a bunch of bugs in your code. To configure
 your build to run with TSAN do:
 ```
-CC=clang-11 CXX=clang++-11 cmake -DCAFFEINE_ENABLE_TSAN=ON ..
+CC=clang-10 CXX=clang++-10 cmake -DCAFFEINE_ENABLE_TSAN=ON ..
 ```
 
 It's also possible to specify UBSAN, ASAN, and others with the following flags:
@@ -29,9 +29,9 @@ It's also possible to specify UBSAN, ASAN, and others with the following flags:
 ```
 apt-get update \
     && apt-get -y install \
-        llvm-11-dev \
-        clang-11 \
-        clang++-11 \
+        llvm-10-dev \
+        clang-10 \
+        clang++-10 \
         libz-dev \
         build-essential \
         gcc-9 \
