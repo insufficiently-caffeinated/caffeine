@@ -15,8 +15,8 @@ if (CAFFEINE_ENABLE_TSAN)
 endif()
 
 if (CAFFEINE_ENABLE_ASAN)
-  add_compile_options(-fsanitize=address)
-  add_link_options   (-fsanitize=address)
+  add_compile_options("$<$<NOT:$<BOOL:$<TARGET_PROPERTY:DISABLE_ASAN>>>:-fsanitize=address>")
+  add_link_options   ("$<$<NOT:$<BOOL:$<TARGET_PROPERTY:DISABLE_ASAN>>>:-fsanitize=address>")
 endif()
 
 if (CAFFEINE_ENABLE_UBSAN)
