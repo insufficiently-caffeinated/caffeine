@@ -23,7 +23,7 @@ jobs:
 
       - name: Configure
         run: |
-          source ./.github/scripts/setup-env.sh --compiler ${{ matrix.compiler }}
+          . ./.github/scripts/setup-env.sh --compiler ${{ matrix.compiler }}
           mkdir -p build
           cmake -B build \
             -DCAFFEINE_CI=ON \
