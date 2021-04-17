@@ -1,11 +1,11 @@
 #include "caffeine/Interpreter/Executor.h"
 #include "caffeine/Interpreter/Interpreter.h"
 #include "caffeine/Interpreter/Store.h"
-
 #include "caffeine/Solver/CanonicalizingSolver.h"
 #include "caffeine/Solver/SequenceSolver.h"
 #include "caffeine/Solver/SimplifyingSolver.h"
 #include "caffeine/Solver/Z3Solver.h"
+#include "caffeine/Support/UnsupportedOperation.h"
 
 #include <thread>
 #include <z3++.h>
@@ -18,8 +18,16 @@ void run_worker(Executor* exec, FailureLogger* logger,
                                                caffeine::CanonicalizingSolver(),
                                                caffeine::Z3Solver());
   while (auto ctx = store->next_context()) {
-    Interpreter interp(&ctx.value(), exec->policy, store, logger, solver);
-    interp.execute();
+    auto guard_ = UnsupportedOperation::SetCurrentContext(&ctx.value());
+
+    try {
+      Interpreter interp(&ctx.value(), exec->policy, store, logger, solver);
+      interp.execute();
+    } catch (UnsupportedOperation&) {
+      // The assert that threw this already printed an error message
+      // TODO: We should have some way to indicate that this failed to the
+      //       parent program.
+    }
   }
 }
 
