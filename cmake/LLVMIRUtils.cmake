@@ -108,7 +108,7 @@ function(llvm_library TARGET_NAME)
   set(objects "")
   set(counter 0)
   set(library "${ARG_OUTPUT}")
-  set(linked  "${intermediate_dir}/linked.bc")
+  set(linked  "${intermediate_dir}/linked.${target_ext}")
 
   add_custom_target(
     "${TARGET_NAME}" ALL
