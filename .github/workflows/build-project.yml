@@ -14,11 +14,7 @@ jobs:
     container: insufficientlycaffeinated/bob
     strategy:
       matrix:
-        include:
-          - cc: clang-11
-            cxx: clang++-11
-          - cc: gcc
-            cxx: g++
+        compiler: [clang, gcc]
       # We explicitly want to run all the compilers
       fail-fast: false
     steps:
@@ -27,6 +23,7 @@ jobs:
 
       - name: Configure
         run: |
+          source ./.github/scripts/setup-env.sh --compiler ${{ matrix.compiler }}
           mkdir -p build
           cmake -B build \
             -DCAFFEINE_CI=ON \
@@ -34,9 +31,6 @@ jobs:
             -DCAFFEINE_ENABLE_UBSAN=ON \
             -DCAFFEINE_ENABLE_LIBC=ON \
             -DCAFFEINE_ENABLE_ASAN=ON
-        env:
-          CC: ${{ matrix.cc }}
-          CXX: ${{ matrix.cxx }}
 
       - name: Build
         run: cmake --build "build" -j$(nproc)
