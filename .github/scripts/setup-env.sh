@@ -1,9 +1,9 @@
-#!/bin/bash
+#!/bin/sh
 
 # This script is meant to simplify the compilation matrix in the case where we have
 # multiple dependent definitions
 
-function error {
+error() {
   echo "$1" >&2
 }
 
