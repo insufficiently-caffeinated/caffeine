@@ -108,6 +108,7 @@ function(llvm_library TARGET_NAME)
   set(objects "")
   set(counter 0)
   set(library "${ARG_OUTPUT}")
+  set(linked  "${intermediate_dir}/linked.${target_ext}")
 
   add_custom_target(
     "${TARGET_NAME}" ALL
@@ -138,7 +139,7 @@ function(llvm_library TARGET_NAME)
     set(object  "${intermediate_dir}/${source_base}.${counter}.bc")
     set(depfile "${intermediate_dir}/${source_base}.${counter}.d")
 
-    if (NOT source_language STREQUAL "C")
+    if (NOT source_language STREQUAL "C" AND NOT source_language STREQUAL "CXX")
       continue()
     endif()
 
@@ -185,6 +186,7 @@ function(llvm_library TARGET_NAME)
       set(DEPFILE_ARG "")
     endif()
 
+
     add_custom_command(
       OUTPUT "${object}"
       COMMAND "${COMPILER}" ARGS
@@ -215,16 +217,23 @@ function(llvm_library TARGET_NAME)
   file(RELATIVE_PATH library_rel "${CMAKE_BINARY_DIR}" "${library}")
 
   add_custom_command(
-    OUTPUT "${library}"
+    OUTPUT "${linked}"
     COMMAND "${LLVM_LINK}" ARGS
       "$<GENEX_EVAL:$<TARGET_PROPERTY:${TARGET_NAME},LLVM_LINK_OPTIONS>>"
       "$<GENEX_EVAL:$<TARGET_PROPERTY:${TARGET_NAME},LLVM_LINK_LIBRARIES>>"
       "${objects}"
       ${extra_flags}
-      -o "${library}"
+      -o "${linked}"
     DEPENDS "${objects}" "$<TARGET_PROPERTY:${TARGET_NAME},LLVM_LINK_DEPENDS>"
     COMMENT "Linking BITCODE library ${library_rel}"
     COMMAND_EXPAND_LISTS
+  )
+
+  add_custom_command(
+    OUTPUT "${library}"
+    COMMAND gen-builtins ARGS -o "${library}" "${linked}"
+    MAIN_DEPENDENCY "${linked}"
+    COMMENT "Generating builtin methods for ${library}"
   )
 endfunction()
 

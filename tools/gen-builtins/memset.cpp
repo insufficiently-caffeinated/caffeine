@@ -84,6 +84,16 @@ llvm::Function* generateMemset(llvm::Module* m, llvm::Function* decl) {
   auto arg_val = decl->getArg(1);
   auto arg_len = decl->getArg(2);
 
+  std::string func_name =
+      fmt::format("caffeine.memset.p{}i{}.i{}",
+                  arg_dst->getType()->getPointerAddressSpace(),
+                  arg_val->getType()->getIntegerBitWidth(),
+                  arg_len->getType()->getIntegerBitWidth());
+  if (llvm::Function* func = m->getFunction(func_name)) {
+    decl->replaceAllUsesWith(func);
+    return func;
+  }
+
   auto entry_ = llvm::BasicBlock::Create(m->getContext(), "entry", decl);
   auto head_ = llvm::BasicBlock::Create(m->getContext(), "head", decl);
   auto body_ = llvm::BasicBlock::Create(m->getContext(), "body", decl);
@@ -139,15 +149,16 @@ llvm::Function* generateMemset(llvm::Module* m, llvm::Function* decl) {
 
   decl->setAttributes(llvm::AttributeList::get(
       m->getContext(), llvm::AttributeList::FunctionIndex, builder));
-  decl->setName(fmt::format("caffeine.memset.p{}i{}.i{}",
-                            arg_dst->getType()->getPointerAddressSpace(),
-                            arg_val->getType()->getIntegerBitWidth(),
-                            arg_len->getType()->getIntegerBitWidth()));
+  decl->setName(func_name);
 
   // These are what clang sets on the dst argument to memset. Copying them
   // here since they're probably useful.
   decl->addAttribute(1, Attribute::WriteOnly);
   decl->addAttribute(1, Attribute::NoCapture);
+
+  // Ensure that if we try to link multiple modules with a builtin definition
+  // then the linker just picks one of them.
+  decl->setLinkage(llvm::Function::LinkOnceAnyLinkage);
 
   return decl;
 }
