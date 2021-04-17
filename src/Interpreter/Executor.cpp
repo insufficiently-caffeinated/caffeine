@@ -23,10 +23,14 @@ void run_worker(Executor* exec, FailureLogger* logger,
     try {
       Interpreter interp(&ctx.value(), exec->policy, store, logger, solver);
       interp.execute();
-    } catch (UnsupportedOperation&) {
+    } catch (UnsupportedOperationException&) {
       // The assert that threw this already printed an error message
-      // TODO: We should have some way to indicate that this failed to the
+      // TODO: We should have a better way to indicate that this failed to the
       //       parent program.
+
+      logger->log_failure(
+          caffeine::EmptyModel(SolverResult::Unknown), ctx.value(),
+          Failure(Assertion(), "internal error: unsupported operation"));
     }
   }
 }

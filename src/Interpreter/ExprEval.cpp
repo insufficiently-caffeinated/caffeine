@@ -4,6 +4,7 @@
 #include "caffeine/Interpreter/Value.h"
 #include "caffeine/Memory/MemHeap.h"
 #include "caffeine/Support/LLVMFmt.h"
+#include "caffeine/Support/UnsupportedOperation.h"
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 #include <llvm/IR/Constants.h>
@@ -92,10 +93,9 @@ LLVMValue ExprEvaluator::evaluate(llvm::Value* val) {
   if (auto* cnst = llvm::dyn_cast<llvm::GlobalVariable>(val))
     return visitGlobalVariable(*cnst);
 
-  std::cout << magic_enum::enum_name((llvm::Value::ValueTy)val->getValueID())
-            << std::endl;
-
-  CAFFEINE_ABORT(fmt::format("Unsupported expression: {}", *val));
+  CAFFEINE_UNSUPPORTED(fmt::format(
+      "Unsupported expression ({}): {}",
+      magic_enum::enum_name((llvm::Value::ValueTy)val->getValueID()), *val));
 }
 LLVMValue ExprEvaluator::evaluate(llvm::Value& val) {
   return evaluate(&val);
@@ -112,7 +112,7 @@ std::optional<LLVMValue> ExprEvaluator::try_visit(llvm::Value* val) {
  *********************************************/
 
 LLVMValue ExprEvaluator::visitConstant(llvm::Constant& cnst) {
-  CAFFEINE_ABORT(
+  CAFFEINE_UNSUPPORTED(
       fmt::format("Unable to evaluate constant expression: {}", cnst));
 }
 
