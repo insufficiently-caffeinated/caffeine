@@ -152,7 +152,7 @@ int main(int argc, char** argv) {
   auto function = module->getFunction(target_method.getValue());
   if (!function) {
     errs() << argv[0] << ": ";
-    WithColor::error() << " no method '" << target_method.getValue() << "'";
+    WithColor::error() << " no method '" << target_method.getValue() << "'\n";
     return 2;
   }
 
