@@ -97,7 +97,7 @@ private:
   std::mutex mutex;
   std::unordered_multimap<size_t, std::weak_ptr<const Operation>> map;
 
-  std::pair<size_t, OpRef> find(const Operation& op);
+  OpRef find(size_t key, const Operation& op);
 
 public:
   OperationCache() = default;
@@ -130,19 +130,16 @@ public:
 #ifdef CAFFEINE_IMPLICIT_CONSTANT_FOLDING
     return ConstOpVisitor<ConstantFolder<move_out>, OpRef>::visit(op);
 #else
-    if constexpr (move_out) {
-      return make_ref<Operation>(std::move(const_cast<Operation&>(op)));
-    } else {
-      return make_ref<Operation>(op);
-    }
+    return visitOperation(op);
 #endif
   }
 
   OpRef visitOperation(const Operation& op) {
     if constexpr (move_out) {
-      return make_ref<Operation>(std::move(const_cast<Operation&>(op)));
+      return OperationCache::cache.intern(
+          std::move(const_cast<Operation&>(op)));
     } else {
-      return make_ref<Operation>(op);
+      return OperationCache::cache.intern(op);
     }
   }
 
@@ -439,6 +436,10 @@ public:
     }
 
     return this->visitArrayBase(op);
+  }
+
+  OpRef visitFixedArray(const FixedArray& op) {
+    return make_ref<Operation>(op);
   }
 
 private:

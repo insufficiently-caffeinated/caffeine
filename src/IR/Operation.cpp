@@ -74,7 +74,8 @@ Operation::Operation(Operation&& op) noexcept
 }
 
 Operation::~Operation() {
-  OperationCache::cache.erase(*this);
+  if (opcode_ != FixedArray)
+    OperationCache::cache.erase(*this);
 }
 
 Operation& Operation::operator=(const Operation& op) {
@@ -233,8 +234,7 @@ std::ostream& operator<<(std::ostream& os, const Operation& op) {
  ***************************************************/
 OperationCache OperationCache::cache{};
 
-std::pair<size_t, OpRef> OperationCache::find(const Operation& op) {
-  size_t key = (size_t)hash_value(op);
+OpRef OperationCache::find(size_t key, const Operation& op) {
 
   auto [start, end] = map.equal_range(key);
   for (auto it = start; it != end;) {
@@ -246,17 +246,19 @@ std::pair<size_t, OpRef> OperationCache::find(const Operation& op) {
     }
 
     if (*shared == op)
-      return {key, shared};
+      return shared;
 
     ++it;
   }
 
-  return {key, nullptr};
+  return nullptr;
 }
 
 OpRef OperationCache::intern(Operation&& op) {
+  size_t key = (size_t)hash_value(op);
+
   std::unique_lock<std::mutex> lock{mutex};
-  auto [key, cached] = find(op);
+  auto cached = find(key, op);
   if (cached)
     return cached;
 
@@ -266,8 +268,10 @@ OpRef OperationCache::intern(Operation&& op) {
   return shared;
 }
 OpRef OperationCache::intern(const Operation& op) {
+  size_t key = (size_t)hash_value(op);
+
   std::unique_lock<std::mutex> lock{mutex};
-  auto [key, cached] = find(op);
+  auto cached = find(key, op);
   if (cached)
     return cached;
 
