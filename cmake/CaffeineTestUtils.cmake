@@ -108,25 +108,17 @@ function(declare_test TEST_NAME_OUT test EXPECTED)
 
 
   build_command(
-    OUTPUT "${OUT_DIR}/with-main.ll"
-    MAIN_DEPENDENCY "${OUT_DIR}/lib.bc"
-    COMMAND gen-test-main ARGS --skip-if-present -o <OUTPUT> <MAIN_DEPENDENCY> test
-    COMMENT "Generating main method for ${test_target}"
-    DEPENDS "$<TARGET_FILE:gen-test-main>"
-  )
-
-  build_command(
-    OUTPUT "${OUT_DIR}/with-intrinsics.ll"
-    MAIN_DEPENDENCY "${OUT_DIR}/with-main.ll"
-    COMMAND gen-builtins ARGS -o <OUTPUT> <MAIN_DEPENDENCY>
-    COMMENT "Generating builtin methods for ${test_target}"
-  )
-
-  build_command(
     OUTPUT "${OUT_DIR}/optimized.bc"
-    MAIN_DEPENDENCY "${OUT_DIR}/with-intrinsics.ll"
-    COMMAND "${LLVM_OPT}" ARGS -internalize -globaldce <MAIN_DEPENDENCY> -o <OUTPUT>
+    MAIN_DEPENDENCY "${OUT_DIR}/lib.bc"
+    COMMAND "${LLVM_OPT}" ARGS 
+      "--load=$<TARGET_FILE:caffeine-opt-plugin>" 
+      --caffeine-gen-test-main
+      --caffeine-gen-builtins
+      --internalize
+      --globaldce
+      -o <OUTPUT> <MAIN_DEPENDENCY>
     COMMENT "Optimizing ${test_target}"
+    DEPENDS "$<TARGET_FILE:caffeine-opt-plugin>"
   )
 
   build_command(
