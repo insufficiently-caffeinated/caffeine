@@ -30,7 +30,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
             -DCAFFEINE_ENABLE_UBSAN=ON \
             -DCAFFEINE_ENABLE_LIBC=ON \
-            -DCAFFEINE_ENABLE_ASAN=OFF
+            -DCAFFEINE_ENABLE_ASAN=ON
 
       - name: Build
         run: cmake --build "build" -j$(nproc)
