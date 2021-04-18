@@ -69,7 +69,7 @@ if (CAFFEINE_ENABLE_BUILD)
   find_package(fmt REQUIRED)
   find_package(CapnProto REQUIRED)
 
-  include (CaffeineDependencies)
+  include(CaffeineDependencies)
 
   set(IR_USE_BITCODE ${CAFFEINE_BUILD_BITCODE})
 
