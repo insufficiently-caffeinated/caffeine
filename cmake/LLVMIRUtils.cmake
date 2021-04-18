@@ -231,8 +231,13 @@ function(llvm_library TARGET_NAME)
 
   add_custom_command(
     OUTPUT "${library}"
-    COMMAND gen-builtins ARGS -o "${library}" "${linked}"
+    COMMAND "${LLVM_OPT}" ARGS
+      --load="$<TARGET_FILE:caffeine-opt-plugin>"
+      --caffeine-gen-builtins
+      ${extra_flags}
+      -o "${library}" "${linked}"
     MAIN_DEPENDENCY "${linked}"
+    DEPENDS "$<TARGET_FILE:caffeine-opt-plugin>"
     COMMENT "Generating builtin methods for ${library}"
   )
 endfunction()
