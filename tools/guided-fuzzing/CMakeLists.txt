@@ -26,21 +26,6 @@ target_include_directories(afl-guided-mutator SYSTEM
   PRIVATE "${FMT_INCLUDE_DIRS}"
 )
 
-if (CMAKE_VERSION VERSION_GREATER "3.16")
-  cmake_policy(SET CMP0097 NEW)
-endif()
-
-caffeine_dependency(
-  AFLplusplus                ""
-  GIT_REPOSITORY             https://github.com/AFLplusplus/AFLplusplus
-  GIT_TAG                    3.12c
-  GIT_SHALLOW                TRUE
-  GIT_SUBMODULES             ""
-  PATCH_COMMAND  "${CMAKE_COMMAND}"
-    "${CMAKE_SOURCE_DIR}/cmake/AFLplusplus.patch"
-    -P "${CMAKE_SOURCE_DIR}/cmake/CaffeinePatch.cmake"
-)
-
 target_link_libraries(afl-guided-mutator PRIVATE caffeine)
 set_property(TARGET caffeine PROPERTY POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(afl-guided-mutator PRIVATE LLVMCore LLVMIRReader LLVMBitWriter LLVMTransformUtils)

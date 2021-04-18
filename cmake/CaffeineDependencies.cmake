@@ -119,3 +119,14 @@ caffeine_dependency(
     -P "${CMAKE_CURRENT_LIST_DIR}/CaffeinePatch.cmake"
   GIT_SUBMODULES ""
 )
+
+caffeine_dependency(
+  AFLplusplus                ""
+  GIT_REPOSITORY             https://github.com/AFLplusplus/AFLplusplus
+  GIT_TAG                    3.12c
+  GIT_SHALLOW                TRUE
+  GIT_SUBMODULES             ""
+  PATCH_COMMAND  "${CMAKE_COMMAND}"
+    "${CMAKE_SOURCE_DIR}/cmake/AFLplusplus.patch"
+    -P "${CMAKE_SOURCE_DIR}/cmake/CaffeinePatch.cmake"
+)

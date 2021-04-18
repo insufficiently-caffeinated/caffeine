@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.8)
 
+if (CMAKE_VERSION VERSION_GREATER "3.16")
+  cmake_policy(SET CMP0097 NEW)
+endif()
+
 project(caffeine LANGUAGES C CXX)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
