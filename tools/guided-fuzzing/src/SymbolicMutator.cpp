@@ -1,0 +1,1 @@
+#include "afl-fuzz.h"

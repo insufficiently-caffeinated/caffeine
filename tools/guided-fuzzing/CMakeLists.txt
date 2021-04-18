@@ -29,4 +29,4 @@ target_include_directories(afl-guided-mutator SYSTEM
 target_link_libraries(afl-guided-mutator PRIVATE caffeine)
 set_property(TARGET caffeine PROPERTY POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(afl-guided-mutator PRIVATE LLVMCore LLVMIRReader LLVMBitWriter LLVMTransformUtils)
-target_link_libraries(afl-guided-mutator PRIVATE fmt::fmt)
+target_link_libraries(afl-guided-mutator PRIVATE fmt::fmt AFLplusplus)
