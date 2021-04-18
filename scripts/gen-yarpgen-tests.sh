@@ -17,7 +17,7 @@ for i in $(seq 0 $COUNT); do
   mkdir "$OUTDIR"
   "$YARPGEN" -o "$OUTDIR"
 
-  clang++ "$OUTDIR/driver.cpp" "$OUTDIR/func.cpp" "-I$OUTDIR" -o "$OUTDIR/prog"
+  clang++ -O1 -w "$OUTDIR/driver.cpp" "$OUTDIR/func.cpp" "-I$OUTDIR" -o "$OUTDIR/prog"
   seed=$("$OUTDIR/prog")
   rm "$OUTDIR/prog"
 
@@ -39,7 +39,7 @@ llvm_compile_options    ("yarpgen-${testname}" PRIVATE -O3 -w)
 
 add_test(
   NAME "yarpgen/${testname}"
-  COMMAND caffeine-bin "${CMAKE_CURRENT_BINARY_DIR}/$<TARGET_PROPERTY:yarpgen-${testname},OUTPUT>" main
+  COMMAND caffeine-bin "$<TARGET_PROPERTY:yarpgen-${testname},OUTPUT>" main
 )
 EOM
 
