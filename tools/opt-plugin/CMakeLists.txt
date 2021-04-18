@@ -41,3 +41,8 @@ set_property(TARGET caffeine-assert PROPERTY POSITION_INDEPENDENT_CODE ON)
 # target_link_libraries(caffeine-opt-plugin PRIVATE LLVMCore)
 target_link_libraries(caffeine-opt-plugin PRIVATE fmt::fmt)
 target_link_libraries(caffeine-opt-plugin PRIVATE caffeine-assert)
+
+set_target_properties(
+  caffeine-opt-plugin PROPERTIES
+  DISABLE_ASAN TRUE
+)
