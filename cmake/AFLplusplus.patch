@@ -1,0 +1,19 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+new file mode 100644
+index 00000000..a5991245
+--- /dev/null
++++ b/CMakeLists.txt
+@@ -0,0 +1,13 @@
++cmake_minimum_required(VERSION 3.8)
++
++project(AFLplusplus VERSION "3.12" LANGUAGES C)
++include(CMakePackageConfigHelpers)
++add_library(${PROJECT_NAME} INTERFACE)
++target_include_directories(${PROJECT_NAME}
++  INTERFACE
++  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
++  $<INSTALL_INTERFACE:include/AFLplusplus>
++)
++install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}Config)
++install(EXPORT ${PROJECT_NAME}Config DESTINATION lib/cmake/${PROJECT_NAME})
++install(DIRECTORY include/ DESTINATION include/${PROJECT_NAME})
