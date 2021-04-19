@@ -190,7 +190,7 @@ function(llvm_library TARGET_NAME)
     add_custom_command(
       OUTPUT "${object}"
       COMMAND "${COMPILER}" ARGS
-        -emit-llvm -MMD -c
+        -emit-llvm -MMD -g -c
         "${sys_includes}"
         "${tgt_includes}"
         "${src_includes}"
