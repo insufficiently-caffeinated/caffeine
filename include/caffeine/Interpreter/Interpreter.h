@@ -93,6 +93,8 @@ public:
   ExecutionResult visitMemMoveInst(llvm::MemMoveInst& memmove);
   ExecutionResult visitMemSetInst(llvm::MemSetInst& memset);
 
+  ExecutionResult visitDbgInfoIntrinsic(llvm::DbgInfoIntrinsic&);
+
 private:
   void logFailure(Context& ctx, const Assertion& assertion,
                   std::string_view message = "");
