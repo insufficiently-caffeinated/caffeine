@@ -455,6 +455,11 @@ ExecutionResult Interpreter::visitMemSetInst(llvm::MemSetInst&) {
                  "first to generate definitions that caffeine can execute.");
 }
 
+ExecutionResult Interpreter::visitDbgInfoIntrinsic(llvm::DbgInfoIntrinsic&) {
+  // Ignore debug info since it doesn't affect semantics.
+  return ExecutionResult::Continue;
+}
+
 /***************************************************
  * External function                               *
  ***************************************************/
