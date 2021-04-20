@@ -138,7 +138,7 @@ public:
 
 private:
   OpRef scalarize(const LLVMScalar& scalar) const;
-  static LLVMScalar pointerize(const OpRef& op, bool turn_to_pointer) const;
+  static LLVMScalar pointerize(const OpRef& op, bool turn_to_pointer);
 
 private:
   Context* ctx;
