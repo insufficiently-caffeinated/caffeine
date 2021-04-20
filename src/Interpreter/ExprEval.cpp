@@ -44,6 +44,12 @@ OpRef ExprEvaluator::scalarize(const LLVMScalar& scalar) const {
     return scalar.expr();
   return scalar.pointer().value(ctx->heap);
 }
+LLVMScalar ExprEvaluator::pointerize(const OpRef& op,
+                                     bool turn_to_pointer) const {
+  if (turn_to_pointer)
+    return LLVMScalar(Pointer(op));
+  return LLVMScalar(op);
+}
 
 LLVMValue ExprEvaluator::visit(llvm::Value* val) {
   const auto& frame = ctx->stack_top();
