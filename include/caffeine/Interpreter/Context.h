@@ -11,6 +11,7 @@
 #include <llvm/IR/Constant.h>
 #include <llvm/IR/Function.h>
 
+#include <iosfwd>
 #include <memory>
 #include <optional>
 #include <unordered_map>
@@ -134,6 +135,13 @@ public:
    * resolution.
    */
   void backprop(const Pointer& unresolved, const Pointer& resolved);
+
+  /**
+   * Print a backtrace of the symbolic frames contained within this context to
+   * the provided raw_ostream. Will attempt to use debug info present in the
+   * module to print the source files corresponding to the stack frames.
+   */
+  void print_backtrace(std::ostream& OS) const;
 
 private:
   // TODO: Temporary until context redesign is completed
