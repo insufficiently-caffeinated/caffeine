@@ -28,7 +28,7 @@ set_if_unset(LLVM_LINK "${LLVM_TOOLS_BINARY_DIR}/llvm-link")
 set_if_unset(LLVM_OPT  "${LLVM_TOOLS_BINARY_DIR}/opt")
 set_if_unset(LLVM_DIS  "${LLVM_TOOLS_BINARY_DIR}/llvm-dis")
 
-set_if_unset(IR_USE_BITCODE OFF)
+set_if_unset(IR_USE_BITCODE ON)
 
 if (IR_USE_BITCODE)
   set(IR_EXTRA_FLAGS "")
@@ -108,7 +108,7 @@ function(llvm_library TARGET_NAME)
   set(objects "")
   set(counter 0)
   set(library "${ARG_OUTPUT}")
-  set(linked  "${intermediate_dir}/linked.${target_ext}")
+  set(linked  "${intermediate_dir}/linked${target_ext}")
 
   add_custom_target(
     "${TARGET_NAME}" ALL
