@@ -19,9 +19,10 @@ class ExecutionContextStore;
 class ExecutionResult {
 public:
   enum Status { Continue, Dead, Stop };
+  using ContextVec = llvm::SmallVector<Context, 2>;
 
   ExecutionResult(Status status);
-  ExecutionResult(llvm::SmallVector<Context, 2>&& contexts);
+  ExecutionResult(ContextVec&& contexts);
 
   Status status() const {
     return status_;
@@ -36,7 +37,7 @@ public:
 
 private:
   Status status_;
-  llvm::SmallVector<Context, 2> contexts_;
+  ContextVec contexts_;
 };
 
 class Interpreter : public llvm::InstVisitor<Interpreter, ExecutionResult> {
@@ -76,6 +77,7 @@ public:
   ExecutionResult visitPHINode(llvm::PHINode& node);
   ExecutionResult visitBranchInst(llvm::BranchInst& inst);
   ExecutionResult visitReturnInst(llvm::ReturnInst& inst);
+  ExecutionResult visitSwitchInst(llvm::SwitchInst& inst);
   ExecutionResult visitCallInst(llvm::CallInst& inst);
   ExecutionResult visitSelectInst(llvm::SelectInst& inst);
   ExecutionResult visitIntrinsicInst(llvm::IntrinsicInst& inst);
