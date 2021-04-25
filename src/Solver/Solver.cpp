@@ -4,8 +4,8 @@
 #include "caffeine/IR/Visitor.h"
 #include "caffeine/Interpreter/Context.h"
 
-#include <magic_enum.hpp>
 #include <fmt/format.h>
+#include <magic_enum.hpp>
 
 namespace caffeine {
 

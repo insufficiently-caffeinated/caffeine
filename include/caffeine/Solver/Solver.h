@@ -1,9 +1,9 @@
 #ifndef CAFFEINE_SOLVER_SOLVER_H
 #define CAFFEINE_SOLVER_SOLVER_H
 
+#include <iosfwd>
 #include <memory>
 #include <vector>
-#include <iosfwd>
 
 #include "caffeine/ADT/Ref.h"
 #include "caffeine/IR/Value.h"

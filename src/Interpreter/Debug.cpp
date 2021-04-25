@@ -13,4 +13,4 @@ void AssertionList::DebugPrint() const {
   std::cout << "\n]" << std::endl;
 }
 
-}
+} // namespace caffeine
