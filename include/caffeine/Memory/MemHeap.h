@@ -5,6 +5,7 @@
 #include "caffeine/IR/Operation.h"
 
 #include <llvm/ADT/APInt.h>
+#include <llvm/ADT/DenseMap.h>
 #include <llvm/IR/DataLayout.h>
 
 #include <vector>
@@ -14,6 +15,7 @@ namespace caffeine {
 class Context;
 class Assertion;
 class MemHeap;
+class MemHeapMgr;
 class LLVMScalar;
 class LLVMValue;
 class Solver;
@@ -280,6 +282,33 @@ public:
                                         Context& ctx) const;
 
   void DebugPrint() const;
+};
+
+class MemHeapMgr {
+private:
+  llvm::SmallDenseMap<unsigned, MemHeap> heaps_;
+
+public:
+  static constexpr unsigned int FUNCTION_INDEX = UINT_MAX;
+
+public:
+  MemHeapMgr() = default;
+
+  /**
+   * Access a heap by index. The non-const variant will automatically create new
+   * heaps if they don't already exist, the const overload will cause a
+   * recoverable assertion failure.
+   */
+  MemHeap& operator[](unsigned index);
+  const MemHeap& operator[](unsigned index) const;
+
+  Assertion check_valid(const Pointer& value, uint32_t width);
+  Assertion check_valid(const Pointer& value, const OpRef& width);
+  Assertion check_starts_allocation(const Pointer& value);
+
+  llvm::SmallVector<Pointer, 1> resolve(std::shared_ptr<Solver> solver,
+                                        const Pointer& value,
+                                        Context& ctx) const;
 };
 
 } // namespace caffeine

@@ -4,6 +4,7 @@
 #include "caffeine/Interpreter/Value.h"
 #include "caffeine/Solver/Solver.h"
 #include "caffeine/Support/Assert.h"
+#include "caffeine/Support/UnsupportedOperation.h"
 
 #include <llvm/ADT/SmallVector.h>
 
@@ -450,6 +451,38 @@ llvm::SmallVector<Pointer, 1> MemHeap::resolve(std::shared_ptr<Solver> solver,
   }
 
   return results;
+}
+
+/***************************************************
+ * MemHeapMgr                                      *
+ ***************************************************/
+
+MemHeap& MemHeapMgr::operator[](unsigned index) {
+  return heaps_[index];
+}
+const MemHeap& MemHeapMgr::operator[](unsigned index) const {
+  auto it = heaps_.find(index);
+  CAFFEINE_UASSERT(it != heaps_.end(),
+                   "Attempted to access an invalid heap index");
+  return it->getSecond();
+}
+
+Assertion MemHeapMgr::check_valid(const Pointer& ptr, uint32_t width) {
+  return check_valid(ptr, ConstantInt::Create(llvm::APInt(
+                              ptr.offset()->type().bitwidth(), width)));
+}
+Assertion MemHeapMgr::check_valid(const Pointer& ptr, const OpRef& width) {
+  return (*this)[ptr.heap()].check_valid(ptr, width);
+}
+
+Assertion MemHeapMgr::check_starts_allocation(const Pointer& value) {
+  return (*this)[value.heap()].check_starts_allocation(value);
+}
+
+llvm::SmallVector<Pointer, 1>
+MemHeapMgr::resolve(std::shared_ptr<Solver> solver, const Pointer& value,
+                    Context& ctx) const {
+  return (*this)[value.heap()].resolve(std::move(solver), value, ctx);
 }
 
 } // namespace caffeine
