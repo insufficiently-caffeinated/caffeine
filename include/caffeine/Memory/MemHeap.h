@@ -216,9 +216,7 @@ private:
 public:
   MemHeap(unsigned index);
 
-  unsigned index() const {
-    return index_;
-  }
+  unsigned index() const;
 
   Allocation& operator[](const AllocId& alloc);
   const Allocation& operator[](const AllocId& alloc) const;

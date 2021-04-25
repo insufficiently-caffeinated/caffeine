@@ -309,6 +309,10 @@ bool Pointer::operator!=(const Pointer& p) const {
 
 MemHeap::MemHeap(unsigned index) : index_(index) {}
 
+unsigned MemHeap::index() const {
+  return index_;
+}
+
 Allocation& MemHeap::operator[](const AllocId& alloc) {
   return allocs_.at(alloc);
 }
