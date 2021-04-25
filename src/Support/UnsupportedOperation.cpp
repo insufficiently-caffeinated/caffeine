@@ -32,7 +32,7 @@ void UnsupportedOperation::Abort(const char* condition, const char* function,
     CurrentContext->print_backtrace(output);
   }
 
-  fmt::print(output, "\nCaffeine Backtrace:");
+  fmt::print(output, "\nCaffeine Backtrace:\n");
   llvm::errs() << output.str();
   llvm::errs().flush();
   // PrintStackTrace may just end up printing straight to stderr in some cases
