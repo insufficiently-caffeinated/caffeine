@@ -104,10 +104,10 @@ void Context::pop() {
 
   auto& frame = stack.back();
   for (auto allocid : frame.allocations) {
-    CAFFEINE_ASSERT(heap[allocid].kind() == AllocationKind::Alloca,
+    CAFFEINE_ASSERT(heap()[allocid].kind() == AllocationKind::Alloca,
                     "found non-stack allocation on the stack");
 
-    heap.deallocate(allocid);
+    heap().deallocate(allocid);
   }
 
   stack.pop_back();
