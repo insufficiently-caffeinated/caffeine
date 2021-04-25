@@ -444,8 +444,8 @@ ExecutionResult Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {
       layout.getTypeAllocSize(inst.getAllocatedType()).getFixedSize();
   uint64_t align = std::max<uint64_t>(inst.getAlignment(), 1);
 
-  unsigned ptr_width =
-      layout.getPointerSizeInBits(inst.getType()->getPointerAddressSpace());
+  unsigned address_space = inst.getType()->getPointerAddressSpace();
+  unsigned ptr_width = layout.getPointerSizeInBits(address_space);
 
   auto size_op = ConstantInt::Create(llvm::APInt(ptr_width, size));
   auto alloc = ctx->heap.allocate(
@@ -453,8 +453,9 @@ ExecutionResult Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {
       AllocOp::Create(size_op, ConstantInt::Create(llvm::APInt(8, 0xDD))),
       AllocationKind::Alloca, AllocationPermissions::ReadWrite, *ctx);
 
-  frame.insert(&inst, LLVMValue(Pointer(alloc, ConstantInt::Create(llvm::APInt(
-                                                   ptr_width, 0)))));
+  frame.insert(&inst, LLVMValue(Pointer(
+                          alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)),
+                          address_space)));
   frame.allocations.push_back(alloc);
 
   return ExecutionResult::Continue;
@@ -590,6 +591,7 @@ ExecutionResult Interpreter::visitSymbolicAlloca(llvm::CallInst& call) {
   if (!alloc_name.has_value())
     return ExecutionResult::Stop;
 
+  unsigned address_space = call.getType()->getPointerAddressSpace();
   unsigned ptr_width = size->type().bitwidth();
 
   auto alloc = ctx->heap.allocate(
@@ -598,8 +600,9 @@ ExecutionResult Interpreter::visitSymbolicAlloca(llvm::CallInst& call) {
       AllocationKind::Alloca, AllocationPermissions::ReadWrite, *ctx);
 
   auto& frame = ctx->stack_top();
-  frame.insert(&call, LLVMValue(Pointer(alloc, ConstantInt::Create(llvm::APInt(
-                                                   ptr_width, 0)))));
+  frame.insert(&call, LLVMValue(Pointer(
+                          alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)),
+                          address_space)));
   frame.allocations.push_back(alloc);
 
   return ExecutionResult::Continue;
@@ -616,20 +619,19 @@ ExecutionResult Interpreter::visitMalloc(llvm::CallInst& call) {
   auto size = ctx->lookup(call.getArgOperand(0)).scalar().expr();
   const llvm::DataLayout& layout = call.getModule()->getDataLayout();
 
-  CAFFEINE_ASSERT(size->type().is_int(), "Invalid malloc signature");
-  CAFFEINE_ASSERT(
-      size->type().bitwidth() ==
-          layout.getIndexSizeInBits(call.getType()->getPointerAddressSpace()),
-      "Invalid malloc signature");
+  unsigned address_space = call.getType()->getPointerAddressSpace();
+  auto ptr_width = layout.getPointerSizeInBits(address_space);
 
-  auto ptr_width =
-      layout.getPointerSizeInBits(call.getType()->getPointerAddressSpace());
+  CAFFEINE_ASSERT(size->type().is_int(), "Invalid malloc signature");
+  CAFFEINE_ASSERT(size->type().bitwidth() ==
+                      layout.getIndexSizeInBits(address_space),
+                  "Invalid malloc signature");
 
   if (options.malloc_can_return_null) {
     Context forked = ctx->fork_once();
     forked.stack_top().insert(
-        &call,
-        LLVMValue(Pointer(ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
+        &call, LLVMValue(Pointer(ConstantInt::Create(llvm::APInt(ptr_width, 0)),
+                                 address_space)));
     queueContext(std::move(forked));
   }
 
@@ -641,8 +643,9 @@ ExecutionResult Interpreter::visitMalloc(llvm::CallInst& call) {
       AllocationKind::Malloc, AllocationPermissions::ReadWrite, *ctx);
 
   ctx->stack_top().insert(
-      &call, LLVMValue(Pointer(
-                 alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
+      &call,
+      LLVMValue(Pointer(alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)),
+                        address_space)));
 
   return ExecutionResult::Continue;
 }
@@ -653,20 +656,19 @@ ExecutionResult Interpreter::visitCalloc(llvm::CallInst& call) {
   auto size = ctx->lookup(call.getArgOperand(0)).scalar().expr();
   const llvm::DataLayout& layout = call.getModule()->getDataLayout();
 
-  CAFFEINE_ASSERT(size->type().is_int(), "Invalid calloc signature");
-  CAFFEINE_ASSERT(
-      size->type().bitwidth() ==
-          layout.getIndexSizeInBits(call.getType()->getPointerAddressSpace()),
-      "Invalid calloc signature");
+  unsigned address_space = call.getType()->getPointerAddressSpace();
+  auto ptr_width = layout.getPointerSizeInBits(address_space);
 
-  auto ptr_width =
-      layout.getPointerSizeInBits(call.getType()->getPointerAddressSpace());
+  CAFFEINE_ASSERT(size->type().is_int(), "Invalid calloc signature");
+  CAFFEINE_ASSERT(size->type().bitwidth() ==
+                      layout.getIndexSizeInBits(address_space),
+                  "Invalid calloc signature");
 
   if (options.malloc_can_return_null) {
     Context forked = ctx->fork_once();
     forked.stack_top().insert(
-        &call,
-        LLVMValue(Pointer(ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
+        &call, LLVMValue(Pointer(ConstantInt::Create(llvm::APInt(ptr_width, 0)),
+                                 address_space)));
     queueContext(std::move(forked));
   }
 
@@ -678,8 +680,9 @@ ExecutionResult Interpreter::visitCalloc(llvm::CallInst& call) {
       AllocationKind::Malloc, AllocationPermissions::ReadWrite, *ctx);
 
   ctx->stack_top().insert(
-      &call, LLVMValue(Pointer(
-                 alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
+      &call,
+      LLVMValue(Pointer(alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)),
+                        address_space)));
 
   return ExecutionResult::Continue;
 }

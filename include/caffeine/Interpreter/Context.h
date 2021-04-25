@@ -26,7 +26,7 @@ class Context {
 public:
   std::vector<StackFrame> stack;
   std::unordered_map<llvm::GlobalVariable*, LLVMValue> globals;
-  MemHeap heap;
+  MemHeap heap{0};
   AssertionList assertions;
 
   llvm::Module* mod;

@@ -199,11 +199,11 @@ LLVMValue ExprEvaluator::visitConstantFP(llvm::ConstantFP& cnst) {
 LLVMValue
 ExprEvaluator::visitConstantPointerNull(llvm::ConstantPointerNull& null) {
   const auto& layout = ctx->mod->getDataLayout();
-  unsigned bitwidth =
-      layout.getPointerSizeInBits(null.getType()->getPointerAddressSpace());
+  unsigned address_space = null.getType()->getPointerAddressSpace();
+  unsigned bitwidth = layout.getPointerSizeInBits(address_space);
 
-  return LLVMValue(
-      Pointer(ConstantInt::Create(llvm::APInt::getNullValue(bitwidth))));
+  return LLVMValue(Pointer(
+      ConstantInt::Create(llvm::APInt::getNullValue(bitwidth)), address_space));
 }
 
 LLVMValue ExprEvaluator::visitUndefValue(llvm::UndefValue& undef) {
@@ -264,7 +264,8 @@ LLVMValue ExprEvaluator::visitUndefValue(llvm::UndefValue& undef) {
     unsigned bitwidth =
         layout.getPointerSizeInBits(type->getPointerAddressSpace());
 
-    return LLVMValue(Pointer(Undef::Create(Type::int_ty(bitwidth))));
+    return LLVMValue(Pointer(Undef::Create(Type::int_ty(bitwidth)),
+                             type->getPointerAddressSpace()));
   }
 
   return visitConstant(undef);
@@ -344,7 +345,8 @@ LLVMValue ExprEvaluator::visitGlobalVariable(llvm::GlobalVariable& global) {
       AllocationKind::Global, perms, *ctx);
 
   auto pointer = LLVMValue(
-      Pointer(alloc, ConstantInt::Create(llvm::APInt::getNullValue(bitwidth))));
+      Pointer(alloc, ConstantInt::Create(llvm::APInt::getNullValue(bitwidth)),
+              global.getAddressSpace()));
 
   ctx->globals.emplace(&global, pointer);
 
@@ -575,7 +577,8 @@ LLVMValue ExprEvaluator::visitIntToPtr(llvm::IntToPtrInst& inst) {
   return transform_elements(
       [&](const LLVMScalar& value) {
         return LLVMScalar(Pointer(UnaryOp::CreateTruncOrZExt(
-            Type::int_ty(pointer_size), value.expr())));
+                                      Type::int_ty(pointer_size), value.expr()),
+                                  inst.getType()->getPointerAddressSpace()));
       },
       visit(inst.getOperand(0)));
 }
@@ -657,10 +660,12 @@ LLVMValue ExprEvaluator::visitGetElementPtr(llvm::GetElementPtrInst& inst) {
 
         if (inst.isInBounds()) {
           return Pointer(ptr.alloc(),
-                         BinaryOp::CreateAdd(ptr.offset(), offset.expr()));
+                         BinaryOp::CreateAdd(ptr.offset(), offset.expr()),
+                         ptr.heap());
         } else {
           return Pointer(
-              BinaryOp::CreateAdd(ptr.value(ctx->heap), offset.expr()));
+              BinaryOp::CreateAdd(ptr.value(ctx->heap), offset.expr()),
+              ptr.heap());
         }
       },
       base, offsets);
