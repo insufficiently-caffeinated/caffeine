@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <vector>
+#include <iosfwd>
 
 #include "caffeine/ADT/Ref.h"
 #include "caffeine/IR/Value.h"
@@ -157,6 +158,8 @@ public:
 
   Value lookup(const Symbol& symbol, std::optional<size_t> size) const override;
 };
+
+std::ostream& operator<<(std::ostream& os, SolverResult res);
 
 } // namespace caffeine
 
