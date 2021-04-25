@@ -209,15 +209,16 @@ void Allocation::write(const OpRef& offset, const OpRef& value_,
   }
 }
 void Allocation::write(const OpRef& offset, const LLVMScalar& value,
-                       const MemHeap& heap, const llvm::DataLayout& layout) {
+                       const MemHeapMgr& heapmgr,
+                       const llvm::DataLayout& layout) {
   if (value.is_pointer()) {
-    write(offset, value.pointer().value(heap), layout);
+    write(offset, value.pointer().value(heapmgr), layout);
   } else {
     write(offset, value.expr(), layout);
   }
 }
 void Allocation::write(const OpRef& offset, llvm::Type* type,
-                       const LLVMValue& value, const MemHeap& heap,
+                       const LLVMValue& value, const MemHeapMgr& heapmgr,
                        const llvm::DataLayout& layout) {
   CAFFEINE_ASSERT(perms_ & AllocationPermissions::Write,
                   "tried to write to unwritable allocation");
@@ -231,7 +232,7 @@ void Allocation::write(const OpRef& offset, llvm::Type* type,
 
     for (size_t i = 0; i < value.num_elements(); ++i) {
       write(BinaryOp::CreateAdd(offset, i * layout.getTypeAllocSize(type)),
-            value.element(i), heap, layout);
+            value.element(i), heapmgr, layout);
     }
   } else if (type->isArrayTy()) {
     CAFFEINE_ASSERT(value.num_members() == type->getArrayNumElements());
@@ -239,7 +240,7 @@ void Allocation::write(const OpRef& offset, llvm::Type* type,
 
     for (size_t i = 0; i < value.num_members(); ++i) {
       write(BinaryOp::CreateAdd(offset, i * layout.getTypeAllocSize(elem_ty)),
-            elem_ty, value.member(i), heap, layout);
+            elem_ty, value.member(i), heapmgr, layout);
     }
   } else if (type->isStructTy()) {
     CAFFEINE_ASSERT(value.num_members() == type->getStructNumElements());
@@ -249,7 +250,7 @@ void Allocation::write(const OpRef& offset, llvm::Type* type,
       llvm::Type* elem_ty = type->getStructElementType(i);
 
       write(BinaryOp::CreateAdd(offset, elem_offset), elem_ty, value.member(i),
-            heap, layout);
+            heapmgr, layout);
 
       elem_offset += layout.getTypeAllocSize(elem_ty);
     }

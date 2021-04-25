@@ -31,7 +31,7 @@ public:
 
   llvm::Module* mod;
 
-  MemHeap& heap() {
+  [[deprecated]] MemHeap& heap() {
     return heaps[0];
   }
 

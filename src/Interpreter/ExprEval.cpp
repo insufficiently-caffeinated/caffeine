@@ -43,7 +43,7 @@ ExprEvaluator::ExprEvaluator(Context* ctx, Options options)
 OpRef ExprEvaluator::scalarize(const LLVMScalar& scalar) const {
   if (scalar.is_expr())
     return scalar.expr();
-  return scalar.pointer().value(ctx->heap());
+  return scalar.pointer().value(ctx->heaps);
 }
 LLVMScalar ExprEvaluator::pointerize(const OpRef& op, bool turn_to_pointer) {
   if (turn_to_pointer)
@@ -340,7 +340,7 @@ LLVMValue ExprEvaluator::visitGlobalVariable(llvm::GlobalVariable& global) {
   auto perms = global.isConstant() ? AllocationPermissions::Write
                                    : AllocationPermissions::ReadWrite;
 
-  auto alloc = ctx->heap().allocate(
+  auto alloc = ctx->heaps[global.getAddressSpace()].allocate(
       array.size(), ConstantInt::Create(llvm::APInt(bitwidth, alignment)), data,
       AllocationKind::Global, perms, *ctx);
 
@@ -365,7 +365,7 @@ OpRef ExprEvaluator::visitGlobalData(llvm::Constant& constant, unsigned AS) {
   Allocation alloc{ConstantInt::CreateZero(bitwidth), size,
                    AllocOp::Create(size, ConstantInt::CreateZero(8)),
                    AllocationKind::Alloca, AllocationPermissions::ReadWrite};
-  alloc.write(ConstantInt::CreateZero(bitwidth), type, value, ctx->heap(),
+  alloc.write(ConstantInt::CreateZero(bitwidth), type, value, ctx->heaps,
               layout);
 
   return alloc.data();
@@ -479,7 +479,7 @@ LLVMValue ExprEvaluator::visitICmp(llvm::ICmpInst& icmp) {
   auto as_expr = [&](const LLVMScalar& value) {
     if (value.is_expr())
       return value.expr();
-    return value.pointer().value(ctx->heap());
+    return value.pointer().value(ctx->heaps);
   };
 
   return transform_elements(
@@ -564,8 +564,9 @@ LLVMValue ExprEvaluator::visitFCmp(llvm::FCmpInst& fcmp) {
 LLVMValue ExprEvaluator::visitPtrToInt(llvm::PtrToIntInst& inst) {
   return transform_elements(
       [&](const LLVMScalar& value) {
-        return LLVMScalar(UnaryOp::CreateTruncOrZExt(
-            Type::from_llvm(inst.getType()), value.pointer().value(ctx->heap())));
+        return LLVMScalar(
+            UnaryOp::CreateTruncOrZExt(Type::from_llvm(inst.getType()),
+                                       value.pointer().value(ctx->heaps)));
       },
       visit(inst.getOperand(0)));
 }
@@ -664,7 +665,7 @@ LLVMValue ExprEvaluator::visitGetElementPtr(llvm::GetElementPtrInst& inst) {
                          ptr.heap());
         } else {
           return Pointer(
-              BinaryOp::CreateAdd(ptr.value(ctx->heap()), offset.expr()),
+              BinaryOp::CreateAdd(ptr.value(ctx->heaps), offset.expr()),
               ptr.heap());
         }
       },
