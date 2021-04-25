@@ -31,10 +31,6 @@ public:
 
   llvm::Module* mod;
 
-  [[deprecated]] MemHeap& heap() {
-    return heaps[0];
-  }
-
 private:
   uint64_t constant_num_ = 0;
 
