@@ -41,13 +41,13 @@ protected:
 };
 
 TEST_F(MemHeapTests, resolve_pointer_single) {
-  MemHeap heap;
+  MemHeapMgr heaps;
   Context context{function.get()};
 
   unsigned index_size = layout.getIndexSizeInBits(0);
   auto align = MakeInt(16);
   auto size = Constant::Create(Type::int_ty(index_size), "size");
-  auto alloc = heap.allocate(
+  auto alloc = heaps[0].allocate(
       size, align,
       AllocOp::Create(size, ConstantInt::Create(llvm::APInt(8, 0xDD))),
       AllocationKind::Alloca, AllocationPermissions::ReadWrite, context);
@@ -55,15 +55,15 @@ TEST_F(MemHeapTests, resolve_pointer_single) {
 
   context.add(ICmpOp::CreateICmp(ICmpOpcode::ULT, offset, size));
 
-  auto ptr = Pointer(BinaryOp::CreateAdd(heap[alloc].address(), offset));
+  auto ptr = Pointer(BinaryOp::CreateAdd(heaps[0][alloc].address(), offset), 0);
 
-  ASSERT_EQ(context.check(solver, !heap.check_valid(ptr, 0)),
+  ASSERT_EQ(context.check(solver, !heaps.check_valid(ptr, 0)),
             SolverResult::UNSAT);
 
-  auto res = heap.resolve(solver, ptr, context);
+  auto res = heaps.resolve(solver, ptr, context);
 
   ASSERT_EQ(res.size(), 1);
   ASSERT_EQ(res[0].alloc(), alloc);
-  ASSERT_EQ(context.check(solver, res[0].check_null(heap)),
+  ASSERT_EQ(context.check(solver, res[0].check_null(heaps)),
             SolverResult::UNSAT);
 }

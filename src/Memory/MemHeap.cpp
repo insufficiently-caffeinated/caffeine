@@ -111,8 +111,13 @@ OpRef Allocation::read(const OpRef& offset, const Type& t,
 LLVMValue Allocation::read(const OpRef& offset, llvm::Type* type,
                            const llvm::DataLayout& layout) {
   if (type->isPointerTy()) {
+    auto heap = type->getPointerElementType()->isFunctionTy()
+                    ? MemHeapMgr::FUNCTION_INDEX
+                    : type->getPointerAddressSpace();
+
     return LLVMValue(Pointer(
-        read(offset, Type::int_ty(layout.getPointerSizeInBits()), layout)));
+        read(offset, Type::int_ty(layout.getPointerSizeInBits()), layout),
+        heap));
   }
 
   if (type->isArrayTy()) {
@@ -255,22 +260,39 @@ void Allocation::write(const OpRef& offset, llvm::Type* type,
  * Pointer                                         *
  ***************************************************/
 
-Pointer::Pointer(const OpRef& value) : Pointer({SIZE_MAX, SIZE_MAX}, value) {
+Pointer::Pointer(const OpRef& value, unsigned heap)
+    : Pointer({SIZE_MAX, SIZE_MAX}, value, heap) {
   CAFFEINE_ASSERT(value->type().is_int());
 }
-Pointer::Pointer(const AllocId& alloc, const OpRef& offset)
-    : alloc_(alloc), offset_(offset) {
+Pointer::Pointer(const AllocId& alloc, const OpRef& offset, unsigned heap)
+    : alloc_(alloc), offset_(offset), heap_(heap) {
   CAFFEINE_ASSERT(offset->type().is_int());
 }
 
+unsigned Pointer::heap() const {
+  return heap_;
+}
+
 OpRef Pointer::value(const MemHeap& heap) const {
-  if (is_resolved())
-    return BinaryOp::CreateAdd(heap[alloc()].address(), offset());
-  return offset();
+  if (!is_resolved())
+    return offset();
+
+  CAFFEINE_UASSERT(heap.index() == this->heap(),
+                   "Attempted to get value of a pointer using the wrong heap");
+  return BinaryOp::CreateAdd(heap[alloc()].address(), offset());
+}
+OpRef Pointer::value(const MemHeapMgr& heapmgr) const {
+  if (!is_resolved())
+    return offset();
+
+  return value(heapmgr[heap()]);
 }
 
 Assertion Pointer::check_null(const MemHeap& heap) const {
   return ICmpOp::CreateICmp(ICmpOpcode::EQ, value(heap), 0);
+}
+Assertion Pointer::check_null(const MemHeapMgr& heapmgr) const {
+  return ICmpOp::CreateICmp(ICmpOpcode::EQ, value(heapmgr), 0);
 }
 
 bool Pointer::operator==(const Pointer& p) const {
@@ -283,6 +305,8 @@ bool Pointer::operator!=(const Pointer& p) const {
 /***************************************************
  * MemHeap                                         *
  ***************************************************/
+
+MemHeap::MemHeap(unsigned index) : index_(index) {}
 
 Allocation& MemHeap::operator[](const AllocId& alloc) {
   return allocs_.at(alloc);
@@ -421,6 +445,8 @@ llvm::SmallVector<Pointer, 1> MemHeap::resolve(std::shared_ptr<Solver> solver,
   llvm::SmallVector<Pointer, 1> results;
 
   if (ptr.is_resolved()) {
+    CAFFEINE_UASSERT(ptr.heap() == index_,
+                     "Attempted to resolve a pointer using the wrong heap");
     if (!check_live(ptr.alloc()))
       return results;
 
@@ -445,8 +471,8 @@ llvm::SmallVector<Pointer, 1> MemHeap::resolve(std::shared_ptr<Solver> solver,
     auto assertion = BinaryOp::CreateAnd(cmp1, cmp2);
 
     if (ctx.check(solver, Assertion(assertion)) != SolverResult::UNSAT) {
-      results.push_back(
-          Pointer(it.key(), BinaryOp::CreateSub(value, alloc.address())));
+      results.push_back(Pointer(
+          it.key(), BinaryOp::CreateSub(value, alloc.address()), ptr.heap()));
     }
   }
 
@@ -458,7 +484,7 @@ llvm::SmallVector<Pointer, 1> MemHeap::resolve(std::shared_ptr<Solver> solver,
  ***************************************************/
 
 MemHeap& MemHeapMgr::operator[](unsigned index) {
-  return heaps_[index];
+  return heaps_.try_emplace(index, index).first->getSecond();
 }
 const MemHeap& MemHeapMgr::operator[](unsigned index) const {
   auto it = heaps_.find(index);

@@ -168,13 +168,15 @@ class Pointer {
 private:
   AllocId alloc_;
   OpRef offset_;
+  unsigned heap_;
 
 public:
-  explicit Pointer(const OpRef& value);
-  Pointer(const AllocId& alloc, const OpRef& offset);
+  explicit Pointer(const OpRef& value, unsigned heap);
+  Pointer(const AllocId& alloc, const OpRef& offset, unsigned heap);
 
   AllocId alloc() const;
   const OpRef& offset() const;
+  unsigned heap() const;
 
   /**
    * The absolute value of this pointer.
@@ -184,6 +186,7 @@ public:
    * MemHeap::resolve to go the other way.
    */
   OpRef value(const MemHeap& heap) const;
+  OpRef value(const MemHeapMgr& heapmgr) const;
 
   /**
    * Whether this pointer has been resolved to a specific allocation.
@@ -197,6 +200,7 @@ public:
    * Get an assertion to check if this pointer is a null pointer.
    */
   Assertion check_null(const MemHeap& heap) const;
+  Assertion check_null(const MemHeapMgr& heapmgr) const;
 
   bool operator==(const Pointer& p) const;
   bool operator!=(const Pointer& p) const;
@@ -207,9 +211,14 @@ public:
 class MemHeap {
 private:
   slot_map<Allocation> allocs_;
+  unsigned index_;
 
 public:
-  MemHeap() = default;
+  MemHeap(unsigned index);
+
+  unsigned index() const {
+    return index_;
+  }
 
   Allocation& operator[](const AllocId& alloc);
   const Allocation& operator[](const AllocId& alloc) const;
@@ -247,7 +256,7 @@ public:
    * assertion that the pointer points within one of them.
    */
   Assertion check_valid(const Pointer& value, uint32_t width);
-  Assertion check_valid(const Pointer& value, const OpRef& offset);
+  Assertion check_valid(const Pointer& value, const OpRef& width);
 
   /**
    * Get an assertion that checks whether the provided pointer points to the
