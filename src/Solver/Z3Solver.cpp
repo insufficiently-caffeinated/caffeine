@@ -221,7 +221,7 @@ SolverResult Z3Solver::check(AssertionList& assertions,
 
   if (list.unproven().empty())
     return SolverResult::SAT;
-  return resolve(assertions, extra)->result();
+  return resolve(list, Assertion())->result();
 }
 
 std::unique_ptr<Model> Z3Solver::resolve(AssertionList& assertions,
