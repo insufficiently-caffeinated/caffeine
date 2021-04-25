@@ -304,7 +304,7 @@ protected:
    */
   uint16_t aux_data() const;
 
-private:
+public:
   // Utility during debugging - should never actually be called by the program.
   void DebugPrint() const;
 };
