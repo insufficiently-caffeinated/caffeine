@@ -97,6 +97,8 @@ public:
     return llvm::iterator_range<const_iterator>(list_.iterator_at(mark_),
                                                 end());
   }
+
+  void DebugPrint() const;
 };
 
 } // namespace caffeine
