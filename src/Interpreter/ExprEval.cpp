@@ -92,6 +92,8 @@ LLVMValue ExprEvaluator::evaluate(llvm::Value* val) {
   // Subclasses of GlobalValue
   if (auto* cnst = llvm::dyn_cast<llvm::GlobalVariable>(val))
     return visitGlobalVariable(*cnst);
+  if (auto* cnst = llvm::dyn_cast<llvm::Function>(val))
+    return visitFunction(*cnst);
 
   CAFFEINE_UNSUPPORTED(fmt::format(
       "Unsupported expression ({}): {}",
@@ -345,6 +347,27 @@ LLVMValue ExprEvaluator::visitGlobalVariable(llvm::GlobalVariable& global) {
 
   ctx->globals.emplace(&global, pointer);
 
+  return pointer;
+}
+
+LLVMValue ExprEvaluator::visitFunction(llvm::Function& func) {
+  auto it = ctx->globals.find(&func);
+  if (it != ctx->globals.end())
+    return (LLVMValue)it->second;
+
+  const llvm::DataLayout& layout = ctx->mod->getDataLayout();
+  unsigned bitwidth = layout.getPointerSizeInBits();
+
+  auto alloc = ctx->heaps[MemHeapMgr::FUNCTION_INDEX].allocate(
+      ConstantInt::Create(llvm::APInt(bitwidth, layout.getPointerSize())),
+      ConstantInt::CreateZero(bitwidth), FunctionObject::Create(&func),
+      AllocationKind::Global, AllocationPermissions::Execute, *ctx);
+
+  auto pointer = LLVMValue(
+      Pointer(alloc, ConstantInt::Create(llvm::APInt::getNullValue(bitwidth)),
+              MemHeapMgr::FUNCTION_INDEX));
+
+  ctx->globals.emplace(&func, pointer);
   return pointer;
 }
 

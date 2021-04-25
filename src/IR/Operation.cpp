@@ -198,6 +198,10 @@ std::ostream& operator<<(std::ostream& os, const Operation& op) {
     return print_cons(os, op.type(), s);
   }
 
+  if (const auto* function = llvm::dyn_cast<FunctionObject>(&op)) {
+    return print_cons(os, "function", function->function()->getName().str());
+  }
+
   std::string name(op.opcode_name());
   std::transform(name.begin(), name.end(), name.begin(),
                  [](char c) { return std::tolower(c); });
@@ -807,6 +811,23 @@ OpRef FixedArray::Create(Type index_ty, const PersistentArray<OpRef>& data) {
 OpRef FixedArray::Create(Type index_ty, const OpRef& value, size_t size) {
   return FixedArray::Create(
       index_ty, PersistentArray<OpRef>(std::vector<OpRef>(size, value)));
+}
+
+/***************************************************
+ * FunctionObject                                  *
+ ***************************************************/
+FunctionObject::FunctionObject(llvm::Function* function)
+    : Operation(Operation::FunctionObject, Type::from_llvm(function->getType()),
+                function) {}
+
+llvm::Function* FunctionObject::function() const {
+  return std::get<llvm::Function*>(inner_);
+}
+
+OpRef FunctionObject::Create(llvm::Function* function) {
+  CAFFEINE_ASSERT(function != nullptr);
+
+  return constant_fold(FunctionObject(function));
 }
 
 /***************************************************

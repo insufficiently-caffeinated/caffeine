@@ -3,11 +3,10 @@
 
 #include "caffeine/ADT/SlotMap.h"
 #include "caffeine/IR/Operation.h"
-
+#include <climits>
 #include <llvm/ADT/APInt.h>
 #include <llvm/ADT/DenseMap.h>
 #include <llvm/IR/DataLayout.h>
-
 #include <vector>
 
 namespace caffeine {
@@ -38,10 +37,11 @@ enum class AllocationKind { Alloca, Malloc, Global };
  * memory. For a Read, a user can read the data, but cannot modify the buffer.
  */
 enum class AllocationPermissions {
-  None = 0,
-  Read = 1,
-  Write = 2,
-  ReadWrite = 3,
+  None = 0x0,
+  Read = 0x1,
+  Write = 0x2,
+  Execute = 0x4,
+  ReadWrite = Read | Write,
 };
 
 /**
@@ -147,6 +147,10 @@ using AllocId = typename slot_map<Allocation>::key_type;
  * cheap and quick to do. To go the other way it is necessary to call
  * MemHeap::resolve. This is usually quite expensive so, where semantics permit,
  * pointers should be kept as an allocation + offset pair as much as possible.
+ *
+ * In addition pointers also have a heap index. This is meant to allow for
+ * separate address spaces although currently it is only used to distinguish
+ * functions and data.
  *
  * # Working with Pointers
  * The main rule to keep in mind is this: unless you know that the semantics
@@ -296,7 +300,9 @@ private:
   llvm::SmallDenseMap<unsigned, MemHeap> heaps_;
 
 public:
-  static constexpr unsigned int FUNCTION_INDEX = UINT_MAX;
+  // DenseMap uses MAX and MAX - 1 internally (so they can't be inserted). Use
+  // MAX - 2 here instead.
+  static constexpr unsigned int FUNCTION_INDEX = UINT_MAX - 2;
 
 public:
   MemHeapMgr() = default;

@@ -47,6 +47,14 @@ void Interpreter::queueContext(Context&& ctx) {
   }
 }
 
+Interpreter Interpreter::cloneWith(Context* ctx) {
+  CAFFEINE_ASSERT(ctx);
+
+  Interpreter cloned = *this;
+  cloned.ctx = ctx;
+  return cloned;
+}
+
 void Interpreter::execute() {
   while (true) {
     StackFrame& frame = ctx->stack_top();
@@ -323,13 +331,14 @@ ExecutionResult Interpreter::visitSwitchInst(llvm::SwitchInst& inst) {
   return forks;
 }
 ExecutionResult Interpreter::visitCallInst(llvm::CallInst& call) {
-  auto func = call.getCalledFunction();
+  if (call.isIndirectCall())
+    return visitIndirectCall(call);
 
-  CAFFEINE_ASSERT(
-      !func->isIntrinsic(),
-      "intrinsics function calls should be handled by visitIntrinsic");
-  CAFFEINE_ASSERT(!call.isIndirectCall(),
-                  "Indirect function calls are not supported yet");
+  auto func = call.getCalledFunction();
+  CAFFEINE_ASSERT(!func->isIntrinsic(),
+                  fmt::format("bad function call '{}': intrinsic function "
+                              "calls should be handled by visitIntrinsic",
+                              func->getName().str()));
 
   if (func->empty())
     return visitExternFunc(call);
@@ -357,6 +366,55 @@ ExecutionResult Interpreter::visitIntrinsicInst(llvm::IntrinsicInst& intrin) {
 
   CAFFEINE_ABORT(fmt::format("Intrinsic function '{}' is not supported",
                              intrin.getCalledFunction()->getName().str()));
+}
+ExecutionResult Interpreter::visitIndirectCall(llvm::CallInst& call) {
+  CAFFEINE_ASSERT(
+      call.isIndirectCall(),
+      "visitIndirectCall called with a non-indirect call instruction");
+
+  auto pointer = ctx->lookup(call.getCalledOperand()).scalar().pointer();
+  CAFFEINE_ASSERT(
+      pointer.heap() == MemHeapMgr::FUNCTION_INDEX,
+      "Indirect call instruction called with pointer of wrong type");
+
+  auto assertion = ctx->heaps.check_valid(pointer, 1);
+  if (ctx->check(solver, !assertion) == SolverResult::SAT) {
+    logFailure(*ctx, !assertion, "invalid function pointer");
+
+    // If we get an invalid function pointer then there's a pretty good chance
+    // that we'll potentially be calling all the function pointers. This isn't
+    // likely to yield useful bugs so just kill the context.
+    return ExecutionResult::Dead;
+  }
+
+  auto resolved = ctx->heaps.resolve(solver, pointer, *ctx);
+  auto resolved_forks = ctx->fork(resolved.size());
+
+  auto newcall = llvm::cast<llvm::CallInst>(call.clone());
+  auto _guard = llvm::unique_value(newcall);
+
+  llvm::SmallVector<Context, 2> forks;
+
+  for (auto [fork, ptr] : llvm::zip(resolved_forks, resolved)) {
+    Allocation& alloc = fork.heaps[ptr.heap()][ptr.alloc()];
+    fork.add(ICmpOp::CreateICmp(ICmpOpcode::EQ, alloc.address(),
+                                pointer.value(fork.heaps)));
+    newcall->setCalledFunction(
+        llvm::cast<FunctionObject>(*alloc.data()).function());
+
+    Interpreter interp = cloneWith(&fork);
+    auto result = interp.visitCall(*newcall);
+
+    if (!result.empty()) {
+      auto& contexts = result.contexts();
+      forks.append(std::move_iterator(contexts.begin()),
+                   std::move_iterator(contexts.end()));
+    } else if (result.status() == ExecutionResult::Continue) {
+      forks.push_back(std::move(fork));
+    }
+  }
+
+  return forks;
 }
 
 ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {

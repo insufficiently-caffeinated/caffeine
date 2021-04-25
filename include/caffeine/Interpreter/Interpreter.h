@@ -35,6 +35,10 @@ public:
     return contexts_;
   }
 
+  bool empty() const {
+    return contexts_.empty();
+  }
+
 private:
   Status status_;
   ContextVec contexts_;
@@ -81,6 +85,7 @@ public:
   ExecutionResult visitCallInst(llvm::CallInst& inst);
   ExecutionResult visitSelectInst(llvm::SelectInst& inst);
   ExecutionResult visitIntrinsicInst(llvm::IntrinsicInst& inst);
+  ExecutionResult visitIndirectCall(llvm::CallInst& inst);
 
   ExecutionResult visitGetElementPtrInst(llvm::GetElementPtrInst& inst);
   ExecutionResult visitLoadInst(llvm::LoadInst& inst);
@@ -101,6 +106,7 @@ private:
   void logFailure(Context& ctx, const Assertion& assertion,
                   std::string_view message = "");
   void queueContext(Context&& ctx);
+  Interpreter cloneWith(Context* ctx);
 
 private:
   ExecutionResult visitExternFunc(llvm::CallInst& inst);

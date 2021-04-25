@@ -25,7 +25,7 @@ namespace caffeine {
 class Context {
 public:
   std::vector<StackFrame> stack;
-  std::unordered_map<llvm::GlobalVariable*, LLVMValue> globals;
+  std::unordered_map<llvm::GlobalValue*, LLVMValue> globals;
   MemHeapMgr heaps;
   AssertionList assertions;
 

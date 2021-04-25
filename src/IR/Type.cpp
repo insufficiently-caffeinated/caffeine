@@ -57,15 +57,6 @@ Type Type::vector_ty() {
   return Type(Vector, 0);
 }
 
-llvm::FunctionType* Type::signature() const {
-  CAFFEINE_ASSERT(is_function_pointer());
-
-  auto fnty = llvm::dyn_cast_or_null<llvm::FunctionType>(llvm_);
-  CAFFEINE_ASSERT(fnty, "function type didn't contain a signature");
-
-  return fnty;
-}
-
 uint32_t Type::byte_size(const llvm::DataLayout& layout) const {
   // TODO: Might not always want to hardcode this?
   constexpr uint32_t bits_per_byte = 8;
@@ -78,8 +69,9 @@ uint32_t Type::byte_size(const llvm::DataLayout& layout) const {
   case FloatingPoint:
     return divceil(mantissa_bits() + exponent_bits(), bits_per_byte);
   case Pointer:
-  case FunctionPointer:
     return layout.getPointerSize();
+  case Function:
+    CAFFEINE_ABORT("Functions have no size");
   case Array:
     CAFFEINE_ABORT("Arrays have no size");
   case Vector:
@@ -143,13 +135,11 @@ Type Type::from_llvm(llvm::Type* type) {
   if (type->isIntegerTy())
     return Type::int_ty(type->getIntegerBitWidth());
 
-  if (type->isPointerTy()) {
-    auto contained = type->getContainedType(0);
-
-    if (contained->isFunctionTy())
-      return Type(FunctionPointer, 0, contained);
+  if (type->isPointerTy())
     return Type(Pointer, 0);
-  }
+
+  if (type->isFunctionTy())
+    return Type(Function, 0);
 
   CAFFEINE_UNIMPLEMENTED();
 }

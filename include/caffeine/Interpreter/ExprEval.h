@@ -77,6 +77,7 @@ public:
 
   // Subclasses of GlobalValue
   LLVMValue visitGlobalVariable(llvm::GlobalVariable& global);
+  LLVMValue visitFunction(llvm::Function& func);
 
   // Extras
   OpRef visitGlobalData(llvm::Constant& cnst, unsigned AS);

@@ -25,6 +25,10 @@
 // Get definitions of CAFFEINE_FCMP_BASE and CAFFEINE_ICMP_BASE
 #include "caffeine/IR/Operation.def"
 
+namespace llvm {
+class Function;
+}
+
 namespace caffeine {
 
 namespace detail {
@@ -198,7 +202,7 @@ protected:
   using FixedData = PersistentArray<OpRef>;
   using OpVec = boost::container::static_vector<OpRef, 3>;
   using Inner = std::variant<std::monostate, OpVec, llvm::APInt, llvm::APFloat,
-                             FixedData, ConstantData>;
+                             FixedData, ConstantData, llvm::Function*>;
 
   uint16_t opcode_;
   uint16_t dummy_ = 0; // Unused, used for padding
@@ -702,6 +706,18 @@ public:
 
   static OpRef Create(Type index_ty, const PersistentArray<OpRef>& data);
   static OpRef Create(Type index_ty, const OpRef& value, size_t size);
+
+  static bool classof(const Operation* op);
+};
+
+class FunctionObject final : public Operation {
+private:
+  FunctionObject(llvm::Function* function);
+
+public:
+  llvm::Function* function() const;
+
+  static OpRef Create(llvm::Function* function);
 
   static bool classof(const Operation* op);
 };

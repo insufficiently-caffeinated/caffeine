@@ -325,8 +325,8 @@ AllocId MemHeap::allocate(const OpRef& size, const OpRef& alignment,
                           AllocationPermissions permissions, Context& ctx) {
   CAFFEINE_ASSERT(size->type() == alignment->type());
   CAFFEINE_ASSERT(size->type().is_int());
-  CAFFEINE_ASSERT(data->type().is_array());
-  CAFFEINE_ASSERT(data->type().bitwidth() == size->type().bitwidth());
+  CAFFEINE_ASSERT(!data->type().is_array() ||
+                  data->type().bitwidth() == size->type().bitwidth());
 
   auto newalloc =
       Allocation(Constant::Create(size->type(), ctx.next_constant()), size,
