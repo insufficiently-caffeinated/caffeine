@@ -4,7 +4,6 @@
 #include <iosfwd>
 #include <memory>
 #include <vector>
-#include <iosfwd>
 
 #include "caffeine/ADT/Ref.h"
 #include "caffeine/IR/Value.h"
