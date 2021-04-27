@@ -307,7 +307,10 @@ bool Pointer::operator!=(const Pointer& p) const {
  * MemHeap                                         *
  ***************************************************/
 
-MemHeap::MemHeap(unsigned index) : index_(index) {}
+MemHeap::MemHeap(unsigned index, bool concrete) : index_(index) {
+  if (concrete)
+    allocator_.emplace<Uninit>();
+}
 
 unsigned MemHeap::index() const {
   return index_;
@@ -328,9 +331,8 @@ AllocId MemHeap::allocate(const OpRef& size, const OpRef& alignment,
   CAFFEINE_ASSERT(!data->type().is_array() ||
                   data->type().bitwidth() == size->type().bitwidth());
 
-  auto newalloc =
-      Allocation(Constant::Create(size->type(), ctx.next_constant()), size,
-                 data, kind, permissions);
+  auto addr = alloc_addr(size, alignment, ctx);
+  auto newalloc = Allocation(addr, size, data, kind, permissions);
 
   // Ensure that the allocation is properly aligned
   auto is_aligned = ICmpOp::CreateICmp(
@@ -378,6 +380,13 @@ void MemHeap::deallocate(const AllocId& alloc) {
   //       was created in an unrelated context.
   CAFFEINE_ASSERT(value.has_value(),
                   "tried to deallocate a nonexistant allocation");
+
+  if (allocator_.index() == Init) {
+    std::get<Init>(allocator_)
+        .deallocate(llvm::cast<ConstantInt>(*value->address()).value());
+  } else {
+    allocator_.emplace<Symbolic>();
+  }
 }
 
 bool MemHeap::check_live(const AllocId& alloc) const {
@@ -483,13 +492,48 @@ llvm::SmallVector<Pointer, 1> MemHeap::resolve(std::shared_ptr<Solver> solver,
 
   return results;
 }
+OpRef MemHeap::alloc_addr(const OpRef& size, const OpRef& align, Context& ctx) {
+  if (allocator_.index() == Symbolic)
+    goto symbolic;
+
+  if (!llvm::isa<ConstantInt>(*size) || !llvm::isa<ConstantInt>(*align)) {
+    allocator_.emplace<Symbolic>();
+    goto symbolic;
+  }
+
+  if (allocator_.index() == Uninit) {
+    unsigned bitwidth = size->type().bitwidth();
+    allocator_.emplace<Init>(llvm::APInt::getSignedMinValue(bitwidth),
+                             llvm::APInt::getSignedMinValue(bitwidth));
+  }
+
+  {
+    auto addr = std::get<Init>(allocator_)
+                    .allocate(llvm::cast<ConstantInt>(*size).value(),
+                              llvm::cast<ConstantInt>(*align).value());
+    if (addr)
+      return ConstantInt::Create(std::move(*addr));
+    allocator_.emplace<Symbolic>();
+  }
+
+symbolic:
+  return Constant::Create(size->type(), ctx.next_constant());
+}
 
 /***************************************************
  * MemHeapMgr                                      *
  ***************************************************/
 
+MemHeapMgr::MemHeapMgr(bool concrete_heap)
+    : heaps_are_concrete_(concrete_heap) {}
+
+void MemHeapMgr::set_concrete(bool concrete) {
+  heaps_are_concrete_ = concrete;
+}
+
 MemHeap& MemHeapMgr::operator[](unsigned index) {
-  return heaps_.try_emplace(index, index).first->getSecond();
+  return heaps_.try_emplace(index, index, heaps_are_concrete_)
+      .first->getSecond();
 }
 const MemHeap& MemHeapMgr::operator[](unsigned index) const {
   auto it = heaps_.find(index);
