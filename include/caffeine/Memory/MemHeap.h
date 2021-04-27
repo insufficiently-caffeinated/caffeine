@@ -3,6 +3,7 @@
 
 #include "caffeine/ADT/SlotMap.h"
 #include "caffeine/IR/Operation.h"
+#include "caffeine/Memory/Allocator.h"
 #include <climits>
 #include <llvm/ADT/APInt.h>
 #include <llvm/ADT/DenseMap.h>
@@ -214,11 +215,14 @@ public:
 
 class MemHeap {
 private:
+  enum { Symbolic, Init, Uninit };
+
   slot_map<Allocation> allocs_;
   unsigned index_;
+  std::variant<std::monostate, BuddyAllocator, std::monostate> allocator_;
 
 public:
-  MemHeap(unsigned index);
+  MemHeap(unsigned index, bool concrete = true);
 
   unsigned index() const;
 
@@ -293,11 +297,17 @@ public:
                                         Context& ctx) const;
 
   void DebugPrint() const;
+
+private:
+  BuddyAllocator* allocator();
+
+  OpRef alloc_addr(const OpRef& size, const OpRef& align, Context& ctx);
 };
 
 class MemHeapMgr {
 private:
   llvm::SmallDenseMap<unsigned, MemHeap> heaps_;
+  bool heaps_are_concrete_;
 
 public:
   // DenseMap uses MAX and MAX - 1 internally (so they can't be inserted). Use
@@ -305,7 +315,13 @@ public:
   static constexpr unsigned int FUNCTION_INDEX = UINT_MAX - 2;
 
 public:
-  MemHeapMgr() = default;
+  MemHeapMgr(bool concrete_heap = true);
+
+  /**
+   * Configure whether future heaps will first attempt to allocate concrete
+   * addresses before falling back to general symbolic allocation.
+   */
+  void set_concrete(bool concrete);
 
   /**
    * Access a heap by index. The non-const variant will automatically create new

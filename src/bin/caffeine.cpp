@@ -51,6 +51,13 @@ cl::opt<bool> invert_exitcode{
              "otherwise. All other exit codes remain the same.")};
 cl::opt<size_t> threads{
     "t", cl::desc("the number of threads to use. 0 means num_cpus")};
+cl::opt<bool> force_symbolic_allocator{
+    "force-symbolic-allocator",
+    cl::desc("force caffeine to only use the symbolic allocator. By default, "
+             "caffeine will assign concrete addresses to allocations made by "
+             "the program under test if possible. This option disables that "
+             "and forces all allocations to have symbolic addresses. This "
+             "may be much slower than allowing concrete addresses.")};
 
 static ExitOnError exit_on_err;
 
@@ -104,13 +111,12 @@ int main(int argc, char** argv) {
 
   exit_on_err.setBanner(std::string(argv[0]) + ":");
 
-  LLVMContext context;
-  context.setDiagnosticHandler(std::make_unique<DecafDiagnosticHandler>(),
-                               true);
+  LLVMContext ctx;
+  ctx.setDiagnosticHandler(std::make_unique<DecafDiagnosticHandler>(), true);
 
   cl::ParseCommandLineOptions(argc, argv, "symbolic executor for LLVM IR");
 
-  auto module = loadFile(argv[0], input_filename.getValue(), context);
+  auto module = loadFile(argv[0], input_filename.getValue(), ctx);
   if (!module) {
     errs() << argv[0] << ": ";
     WithColor::error() << " loading file '" << input_filename.getValue()
@@ -135,7 +141,9 @@ int main(int argc, char** argv) {
   auto store = caffeine::QueueingContextStore(options.num_threads);
   auto exec = caffeine::Executor(&policy, &store, &logger, options);
 
-  store.add_context(Context(function));
+  auto context = Context(function);
+  context.heaps.set_concrete(!force_symbolic_allocator);
+  store.add_context(std::move(context));
 
   exec.run();
 
