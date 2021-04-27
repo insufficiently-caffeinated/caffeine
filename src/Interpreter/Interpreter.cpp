@@ -293,6 +293,35 @@ ExecutionResult Interpreter::visitReturnInst(llvm::ReturnInst& inst) {
 
   return ExecutionResult::Continue;
 }
+ExecutionResult Interpreter::visitSwitchInst(llvm::SwitchInst& inst) {
+  auto cond = ctx->lookup(inst.getCondition()).scalar().expr();
+
+  ExecutionResult::ContextVec forks;
+  Context def = ctx->fork_once();
+
+  for (auto value : inst.cases()) {
+    auto assertion = Assertion(ICmpOp::CreateICmp(
+        ICmpOpcode::EQ, cond,
+        ConstantInt::Create(value.getCaseValue()->getValue())));
+    def.add(!assertion);
+
+    if (ctx->check(solver, assertion) == SolverResult::UNSAT)
+      continue;
+
+    Context fork = ctx->fork_once();
+    fork.add(assertion);
+    fork.stack_top().jump_to(value.getCaseSuccessor());
+
+    forks.push_back(std::move(fork));
+  }
+
+  if (def.check(solver) != SolverResult::UNSAT) {
+    def.stack_top().jump_to(inst.getDefaultDest());
+    forks.push_back(std::move(def));
+  }
+
+  return forks;
+}
 ExecutionResult Interpreter::visitCallInst(llvm::CallInst& call) {
   auto func = call.getCalledFunction();
 
