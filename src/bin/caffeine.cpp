@@ -1,7 +1,9 @@
 
+#include "caffeine/Interpreter/Context.h"
 #include "caffeine/Interpreter/Interpreter.h"
 #include "caffeine/Interpreter/Policy.h"
 #include "caffeine/Interpreter/Store.h"
+#include "caffeine/Support/UnsupportedOperation.h"
 
 #include <boost/core/demangle.hpp>
 #include <llvm/IR/DiagnosticInfo.h>
@@ -10,13 +12,16 @@
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/InitLLVM.h>
+#include <llvm/Support/Signals.h>
 #include <llvm/Support/WithColor.h>
+#include <llvm/Support/raw_os_ostream.h>
 #include <z3++.h>
 
 #include <atomic>
 #include <exception>
 #include <iostream>
 #include <memory>
+#include <signal.h>
 #include <thread>
 
 using namespace llvm;
@@ -80,40 +85,22 @@ struct DecafDiagnosticHandler : public DiagnosticHandler {
   }
 };
 
-std::terminate_handler llvm_handler = nullptr;
-
-void custom_terminate_handler() {
+// Handler to print a symbolic backtrace if available
+static void signal_handler(void*) {
   try {
-    // special-case handling to print the contained message
-    try {
-      auto current = std::current_exception();
-
-      if (!current) {
-        llvm_handler();
-        std::abort();
-      }
-
-      std::rethrow_exception(current);
-    } catch (std::exception& e) {
-      const auto& ty = typeid(e);
-      std::cerr << "std::terminate called after throwing an instance of '"
-                << boost::core::demangle(ty.name()) << "' and message\n  "
-                << e.what() << std::endl;
-      throw;
-    } catch (z3::exception& e) {
-      // Why oh why does z3::exception not inherit from std::exception??? :(
-      const auto& ty = typeid(e);
-      std::cerr << "std::terminate called after throwing an instance of '"
-                << boost::core::demangle(ty.name()) << "' and message\n  "
-                << e.msg() << std::endl;
-      throw;
+    if (const auto* context =
+            caffeine::UnsupportedOperation::CurrentContextUnsafe()) {
+      std::stringstream output;
+      output << "\nSymbolic Backtrace:\n";
+      context->print_backtrace(output);
+      llvm::errs() << output.str();
     }
+
   } catch (...) {
-    // Use default llvm handling logic for the rest
-    if (llvm_handler)
-      llvm_handler();
+    llvm::errs()
+        << "ERROR: Exception was thrown while attempting to print backtraces\n";
   }
-  std::abort();
+  llvm::errs().flush();
 }
 
 } // namespace
@@ -135,6 +122,8 @@ int main(int argc, char** argv) {
   InitLLVM X(argc, argv);
   exit_on_err.setBanner(std::string(argv[0]) + ":");
 
+  llvm::sys::AddSignalHandler(signal_handler, nullptr);
+
   LLVMContext context;
   context.setDiagnosticHandler(std::make_unique<DecafDiagnosticHandler>(),
                                true);
@@ -155,9 +144,6 @@ int main(int argc, char** argv) {
     WithColor::error() << " no method '" << target_method.getValue() << "'\n";
     return 2;
   }
-
-  // Print out exception messages in std::terminate
-  llvm_handler = std::set_terminate(custom_terminate_handler);
 
   auto logger = CountingFailureLogger{std::cout, function};
 

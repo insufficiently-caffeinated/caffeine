@@ -30,6 +30,10 @@ public:
   class ContextGuard;
   friend class ContextGuard;
 
+  static const Context* CurrentContextUnsafe() noexcept {
+    return CurrentContext;
+  }
+
   [[noreturn]] static void Abort(const char* condition, const char* function,
                                  unsigned int line, const char* file,
                                  std::string_view message);
