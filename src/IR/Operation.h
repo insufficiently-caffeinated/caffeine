@@ -2,6 +2,7 @@
 
 #include "caffeine/IR/Matching.h"
 #include "caffeine/IR/Operation.h"
+#include "caffeine/IR/Value.h"
 #include "caffeine/IR/Visitor.h"
 #include <llvm/Support/MathExtras.h>
 #include <memory>
