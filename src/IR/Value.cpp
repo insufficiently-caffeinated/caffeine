@@ -129,15 +129,25 @@ Value Value::bvmul(const Value& lhs, const Value& rhs) {
   return lhs.apint() * rhs.apint();
 }
 Value Value::bvudiv(const Value& lhs, const Value& rhs) {
+  if (rhs.apint().isNullValue())
+    return llvm::APInt::getMaxValue(lhs.type().bitwidth());
   return lhs.apint().udiv(rhs.apint());
 }
 Value Value::bvsdiv(const Value& lhs, const Value& rhs) {
+  if (rhs.apint().isNullValue())
+    return llvm::APInt::getSignedMaxValue(lhs.type().bitwidth());
+  if (lhs.apint().isMinSignedValue() && rhs.apint().isAllOnesValue())
+    return llvm::APInt::getSignedMaxValue(lhs.type().bitwidth());
   return lhs.apint().sdiv(rhs.apint());
 }
 Value Value::bvurem(const Value& lhs, const Value& rhs) {
+  if (rhs.apint().isNullValue())
+    return lhs;
   return lhs.apint().urem(rhs.apint());
 }
 Value Value::bvsrem(const Value& lhs, const Value& rhs) {
+  if (rhs.apint().isNullValue())
+    return lhs;
   return lhs.apint().srem(rhs.apint());
 }
 
