@@ -58,7 +58,7 @@ apt-get update \
 - Install homebrew
   - Follow the instructions at <https://brew.sh>
 - Install dependencies with homebrew
-  - `brew update && brew install cmake boost llvm fmt z3 capnp pkg-config`
+  - `brew update && brew install cmake boost llvm@11 fmt z3 capnp pkg-config`
 - Install gtest
   - `git clone https://github.com/google/googletest` or `git clone git@github.com:google/googletest.git`
   - `cd googletest`
