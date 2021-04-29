@@ -5,6 +5,7 @@
 #include "caffeine/Interpreter/Store.h"
 #include "caffeine/Interpreter/Value.h"
 #include "caffeine/Support/Assert.h"
+#include "caffeine/Support/UnsupportedOperation.h"
 
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/combine.hpp>
@@ -646,8 +647,8 @@ ExecutionResult Interpreter::visitSymbolicAlloca(llvm::CallInst& call) {
                   "caffeine_make_symbolic called with symbolic name");
 
   auto alloc_name = readSymbolicName(solver, ctx, resolved.front());
-  if (!alloc_name.has_value())
-    return ExecutionResult::Stop;
+  CAFFEINE_UASSERT(alloc_name.has_value(),
+                   "Unable to read name argument of caffeine_make_symbolic");
 
   unsigned address_space = call.getType()->getPointerAddressSpace();
   unsigned ptr_width = size->type().bitwidth();
