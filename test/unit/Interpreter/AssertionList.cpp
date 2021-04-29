@@ -48,3 +48,30 @@ TEST(AssertionListTests, breaks_down_top_level_not_or) {
   ASSERT_EQ(llvm::cast<Constant>(*assertions[1].value()).number(), 1);
   ASSERT_EQ(llvm::cast<Constant>(*assertions[2].value()).number(), 2);
 }
+
+TEST(AssertionListTests, checkpoint_restore) {
+  AssertionList list;
+  list.insert(Assertion(Constant::Create(Type::int_ty(1), 0)));
+  list.insert(Assertion(Constant::Create(Type::int_ty(1), 1)));
+  list.insert(Assertion(Constant::Create(Type::int_ty(1), 2)));
+
+  ASSERT_EQ(list.size(), 3);
+
+  size_t checkpoint = list.checkpoint();
+  list.insert(Assertion(Constant::Create(Type::int_ty(1), 3)));
+  list.insert(Assertion(Constant::Create(Type::int_ty(1), 4)));
+
+  ASSERT_EQ(list.size(), 5);
+
+  list.restore(checkpoint);
+  ASSERT_EQ(list.size(), 3);
+
+  list.insert(Assertion(Constant::Create(Type::int_ty(1), 3)));
+  ASSERT_EQ(list.size(), 4);
+}
+
+TEST(AssertionListTests, checkpoint_restore_unchanged) {
+  AssertionList list;
+  size_t checkpoint = list.checkpoint();
+  list.restore(checkpoint);
+}

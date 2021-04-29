@@ -98,6 +98,20 @@ public:
                                                 end());
   }
 
+  /**
+   * Create a checkpoint of the current position of the tail of the list. This
+   * allows for items to be temporarily inserted into the list and then removed
+   * once no longer needed.
+   *
+   * The number returned by this method is the index of the end iterator in the
+   * backing array.
+   *
+   * To remove all items inserted since the corresponding checkpoint call the
+   * restore method.
+   */
+  size_t checkpoint() const;
+  void restore(size_t checkpoint);
+
   void DebugPrint() const;
 };
 

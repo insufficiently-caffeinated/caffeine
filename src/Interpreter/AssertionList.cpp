@@ -73,4 +73,21 @@ void AssertionList::erase(const_iterator it) {
   list_.erase(it.index());
 }
 
+size_t AssertionList::checkpoint() const {
+  return list_.end().index();
+}
+
+void AssertionList::restore(size_t checkpoint) {
+  auto it = list_.iterator_at(checkpoint);
+  auto end = list_.end();
+
+  if (it != end && !it.valid())
+    ++it;
+
+  for(; it != end; ++it) {
+    lookup_.erase(*it);
+    list_.erase(it);
+  }
+}
+
 } // namespace caffeine
