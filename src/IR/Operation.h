@@ -372,6 +372,8 @@ public:
   OpRef visitSelectOp(const SelectOp& op) {
     if (const auto* vcond = llvm::dyn_cast<ConstantInt>(op.condition().get()))
       return vcond->value() == 1 ? op.true_value() : op.false_value();
+    if (op.true_value() == op.false_value())
+      return op.true_value();
 
     return this->visitOperation(op);
   }
