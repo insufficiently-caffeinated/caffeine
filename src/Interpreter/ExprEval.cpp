@@ -376,12 +376,18 @@ OpRef ExprEvaluator::visitGlobalData(llvm::Constant& constant, unsigned AS) {
   const llvm::DataLayout& layout = ctx->mod->getDataLayout();
   unsigned bitwidth = layout.getPointerSizeInBits(AS);
 
+  OpRef size = ConstantInt::Create(
+      llvm::APInt(bitwidth, layout.getTypeAllocSize(type).getFixedSize()));
+  OpRef alloc_data = AllocOp::Create(size, ConstantInt::CreateZero(8));
+
+  // Don't bother to evaluate the rest of the initializer if we already know
+  // that we're going to get all zeros.
+  if (llvm::isa<llvm::ConstantAggregateZero>(constant))
+    return alloc_data;
+
   LLVMValue value = visit(&constant);
 
-  OpRef size = ConstantInt::Create(llvm::APInt(
-      bitwidth, layout.getTypeAllocSizeInBits(type).getFixedSize()));
-  Allocation alloc{ConstantInt::CreateZero(bitwidth), size,
-                   AllocOp::Create(size, ConstantInt::CreateZero(8)),
+  Allocation alloc{ConstantInt::CreateZero(bitwidth), size, alloc_data,
                    AllocationKind::Alloca, AllocationPermissions::ReadWrite};
   alloc.write(ConstantInt::CreateZero(bitwidth), type, value, ctx->heaps,
               layout);
