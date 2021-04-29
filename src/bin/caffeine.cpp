@@ -3,16 +3,14 @@
 #include "caffeine/Interpreter/Interpreter.h"
 #include "caffeine/Interpreter/Policy.h"
 #include "caffeine/Interpreter/Store.h"
-#include "caffeine/Support/UnsupportedOperation.h"
+#include "caffeine/Support/Signal.h"
 
-#include <boost/core/demangle.hpp>
 #include <llvm/IR/DiagnosticInfo.h>
 #include <llvm/IR/DiagnosticPrinter.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/InitLLVM.h>
-#include <llvm/Support/Signals.h>
 #include <llvm/Support/WithColor.h>
 #include <llvm/Support/raw_os_ostream.h>
 #include <z3++.h>
@@ -85,24 +83,6 @@ struct DecafDiagnosticHandler : public DiagnosticHandler {
   }
 };
 
-// Handler to print a symbolic backtrace if available
-static void signal_handler(void*) {
-  try {
-    if (const auto* context =
-            caffeine::UnsupportedOperation::CurrentContextUnsafe()) {
-      std::stringstream output;
-      output << "\nSymbolic Backtrace:\n";
-      context->print_backtrace(output);
-      llvm::errs() << output.str();
-    }
-
-  } catch (...) {
-    llvm::errs()
-        << "ERROR: Exception was thrown while attempting to print backtraces\n";
-  }
-  llvm::errs().flush();
-}
-
 } // namespace
 
 static std::unique_ptr<Module>
@@ -120,9 +100,9 @@ loadFile(const char* argv0, const std::string& filename, LLVMContext& context) {
 
 int main(int argc, char** argv) {
   InitLLVM X(argc, argv);
-  exit_on_err.setBanner(std::string(argv[0]) + ":");
+  caffeine::RegisterSignalHandlers();
 
-  llvm::sys::AddSignalHandler(signal_handler, nullptr);
+  exit_on_err.setBanner(std::string(argv[0]) + ":");
 
   LLVMContext context;
   context.setDiagnosticHandler(std::make_unique<DecafDiagnosticHandler>(),
