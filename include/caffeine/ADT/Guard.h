@@ -21,7 +21,7 @@ namespace detail {
     constexpr ScopeGuard(F&& func) : F(std::move(func)) {}
     constexpr ScopeGuard(const F& func) : F(func) {}
 
-    ~ScopeGuard() {
+    ~ScopeGuard() noexcept(false) {
       if (!dismissed) {
         (*this)();
       }
