@@ -97,35 +97,22 @@ private:
 
 PrintingFailureLogger::PrintingFailureLogger(std::ostream& os) : os(&os) {}
 
-static void print_context_backtrace(std::ostream& os, const Context& ctx) {
-  size_t i = 0;
-  const auto& stack = ctx.stack;
-
-  for (const auto& frame : boost::adaptors::reverse(stack)) {
-    llvm::Function* func = frame.current_block->getParent();
-
-    os << "  #" << i << " " << func->getName().str() << "\n";
-    i += 1;
-  }
-}
-
 void PrintingFailureLogger::log_failure(const Model& model, const Context& ctx,
                                         const Failure& failure) {
-  CAFFEINE_ASSERT(model.result() == SolverResult::SAT);
-
   std::stringstream ss;
-  ConstantPrinter printer{ss, &model};
-
   ss << "Found assertion failure:\n";
 
-  for (const auto& assertion : ctx.assertions) {
-    printer.visit(*assertion.value());
+  if (model.result() == SolverResult::SAT) {
+    ConstantPrinter printer{ss, &model};
+
+    for (const auto& assertion : ctx.assertions) {
+      printer.visit(*assertion.value());
+    }
+    printer.visit(*failure.check.value());
+
+    ss << "Backtrace:\n";
+    ctx.print_backtrace(ss);
   }
-  printer.visit(*failure.check.value());
-
-  ss << "Backtrace:\n";
-  print_context_backtrace(ss, ctx);
-
   if (!failure.message.empty())
     ss << "Reason:\n  " << failure.message << '\n';
 
