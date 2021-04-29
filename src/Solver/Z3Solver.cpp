@@ -591,13 +591,13 @@ z3::expr Z3OpVisitor::visitZExt(const UnaryOp& op) {
   auto operand = visit(*op.operand());
   auto src = normalize_to_bv(operand);
 
-  return z3::zext(src, op.type().bitwidth() - operand.get_sort().bv_size());
+  return z3::zext(src, op.type().bitwidth() - src.get_sort().bv_size());
 }
 z3::expr Z3OpVisitor::visitSExt(const UnaryOp& op) {
   auto operand = visit(*op.operand());
   auto src = normalize_to_bv(operand);
 
-  return z3::sext(src, op.type().bitwidth() - operand.get_sort().bv_size());
+  return z3::sext(src, op.type().bitwidth() - src.get_sort().bv_size());
 }
 
 z3::expr Z3OpVisitor::visitLoadOp(const LoadOp& op) {
