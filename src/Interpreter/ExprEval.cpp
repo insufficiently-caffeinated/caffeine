@@ -45,11 +45,6 @@ OpRef ExprEvaluator::scalarize(const LLVMScalar& scalar) const {
     return scalar.expr();
   return scalar.pointer().value(ctx->heaps);
 }
-LLVMScalar ExprEvaluator::pointerize(const OpRef& op, bool turn_to_pointer) {
-  if (turn_to_pointer)
-    return LLVMScalar(Pointer(op));
-  return LLVMScalar(op);
-}
 
 LLVMValue ExprEvaluator::visit(llvm::Value* val) {
   const auto& frame = ctx->stack_top();
@@ -682,12 +677,25 @@ LLVMValue ExprEvaluator::visitSelectInst(llvm::SelectInst& op) {
   }
 
   return transform_elements(
-      [&](const auto& cond, const auto& t_val,
-          const auto& f_val) -> LLVMScalar {
-        auto is_ptr = t_val.is_pointer() || f_val.is_pointer();
-        return pointerize(
-            SelectOp::Create(cond.expr(), scalarize(t_val), scalarize(f_val)),
-            is_ptr);
+      [&](const LLVMScalar& cond, const LLVMScalar& t_val,
+          const LLVMScalar& f_val) -> LLVMScalar {
+        if (!t_val.is_pointer() && !f_val.is_pointer())
+          return SelectOp::Create(cond.expr(), t_val.expr(), f_val.expr());
+
+        const Pointer& t_ptr = t_val.pointer();
+        const Pointer& f_ptr = f_val.pointer();
+        CAFFEINE_ASSERT(t_ptr.heap() == f_ptr.heap());
+
+        if (t_ptr.alloc() == f_ptr.alloc()) {
+          return Pointer(
+              t_ptr.alloc(),
+              SelectOp::Create(cond.expr(), t_ptr.offset(), f_ptr.offset()),
+              t_ptr.heap());
+        }
+
+        return Pointer(SelectOp::Create(cond.expr(), t_ptr.value(ctx->heaps),
+                                        f_ptr.value(ctx->heaps)),
+                       t_ptr.heap());
       },
       cond, t_val, f_val);
 }
