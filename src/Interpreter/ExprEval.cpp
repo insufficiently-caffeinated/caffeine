@@ -45,6 +45,11 @@ OpRef ExprEvaluator::scalarize(const LLVMScalar& scalar) const {
     return scalar.expr();
   return scalar.pointer().value(ctx->heap);
 }
+LLVMScalar ExprEvaluator::pointerize(const OpRef& op, bool turn_to_pointer) {
+  if (turn_to_pointer)
+    return LLVMScalar(Pointer(op));
+  return LLVMScalar(op);
+}
 
 LLVMValue ExprEvaluator::visit(llvm::Value* val) {
   const auto& frame = ctx->stack_top();
@@ -673,8 +678,10 @@ LLVMValue ExprEvaluator::visitSelectInst(llvm::SelectInst& op) {
   return transform_elements(
       [&](const auto& cond, const auto& t_val,
           const auto& f_val) -> LLVMScalar {
-        return SelectOp::Create(cond.expr(), scalarize(t_val),
-                                scalarize(f_val));
+        auto is_ptr = t_val.is_pointer() || f_val.is_pointer();
+        return pointerize(
+            SelectOp::Create(cond.expr(), scalarize(t_val), scalarize(f_val)),
+            is_ptr);
       },
       cond, t_val, f_val);
 }
