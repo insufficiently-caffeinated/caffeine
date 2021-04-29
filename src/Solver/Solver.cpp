@@ -5,6 +5,7 @@
 #include "caffeine/Interpreter/Context.h"
 
 #include <fmt/format.h>
+#include <magic_enum.hpp>
 
 namespace caffeine {
 
@@ -184,6 +185,10 @@ EmptyModel::EmptyModel(SolverResult result) : Model(result) {
 
 Value EmptyModel::lookup(const Symbol&, std::optional<size_t>) const {
   CAFFEINE_ABORT("Model was empty");
+}
+
+std::ostream& operator<<(std::ostream& os, SolverResult res) {
+  return os << magic_enum::enum_name(res);
 }
 
 } // namespace caffeine

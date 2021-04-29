@@ -1,6 +1,7 @@
 #ifndef CAFFEINE_SOLVER_SOLVER_H
 #define CAFFEINE_SOLVER_SOLVER_H
 
+#include <iosfwd>
 #include <memory>
 #include <vector>
 
@@ -157,6 +158,8 @@ public:
 
   Value lookup(const Symbol& symbol, std::optional<size_t> size) const override;
 };
+
+std::ostream& operator<<(std::ostream& os, SolverResult res);
 
 } // namespace caffeine
 
