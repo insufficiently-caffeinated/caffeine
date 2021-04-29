@@ -66,7 +66,8 @@ namespace {
         name = fmt::format("arg{}", i);
       }
 
-      auto value = ConstantDataArray::getRaw(name, name.size(),
+      // Note: need to include the nul terminator
+      auto value = ConstantDataArray::getRaw(name, name.size() + 1,
                                              Type::getInt8Ty(m->getContext()));
       auto ident = new GlobalVariable(*m, value->getType(), true,
                                       GlobalVariable::InternalLinkage, value);
