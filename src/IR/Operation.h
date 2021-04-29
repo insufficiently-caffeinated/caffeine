@@ -419,8 +419,22 @@ public:
     const auto* fixedarray = llvm::dyn_cast<FixedArray>(op.data().get());
     const auto* offset_int = llvm::dyn_cast<ConstantInt>(op.offset().get());
 
-    if (fixedarray && offset_int) {
-      return fixedarray->data()[offset_int->value().getLimitedValue()];
+    if (fixedarray) {
+      if (offset_int) {
+        return fixedarray->data()[offset_int->value().getLimitedValue()];
+      }
+
+      if (fixedarray->data().size() < 1024) {
+        OpRef output = Undef::Create(Type::int_ty(8));
+        size_t i = 0;
+        for (const OpRef& value : fixedarray->data()) {
+          output = SelectOp::Create(
+              ICmpOp::CreateICmp(ICmpOpcode::EQ, op.offset(), i), value,
+              output);
+          i += 1;
+        }
+        return output;
+      }
     }
 
     return this->visitOperation(op);
