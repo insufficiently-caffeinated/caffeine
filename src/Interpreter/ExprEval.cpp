@@ -733,8 +733,8 @@ LLVMValue ExprEvaluator::visitInsertElement(llvm::InsertElementInst& inst) {
   LLVMValue::OpVector result;
   result.reserve(vec.size());
   for (size_t i = 0; i < vec.size(); ++i) {
-    result.emplace_back(SelectOp::Create(
-        ICmpOp::CreateICmp(ICmpOpcode::EQ, idx, i), elt, scalarize(vec[i])));
+    result.emplace_back(
+        SelectOp::Create(ICmpOp::CreateICmpEQ(idx, i), elt, scalarize(vec[i])));
   }
 
   return LLVMValue(std::move(result));
@@ -747,8 +747,8 @@ LLVMValue ExprEvaluator::visitExtractElement(llvm::ExtractElementInst& inst) {
 
   OpRef result = Undef::Create(Type::from_llvm(inst.getType()));
   for (size_t i = 0; i < vec.size(); ++i) {
-    result = SelectOp::Create(ICmpOp::CreateICmp(ICmpOpcode::EQ, idx, i),
-                              scalarize(vec[i]), result);
+    result = SelectOp::Create(ICmpOp::CreateICmpEQ(idx, i), scalarize(vec[i]),
+                              result);
   }
 
   return LLVMValue(result);

@@ -56,9 +56,9 @@ Assertion Allocation::check_inbounds(const OpRef& offset,
   // Need to check that the entire range is within the allocation.
   // TODO: Should we check for wraparound, probably not worth it for now.
 
-  auto lower = ICmpOp::CreateICmp(ICmpOpcode::ULT, offset, size());
-  auto upper = ICmpOp::CreateICmp(ICmpOpcode::ULE,
-                                  BinaryOp::CreateAdd(offset, width), size());
+  auto lower = ICmpOp::CreateICmpULT(offset, size());
+  auto upper =
+      ICmpOp::CreateICmpULE(BinaryOp::CreateAdd(offset, width), size());
 
   return Assertion(BinaryOp::CreateAnd(std::move(upper), std::move(lower)));
 }
@@ -290,7 +290,7 @@ OpRef Pointer::value(const MemHeapMgr& heapmgr) const {
 }
 
 Assertion Pointer::check_null(const MemHeap& heap) const {
-  return ICmpOp::CreateICmp(ICmpOpcode::EQ, value(heap), 0);
+  return ICmpOp::CreateICmpEQ(value(heap), 0);
 }
 Assertion Pointer::check_null(const MemHeapMgr& heapmgr) const {
   return ICmpOp::CreateICmp(ICmpOpcode::EQ, value(heapmgr), 0);
@@ -335,15 +335,15 @@ AllocId MemHeap::allocate(const OpRef& size, const OpRef& alignment,
   auto newalloc = Allocation(addr, size, data, kind, permissions);
 
   // Ensure that the allocation is properly aligned
-  auto is_aligned = ICmpOp::CreateICmp(
-      ICmpOpcode::EQ, BinaryOp::CreateURem(newalloc.address(), alignment), 0);
-  auto align_is_zero = ICmpOp::CreateICmp(ICmpOpcode::EQ, alignment, 0);
+  auto is_aligned = ICmpOp::CreateICmpEQ(
+      BinaryOp::CreateURem(newalloc.address(), alignment), 0);
+  auto align_is_zero = ICmpOp::CreateICmpEQ(alignment, 0);
   ctx.add(BinaryOp::CreateOr(is_aligned, align_is_zero));
   // The allocation can never wrap around the address space
-  ctx.add(ICmpOp::CreateICmp(ICmpOpcode::ULE, newalloc.address(),
-                             BinaryOp::CreateAdd(newalloc.address(), size)));
+  ctx.add(ICmpOp::CreateICmpULE(newalloc.address(),
+                                BinaryOp::CreateAdd(newalloc.address(), size)));
   // The allocation is not null
-  ctx.add(ICmpOp::CreateICmp(ICmpOpcode::NE, newalloc.address(), 0));
+  ctx.add(ICmpOp::CreateICmpNE(newalloc.address(), 0));
 
   for (const auto& alloc : allocs_) {
     /**
@@ -364,8 +364,8 @@ AllocId MemHeap::allocate(const OpRef& size, const OpRef& alignment,
     auto new_end = BinaryOp::CreateAdd(newalloc.address(), newalloc.size());
     auto old_end = BinaryOp::CreateAdd(alloc.address(), alloc.size());
 
-    auto cmp1 = ICmpOp::CreateICmp(ICmpOpcode::ULE, old_end, new_start);
-    auto cmp2 = ICmpOp::CreateICmp(ICmpOpcode::ULE, new_end, old_start);
+    auto cmp1 = ICmpOp::CreateICmpULE(old_end, new_start);
+    auto cmp2 = ICmpOp::CreateICmpULE(new_end, old_start);
 
     ctx.add(Assertion(BinaryOp::CreateOr(cmp1, cmp2)));
   }
@@ -409,9 +409,8 @@ Assertion MemHeap::check_valid(const Pointer& ptr, const OpRef& width) {
     if (!check_live(ptr.alloc()))
       return ConstantInt::Create(false);
 
-    return ICmpOp::CreateICmp(
-        ICmpOpcode::ULE, ptr.offset(),
-        BinaryOp::CreateSub((*this)[ptr.alloc()].size(), width));
+    return ICmpOp::CreateICmpULE(
+        ptr.offset(), BinaryOp::CreateSub((*this)[ptr.alloc()].size(), width));
   }
 
   auto result = ConstantInt::Create(false);
@@ -420,16 +419,15 @@ Assertion MemHeap::check_valid(const Pointer& ptr, const OpRef& width) {
   for (const auto& alloc : allocs_) {
     auto end = BinaryOp::CreateAdd(alloc.address(),
                                    BinaryOp::CreateSub(alloc.size(), width));
-    auto cmp1 = ICmpOp::CreateICmp(ICmpOpcode::ULE, alloc.address(), value);
-    auto cmp2 = ICmpOp::CreateICmp(ICmpOpcode::ULE, value, end);
+    auto cmp1 = ICmpOp::CreateICmpULE(alloc.address(), value);
+    auto cmp2 = ICmpOp::CreateICmpULE(value, end);
 
     // result |= (address <= value) && (value < address + size)
     result = BinaryOp::CreateOr(result, BinaryOp::CreateAnd(cmp1, cmp2));
   }
 
   // Note: NULL pointers are never valid.
-  return BinaryOp::CreateAnd(ICmpOp::CreateICmp(ICmpOpcode::NE, value, 0),
-                             result);
+  return BinaryOp::CreateAnd(ICmpOp::CreateICmpNE(value, 0), result);
 }
 
 Assertion MemHeap::check_starts_allocation(const Pointer& ptr) {
@@ -437,20 +435,19 @@ Assertion MemHeap::check_starts_allocation(const Pointer& ptr) {
     if (!check_live(ptr.alloc()))
       return ConstantInt::Create(false);
 
-    return ICmpOp::CreateICmp(ICmpOpcode::EQ, ptr.offset(), 0);
+    return ICmpOp::CreateICmpEQ(ptr.offset(), 0);
   }
 
   auto result = ConstantInt::Create(false);
   auto value = ptr.value(*this);
 
   for (const auto& alloc : allocs_) {
-    result = BinaryOp::CreateOr(
-        result, ICmpOp::CreateICmp(ICmpOpcode::EQ, value, alloc.address()));
+    result = BinaryOp::CreateOr(result,
+                                ICmpOp::CreateICmpEQ(value, alloc.address()));
   }
 
   // Note: NULL pointers are never valid.
-  return BinaryOp::CreateAnd(ICmpOp::CreateICmp(ICmpOpcode::NE, value, 0),
-                             result);
+  return BinaryOp::CreateAnd(ICmpOp::CreateICmpNE(value, 0), result);
 }
 
 llvm::SmallVector<Pointer, 1> MemHeap::resolve(std::shared_ptr<Solver> solver,
@@ -480,8 +477,8 @@ llvm::SmallVector<Pointer, 1> MemHeap::resolve(std::shared_ptr<Solver> solver,
     const auto& alloc = *it;
 
     auto end = BinaryOp::CreateAdd(alloc.address(), alloc.size());
-    auto cmp1 = ICmpOp::CreateICmp(ICmpOpcode::ULE, alloc.address(), value);
-    auto cmp2 = ICmpOp::CreateICmp(ICmpOpcode::ULT, value, end);
+    auto cmp1 = ICmpOp::CreateICmpULE(alloc.address(), value);
+    auto cmp2 = ICmpOp::CreateICmpULT(value, end);
     auto assertion = BinaryOp::CreateAnd(cmp1, cmp2);
 
     if (ctx.check(solver, Assertion(assertion)) != SolverResult::UNSAT) {
