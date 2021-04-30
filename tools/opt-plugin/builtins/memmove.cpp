@@ -14,7 +14,7 @@ namespace caffeine {
  *   i8* dst = caffeine.resolve.p0i8.i32(dst_, len);
  *   i8* src = caffeine.resolve.p0i8.i32(src_, len);
  *
- *   if (dst < src) {
+ *   if (overlap(src, dst, len) && src < dst) {
  *     while (len > 0) {
  *       *dst = *src;
  *       dst += 1;
@@ -28,6 +28,9 @@ namespace caffeine {
  *     }
  *   }
  * }
+ *
+ * Note that we explicitly check whether the two ranges overlap. This is to
+ * avoid forking the context when using memmove on two distinct allocations.
  */
 
 using namespace llvm;
@@ -146,7 +149,20 @@ llvm::Function* generateMemmove(llvm::Module* m, llvm::Function* decl) {
 
   auto int_src = entry.CreatePtrToInt(res_src, iptr);
   auto int_dst = entry.CreatePtrToInt(res_dst, iptr);
-  auto cond = entry.CreateICmpULT(int_src, int_dst);
+  auto int_len = entry.CreateZExtOrTrunc(arg_len, iptr);
+  auto addr_lt = entry.CreateICmpULT(int_src, int_dst);
+
+  // If we have the two ranges [a, b) and [c, d) then the check to see if they
+  // overlap is
+  //   no_overlap = b <= c || d <= a
+  // We do this to reduce branching in the case where the arguments to memmove
+  // do not overlap.
+  auto overlap_1 =
+      entry.CreateICmpULE(entry.CreateAdd(int_src, int_len), int_dst);
+  auto overlap_2 =
+      entry.CreateICmpULE(entry.CreateAdd(int_dst, int_len), int_src);
+
+  auto cond = entry.CreateOr({overlap_1, overlap_2, addr_lt});
 
   auto fwd = buildForward(m, decl, entry.GetInsertBlock(),
                           exit.GetInsertBlock(), res_dst, res_src, arg_len);
