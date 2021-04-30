@@ -61,8 +61,8 @@ namespace caffeine {
  * goes (note that iptr is pseudocode for a pointer-sized int type):
  *
  * define void @caffeine.memcpy.p0i8.p0i8.i32(
- *     i8* %arg_dst, i8* %arg_src, i32 %arg_len, ii %isvolatile) {
- * entry: *
+ *     i8* %arg_dst, i8* %arg_src, i32 %arg_len, i1 %isvolatile) {
+ * entry:
  *   %res_dst = call void @caffeine.resolve.p0i8.i32(i8* %arg_dst, i32 %arg_len)
  *   %res_src = call void @caffeine.resolve.p0i8.i32(i8* %arg_src, i32 %arg_len)
  *

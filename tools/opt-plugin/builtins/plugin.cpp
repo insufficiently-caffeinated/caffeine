@@ -23,6 +23,11 @@ bool GenBuiltinsPass::runOnModule(Module& module) {
       continue;
     }
 
+    if (name.startswith("llvm.memmove.")) {
+      caffeine::generateMemmove(&module, &function);
+      continue;
+    }
+
     if (name.startswith("llvm.memcpy.")) {
       caffeine::generateMemcpy(&module, &function);
       updated = true;

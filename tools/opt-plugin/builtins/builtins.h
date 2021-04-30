@@ -25,6 +25,15 @@ llvm::Function* generateMemset(llvm::Module* mod, llvm::Function* memsetDecl);
 llvm::Function* generateMemcpy(llvm::Module* mod, llvm::Function* memcpyDecl);
 
 /**
+ * Generate an implementation for an instance of the llvm.memmove.* builtin and
+ * replace the provided function with it within the parent module.
+ *
+ * This function takes a function pointer to a memcpy definition with the
+ * current module and generates the corresponding implementation.
+ */
+llvm::Function* generateMemmove(llvm::Module* mode, llvm::Function* decl);
+
+/**
  * Get the existing declaration of a variant of the caffeine.resolve builtin. If
  * the requested variant is not available then generate it within the provided
  * module.
