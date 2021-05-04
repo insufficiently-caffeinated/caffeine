@@ -5,6 +5,7 @@
 #include "caffeine/IR/Operation.h"
 
 #include <llvm/ADT/APInt.h>
+#include <llvm/ADT/DenseMap.h>
 #include <llvm/IR/DataLayout.h>
 
 #include <vector>
@@ -14,6 +15,7 @@ namespace caffeine {
 class Context;
 class Assertion;
 class MemHeap;
+class MemHeapMgr;
 class LLVMScalar;
 class LLVMValue;
 class Solver;
@@ -121,10 +123,10 @@ public:
    */
   void write(const OpRef& offset, const OpRef& value,
              const llvm::DataLayout& layout);
-  void write(const OpRef& offset, const LLVMScalar& value, const MemHeap& heap,
-             const llvm::DataLayout& layout);
+  void write(const OpRef& offset, const LLVMScalar& value,
+             const MemHeapMgr& heapmgr, const llvm::DataLayout& layout);
   void write(const OpRef& offset, llvm::Type* type, const LLVMValue& value,
-             const MemHeap& heap, const llvm::DataLayout& layout);
+             const MemHeapMgr& heapmgr, const llvm::DataLayout& layout);
 
   void DebugPrint() const;
 };
@@ -166,13 +168,15 @@ class Pointer {
 private:
   AllocId alloc_;
   OpRef offset_;
+  unsigned heap_;
 
 public:
-  explicit Pointer(const OpRef& value);
-  Pointer(const AllocId& alloc, const OpRef& offset);
+  explicit Pointer(const OpRef& value, unsigned heap);
+  Pointer(const AllocId& alloc, const OpRef& offset, unsigned heap);
 
   AllocId alloc() const;
   const OpRef& offset() const;
+  unsigned heap() const;
 
   /**
    * The absolute value of this pointer.
@@ -182,6 +186,7 @@ public:
    * MemHeap::resolve to go the other way.
    */
   OpRef value(const MemHeap& heap) const;
+  OpRef value(const MemHeapMgr& heapmgr) const;
 
   /**
    * Whether this pointer has been resolved to a specific allocation.
@@ -195,6 +200,7 @@ public:
    * Get an assertion to check if this pointer is a null pointer.
    */
   Assertion check_null(const MemHeap& heap) const;
+  Assertion check_null(const MemHeapMgr& heapmgr) const;
 
   bool operator==(const Pointer& p) const;
   bool operator!=(const Pointer& p) const;
@@ -205,9 +211,12 @@ public:
 class MemHeap {
 private:
   slot_map<Allocation> allocs_;
+  unsigned index_;
 
 public:
-  MemHeap() = default;
+  MemHeap(unsigned index);
+
+  unsigned index() const;
 
   Allocation& operator[](const AllocId& alloc);
   const Allocation& operator[](const AllocId& alloc) const;
@@ -245,7 +254,7 @@ public:
    * assertion that the pointer points within one of them.
    */
   Assertion check_valid(const Pointer& value, uint32_t width);
-  Assertion check_valid(const Pointer& value, const OpRef& offset);
+  Assertion check_valid(const Pointer& value, const OpRef& width);
 
   /**
    * Get an assertion that checks whether the provided pointer points to the
@@ -280,6 +289,33 @@ public:
                                         Context& ctx) const;
 
   void DebugPrint() const;
+};
+
+class MemHeapMgr {
+private:
+  llvm::SmallDenseMap<unsigned, MemHeap> heaps_;
+
+public:
+  static constexpr unsigned int FUNCTION_INDEX = UINT_MAX;
+
+public:
+  MemHeapMgr() = default;
+
+  /**
+   * Access a heap by index. The non-const variant will automatically create new
+   * heaps if they don't already exist, the const overload will cause a
+   * recoverable assertion failure.
+   */
+  MemHeap& operator[](unsigned index);
+  const MemHeap& operator[](unsigned index) const;
+
+  Assertion check_valid(const Pointer& value, uint32_t width);
+  Assertion check_valid(const Pointer& value, const OpRef& width);
+  Assertion check_starts_allocation(const Pointer& value);
+
+  llvm::SmallVector<Pointer, 1> resolve(std::shared_ptr<Solver> solver,
+                                        const Pointer& value,
+                                        Context& ctx) const;
 };
 
 } // namespace caffeine

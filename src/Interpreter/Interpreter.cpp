@@ -371,7 +371,7 @@ ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
   const Pointer& pointer = operand.scalar().pointer();
 
   auto assertion =
-      ctx->heap.check_valid(pointer, layout.getTypeStoreSize(inst.getType()));
+      ctx->heaps.check_valid(pointer, layout.getTypeStoreSize(inst.getType()));
   if (ctx->check(solver, !assertion) == SolverResult::SAT) {
     logFailure(*ctx, !assertion, "invalid pointer load");
 
@@ -382,11 +382,11 @@ ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
     return ExecutionResult::Dead;
   }
 
-  auto resolved = ctx->heap.resolve(solver, pointer, *ctx);
+  auto resolved = ctx->heaps.resolve(solver, pointer, *ctx);
   auto forks = ctx->fork(resolved.size());
 
   for (auto [fork, ptr] : llvm::zip(forks, resolved)) {
-    Allocation& alloc = fork.heap[ptr.alloc()];
+    Allocation& alloc = fork.heaps[ptr.heap()][ptr.alloc()];
     fork.add(alloc.check_inbounds(ptr.offset(),
                                   layout.getTypeStoreSize(inst.getType())));
 
@@ -408,7 +408,7 @@ ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
   const llvm::DataLayout& layout = inst.getModule()->getDataLayout();
   const Pointer& pointer = dest.scalar().pointer();
 
-  auto assertion = ctx->heap.check_valid(
+  auto assertion = ctx->heaps.check_valid(
       pointer, layout.getTypeStoreSize(inst.getOperand(0)->getType()));
   if (ctx->check(solver, !assertion) == SolverResult::SAT) {
     logFailure(*ctx, !assertion, "invalid pointer store");
@@ -420,14 +420,14 @@ ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
     return ExecutionResult::Dead;
   }
 
-  auto resolved = ctx->heap.resolve(solver, pointer, *ctx);
+  auto resolved = ctx->heaps.resolve(solver, pointer, *ctx);
   auto forks = ctx->fork(resolved.size());
 
   for (auto [fork, ptr] : llvm::zip(forks, resolved)) {
-    Allocation& alloc = fork.heap[ptr.alloc()];
+    Allocation& alloc = fork.heaps[ptr.heap()][ptr.alloc()];
     fork.add(
         alloc.check_inbounds(ptr.offset(), layout.getTypeStoreSize(op_ty)));
-    alloc.write(ptr.offset(), op_ty, value, fork.heap, layout);
+    alloc.write(ptr.offset(), op_ty, value, fork.heaps, layout);
 
     if (!pointer.is_resolved()) {
       fork.backprop(pointer, ptr);
@@ -444,18 +444,19 @@ ExecutionResult Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {
       layout.getTypeAllocSize(inst.getAllocatedType()).getFixedSize();
   uint64_t align = std::max<uint64_t>(inst.getAlignment(), 1);
 
-  unsigned ptr_width =
-      layout.getPointerSizeInBits(inst.getType()->getPointerAddressSpace());
+  unsigned address_space = inst.getType()->getPointerAddressSpace();
+  unsigned ptr_width = layout.getPointerSizeInBits(address_space);
 
   auto size_op = ConstantInt::Create(llvm::APInt(ptr_width, size));
-  auto alloc = ctx->heap.allocate(
+  auto alloc = ctx->heaps[address_space].allocate(
       size_op, ConstantInt::Create(llvm::APInt(ptr_width, align)),
       AllocOp::Create(size_op, ConstantInt::Create(llvm::APInt(8, 0xDD))),
       AllocationKind::Alloca, AllocationPermissions::ReadWrite, *ctx);
 
-  frame.insert(&inst, LLVMValue(Pointer(alloc, ConstantInt::Create(llvm::APInt(
-                                                   ptr_width, 0)))));
-  frame.allocations.push_back(alloc);
+  frame.insert(&inst, LLVMValue(Pointer(
+                          alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)),
+                          address_space)));
+  frame.allocations.emplace_back(alloc, address_space);
 
   return ExecutionResult::Continue;
 }
@@ -549,7 +550,7 @@ ExecutionResult Interpreter::visitAssert(llvm::CallInst& call) {
 
 std::optional<std::string> readSymbolicName(std::shared_ptr<Solver> solver,
                                             Context* ctx, const Pointer& ptr) {
-  const auto& alloc = ctx->heap[ptr.alloc()];
+  const auto& alloc = ctx->heaps[ptr.heap()][ptr.alloc()];
 
   auto model = ctx->resolve(solver);
   if (model->result() != SolverResult::SAT) {
@@ -579,7 +580,7 @@ ExecutionResult Interpreter::visitSymbolicAlloca(llvm::CallInst& call) {
   auto size = ctx->lookup(call.getArgOperand(0)).scalar().expr();
   auto name = ctx->lookup(call.getArgOperand(1)).scalar().pointer();
 
-  auto resolved = ctx->heap.resolve(solver, name, *ctx);
+  auto resolved = ctx->heaps.resolve(solver, name, *ctx);
 
   CAFFEINE_ASSERT(!resolved.empty(),
                   "caffeine_make_symbolic called with invalid name pointer");
@@ -590,17 +591,19 @@ ExecutionResult Interpreter::visitSymbolicAlloca(llvm::CallInst& call) {
   if (!alloc_name.has_value())
     return ExecutionResult::Stop;
 
+  unsigned address_space = call.getType()->getPointerAddressSpace();
   unsigned ptr_width = size->type().bitwidth();
 
-  auto alloc = ctx->heap.allocate(
+  auto alloc = ctx->heaps[address_space].allocate(
       size, ConstantInt::Create(llvm::APInt(ptr_width, 1)),
       ConstantArray::Create(Symbol(std::move(*alloc_name)), size),
       AllocationKind::Alloca, AllocationPermissions::ReadWrite, *ctx);
 
   auto& frame = ctx->stack_top();
-  frame.insert(&call, LLVMValue(Pointer(alloc, ConstantInt::Create(llvm::APInt(
-                                                   ptr_width, 0)))));
-  frame.allocations.push_back(alloc);
+  frame.insert(&call, LLVMValue(Pointer(
+                          alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)),
+                          address_space)));
+  frame.allocations.emplace_back(alloc, address_space);
 
   return ExecutionResult::Continue;
 }
@@ -616,33 +619,33 @@ ExecutionResult Interpreter::visitMalloc(llvm::CallInst& call) {
   auto size = ctx->lookup(call.getArgOperand(0)).scalar().expr();
   const llvm::DataLayout& layout = call.getModule()->getDataLayout();
 
-  CAFFEINE_ASSERT(size->type().is_int(), "Invalid malloc signature");
-  CAFFEINE_ASSERT(
-      size->type().bitwidth() ==
-          layout.getIndexSizeInBits(call.getType()->getPointerAddressSpace()),
-      "Invalid malloc signature");
+  unsigned address_space = call.getType()->getPointerAddressSpace();
+  auto ptr_width = layout.getPointerSizeInBits(address_space);
 
-  auto ptr_width =
-      layout.getPointerSizeInBits(call.getType()->getPointerAddressSpace());
+  CAFFEINE_ASSERT(size->type().is_int(), "Invalid malloc signature");
+  CAFFEINE_ASSERT(size->type().bitwidth() ==
+                      layout.getIndexSizeInBits(address_space),
+                  "Invalid malloc signature");
 
   if (options.malloc_can_return_null) {
     Context forked = ctx->fork_once();
     forked.stack_top().insert(
-        &call,
-        LLVMValue(Pointer(ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
+        &call, LLVMValue(Pointer(ConstantInt::Create(llvm::APInt(ptr_width, 0)),
+                                 address_space)));
     queueContext(std::move(forked));
   }
 
   auto size_op = UnaryOp::CreateTruncOrZExt(Type::int_ty(ptr_width), size);
-  auto alloc = ctx->heap.allocate(
+  auto alloc = ctx->heaps[address_space].allocate(
       size_op,
       ConstantInt::Create(llvm::APInt(ptr_width, options.malloc_alignment)),
       AllocOp::Create(size_op, ConstantInt::Create(llvm::APInt(8, 0xDD))),
       AllocationKind::Malloc, AllocationPermissions::ReadWrite, *ctx);
 
   ctx->stack_top().insert(
-      &call, LLVMValue(Pointer(
-                 alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
+      &call,
+      LLVMValue(Pointer(alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)),
+                        address_space)));
 
   return ExecutionResult::Continue;
 }
@@ -653,33 +656,33 @@ ExecutionResult Interpreter::visitCalloc(llvm::CallInst& call) {
   auto size = ctx->lookup(call.getArgOperand(0)).scalar().expr();
   const llvm::DataLayout& layout = call.getModule()->getDataLayout();
 
-  CAFFEINE_ASSERT(size->type().is_int(), "Invalid calloc signature");
-  CAFFEINE_ASSERT(
-      size->type().bitwidth() ==
-          layout.getIndexSizeInBits(call.getType()->getPointerAddressSpace()),
-      "Invalid calloc signature");
+  unsigned address_space = call.getType()->getPointerAddressSpace();
+  auto ptr_width = layout.getPointerSizeInBits(address_space);
 
-  auto ptr_width =
-      layout.getPointerSizeInBits(call.getType()->getPointerAddressSpace());
+  CAFFEINE_ASSERT(size->type().is_int(), "Invalid calloc signature");
+  CAFFEINE_ASSERT(size->type().bitwidth() ==
+                      layout.getIndexSizeInBits(address_space),
+                  "Invalid calloc signature");
 
   if (options.malloc_can_return_null) {
     Context forked = ctx->fork_once();
     forked.stack_top().insert(
-        &call,
-        LLVMValue(Pointer(ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
+        &call, LLVMValue(Pointer(ConstantInt::Create(llvm::APInt(ptr_width, 0)),
+                                 address_space)));
     queueContext(std::move(forked));
   }
 
   auto size_op = UnaryOp::CreateTruncOrZExt(Type::int_ty(ptr_width), size);
-  auto alloc = ctx->heap.allocate(
+  auto alloc = ctx->heaps[address_space].allocate(
       size_op,
       ConstantInt::Create(llvm::APInt(ptr_width, options.malloc_alignment)),
       AllocOp::Create(size_op, ConstantInt::Create(llvm::APInt(8, 0x00))),
       AllocationKind::Malloc, AllocationPermissions::ReadWrite, *ctx);
 
   ctx->stack_top().insert(
-      &call, LLVMValue(Pointer(
-                 alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)))));
+      &call,
+      LLVMValue(Pointer(alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)),
+                        address_space)));
 
   return ExecutionResult::Continue;
 }
@@ -693,24 +696,23 @@ ExecutionResult Interpreter::visitFree(llvm::CallInst& call) {
   CAFFEINE_ASSERT(call.getArgOperand(0)->getType()->isPointerTy(),
                   "Invalid free signature");
 
-  auto& heap = ctx->heap;
   auto memptr = ctx->lookup(call.getArgOperand(0)).scalar().pointer();
 
-  auto is_valid_ptr = heap.check_starts_allocation(memptr);
+  auto is_valid_ptr = ctx->heaps.check_starts_allocation(memptr);
   if (ctx->check(solver, !is_valid_ptr) == SolverResult::SAT) {
     logFailure(*ctx, !is_valid_ptr, "free called with an invalid pointer");
 
     return ExecutionResult::Dead;
   }
 
-  auto resolved = heap.resolve(solver, memptr, *ctx);
+  auto resolved = ctx->heaps.resolve(solver, memptr, *ctx);
 
   auto err_start =
       std::remove_if(resolved.begin(), resolved.end(), [&](const Pointer& ptr) {
-        const Allocation& alloc = ctx->heap[ptr.alloc()];
+        const Allocation& alloc = ctx->heaps[ptr.heap()][ptr.alloc()];
 
         auto assertion = Assertion(ICmpOp::CreateICmp(
-            ICmpOpcode::EQ, ptr.value(ctx->heap), alloc.address()));
+            ICmpOpcode::EQ, ptr.value(ctx->heaps), alloc.address()));
         if (ctx->check(solver, !assertion) == SolverResult::SAT) {
           logFailure(*ctx, Assertion::constant(true),
                      "free called with a pointer not allocated by malloc");
@@ -725,10 +727,10 @@ ExecutionResult Interpreter::visitFree(llvm::CallInst& call) {
   auto forks = ctx->fork(resolved.size());
 
   for (auto [fork, ptr] : llvm::zip(forks, resolved)) {
-    Allocation& alloc = fork.heap[ptr.alloc()];
-    fork.add(ICmpOp::CreateICmp(ICmpOpcode::EQ, ptr.value(fork.heap),
+    Allocation& alloc = fork.heaps[ptr.heap()][ptr.alloc()];
+    fork.add(ICmpOp::CreateICmp(ICmpOpcode::EQ, ptr.value(fork.heaps),
                                 alloc.address()));
-    fork.heap.deallocate(ptr.alloc());
+    fork.heaps[ptr.heap()].deallocate(ptr.alloc());
   }
 
   return forks;
@@ -742,7 +744,7 @@ ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallInst& call) {
       Type::int_ty(layout.getPointerSizeInBits()),
       ctx->lookup(call.getArgOperand(1)).scalar().expr());
 
-  auto assertion = ctx->heap.check_valid(mem, size);
+  auto assertion = ctx->heaps.check_valid(mem, size);
   if (ctx->check(solver, !assertion) == SolverResult::SAT) {
     logFailure(*ctx, !assertion, "invalid pointer");
 
@@ -753,7 +755,7 @@ ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallInst& call) {
     return ExecutionResult::Dead;
   }
 
-  auto resolved = ctx->heap.resolve(solver, mem, *ctx);
+  auto resolved = ctx->heaps.resolve(solver, mem, *ctx);
 
   if (resolved.size() == 1) {
     ctx->stack_top().insert(&call, LLVMValue(resolved[0]));
