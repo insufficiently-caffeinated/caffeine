@@ -2,10 +2,9 @@
 #include "caffeine/Interpreter/Interpreter.h"
 #include "caffeine/Interpreter/Policy.h"
 #include "caffeine/Interpreter/Store.h"
+#include "caffeine/Support/DiagnosticHandler.h"
 
 #include <boost/core/demangle.hpp>
-#include <llvm/IR/DiagnosticInfo.h>
-#include <llvm/IR/DiagnosticPrinter.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/Support/CommandLine.h>
@@ -52,33 +51,6 @@ cl::opt<size_t> threads{
 static ExitOnError exit_on_err;
 
 namespace {
-struct DecafDiagnosticHandler : public DiagnosticHandler {
-  bool handleDiagnostics(const DiagnosticInfo& di) override {
-    unsigned severity = di.getSeverity();
-    switch (severity) {
-    case DS_Error:
-      WithColor::error();
-      break;
-    case DS_Warning:
-      WithColor::warning();
-      break;
-    case DS_Remark:
-      WithColor::remark();
-      break;
-    case DS_Note:
-      WithColor::note();
-      break;
-    default:
-      llvm_unreachable("DiagnosticInfo had unknown severity level");
-    }
-
-    DiagnosticPrinterRawOStream dp(errs());
-    di.print(dp);
-    errs() << '\n';
-
-    return true;
-  }
-};
 
 std::terminate_handler llvm_handler = nullptr;
 
@@ -136,8 +108,8 @@ int main(int argc, char** argv) {
   exit_on_err.setBanner(std::string(argv[0]) + ":");
 
   LLVMContext context;
-  context.setDiagnosticHandler(std::make_unique<DecafDiagnosticHandler>(),
-                               true);
+  context.setDiagnosticHandler(
+      std::make_unique<caffeine::DecafDiagnosticHandler>(), true);
 
   cl::ParseCommandLineOptions(argc, argv, "symbolic executor for LLVM IR");
 
