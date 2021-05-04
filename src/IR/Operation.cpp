@@ -1,6 +1,7 @@
 #include "caffeine/IR/Operation.h"
 #include "Operation.h"
 #include "caffeine/IR/Type.h"
+#include "caffeine/IR/Value.h"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/container_hash/hash.hpp>
@@ -335,6 +336,10 @@ ConstantInt::ConstantInt(llvm::APInt&& iconst)
     : Operation(Opcode::ConstantInt, Type::type_of(iconst), std::move(iconst)) {
 }
 
+Value ConstantInt::as_value() const {
+  return Value(value());
+}
+
 OpRef ConstantInt::Create(const llvm::APInt& iconst) {
   return OpRef(new ConstantInt(iconst));
 }
@@ -343,6 +348,9 @@ OpRef ConstantInt::Create(llvm::APInt&& iconst) {
 }
 OpRef ConstantInt::Create(bool value) {
   return ConstantInt::Create(llvm::APInt(1, static_cast<uint64_t>(value)));
+}
+OpRef ConstantInt::Create(const Value& value) {
+  return Create(value.apint());
 }
 
 OpRef ConstantInt::CreateZero(unsigned bitwidth) {

@@ -56,7 +56,9 @@ namespace detail {
 } // namespace detail
 
 class Operation;
-typedef ref<const Operation> OpRef;
+class Value;
+
+using OpRef = std::shared_ptr<const Operation>;
 
 enum class ICmpOpcode : uint8_t {
   // Note: The values here need to be kept in sync with the ones in
@@ -373,10 +375,13 @@ private:
 public:
   const llvm::APInt& value() const;
 
+  Value as_value() const;
+
   static OpRef Create(const llvm::APInt& iconst);
   static OpRef Create(llvm::APInt&& iconst);
   // Specialization for creating boolean constants
   static OpRef Create(bool value);
+  static OpRef Create(const Value& value);
 
   static OpRef CreateZero(unsigned bitwidth);
 
