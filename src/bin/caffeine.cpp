@@ -1,9 +1,10 @@
 
+#include "caffeine/Interpreter/Context.h"
 #include "caffeine/Interpreter/Interpreter.h"
 #include "caffeine/Interpreter/Policy.h"
 #include "caffeine/Interpreter/Store.h"
+#include "caffeine/Support/Signal.h"
 
-#include <boost/core/demangle.hpp>
 #include <llvm/IR/DiagnosticInfo.h>
 #include <llvm/IR/DiagnosticPrinter.h>
 #include <llvm/IR/Module.h>
@@ -11,12 +12,14 @@
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/InitLLVM.h>
 #include <llvm/Support/WithColor.h>
+#include <llvm/Support/raw_os_ostream.h>
 #include <z3++.h>
 
 #include <atomic>
 #include <exception>
 #include <iostream>
 #include <memory>
+#include <signal.h>
 #include <thread>
 
 using namespace llvm;
@@ -80,42 +83,6 @@ struct DecafDiagnosticHandler : public DiagnosticHandler {
   }
 };
 
-std::terminate_handler llvm_handler = nullptr;
-
-void custom_terminate_handler() {
-  try {
-    // special-case handling to print the contained message
-    try {
-      auto current = std::current_exception();
-
-      if (!current) {
-        llvm_handler();
-        std::abort();
-      }
-
-      std::rethrow_exception(current);
-    } catch (std::exception& e) {
-      const auto& ty = typeid(e);
-      std::cerr << "std::terminate called after throwing an instance of '"
-                << boost::core::demangle(ty.name()) << "' and message\n  "
-                << e.what() << std::endl;
-      throw;
-    } catch (z3::exception& e) {
-      // Why oh why does z3::exception not inherit from std::exception??? :(
-      const auto& ty = typeid(e);
-      std::cerr << "std::terminate called after throwing an instance of '"
-                << boost::core::demangle(ty.name()) << "' and message\n  "
-                << e.msg() << std::endl;
-      throw;
-    }
-  } catch (...) {
-    // Use default llvm handling logic for the rest
-    if (llvm_handler)
-      llvm_handler();
-  }
-  std::abort();
-}
-
 } // namespace
 
 static std::unique_ptr<Module>
@@ -133,6 +100,8 @@ loadFile(const char* argv0, const std::string& filename, LLVMContext& context) {
 
 int main(int argc, char** argv) {
   InitLLVM X(argc, argv);
+  caffeine::RegisterSignalHandlers();
+
   exit_on_err.setBanner(std::string(argv[0]) + ":");
 
   LLVMContext context;
@@ -155,9 +124,6 @@ int main(int argc, char** argv) {
     WithColor::error() << " no method '" << target_method.getValue() << "'\n";
     return 2;
   }
-
-  // Print out exception messages in std::terminate
-  llvm_handler = std::set_terminate(custom_terminate_handler);
 
   auto logger = CountingFailureLogger{std::cout, function};
 
