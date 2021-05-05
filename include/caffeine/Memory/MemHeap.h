@@ -3,10 +3,11 @@
 
 #include "caffeine/ADT/SlotMap.h"
 #include "caffeine/IR/Operation.h"
-
+#include "caffeine/Memory/Allocator.h"
+#include <climits>
 #include <llvm/ADT/APInt.h>
+#include <llvm/ADT/DenseMap.h>
 #include <llvm/IR/DataLayout.h>
-
 #include <vector>
 
 namespace caffeine {
@@ -14,6 +15,7 @@ namespace caffeine {
 class Context;
 class Assertion;
 class MemHeap;
+class MemHeapMgr;
 class LLVMScalar;
 class LLVMValue;
 class Solver;
@@ -36,10 +38,11 @@ enum class AllocationKind { Alloca, Malloc, Global };
  * memory. For a Read, a user can read the data, but cannot modify the buffer.
  */
 enum class AllocationPermissions {
-  None = 0,
-  Read = 1,
-  Write = 2,
-  ReadWrite = 3,
+  None = 0x0,
+  Read = 0x1,
+  Write = 0x2,
+  Execute = 0x4,
+  ReadWrite = Read | Write,
 };
 
 /**
@@ -121,10 +124,10 @@ public:
    */
   void write(const OpRef& offset, const OpRef& value,
              const llvm::DataLayout& layout);
-  void write(const OpRef& offset, const LLVMScalar& value, const MemHeap& heap,
-             const llvm::DataLayout& layout);
+  void write(const OpRef& offset, const LLVMScalar& value,
+             const MemHeapMgr& heapmgr, const llvm::DataLayout& layout);
   void write(const OpRef& offset, llvm::Type* type, const LLVMValue& value,
-             const MemHeap& heap, const llvm::DataLayout& layout);
+             const MemHeapMgr& heapmgr, const llvm::DataLayout& layout);
 
   void DebugPrint() const;
 };
@@ -146,6 +149,10 @@ using AllocId = typename slot_map<Allocation>::key_type;
  * MemHeap::resolve. This is usually quite expensive so, where semantics permit,
  * pointers should be kept as an allocation + offset pair as much as possible.
  *
+ * In addition pointers also have a heap index. This is meant to allow for
+ * separate address spaces although currently it is only used to distinguish
+ * functions and data.
+ *
  * # Working with Pointers
  * The main rule to keep in mind is this: unless you know that the semantics
  * disallow crossing between allocations (e.g. LLVM's GetElementPtr) then always
@@ -166,13 +173,15 @@ class Pointer {
 private:
   AllocId alloc_;
   OpRef offset_;
+  unsigned heap_;
 
 public:
-  explicit Pointer(const OpRef& value);
-  Pointer(const AllocId& alloc, const OpRef& offset);
+  explicit Pointer(const OpRef& value, unsigned heap);
+  Pointer(const AllocId& alloc, const OpRef& offset, unsigned heap);
 
   AllocId alloc() const;
   const OpRef& offset() const;
+  unsigned heap() const;
 
   /**
    * The absolute value of this pointer.
@@ -182,6 +191,7 @@ public:
    * MemHeap::resolve to go the other way.
    */
   OpRef value(const MemHeap& heap) const;
+  OpRef value(const MemHeapMgr& heapmgr) const;
 
   /**
    * Whether this pointer has been resolved to a specific allocation.
@@ -195,6 +205,7 @@ public:
    * Get an assertion to check if this pointer is a null pointer.
    */
   Assertion check_null(const MemHeap& heap) const;
+  Assertion check_null(const MemHeapMgr& heapmgr) const;
 
   bool operator==(const Pointer& p) const;
   bool operator!=(const Pointer& p) const;
@@ -204,10 +215,16 @@ public:
 
 class MemHeap {
 private:
+  enum { Symbolic, Init, Uninit };
+
   slot_map<Allocation> allocs_;
+  unsigned index_;
+  std::variant<std::monostate, BuddyAllocator, std::monostate> allocator_;
 
 public:
-  MemHeap() = default;
+  MemHeap(unsigned index, bool concrete = true);
+
+  unsigned index() const;
 
   Allocation& operator[](const AllocId& alloc);
   const Allocation& operator[](const AllocId& alloc) const;
@@ -245,7 +262,7 @@ public:
    * assertion that the pointer points within one of them.
    */
   Assertion check_valid(const Pointer& value, uint32_t width);
-  Assertion check_valid(const Pointer& value, const OpRef& offset);
+  Assertion check_valid(const Pointer& value, const OpRef& width);
 
   /**
    * Get an assertion that checks whether the provided pointer points to the
@@ -280,6 +297,47 @@ public:
                                         Context& ctx) const;
 
   void DebugPrint() const;
+
+private:
+  BuddyAllocator* allocator();
+
+  OpRef alloc_addr(const OpRef& size, const OpRef& align, Context& ctx);
+};
+
+class MemHeapMgr {
+private:
+  llvm::SmallDenseMap<unsigned, MemHeap> heaps_;
+  bool heaps_are_concrete_;
+
+public:
+  // DenseMap uses MAX and MAX - 1 internally (so they can't be inserted). Use
+  // MAX - 2 here instead.
+  static constexpr unsigned int FUNCTION_INDEX = UINT_MAX - 2;
+
+public:
+  MemHeapMgr(bool concrete_heap = true);
+
+  /**
+   * Configure whether future heaps will first attempt to allocate concrete
+   * addresses before falling back to general symbolic allocation.
+   */
+  void set_concrete(bool concrete);
+
+  /**
+   * Access a heap by index. The non-const variant will automatically create new
+   * heaps if they don't already exist, the const overload will cause a
+   * recoverable assertion failure.
+   */
+  MemHeap& operator[](unsigned index);
+  const MemHeap& operator[](unsigned index) const;
+
+  Assertion check_valid(const Pointer& value, uint32_t width);
+  Assertion check_valid(const Pointer& value, const OpRef& width);
+  Assertion check_starts_allocation(const Pointer& value);
+
+  llvm::SmallVector<Pointer, 1> resolve(std::shared_ptr<Solver> solver,
+                                        const Pointer& value,
+                                        Context& ctx) const;
 };
 
 } // namespace caffeine

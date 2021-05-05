@@ -44,7 +44,7 @@ public:
     Integer,
     FloatingPoint,
     Pointer,
-    FunctionPointer,
+    Function,
     Array,
     Vector
   };
@@ -67,7 +67,7 @@ public:
   bool is_int() const;
   bool is_float() const;
   bool is_pointer() const;
-  bool is_function_pointer() const;
+  bool is_function() const;
   bool is_array() const;
   bool is_vector() const;
 
@@ -82,9 +82,6 @@ public:
    */
   uint32_t byte_size(const llvm::DataLayout& layout) const;
 
-  // Signature of a function pointer.
-  llvm::FunctionType* signature() const;
-
   static Type int_ty(uint32_t bitwidth);
   static Type void_ty();
   static Type float_ty(uint32_t exponent, uint32_t mantissa);
@@ -95,6 +92,7 @@ public:
   //       index into the byte array.
   static Type array_ty(uint32_t bitwidth);
   static Type vector_ty();
+  static Type function_ty();
 
   static Type from_llvm(llvm::Type* type);
 

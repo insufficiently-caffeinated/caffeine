@@ -15,6 +15,15 @@ namespace caffeine {
 
 class Context;
 
+class StackAllocation {
+public:
+  AllocId alloc;
+  unsigned heap;
+
+  StackAllocation(const AllocId& allocid, unsigned heap)
+      : alloc(allocid), heap(heap) {}
+};
+
 class StackFrame {
 public:
   std::unordered_map<llvm::Value*, LLVMValue> variables;
@@ -27,7 +36,7 @@ public:
   llvm::BasicBlock::iterator current;
 
   // Allocations within the current frame.
-  std::vector<AllocId> allocations;
+  std::vector<StackAllocation> allocations;
 
   StackFrame(llvm::Function* function);
 

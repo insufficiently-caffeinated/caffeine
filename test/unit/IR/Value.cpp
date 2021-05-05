@@ -33,3 +33,17 @@ TEST(ir_value, bitcast_roundtrip) {
 
   ASSERT_EQ(a, b);
 }
+
+TEST(ir_value, div_by_0_does_not_fault) {
+  Value a{llvm::APInt(64, 1)};
+  Value b{llvm::APInt(64, 0)};
+
+  Value::bvudiv(a, b);
+}
+
+TEST(ir_value, sdiv_invalid_does_not_fault) {
+  Value a{llvm::APInt::getSignedMinValue(32)};
+  Value b{llvm::APInt::getAllOnesValue(32)};
+
+  Value::bvsdiv(a, b);
+}

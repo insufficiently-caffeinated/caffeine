@@ -407,6 +407,7 @@ CAFFEINE_OP_DECL_CLASSOF(LoadOp, Load);
 CAFFEINE_OP_DECL_CLASSOF(StoreOp, Store);
 CAFFEINE_OP_DECL_CLASSOF(Undef, Undef);
 CAFFEINE_OP_DECL_CLASSOF(FixedArray, FixedArray);
+CAFFEINE_OP_DECL_CLASSOF(FunctionObject, FunctionObject);
 
 inline bool Constant::classof(const Operation* op) {
   return op->opcode() == ConstantNamed || op->opcode() == ConstantNumbered;

@@ -142,7 +142,7 @@ static z3::sort type_to_sort(z3::context& ctx, const Type& type) {
     CAFFEINE_ABORT("Cannot make symbolic void constants");
   case Type::Pointer:
     CAFFEINE_ABORT("Cannot make symbolic pointer constants");
-  case Type::FunctionPointer:
+  case Type::Function:
     CAFFEINE_ABORT("Cannot make symbolic function constants");
   case Type::Vector:
     CAFFEINE_ABORT("Cannot make symbolic vector constants");
@@ -205,6 +205,8 @@ Z3Solver::Z3Solver() : ctx(std::make_unique<z3::context>()) {
   ctx->set("model", true);
   // Automatically select and configure the solver
   ctx->set("auto_config", true);
+  // Z3 will set a SIGINT handler unless we tell it not to
+  ctx->set("ctrl_c", false);
 }
 
 Z3Solver::~Z3Solver() {}
@@ -221,7 +223,7 @@ SolverResult Z3Solver::check(AssertionList& assertions,
 
   if (list.unproven().empty())
     return SolverResult::SAT;
-  return resolve(assertions, extra)->result();
+  return resolve(list, Assertion())->result();
 }
 
 std::unique_ptr<Model> Z3Solver::resolve(AssertionList& assertions,

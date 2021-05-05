@@ -132,7 +132,7 @@ Value Model::evaluate(const LLVMScalar& scalar, Context& ctx) const {
   ExprEvaluator evaluator{this};
 
   if (scalar.is_pointer())
-    return evaluator.visit(*scalar.pointer().value(ctx.heap));
+    return evaluator.visit(*scalar.pointer().value(ctx.heaps));
   return evaluator.visit(*scalar.expr());
 }
 

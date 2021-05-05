@@ -2,6 +2,7 @@
 
 #include "caffeine/IR/Matching.h"
 #include "caffeine/IR/Operation.h"
+#include "caffeine/IR/Value.h"
 #include "caffeine/IR/Visitor.h"
 #include <llvm/Support/MathExtras.h>
 #include <memory>
@@ -185,7 +186,11 @@ public:
     if (is_constant_int(op.lhs(), 0) || is_constant_int(*op.rhs(), 1))
       return op.lhs();
 
-    TRY_CONST_INT(ConstantInt::Create(lhs.value().udiv(rhs.value())));
+    if (auto args = as_const_int(op.lhs(), op.rhs())) {
+      auto [lhs, rhs] = args.value();
+      return ConstantInt::Create(
+          Value::bvudiv(lhs->as_value(), rhs->as_value()));
+    }
 
     return this->visitBinaryOp(op);
   }
@@ -195,7 +200,11 @@ public:
     if (is_constant_int(op.rhs(), 1) && op.type().bitwidth() > 1)
       return op.lhs();
 
-    TRY_CONST_INT(ConstantInt::Create(lhs.value().sdiv(rhs.value())));
+    if (auto args = as_const_int(op.lhs(), op.rhs())) {
+      auto [lhs, rhs] = args.value();
+      return ConstantInt::Create(
+          Value::bvsdiv(lhs->as_value(), rhs->as_value()));
+    }
 
     return this->visitBinaryOp(op);
   }
@@ -205,7 +214,11 @@ public:
     if (is_constant_int(op.rhs(), 1))
       return ConstantInt::Create(llvm::APInt(op.type().bitwidth(), 0));
 
-    TRY_CONST_INT(ConstantInt::Create(lhs.value().urem(rhs.value())));
+    if (auto args = as_const_int(op.lhs(), op.rhs())) {
+      auto [lhs, rhs] = args.value();
+      return ConstantInt::Create(
+          Value::bvurem(lhs->as_value(), rhs->as_value()));
+    }
 
     return this->visitBinaryOp(op);
   }
@@ -215,7 +228,11 @@ public:
     if (is_constant_int(op.rhs(), 1) && op.type().bitwidth() > 1)
       return ConstantInt::Create(llvm::APInt(op.type().bitwidth(), 0));
 
-    TRY_CONST_INT(ConstantInt::Create(lhs.value().srem(rhs.value())));
+    if (auto args = as_const_int(op.lhs(), op.rhs())) {
+      auto [lhs, rhs] = args.value();
+      return ConstantInt::Create(
+          Value::bvsrem(lhs->as_value(), rhs->as_value()));
+    }
 
     return this->visitBinaryOp(op);
   }
@@ -443,6 +460,22 @@ public:
   }
 
 private:
+  template <typename... Ts>
+  std::optional<std::array<const ConstantInt*, sizeof...(Ts)>>
+  as_const_int(const Ts&... args) {
+    static_assert((... && std::is_same_v<Ts, OpRef>));
+
+    std::array<const ConstantInt*, sizeof...(Ts)> result = {
+        llvm::dyn_cast<ConstantInt>(args.get())...};
+
+    for (const ConstantInt* arg : result) {
+      if (!arg)
+        return std::nullopt;
+    }
+
+    return result;
+  }
+
   template <typename F>
   OpRef try_const_int(const OpRef& lhs, const OpRef& rhs, F&& func) {
     const auto* lhs_int = llvm::dyn_cast<ConstantInt>(lhs.get());

@@ -40,6 +40,11 @@ Executor::Executor(ExecutionPolicy* policy, ExecutionContextStore* store,
     : policy(policy), store(store), logger(logger), options(options) {}
 
 void Executor::run() {
+  if (options.num_threads == 1) {
+    run_worker(this, logger, store);
+    return;
+  }
+
   std::vector<std::thread> threads;
 
   for (uint32_t i = 0; i < options.num_threads; i++) {

@@ -24,8 +24,8 @@ inline bool Type::is_pointer() const {
 inline bool Type::is_void() const {
   return kind() == Void;
 }
-inline bool Type::is_function_pointer() const {
-  return kind() == FunctionPointer;
+inline bool Type::is_function() const {
+  return kind() == Function;
 }
 inline bool Type::is_array() const {
   return kind() == Array;

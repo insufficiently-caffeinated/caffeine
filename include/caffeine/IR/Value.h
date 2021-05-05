@@ -108,6 +108,9 @@ public:
   static Value bvadd(const Value& lhs, const Value& rhs);
   static Value bvsub(const Value& lhs, const Value& rhs);
   static Value bvmul(const Value& lhs, const Value& rhs);
+
+  // Note: These return bogus values in cases where they would fault (e.g. div
+  //       by 0) so that constant evaluation on dead paths doesn't cause crashes
   static Value bvudiv(const Value& lhs, const Value& rhs);
   static Value bvsdiv(const Value& lhs, const Value& rhs);
   static Value bvurem(const Value& lhs, const Value& rhs);

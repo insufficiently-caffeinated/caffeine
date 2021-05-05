@@ -77,6 +77,7 @@ public:
 
   // Subclasses of GlobalValue
   LLVMValue visitGlobalVariable(llvm::GlobalVariable& global);
+  LLVMValue visitFunction(llvm::Function& func);
 
   // Extras
   OpRef visitGlobalData(llvm::Constant& cnst, unsigned AS);
@@ -138,7 +139,6 @@ public:
 
 private:
   OpRef scalarize(const LLVMScalar& scalar) const;
-  static LLVMScalar pointerize(const OpRef& op, bool turn_to_pointer);
 
 private:
   Context* ctx;

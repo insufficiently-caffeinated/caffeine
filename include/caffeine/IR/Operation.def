@@ -67,6 +67,7 @@ HANDLE_REPT_OP(ConstantNumbered,  Constant,       Constant,       1, 0, 1)
 HANDLE_FULL_OP(ConstantInt,       ConstantInt,    ConstantInt,    1, 0, 5)
 HANDLE_FULL_OP(ConstantFloat,     ConstantFloat,  ConstantFloat,  1, 0, 6)
 HANDLE_FULL_OP(ConstantArray,     ConstantArray,  ConstantArray,  1, 1, 7)
+HANDLE_FULL_OP(FunctionObject,    FunctionObject, FunctionObject, 1, 0, 8)
 
 /**
  * An unnamed symbolic constant that can have any value whenever it is

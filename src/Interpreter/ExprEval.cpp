@@ -43,12 +43,7 @@ ExprEvaluator::ExprEvaluator(Context* ctx, Options options)
 OpRef ExprEvaluator::scalarize(const LLVMScalar& scalar) const {
   if (scalar.is_expr())
     return scalar.expr();
-  return scalar.pointer().value(ctx->heap);
-}
-LLVMScalar ExprEvaluator::pointerize(const OpRef& op, bool turn_to_pointer) {
-  if (turn_to_pointer)
-    return LLVMScalar(Pointer(op));
-  return LLVMScalar(op);
+  return scalar.pointer().value(ctx->heaps);
 }
 
 LLVMValue ExprEvaluator::visit(llvm::Value* val) {
@@ -97,6 +92,8 @@ LLVMValue ExprEvaluator::evaluate(llvm::Value* val) {
   // Subclasses of GlobalValue
   if (auto* cnst = llvm::dyn_cast<llvm::GlobalVariable>(val))
     return visitGlobalVariable(*cnst);
+  if (auto* cnst = llvm::dyn_cast<llvm::Function>(val))
+    return visitFunction(*cnst);
 
   CAFFEINE_UNSUPPORTED(fmt::format(
       "Unsupported expression ({}): {}",
@@ -199,11 +196,11 @@ LLVMValue ExprEvaluator::visitConstantFP(llvm::ConstantFP& cnst) {
 LLVMValue
 ExprEvaluator::visitConstantPointerNull(llvm::ConstantPointerNull& null) {
   const auto& layout = ctx->mod->getDataLayout();
-  unsigned bitwidth =
-      layout.getPointerSizeInBits(null.getType()->getPointerAddressSpace());
+  unsigned address_space = null.getType()->getPointerAddressSpace();
+  unsigned bitwidth = layout.getPointerSizeInBits(address_space);
 
-  return LLVMValue(
-      Pointer(ConstantInt::Create(llvm::APInt::getNullValue(bitwidth))));
+  return LLVMValue(Pointer(
+      ConstantInt::Create(llvm::APInt::getNullValue(bitwidth)), address_space));
 }
 
 LLVMValue ExprEvaluator::visitUndefValue(llvm::UndefValue& undef) {
@@ -264,7 +261,8 @@ LLVMValue ExprEvaluator::visitUndefValue(llvm::UndefValue& undef) {
     unsigned bitwidth =
         layout.getPointerSizeInBits(type->getPointerAddressSpace());
 
-    return LLVMValue(Pointer(Undef::Create(Type::int_ty(bitwidth))));
+    return LLVMValue(Pointer(Undef::Create(Type::int_ty(bitwidth)),
+                             type->getPointerAddressSpace()));
   }
 
   return visitConstant(undef);
@@ -339,15 +337,37 @@ LLVMValue ExprEvaluator::visitGlobalVariable(llvm::GlobalVariable& global) {
   auto perms = global.isConstant() ? AllocationPermissions::Write
                                    : AllocationPermissions::ReadWrite;
 
-  auto alloc = ctx->heap.allocate(
+  auto alloc = ctx->heaps[global.getAddressSpace()].allocate(
       array.size(), ConstantInt::Create(llvm::APInt(bitwidth, alignment)), data,
       AllocationKind::Global, perms, *ctx);
 
   auto pointer = LLVMValue(
-      Pointer(alloc, ConstantInt::Create(llvm::APInt::getNullValue(bitwidth))));
+      Pointer(alloc, ConstantInt::Create(llvm::APInt::getNullValue(bitwidth)),
+              global.getAddressSpace()));
 
   ctx->globals.emplace(&global, pointer);
 
+  return pointer;
+}
+
+LLVMValue ExprEvaluator::visitFunction(llvm::Function& func) {
+  auto it = ctx->globals.find(&func);
+  if (it != ctx->globals.end())
+    return (LLVMValue)it->second;
+
+  const llvm::DataLayout& layout = ctx->mod->getDataLayout();
+  unsigned bitwidth = layout.getPointerSizeInBits();
+
+  auto alloc = ctx->heaps[MemHeapMgr::FUNCTION_INDEX].allocate(
+      ConstantInt::Create(llvm::APInt(bitwidth, layout.getPointerSize())),
+      ConstantInt::CreateZero(bitwidth), FunctionObject::Create(&func),
+      AllocationKind::Global, AllocationPermissions::Execute, *ctx);
+
+  auto pointer = LLVMValue(
+      Pointer(alloc, ConstantInt::Create(llvm::APInt::getNullValue(bitwidth)),
+              MemHeapMgr::FUNCTION_INDEX));
+
+  ctx->globals.emplace(&func, pointer);
   return pointer;
 }
 
@@ -363,7 +383,7 @@ OpRef ExprEvaluator::visitGlobalData(llvm::Constant& constant, unsigned AS) {
   Allocation alloc{ConstantInt::CreateZero(bitwidth), size,
                    AllocOp::Create(size, ConstantInt::CreateZero(8)),
                    AllocationKind::Alloca, AllocationPermissions::ReadWrite};
-  alloc.write(ConstantInt::CreateZero(bitwidth), type, value, ctx->heap,
+  alloc.write(ConstantInt::CreateZero(bitwidth), type, value, ctx->heaps,
               layout);
 
   return alloc.data();
@@ -477,7 +497,7 @@ LLVMValue ExprEvaluator::visitICmp(llvm::ICmpInst& icmp) {
   auto as_expr = [&](const LLVMScalar& value) {
     if (value.is_expr())
       return value.expr();
-    return value.pointer().value(ctx->heap);
+    return value.pointer().value(ctx->heaps);
   };
 
   return transform_elements(
@@ -562,8 +582,9 @@ LLVMValue ExprEvaluator::visitFCmp(llvm::FCmpInst& fcmp) {
 LLVMValue ExprEvaluator::visitPtrToInt(llvm::PtrToIntInst& inst) {
   return transform_elements(
       [&](const LLVMScalar& value) {
-        return LLVMScalar(UnaryOp::CreateTruncOrZExt(
-            Type::from_llvm(inst.getType()), value.pointer().value(ctx->heap)));
+        return LLVMScalar(
+            UnaryOp::CreateTruncOrZExt(Type::from_llvm(inst.getType()),
+                                       value.pointer().value(ctx->heaps)));
       },
       visit(inst.getOperand(0)));
 }
@@ -575,7 +596,8 @@ LLVMValue ExprEvaluator::visitIntToPtr(llvm::IntToPtrInst& inst) {
   return transform_elements(
       [&](const LLVMScalar& value) {
         return LLVMScalar(Pointer(UnaryOp::CreateTruncOrZExt(
-            Type::int_ty(pointer_size), value.expr())));
+                                      Type::int_ty(pointer_size), value.expr()),
+                                  inst.getType()->getPointerAddressSpace()));
       },
       visit(inst.getOperand(0)));
 }
@@ -657,10 +679,12 @@ LLVMValue ExprEvaluator::visitGetElementPtr(llvm::GetElementPtrInst& inst) {
 
         if (inst.isInBounds()) {
           return Pointer(ptr.alloc(),
-                         BinaryOp::CreateAdd(ptr.offset(), offset.expr()));
+                         BinaryOp::CreateAdd(ptr.offset(), offset.expr()),
+                         ptr.heap());
         } else {
           return Pointer(
-              BinaryOp::CreateAdd(ptr.value(ctx->heap), offset.expr()));
+              BinaryOp::CreateAdd(ptr.value(ctx->heaps), offset.expr()),
+              ptr.heap());
         }
       },
       base, offsets);
@@ -676,12 +700,25 @@ LLVMValue ExprEvaluator::visitSelectInst(llvm::SelectInst& op) {
   }
 
   return transform_elements(
-      [&](const auto& cond, const auto& t_val,
-          const auto& f_val) -> LLVMScalar {
-        auto is_ptr = t_val.is_pointer() || f_val.is_pointer();
-        return pointerize(
-            SelectOp::Create(cond.expr(), scalarize(t_val), scalarize(f_val)),
-            is_ptr);
+      [&](const LLVMScalar& cond, const LLVMScalar& t_val,
+          const LLVMScalar& f_val) -> LLVMScalar {
+        if (!t_val.is_pointer() && !f_val.is_pointer())
+          return SelectOp::Create(cond.expr(), t_val.expr(), f_val.expr());
+
+        const Pointer& t_ptr = t_val.pointer();
+        const Pointer& f_ptr = f_val.pointer();
+        CAFFEINE_ASSERT(t_ptr.heap() == f_ptr.heap());
+
+        if (t_ptr.alloc() == f_ptr.alloc()) {
+          return Pointer(
+              t_ptr.alloc(),
+              SelectOp::Create(cond.expr(), t_ptr.offset(), f_ptr.offset()),
+              t_ptr.heap());
+        }
+
+        return Pointer(SelectOp::Create(cond.expr(), t_ptr.value(ctx->heaps),
+                                        f_ptr.value(ctx->heaps)),
+                       t_ptr.heap());
       },
       cond, t_val, f_val);
 }

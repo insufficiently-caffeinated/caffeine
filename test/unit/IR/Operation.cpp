@@ -14,3 +14,9 @@ TEST(OperationTests, vtable_is_copied) {
   ASSERT_EQ(fixed_array->num_operands(), 1);
   ASSERT_EQ(copy->num_operands(), fixed_array->num_operands());
 }
+
+TEST(OperationTests, const_div_by_0_does_not_fault) {
+  auto value = BinaryOp::CreateUDiv(1, ConstantInt::CreateZero(64));
+
+  ASSERT_TRUE(llvm::isa<ConstantInt>(*value));
+}
