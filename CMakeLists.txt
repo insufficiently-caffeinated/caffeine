@@ -94,6 +94,7 @@ if (CAFFEINE_ENABLE_BUILD)
   add_subdirectory(src)
   add_subdirectory(libraries)
   add_subdirectory(tools)
+  add_subdirectory(bench)
 
   if (CAFFEINE_ENABLE_TESTS)
     add_subdirectory(test)
