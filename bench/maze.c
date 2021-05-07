@@ -1,6 +1,11 @@
 
 #include "caffeine.h"
 
+/**
+ * This benchmark is a direct translation of klee's maze example. It has a bunch
+ * of branches but all values end up being concrete on any of those branches.
+ */
+
 #define H 7
 #define W 11
 
