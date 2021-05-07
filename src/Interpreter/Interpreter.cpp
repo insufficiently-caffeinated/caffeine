@@ -520,23 +520,15 @@ ExecutionResult Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {
   return ExecutionResult::Continue;
 }
 
-ExecutionResult Interpreter::visitMemCpyInst(llvm::MemCpyInst& memcpy) {
-  // memcpy is implemented by a C function within the builtins library so we
-  // just forward the call to that.
-  auto func = memcpy.getModule()->getFunction("caffeine_builtin_memcpy");
-  CAFFEINE_ASSERT(func);
-  memcpy.setCalledFunction(func);
-
-  return visitCall(memcpy);
+ExecutionResult Interpreter::visitMemCpyInst(llvm::MemCpyInst&) {
+  CAFFEINE_ABORT("llvm.memcpy is not implemented natively within the caffeine "
+                 "interpreter. Run gen-builtins over the input bitcode file "
+                 "first to generate definitions that caffeine can execute.");
 }
-ExecutionResult Interpreter::visitMemMoveInst(llvm::MemMoveInst& memmove) {
-  // memmove is implemented by a C function within the builtins library so we
-  // just forward the call to that.
-  auto func = memmove.getModule()->getFunction("caffeine_builtin_memmove");
-  CAFFEINE_ASSERT(func);
-  memmove.setCalledFunction(func);
-
-  return visitCall(memmove);
+ExecutionResult Interpreter::visitMemMoveInst(llvm::MemMoveInst&) {
+  CAFFEINE_ABORT("llvm.memmove is not implemented natively within the caffeine "
+                 "interpreter. Run gen-builtins over the input bitcode file "
+                 "first to generate definitions that caffeine can execute.");
 }
 ExecutionResult Interpreter::visitMemSetInst(llvm::MemSetInst&) {
   CAFFEINE_ABORT("llvm.memset is not implemented natively within the caffeine "
