@@ -23,7 +23,7 @@ public:
   FailureLogger() = default;
   virtual ~FailureLogger() = default;
 
-  virtual void log_failure(const Model& model, const Context& context,
+  virtual void log_failure(const Model* model, const Context& context,
                            const Failure& failure) = 0;
 
 protected:
@@ -42,7 +42,7 @@ private:
 public:
   PrintingFailureLogger(std::ostream& os);
 
-  void log_failure(const Model& model, const Context& context,
+  void log_failure(const Model* model, const Context& context,
                    const Failure& failure) override;
 };
 
