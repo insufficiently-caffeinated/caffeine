@@ -38,11 +38,11 @@ Interpreter::Interpreter(Context* ctx, ExecutionPolicy* policy,
 
 void Interpreter::logFailure(Context& ctx, const Assertion& assertion,
                              std::string_view message) {
-  auto model = ctx.resolve(solver, assertion);
-  if (model->result() != SolverResult::SAT)
+  auto result = ctx.resolve(solver, assertion);
+  if (result != SolverResult::SAT)
     return;
 
-  logger->log_failure(model.get(), ctx, Failure(assertion, message));
+  logger->log_failure(result.model(), ctx, Failure(assertion, message));
   policy->on_path_complete(ctx, ExecutionPolicy::Fail);
 }
 void Interpreter::queueContext(Context&& ctx) {
@@ -594,7 +594,7 @@ ExecutionResult Interpreter::visitAssert(llvm::CallInst& call) {
   auto cond = ctx->lookup(call.getArgOperand(0));
   auto assertion = Assertion(cond.scalar().expr());
 
-  if (ctx->check(solver, !assertion))
+  if (ctx->check(solver, !assertion) == SolverResult::SAT)
     logFailure(*ctx, !assertion, "assertion failure");
 
   ctx->add(assertion);
@@ -606,15 +606,15 @@ std::optional<std::string> readSymbolicName(std::shared_ptr<Solver> solver,
                                             Context* ctx, const Pointer& ptr) {
   const auto& alloc = ctx->heaps[ptr.heap()][ptr.alloc()];
 
-  auto model = ctx->resolve(solver);
-  if (model->result() != SolverResult::SAT) {
+  auto result = ctx->resolve(solver);
+  if (result != SolverResult::SAT) {
     CAFFEINE_UNSUPPORTED("Unable to resolve symbolic name");
     return std::nullopt;
   }
 
-  uint64_t offset = model->evaluate(*ptr.offset()).apint().getLimitedValue();
-  uint64_t size = model->evaluate(*alloc.size()).apint().getLimitedValue();
-  auto array = std::move(model->evaluate(*alloc.data()).array());
+  uint64_t offset = result.evaluate(*ptr.offset()).apint().getLimitedValue();
+  uint64_t size = result.evaluate(*alloc.size()).apint().getLimitedValue();
+  auto array = std::move(result.evaluate(*alloc.data()).array());
 
   std::string name;
   name.reserve(size - offset);

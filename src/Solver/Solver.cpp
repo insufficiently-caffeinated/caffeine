@@ -141,7 +141,36 @@ private:
   const Model* model_;
 };
 
-Model::Model(SolverResult result) : result_(result) {}
+SolverResult::SolverResult(Kind kind, std::unique_ptr<Model> model)
+    : kind_(kind), model_(std::move(model)) {
+  CAFFEINE_ASSERT(
+      kind == SAT || model_ == nullptr,
+      "It doesn't make sense to construct a non-SAT SolverResult with a model");
+}
+
+bool SolverResult::operator==(Kind kind) const {
+  return this->kind() == kind;
+}
+bool SolverResult::operator!=(Kind kind) const {
+  return !(*this == kind);
+}
+
+SolverResult::Kind SolverResult::kind() const {
+  return kind_;
+}
+const Model* SolverResult::model() const {
+  return model_.get();
+}
+
+Value SolverResult::evaluate(const Operation& expr) const {
+  return model()->evaluate(expr);
+}
+Value SolverResult::evaluate(const LLVMScalar& expr, Context& ctx) const {
+  return model()->evaluate(expr, ctx);
+}
+Value SolverResult::evaluate(const LLVMValue& expr, Context& ctx) const {
+  return model()->evaluate(expr, ctx);
+}
 
 Value Model::evaluate(const Operation& expr) const {
   return ExprEvaluator(this).visit(expr);
@@ -191,23 +220,15 @@ SolverResult Solver::check(AssertionList& assertions) {
 }
 
 SolverResult Solver::check(AssertionList& assertions, const Assertion& extra) {
-  return resolve(assertions, extra)->result();
+  return SolverResult(resolve(assertions, extra).kind());
 }
 
-std::unique_ptr<Model> Solver::resolve(AssertionList& assertions) {
+SolverResult Solver::resolve(AssertionList& assertions) {
   return resolve(assertions, Assertion());
 }
 
-EmptyModel::EmptyModel(SolverResult result) : Model(result) {
-  CAFFEINE_ASSERT(result != SolverResult::SAT);
-}
-
-Value EmptyModel::lookup(const Symbol&, std::optional<size_t>) const {
-  CAFFEINE_ABORT("Model was empty");
-}
-
-std::ostream& operator<<(std::ostream& os, SolverResult res) {
-  return os << magic_enum::enum_name(res);
+std::ostream& operator<<(std::ostream& os, const SolverResult& res) {
+  return os << magic_enum::enum_name(res.kind());
 }
 
 } // namespace caffeine

@@ -10,15 +10,10 @@
 
 namespace caffeine {
 
-SolverResult CanonicalizingSolver::check(AssertionList& assertions,
-                                         const Assertion&) {
+SolverResult CanonicalizingSolver::resolve(AssertionList& assertions,
+                                           const Assertion&) {
   transforms::canonicalize(assertions);
   return SolverResult::Unknown;
-}
-std::unique_ptr<Model> CanonicalizingSolver::resolve(AssertionList& assertions,
-                                                     const Assertion&) {
-  transforms::canonicalize(assertions);
-  return std::make_unique<EmptyModel>(SolverResult::Unknown);
 }
 
 } // namespace caffeine
