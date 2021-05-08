@@ -84,10 +84,19 @@ void AssertionList::restore(size_t checkpoint) {
   if (it != end && !it.valid())
     ++it;
 
-  for(; it != end; ++it) {
+  for (; it != end; ++it) {
     lookup_.erase(*it);
     list_.erase(it);
   }
+}
+
+llvm::iterator_range<AssertionList::const_iterator>
+AssertionList::unproven() const {
+  auto it = list_.iterator_at(mark_);
+  if (it != end() && !it.valid())
+    ++it;
+
+  return llvm::iterator_range<const_iterator>(it, end());
 }
 
 } // namespace caffeine

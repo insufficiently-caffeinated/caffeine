@@ -93,10 +93,7 @@ public:
     return list_.end();
   }
 
-  llvm::iterator_range<const_iterator> unproven() const {
-    return llvm::iterator_range<const_iterator>(list_.iterator_at(mark_),
-                                                end());
-  }
+  llvm::iterator_range<const_iterator> unproven() const;
 
   /**
    * Create a checkpoint of the current position of the tail of the list. This
