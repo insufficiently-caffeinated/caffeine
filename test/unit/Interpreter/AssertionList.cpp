@@ -75,3 +75,15 @@ TEST(AssertionListTests, checkpoint_restore_unchanged) {
   size_t checkpoint = list.checkpoint();
   list.restore(checkpoint);
 }
+
+TEST(AssertionListTests, iterate_empty) {
+  AssertionList list;
+  size_t checkpoint = list.checkpoint();
+  list.insert(Assertion(Constant::Create(Type::int_ty(1), 0)));
+  list.insert(Assertion(Constant::Create(Type::int_ty(1), 1)));
+  list.insert(Assertion(Constant::Create(Type::int_ty(1), 2)));
+  list.restore(checkpoint);
+
+  ASSERT_TRUE(list.empty());
+  ASSERT_EQ(list.begin().index(), list.end().index());
+}
