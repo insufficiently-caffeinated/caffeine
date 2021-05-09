@@ -1,0 +1,6 @@
+#ifndef CAFFEINE_CONFIG_H
+#define CAFFEINE_CONFIG_H
+
+#cmakedefine01 CAFFEINE_ENABLE_TRACING
+
+#endif
