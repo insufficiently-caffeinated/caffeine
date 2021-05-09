@@ -41,4 +41,10 @@
       CAFFEINE_CONCAT(macro, 1)(__VA_ARGS__),                                  \
       CAFFEINE_CONCAT(macro, 0)(__VA_ARGS__)))
 
+#ifdef __PRETTY_FUNCTION__
+#define CAFFEINE_FUNCTION __PRETTY_FUNCTION__
+#else
+#define CAFFEINE_FUNCTION __FUNCTION__
+#endif
+
 #endif
