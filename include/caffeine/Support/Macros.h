@@ -14,6 +14,9 @@
 #define CAFFEINE_CONCAT_(x, y) x##y
 #define CAFFEINE_CONCAT(x, y) CAFFEINE_CONCAT_(x, y)
 
+#define CAFFEINE_STRINGIFY_(x) #x
+#define CAFFEINE_STRINGIFY(x) CAFFEINE_STRINGIFY_(x)
+
 #define CAFFEINE_EXPAND(x) x
 
 #define CAFFEINE_FIRST(x, ...) x
