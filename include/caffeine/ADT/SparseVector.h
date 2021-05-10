@@ -251,7 +251,7 @@ public:
   iterator begin() {
     auto it = elements_.begin();
     if (it != elements_.end() && it->index() != Value)
-      ++it;
+      return std::next(iterator(it, this));
 
     return iterator(it, this);
   }
@@ -261,7 +261,7 @@ public:
   const_iterator begin() const {
     auto it = elements_.begin();
     if (it != elements_.end() && it->index() != Value)
-      ++it;
+      return std::next(const_iterator(it, this));
 
     return const_iterator(it, this);
   }

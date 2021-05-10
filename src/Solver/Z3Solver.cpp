@@ -1,4 +1,5 @@
 #include "caffeine/Solver/Z3Solver.h"
+#include "caffeine/ADT/Guard.h"
 #include "caffeine/IR/Type.h"
 #include "caffeine/Support/Assert.h"
 
@@ -218,12 +219,13 @@ SolverResult Z3Solver::check(AssertionList& assertions,
   if (extra.is_constant_value(false))
     return SolverResult::UNSAT;
 
-  AssertionList list = assertions;
-  list.insert(extra);
+  size_t checkpoint = assertions.checkpoint();
+  auto guard = make_guard([&]() { assertions.restore(checkpoint); });
+  assertions.insert(extra);
 
-  if (list.unproven().empty())
+  if (assertions.unproven().empty())
     return SolverResult::SAT;
-  return resolve(list, Assertion())->result();
+  return resolve(assertions, Assertion())->result();
 }
 
 std::unique_ptr<Model> Z3Solver::resolve(AssertionList& assertions,
