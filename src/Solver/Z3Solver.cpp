@@ -2,12 +2,14 @@
 #include "caffeine/ADT/Guard.h"
 #include "caffeine/IR/Type.h"
 #include "caffeine/Support/Assert.h"
+#include "caffeine/Support/Tracing.h"
 
 #include "Z3Solver.h"
 
 #include <climits>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
+#include <sstream>
 
 #include <llvm/ADT/SmallString.h>
 
@@ -229,6 +231,8 @@ SolverResult Z3Solver::resolve(AssertionList& assertions,
   if (extra.is_constant_value(false))
     return SolverResult::UNSAT;
 
+  auto block = CAFFEINE_TRACE_SPAN("Z3Solver::resolve");
+
   z3::solver solver = impl->tactic.mk_solver();
   Z3Model::ConstMap constMap;
 
@@ -248,6 +252,26 @@ SolverResult Z3Solver::resolve(AssertionList& assertions,
   }
 
   auto result = solver.check();
+
+  if (block.is_enabled()) {
+    std::stringstream ss;
+    for (Assertion assertion : assertions) {
+      // Avoid doing extra serialization work when we'd end up not using it.
+      if ((size_t)ss.tellp() > tracing::AutoTraceBlock::MAX_ANNOTATION_SIZE)
+        break;
+      ss << assertion << '\n';
+    }
+    if (!extra.is_constant_value(true))
+      ss << extra << '\n';
+
+    block.annotate("query", ss.str());
+    block.annotate("result", magic_enum::enum_name(result));
+
+    if (result == z3::sat) {
+      block.annotate("model",
+                     Z3_model_to_string(impl->ctx, solver.get_model()));
+    }
+  }
 
   switch (result) {
   case z3::sat:
