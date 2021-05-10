@@ -626,7 +626,7 @@ std::optional<std::string> readSymbolicName(std::shared_ptr<Solver> solver,
   const char* start = values + offset;
   const char* end = (const char*)std::memchr(start, 0, size - offset);
   if (!end) {
-    CAFFEINE_UNSUPPORTED("Symbolic name was not nul-terminated");
+    CAFFEINE_UNSUPPORTED("Symbolic name was not null-terminated");
     return std::nullopt;
   }
 

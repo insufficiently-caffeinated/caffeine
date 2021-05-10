@@ -63,18 +63,11 @@ void PrintingFailureLogger::log_failure(const Model& model, const Context& ctx,
   ss << "Found assertion failure:\n";
 
   if (model.result() == SolverResult::SAT) {
-    // ConstantPrinter printer{ss, &model};
-
     for (const auto& [name, constant] : ctx.constants) {
       ss << "  " << name << " = ";
       print_value(ss, model.evaluate(*constant));
       ss << '\n';
     }
-
-    // for (const auto& assertion : ctx.assertions) {
-    //   printer.visit(*assertion.value());
-    // }
-    // printer.visit(*failure.check.value());
 
     ss << "Backtrace:\n";
     ctx.print_backtrace(ss);
