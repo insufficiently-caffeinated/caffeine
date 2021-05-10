@@ -4,6 +4,7 @@
 #include "caffeine/Interpreter/Policy.h"
 #include "caffeine/Interpreter/Store.h"
 #include "caffeine/Support/Signal.h"
+#include "caffeine/Support/Tracing.h"
 
 #include <llvm/IR/DiagnosticInfo.h>
 #include <llvm/IR/DiagnosticPrinter.h>
@@ -58,6 +59,10 @@ cl::opt<bool> force_symbolic_allocator{
              "the program under test if possible. This option disables that "
              "and forces all allocations to have symbolic addresses. This "
              "may be much slower than allowing concrete addresses.")};
+cl::opt<std::string> enable_tracing{
+    "trace",
+    cl::desc("Enable tracing to the output log specified by this flag."),
+    cl::value_desc("filename")};
 
 static ExitOnError exit_on_err;
 
@@ -115,6 +120,17 @@ int main(int argc, char** argv) {
   ctx.setDiagnosticHandler(std::make_unique<DecafDiagnosticHandler>(), true);
 
   cl::ParseCommandLineOptions(argc, argv, "symbolic executor for LLVM IR");
+
+  std::optional<caffeine::tracing::TraceContext> tracectx;
+  if (enable_tracing.getNumOccurrences() != 0) {
+    tracectx.emplace(enable_tracing.c_str());
+
+    if (tracectx->is_enabled()) {
+      WithColor::remark() << "Logging trace to " << enable_tracing << '\n';
+    } else {
+      WithColor::warning() << "Tracing disabled at compilation time\n";
+    }
+  }
 
   auto module = loadFile(argv[0], input_filename.getValue(), ctx);
   if (!module) {
