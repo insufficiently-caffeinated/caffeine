@@ -1,10 +1,12 @@
 #pragma once
 
 #include <cstdio>
+#include <memory>
 #include <string>
 
-// Definition required otherwise AFL defines "R" which breaks some LLVM code
-#define AFL_LLVM_PASS (1)
+#include <llvm/IR/Module.h>
+
+#include "caffeine/ADT/Span.h"
 
 extern "C" {
 #include "afl-fuzz.h"
@@ -13,11 +15,17 @@ extern "C" {
 namespace caffeine {
 
 class CaffeineMutator {
-private:
+public:
   afl_state_t* afl;
+
+private:
+  std::unique_ptr<llvm::Module> module;
+  llvm::Function* fuzz_target;
 
 public:
   CaffeineMutator(std::string binary_path, afl_state_t* afl);
+  size_t mutate(caffeine::Span<uint8_t> data, unsigned char** out_buf,
+                size_t max_size);
 };
 
 } // namespace caffeine

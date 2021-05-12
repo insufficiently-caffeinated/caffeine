@@ -1,3 +1,5 @@
+# Definition required otherwise AFL defines "R" which breaks some LLVM code ಠ_ಠ
+add_compile_definitions(AFL_LLVM_PASS=1)
 
 file(
   GLOB sources
