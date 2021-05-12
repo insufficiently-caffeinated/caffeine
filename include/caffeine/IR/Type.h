@@ -16,6 +16,7 @@ class Type;
 class FunctionType;
 class LLVMContext;
 class DataLayout;
+class fltSemantics;
 } // namespace llvm
 
 namespace caffeine {
@@ -74,6 +75,7 @@ public:
   uint32_t bitwidth() const;
   uint32_t mantissa_bits() const;
   uint32_t exponent_bits() const;
+  const llvm::fltSemantics* llvm_flt_semantics() const;
 
   /**
    * Size of the current type in bytes under the given data layout.

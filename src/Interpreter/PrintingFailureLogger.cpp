@@ -8,53 +8,20 @@
 
 namespace caffeine {
 
-class ConstantPrinter : public ConstOpVisitor<ConstantPrinter> {
-private:
-  std::ostream& os;
-  const Model* model;
-  std::unordered_set<std::string_view> seen;
-
-public:
-  ConstantPrinter(std::ostream& os, const Model* model)
-      : os(os), model(model) {}
-
-  void visitOperation(const Operation& op) {
-    for (const auto& operand : op.operands()) {
-      visit(operand);
-    }
+namespace {
+  static char inttohex(uint8_t value) {
+    if (value < 10)
+      return '0' + value;
+    return ('A' - 10) + value;
   }
 
-  void visitConstant(const Constant& c) {
-    // TODO: Figure out how to print numbered constants and whether we'd want
-    //       to.
-    if (!c.is_named())
-      return;
+  void print_value(std::ostream& os, const Value& value) {
+    CAFFEINE_ASSERT(value.is_array());
 
-    // We've already printed this constant.
-    if (!seen.insert(c.name()).second)
-      return;
+    const auto& array = value.array();
+    os << '\"';
 
-    auto value = model->evaluate(c);
-
-    os << "  " << c.name() << " = " << value << "\n";
-  }
-
-  void visitConstantArray(const ConstantArray& c) {
-    const auto& symbol = c.symbol();
-    if (!symbol.is_named())
-      return;
-
-    if (!seen.insert(symbol.name()).second)
-      return;
-
-    auto array = model->evaluate(c).array();
-    char* data = array.data();
-
-    os << "  " << symbol.name() << " = \"";
-
-    for (size_t i = 0; i < array.size(); ++i) {
-      uint8_t value = data[i];
-
+    for (uint8_t value : array) {
       if (std::isprint(value)) {
         os << (char)value;
       } else {
@@ -80,16 +47,9 @@ public:
         }
       }
     }
-    os << "\"\n";
+    os << '\"';
   }
-
-private:
-  static char inttohex(uint8_t value) {
-    if (value < 10)
-      return '0' + value;
-    return ('A' - 10) + value;
-  }
-};
+} // namespace
 
 /***************************************************
  * PrintingFailureLogger                           *
@@ -103,12 +63,11 @@ void PrintingFailureLogger::log_failure(const Model& model, const Context& ctx,
   ss << "Found assertion failure:\n";
 
   if (model.result() == SolverResult::SAT) {
-    ConstantPrinter printer{ss, &model};
-
-    for (const auto& assertion : ctx.assertions) {
-      printer.visit(*assertion.value());
+    for (const auto& [name, constant] : ctx.constants) {
+      ss << "  " << name << " = ";
+      print_value(ss, model.evaluate(*constant));
+      ss << '\n';
     }
-    printer.visit(*failure.check.value());
 
     ss << "Backtrace:\n";
     ctx.print_backtrace(ss);

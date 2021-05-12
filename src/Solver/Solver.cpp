@@ -5,6 +5,7 @@
 #include "caffeine/Interpreter/Context.h"
 
 #include <fmt/format.h>
+#include <fmt/ostream.h>
 #include <magic_enum.hpp>
 
 namespace caffeine {
@@ -19,13 +20,31 @@ public:
 
   Value visitConstant(const Constant& op) {
     Value value = model_->lookup(op.symbol());
-    CAFFEINE_ASSERT(value.type() != Type::void_ty());
+
+    if (value.type().is_void()) {
+      const Type& srcty = op.type();
+
+      // For some symbols that are not used within the model we can get away
+      // with creating some default values
+      if (srcty.is_int())
+        return Value(llvm::APInt::getNullValue(srcty.bitwidth()));
+      if (srcty.is_float()) {
+        if (auto semantics = srcty.llvm_flt_semantics())
+          return Value(llvm::APFloat::getZero(*semantics));
+      }
+    }
+
+    CAFFEINE_ASSERT(
+        value.type() != Type::void_ty(),
+        fmt::format("Symbol {} was not contained in the model", op.symbol()));
     return value;
   }
   Value visitConstantArray(const ConstantArray& op) {
     size_t size = visit(*op.size()).apint().getLimitedValue(SIZE_MAX);
     Value value = model_->lookup(op.symbol(), size);
-    CAFFEINE_ASSERT(value.type() != Type::void_ty());
+    CAFFEINE_ASSERT(
+        value.type() != Type::void_ty(),
+        fmt::format("Symbol {} was not contained in the model", op.symbol()));
     return value;
   }
   Value visitConstantInt(const ConstantInt& op) {
