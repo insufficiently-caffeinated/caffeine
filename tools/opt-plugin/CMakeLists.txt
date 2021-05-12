@@ -16,6 +16,7 @@ add_sources(builtins
   assert.cpp
   memcpy.cpp
   memset.cpp
+  memmove.cpp
   resolve.cpp
   plugin.cpp
   builtins.h
