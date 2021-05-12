@@ -146,7 +146,7 @@ ExecutionResult Interpreter::visitUDiv(llvm::BinaryOperator& op) {
 
   auto result = transform_exprs(
       [&](const auto& lhs, const auto& rhs) {
-        Assertion assertion = ICmpOp::CreateICmp(ICmpOpcode::NE, rhs, 0);
+        Assertion assertion = ICmpOp::CreateICmpNE(rhs, 0);
         if (ctx->check(solver, !assertion) == SolverResult::SAT)
           logFailure(*ctx, !assertion, "udiv by 0");
         ctx->add(assertion);
@@ -167,12 +167,11 @@ ExecutionResult Interpreter::visitSDiv(llvm::BinaryOperator& op) {
 
   auto result = transform_exprs(
       [&](const auto& lhs, const auto& rhs) {
-        auto cmp1 = ICmpOp::CreateICmp(ICmpOpcode::EQ, rhs, 0);
-        auto cmp2 = ICmpOp::CreateICmp(
-            ICmpOpcode::EQ, lhs,
-            ConstantInt::Create(
-                llvm::APInt::getSignedMinValue(lhs->type().bitwidth())));
-        auto cmp3 = ICmpOp::CreateICmp(ICmpOpcode::EQ, rhs, -1);
+        auto cmp1 = ICmpOp::CreateICmpEQ(rhs, 0);
+        auto cmp2 = ICmpOp::CreateICmpEQ(
+            lhs, ConstantInt::Create(
+                     llvm::APInt::getSignedMinValue(lhs->type().bitwidth())));
+        auto cmp3 = ICmpOp::CreateICmpEQ(rhs, -1);
 
         // lhs == 0 || (lhs == INT_MIN && rhs == -1)
         Assertion assertion =
@@ -197,12 +196,11 @@ ExecutionResult Interpreter::visitSRem(llvm::BinaryOperator& op) {
 
   auto result = transform_exprs(
       [&](const auto& lhs, const auto& rhs) {
-        auto cmp1 = ICmpOp::CreateICmp(ICmpOpcode::EQ, rhs, 0);
-        auto cmp2 = ICmpOp::CreateICmp(
-            ICmpOpcode::EQ, lhs,
-            ConstantInt::Create(
-                llvm::APInt::getSignedMinValue(lhs->type().bitwidth())));
-        auto cmp3 = ICmpOp::CreateICmp(ICmpOpcode::EQ, rhs, -1);
+        auto cmp1 = ICmpOp::CreateICmpEQ(rhs, 0);
+        auto cmp2 = ICmpOp::CreateICmpEQ(
+            lhs, ConstantInt::Create(
+                     llvm::APInt::getSignedMinValue(lhs->type().bitwidth())));
+        auto cmp3 = ICmpOp::CreateICmpEQ(rhs, -1);
 
         // lhs == 0 || (lhs == INT_MIN && rhs == -1)
         Assertion assertion =
@@ -227,7 +225,7 @@ ExecutionResult Interpreter::visitURem(llvm::BinaryOperator& op) {
 
   auto result = transform_exprs(
       [&](const auto& lhs, const auto& rhs) {
-        Assertion assertion = ICmpOp::CreateICmp(ICmpOpcode::NE, rhs, 0);
+        Assertion assertion = ICmpOp::CreateICmpNE(rhs, 0);
         if (ctx->check(solver, !assertion) == SolverResult::SAT)
           logFailure(*ctx, !assertion, "urem fault (div by 0)");
         ctx->add(assertion);
@@ -315,9 +313,8 @@ ExecutionResult Interpreter::visitSwitchInst(llvm::SwitchInst& inst) {
   Context def = ctx->fork_once();
 
   for (auto value : inst.cases()) {
-    auto assertion = Assertion(ICmpOp::CreateICmp(
-        ICmpOpcode::EQ, cond,
-        ConstantInt::Create(value.getCaseValue()->getValue())));
+    auto assertion = Assertion(ICmpOp::CreateICmpEQ(
+        cond, ConstantInt::Create(value.getCaseValue()->getValue())));
     def.add(!assertion);
 
     if (ctx->check(solver, assertion) == SolverResult::UNSAT)
@@ -787,8 +784,8 @@ ExecutionResult Interpreter::visitFree(llvm::CallInst& call) {
       std::remove_if(resolved.begin(), resolved.end(), [&](const Pointer& ptr) {
         const Allocation& alloc = ctx->heaps[ptr.heap()][ptr.alloc()];
 
-        auto assertion = Assertion(ICmpOp::CreateICmp(
-            ICmpOpcode::EQ, ptr.value(ctx->heaps), alloc.address()));
+        auto assertion = Assertion(
+            ICmpOp::CreateICmpEQ(ptr.value(ctx->heaps), alloc.address()));
         if (ctx->check(solver, !assertion) == SolverResult::SAT) {
           logFailure(*ctx, Assertion::constant(true),
                      "free called with a pointer not allocated by malloc");
@@ -804,8 +801,7 @@ ExecutionResult Interpreter::visitFree(llvm::CallInst& call) {
 
   for (auto [fork, ptr] : llvm::zip(forks, resolved)) {
     Allocation& alloc = fork.heaps[ptr.heap()][ptr.alloc()];
-    fork.add(ICmpOp::CreateICmp(ICmpOpcode::EQ, ptr.value(fork.heaps),
-                                alloc.address()));
+    fork.add(ICmpOp::CreateICmpEQ(ptr.value(fork.heaps), alloc.address()));
     fork.heaps[ptr.heap()].deallocate(ptr.alloc());
   }
 

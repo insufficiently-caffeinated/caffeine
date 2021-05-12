@@ -115,6 +115,7 @@ function(declare_test TEST_NAME_OUT test EXPECTED)
       --caffeine-gen-test-main
       --caffeine-gen-builtins
       --internalize
+      --internalize-public-api-list main
       --globaldce
       -o <OUTPUT> <MAIN_DEPENDENCY>
     COMMENT "Optimizing ${test_target}"

@@ -89,8 +89,6 @@ namespace {
     builder.CreateCall(function, args);
     builder.CreateRet(ConstantInt::get(Type::getInt32Ty(m->getContext()),
                                        APInt::getNullValue(32)));
-
-    appendToUsed(*m, {main});
   }
 } // namespace
 

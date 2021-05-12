@@ -53,7 +53,7 @@ TEST_F(MemHeapTests, resolve_pointer_single) {
       AllocationKind::Alloca, AllocationPermissions::ReadWrite, context);
   auto offset = Constant::Create(Type::int_ty(index_size), "offset");
 
-  context.add(ICmpOp::CreateICmp(ICmpOpcode::ULT, offset, size));
+  context.add(ICmpOp::CreateICmpULT(offset, size));
 
   auto ptr = Pointer(BinaryOp::CreateAdd(heaps[0][alloc].address(), offset), 0);
 

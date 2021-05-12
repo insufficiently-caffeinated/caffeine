@@ -128,8 +128,9 @@ function(llvm_library TARGET_NAME)
 
   foreach(source ${sources})
     get_property(source_language SOURCE "${source}" PROPERTY LANGUAGE)
-    get_filename_component(source_ext "${source}" LAST_EXT)
-    get_filename_component(source_base "${source}" NAME)
+    get_filename_component(source_ext   "${source}" LAST_EXT)
+    get_filename_component(source_base  "${source}" NAME)
+    get_filename_component(source       "${source}" ABSOLUTE)
 
     if (source_ext STREQUAL .ll OR source_ext STREQUAL .bc)
       list(APPEND objects "${source}")
