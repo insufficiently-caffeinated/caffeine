@@ -201,13 +201,12 @@ Value Z3Model::lookup(const Symbol& symbol, std::optional<size_t> size) const {
 /***************************************************
  * Z3Solver                                        *
  ***************************************************/
-Z3Solver::Z3Solver() : ctx(std::make_unique<z3::context>()) {
-  // We want z3 to generate models
-  ctx->set("model", true);
-  // Automatically select and configure the solver
-  ctx->set("auto_config", true);
-  // Z3 will set a SIGINT handler unless we tell it not to
-  ctx->set("ctrl_c", false);
+Z3Solver::Z3Solver() : impl(std::make_unique<Impl>()) {}
+
+Z3Solver::Z3Solver(Z3Solver&& solver) noexcept : impl(std::move(solver.impl)) {}
+Z3Solver& Z3Solver::operator=(Z3Solver&& solver) noexcept {
+  impl = std::move(solver.impl);
+  return *this;
 }
 
 Z3Solver::~Z3Solver() {}
@@ -233,7 +232,7 @@ std::unique_ptr<Model> Z3Solver::resolve(AssertionList& assertions,
   if (extra.is_constant_value(false))
     return std::make_unique<EmptyModel>(SolverResult::UNSAT);
 
-  z3::solver solver = z3::tactic(*ctx, "default").mk_solver();
+  z3::solver solver = impl->tactic.mk_solver();
   Z3Model::ConstMap constMap;
 
   Z3OpVisitor visitor{&solver, constMap};

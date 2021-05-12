@@ -5,10 +5,6 @@
 
 #include <memory>
 
-namespace z3 {
-class context;
-}
-
 namespace caffeine {
 
 class Model;
@@ -16,12 +12,17 @@ class Assertion;
 
 class Z3Solver : public Solver {
 private:
+  class Impl;
+
   // Use a unique_ptr here so we don't have to include z3++.h
-  std::unique_ptr<z3::context> ctx;
+  std::unique_ptr<Impl> impl;
 
 public:
   Z3Solver();
   ~Z3Solver();
+
+  Z3Solver(Z3Solver&& solver) noexcept;
+  Z3Solver& operator=(Z3Solver&& solver) noexcept;
 
   SolverResult check(AssertionList& assertions,
                      const Assertion& extra) override;
@@ -45,9 +46,6 @@ public:
    */
   std::unique_ptr<Model> resolve(AssertionList& assertions,
                                  const Assertion& extra) override;
-
-  Z3Solver(Z3Solver&&) = default;
-  Z3Solver& operator=(Z3Solver&&) = default;
 };
 
 } // namespace caffeine
