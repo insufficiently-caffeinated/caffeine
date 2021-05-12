@@ -4,6 +4,10 @@ if (CMAKE_VERSION VERSION_GREATER "3.16")
   cmake_policy(SET CMP0097 NEW)
 endif()
 
+if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.20")
+  cmake_policy(SET CMP0116 NEW)
+endif()
+
 project(caffeine LANGUAGES C CXX)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
