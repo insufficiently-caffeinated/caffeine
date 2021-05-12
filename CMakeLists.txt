@@ -81,7 +81,6 @@ if (CAFFEINE_ENABLE_BUILD)
     find_package(LLVM 11.0 REQUIRED)
   endif()
 
-
   # TODO: We should have an option to download and build these locally if needed.
   find_package(GTest REQUIRED)
   find_package(Z3 4.8.7 REQUIRED)
