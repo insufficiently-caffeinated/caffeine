@@ -4,6 +4,8 @@
 /**
  * This benchmark is a direct translation of klee's maze example. It has a bunch
  * of branches but all values end up being concrete on any of those branches.
+ * 
+ * Example: https://feliam.wordpress.com/2010/10/07/the-symbolic-maze/
  */
 
 #define H 7
