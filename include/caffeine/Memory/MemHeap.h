@@ -30,10 +30,10 @@ class Solver;
 enum class AllocationKind { Alloca, Malloc, Global };
 
 /**
- * Permisisons for an allocation
+ * Permissions for an allocation
  *
  * This is used to indicate what kind of operations a user is allowed
- * to perfom on the requested allocation. As an example, for an allocation
+ * to perform on the requested allocation. As an example, for an allocation
  * with ReadWrite permissions a user could can read and modify the underlying
  * memory. For a Read, a user can read the data, but cannot modify the buffer.
  */

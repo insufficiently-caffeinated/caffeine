@@ -29,4 +29,4 @@ RUN apt-get update \
         pkg-config \
     && update-alternatives --install /usr/local/bin/llvm-config llvm-config /usr/bin/llvm-config-11 20 \
     && rm -rf /var/lib/apt/lists/*
-RUN sudo update-alternatives --install /usr/local/bin/llvm-config llvm-config /usr/bin/llvm-config-11 20
+RUN update-alternatives --install /usr/local/bin/llvm-config llvm-config /usr/bin/llvm-config-11 20
