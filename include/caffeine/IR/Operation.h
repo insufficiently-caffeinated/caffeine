@@ -587,6 +587,30 @@ public:
   static OpRef CreateICmp(ICmpOpcode cmp, int64_t lhs, const OpRef& rhs);
   static OpRef CreateICmp(ICmpOpcode cmp, const OpRef& lhs, int64_t rhs);
 
+#define CAFFEINE_DECL_ICMP_CREATE_VARIANT(opcode)                              \
+  static OpRef CreateICmp##opcode(const OpRef& lhs, const OpRef& rhs) {        \
+    return CreateICmp(ICmpOpcode::opcode, lhs, rhs);                           \
+  }                                                                            \
+  static OpRef CreateICmp##opcode(int64_t lhs, const OpRef& rhs) {             \
+    return CreateICmp(ICmpOpcode::opcode, lhs, rhs);                           \
+  }                                                                            \
+  static OpRef CreateICmp##opcode(const OpRef& lhs, int64_t rhs) {             \
+    return CreateICmp(ICmpOpcode::opcode, lhs, rhs);                           \
+  }                                                                            \
+  static_assert(true)
+
+  CAFFEINE_DECL_ICMP_CREATE_VARIANT(EQ);
+  CAFFEINE_DECL_ICMP_CREATE_VARIANT(NE);
+  CAFFEINE_DECL_ICMP_CREATE_VARIANT(UGT);
+  CAFFEINE_DECL_ICMP_CREATE_VARIANT(UGE);
+  CAFFEINE_DECL_ICMP_CREATE_VARIANT(ULT);
+  CAFFEINE_DECL_ICMP_CREATE_VARIANT(ULE);
+  CAFFEINE_DECL_ICMP_CREATE_VARIANT(SGT);
+  CAFFEINE_DECL_ICMP_CREATE_VARIANT(SGE);
+  CAFFEINE_DECL_ICMP_CREATE_VARIANT(SLT);
+  CAFFEINE_DECL_ICMP_CREATE_VARIANT(SLE);
+
+#undef CAFFEINE_DECL_ICMP_CREATE_VARIANT
   static bool classof(const Operation* op);
 };
 
