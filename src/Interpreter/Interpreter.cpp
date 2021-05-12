@@ -19,6 +19,12 @@
 
 namespace caffeine {
 
+namespace {
+  // The maximum size for which a fixed-size symbolic constant will be optimized
+  // to a fixed array of smaller constants.
+  static uint64_t MAX_FIXED_CONSTANT_SIZE = 10 * 1024 * 1024;
+} // namespace
+
 ExecutionResult::ExecutionResult(Status status) : status_(status) {}
 ExecutionResult::ExecutionResult(llvm::SmallVector<Context, 2>&& contexts)
     : status_(Dead), contexts_(std::move(contexts)) {}
@@ -605,6 +611,7 @@ std::optional<std::string> readSymbolicName(std::shared_ptr<Solver> solver,
 
   auto model = ctx->resolve(solver);
   if (model->result() != SolverResult::SAT) {
+    CAFFEINE_UNSUPPORTED("Unable to resolve symbolic name");
     return std::nullopt;
   }
 
@@ -616,15 +623,14 @@ std::optional<std::string> readSymbolicName(std::shared_ptr<Solver> solver,
   name.reserve(size - offset);
 
   const char* values = array.data();
-  for (size_t i = offset; i < size; ++i) {
-    if (values[i] == 0)
-      return name;
-    name.push_back(values[i]);
+  const char* start = values + offset;
+  const char* end = (const char*)std::memchr(start, 0, size - offset);
+  if (!end) {
+    CAFFEINE_UNSUPPORTED("Symbolic name was not null-terminated");
+    return std::nullopt;
   }
 
-  // TODO: This should really be an error when we would read beyond the end of
-  //       the array.
-  return std::nullopt;
+  return std::string(start, end);
 }
 
 ExecutionResult Interpreter::visitSymbolicAlloca(llvm::CallInst& call) {
@@ -645,9 +651,28 @@ ExecutionResult Interpreter::visitSymbolicAlloca(llvm::CallInst& call) {
   unsigned address_space = call.getType()->getPointerAddressSpace();
   unsigned ptr_width = size->type().bitwidth();
 
+  OpRef data;
+
+  auto csize = llvm::dyn_cast<ConstantInt>(size.get());
+  if (csize && csize->value().getLimitedValue() < MAX_FIXED_CONSTANT_SIZE) {
+    size_t data_size = csize->value().getLimitedValue();
+    std::vector<OpRef> constants;
+    constants.reserve(data_size);
+
+    for (size_t i = 0; i < data_size; ++i) {
+      constants.push_back(
+          Constant::Create(Type::int_ty(8), Symbol(ctx->next_constant())));
+    }
+
+    data = FixedArray::Create(size->type(), PersistentArray<OpRef>(constants));
+  } else {
+    data = ConstantArray::Create(Symbol(*alloc_name), size);
+  }
+
+  ctx->constants =
+      std::move(ctx->constants).insert({std::move(*alloc_name), data});
   auto alloc = ctx->heaps[address_space].allocate(
-      size, ConstantInt::Create(llvm::APInt(ptr_width, 1)),
-      ConstantArray::Create(Symbol(std::move(*alloc_name)), size),
+      size, ConstantInt::Create(llvm::APInt(ptr_width, 1)), data,
       AllocationKind::Alloca, AllocationPermissions::ReadWrite, *ctx);
 
   auto& frame = ctx->stack_top();

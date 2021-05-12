@@ -17,6 +17,21 @@
 
 namespace caffeine {
 
+class Z3Solver::Impl {
+public:
+  z3::context ctx;
+  z3::tactic tactic;
+
+  Impl() : tactic(ctx, "default") {
+    // We want z3 to generate models
+    ctx.set("model", true);
+    // Automatically select and configure the solver
+    ctx.set("auto_config", true);
+    // Z3 will set a SIGINT handler unless we tell it not to
+    ctx.set("ctrl_c", false);
+  }
+};
+
 class Z3Model : public Model {
 public:
   using SymbolName = std::variant<std::string, uint64_t>;

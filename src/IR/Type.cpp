@@ -144,6 +144,39 @@ Type Type::from_llvm(llvm::Type* type) {
   CAFFEINE_UNIMPLEMENTED();
 }
 
+static std::pair<unsigned, unsigned>
+semanticsSizes(const llvm::fltSemantics& semantics) {
+  unsigned size = llvm::APFloat::semanticsSizeInBits(semantics);
+  unsigned sbits = llvm::APFloat::semanticsPrecision(semantics);
+  unsigned ebits = size - sbits;
+
+  return {ebits, sbits};
+}
+
+const llvm::fltSemantics* Type::llvm_flt_semantics() const {
+  using llvm::APFloat;
+
+  CAFFEINE_ASSERT(is_float());
+
+  if (*this == Type::type_of<double>())
+    return &APFloat::IEEEdouble();
+  if (*this == Type::type_of<float>())
+    return &APFloat::IEEEsingle();
+
+  const std::pair<unsigned, unsigned> sizes = {exponent_bits(),
+                                               mantissa_bits()};
+  if (sizes == semanticsSizes(APFloat::IEEEhalf()))
+    return &APFloat::IEEEhalf();
+  if (sizes == semanticsSizes(APFloat::IEEEquad()))
+    return &APFloat::IEEEquad();
+  if (sizes == semanticsSizes(APFloat::x87DoubleExtended()))
+    return &APFloat::x87DoubleExtended();
+  if (sizes == semanticsSizes(APFloat::BFloat()))
+    return &APFloat::BFloat();
+
+  return nullptr;
+}
+
 std::ostream& operator<<(std::ostream& os, const Type& t) {
   if (t.is_void())
     return os << "void";

@@ -6,12 +6,11 @@
 #include "caffeine/Interpreter/StackFrame.h"
 #include "caffeine/Memory/MemHeap.h"
 #include "caffeine/Solver/Solver.h"
-
+#include <immer/map.hpp>
+#include <iosfwd>
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/IR/Constant.h>
 #include <llvm/IR/Function.h>
-
-#include <iosfwd>
 #include <memory>
 #include <optional>
 #include <unordered_map>
@@ -28,6 +27,7 @@ public:
   std::unordered_map<llvm::GlobalValue*, LLVMValue> globals;
   MemHeapMgr heaps;
   AssertionList assertions;
+  immer::map<std::string, OpRef> constants;
 
   llvm::Module* mod;
 

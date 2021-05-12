@@ -532,8 +532,8 @@ void MemHeapMgr::set_concrete(bool concrete) {
 }
 
 MemHeap& MemHeapMgr::operator[](unsigned index) {
-  return heaps_.try_emplace(index, index, heaps_are_concrete_)
-      .first->getSecond();
+  auto it = heaps_.try_emplace(index, index, heaps_are_concrete_).first;
+  return it->getSecond();
 }
 const MemHeap& MemHeapMgr::operator[](unsigned index) const {
   auto it = heaps_.find(index);
