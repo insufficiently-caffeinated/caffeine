@@ -4,6 +4,10 @@ if (CMAKE_VERSION VERSION_GREATER "3.16")
   cmake_policy(SET CMP0097 NEW)
 endif()
 
+if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.20")
+  cmake_policy(SET CMP0116 NEW)
+endif()
+
 project(caffeine LANGUAGES C CXX)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
@@ -69,8 +73,15 @@ mark_as_advanced(CAFFEINE_FMTONLY)
 set_property(GLOBAL PROPERTY TARGET_MESSAGES OFF)
 
 if (CAFFEINE_ENABLE_BUILD)
+
+  # LLVM Requires an exact version specification so we need to do one
+  # find_package call for each LLVM version we want to support
+  find_package(LLVM 11.1)
+  if (NOT LLVM_FOUND)
+    find_package(LLVM 11.0 REQUIRED)
+  endif()
+
   # TODO: We should have an option to download and build these locally if needed.
-  find_package(LLVM 11.0 REQUIRED)
   find_package(GTest REQUIRED)
   find_package(Z3 4.8.7 REQUIRED)
   find_package(Boost REQUIRED)
