@@ -27,41 +27,27 @@ public:
 
   SolverResult check(AssertionList& assertions,
                      const Assertion& extra) override {
-    return check_internal<0>(assertions, extra);
+    return do_internal<0>(
+        [&](auto& solver) { return solver.check(assertions, extra); });
   }
 
-  std::unique_ptr<Model> resolve(AssertionList& assertions,
-                                 const Assertion& extra) override {
-    return resolve_internal<0>(assertions, extra);
+  SolverResult resolve(AssertionList& assertions,
+                       const Assertion& extra) override {
+    return do_internal<0>(
+        [&](auto& solver) { return solver.resolve(assertions, extra); });
   }
 
 private:
-  template <size_t i>
-  SolverResult check_internal(AssertionList& assertions,
-                              const Assertion& extra) {
-    SolverResult result = std::get<i>(solvers).check(assertions, extra);
+  template <size_t i, typename F>
+  SolverResult do_internal(F&& func) {
+    SolverResult result = func(std::get<i>(solvers));
     if (result != SolverResult::Unknown)
       return result;
 
     if constexpr (i != sizeof...(Ts) - 1) {
-      return check_internal<i + 1>(assertions, extra);
+      return do_internal<i + 1>(func);
     } else {
       return SolverResult::Unknown;
-    }
-  }
-
-  template <size_t i>
-  std::unique_ptr<Model> resolve_internal(AssertionList& assertions,
-                                          const Assertion& extra) {
-    std::unique_ptr<Model> model =
-        std::get<i>(solvers).resolve(assertions, extra);
-    if (model->result() != SolverResult::Unknown)
-      return model;
-
-    if constexpr (i != sizeof...(Ts) - 1) {
-      return resolve_internal<i + 1>(assertions, extra);
-    } else {
-      return std::make_unique<EmptyModel>(SolverResult::Unknown);
     }
   }
 

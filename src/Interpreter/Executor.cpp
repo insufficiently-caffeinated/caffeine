@@ -29,7 +29,7 @@ void run_worker(Executor* exec, FailureLogger* logger,
       //       parent program.
 
       logger->log_failure(
-          caffeine::EmptyModel(SolverResult::Unknown), ctx.value(),
+          nullptr, ctx.value(),
           Failure(Assertion(), "internal error: unsupported operation"));
     }
   }

@@ -10,15 +10,10 @@
 
 namespace caffeine {
 
-SolverResult SimplifyingSolver::check(AssertionList& assertions,
-                                      const Assertion&) {
+SolverResult SimplifyingSolver::resolve(AssertionList& assertions,
+                                        const Assertion&) {
   transforms::simplify(assertions);
   return SolverResult::Unknown;
-}
-std::unique_ptr<Model> SimplifyingSolver::resolve(AssertionList& assertions,
-                                                  const Assertion&) {
-  transforms::simplify(assertions);
-  return std::make_unique<EmptyModel>(SolverResult::Unknown);
 }
 
 } // namespace caffeine

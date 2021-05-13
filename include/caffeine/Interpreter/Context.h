@@ -122,9 +122,8 @@ public:
    *
    * See the docs on Solver::resolve for more details.
    */
-  std::unique_ptr<Model>
-  resolve(std::shared_ptr<Solver> solver,
-          const Assertion& extra = Assertion::constant(true));
+  SolverResult resolve(std::shared_ptr<Solver> solver,
+                       const Assertion& extra = Assertion::constant(true));
 
   /**
    * Replaces instances of the unresolved pointer within the top stack frame

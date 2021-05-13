@@ -18,11 +18,8 @@ class SimplifyingSolver final : public Solver {
 public:
   SimplifyingSolver() = default;
 
-  SolverResult check(AssertionList& assertions,
-                     const Assertion& extra) override;
-
-  std::unique_ptr<Model> resolve(AssertionList& assertions,
-                                 const Assertion& extra) override;
+  SolverResult resolve(AssertionList& assertions,
+                       const Assertion& extra) override;
 };
 
 } // namespace caffeine

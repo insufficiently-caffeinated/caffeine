@@ -155,15 +155,12 @@ static z3::sort type_to_sort(z3::context& ctx, const Type& type) {
 /***************************************************
  * Z3Model                                         *
  ***************************************************/
-Z3Model::Z3Model(SolverResult result, const z3::model& model,
-                 const ConstMap& map)
-    : Model(result), model(model), constants(map) {}
-Z3Model::Z3Model(SolverResult result, const z3::model& model, ConstMap&& map)
-    : Model(result), model(model), constants(std::move(map)) {}
+Z3Model::Z3Model(const z3::model& model, const ConstMap& map)
+    : model(model), constants(map) {}
+Z3Model::Z3Model(const z3::model& model, ConstMap&& map)
+    : model(model), constants(std::move(map)) {}
 
 Value Z3Model::lookup(const Symbol& symbol, std::optional<size_t> size) const {
-  CAFFEINE_ASSERT(result() == SolverResult::SAT, "Model is not SAT");
-
   auto it = constants.find(op_name(symbol));
   if (it == constants.end()) {
     return Value();
@@ -224,13 +221,13 @@ SolverResult Z3Solver::check(AssertionList& assertions,
 
   if (assertions.unproven().empty())
     return SolverResult::SAT;
-  return resolve(assertions, Assertion())->result();
+  return SolverResult(resolve(assertions, Assertion()).kind());
 }
 
-std::unique_ptr<Model> Z3Solver::resolve(AssertionList& assertions,
-                                         const Assertion& extra) {
+SolverResult Z3Solver::resolve(AssertionList& assertions,
+                               const Assertion& extra) {
   if (extra.is_constant_value(false))
-    return std::make_unique<EmptyModel>(SolverResult::UNSAT);
+    return SolverResult::UNSAT;
 
   z3::solver solver = impl->tactic.mk_solver();
   Z3Model::ConstMap constMap;
@@ -254,14 +251,15 @@ std::unique_ptr<Model> Z3Solver::resolve(AssertionList& assertions,
 
   switch (result) {
   case z3::sat:
-    return std::make_unique<Z3Model>(SolverResult::SAT, solver.get_model(),
-                                     std::move(constMap));
+    return SolverResult(
+        SolverResult::SAT,
+        std::make_unique<Z3Model>(solver.get_model(), std::move(constMap)));
 
   case z3::unsat:
-    return std::make_unique<EmptyModel>(SolverResult::UNSAT);
+    return SolverResult::UNSAT;
 
   default:
-    return std::make_unique<EmptyModel>(SolverResult::Unknown);
+    return SolverResult::Unknown;
   }
 }
 
