@@ -8,9 +8,17 @@
 #include <llvm/Support/CommandLine.h>
 
 #include "caffeine/ADT/Span.h"
+#include "caffeine/Interpreter/Interpreter.h"
+#include "caffeine/Interpreter/Policy.h"
+#include "caffeine/Interpreter/Store.h"
+#include "caffeine/Solver/CanonicalizingSolver.h"
+#include "caffeine/Solver/SequenceSolver.h"
+#include "caffeine/Solver/SimplifyingSolver.h"
+#include "caffeine/Solver/Z3Solver.h"
 #include "caffeine/Support/DiagnosticHandler.h"
 
 #include "include/GuidedExecutionPolicy.h"
+#include "include/TestCaseFailureLogger.h"
 
 #define CAFFEINE_FUZZ_TARGET "LLVMFuzzerTestOneInput"
 
@@ -53,18 +61,37 @@ CaffeineMutator::CaffeineMutator(std::string binary_path, afl_state_t* afl) {
 
   auto secondArgTy =
       llvm::dyn_cast<llvm::IntegerType>(fuzz_target->getArg(1)->getType());
-  CAFFEINE_ASSERT(firstArgTy, "Second parameter must be an integer");
+  CAFFEINE_ASSERT(secondArgTy, "Second parameter must be an integer");
+
+  solver = caffeine::make_sequence_solver(caffeine::SimplifyingSolver(),
+                                          caffeine::CanonicalizingSolver(),
+                                          caffeine::Z3Solver());
 }
 
 size_t CaffeineMutator::mutate(caffeine::Span<uint8_t> data,
                                unsigned char** out_buf, size_t max_size) {
+  caffeine::ExecutorOptions options;
+  options.num_threads = 1;
   auto policy = caffeine::AlwaysAllowExecutionPolicy();
-  auto store = caffeine::QueueingContextStore(1);
+  auto store = caffeine::QueueingContextStore(options.num_threads);
+  auto logger = caffeine::TestCaseFailureLogger(fuzz_target, solver, afl);
   auto exec = caffeine::Executor(&policy, &store, &logger, options);
 
-  auto context = Context(function);
-  context.heaps.set_concrete(!force_symbolic_allocator);
+  auto context = Context(this->fuzz_target);
+  context.heaps.set_concrete(true);
+  auto ptr_width = module->getDataLayout().getPointerSizeInBits(fuzz_target->getArg(0)->getType()->getPointerAddressSpace());
+  auto size = ConstantInt::Create(llvm::APInt(ptr_width, data.size()));
+  context.heaps[0].allocate(
+      size,
+      ConstantInt::Create(llvm::APInt(ptr_width, 1)),
+      ConstantArray::Create(Symbol(std::string((char *) data.data())), size),
+      AllocationKind::Alloca, AllocationPermissions::ReadWrite, context
+  );
   store.add_context(std::move(context));
+
+  exec.run();
+
+  return 0;
 }
 
 } // namespace caffeine

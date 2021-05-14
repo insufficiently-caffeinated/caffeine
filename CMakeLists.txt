@@ -76,7 +76,7 @@ if (CAFFEINE_ENABLE_BUILD)
 
   # LLVM Requires an exact version specification so we need to do one
   # find_package call for each LLVM version we want to support
-  find_package(LLVM 11.1)
+  find_package(LLVM 11.1 QUIET)
   if (NOT LLVM_FOUND)
     find_package(LLVM 11.0 REQUIRED)
   endif()

@@ -1,5 +1,7 @@
 #include "include/GuidedExecutionPolicy.h"
 
+#include "caffeine/Interpreter/Interpreter.h"
+
 namespace caffeine {
 
 GuidedExecutionPolicy::GuidedExecutionPolicy(AssertionList& list,
@@ -17,7 +19,15 @@ bool GuidedExecutionPolicy::should_queue_path(const Context& ctx) {
     combined.insert(i);
   }
 
-  return solver_->check(combined) != UNSAT;
+  if (solver_->check(combined) == SAT) {
+    return true;
+  }
+
+  // If the path that we're checking isn't SAT given the assumptions, we want
+  // to see if it's SAT in general without our additional assumption so that
+  // we can create a testcase out of it
+  Interpreter interp(ctx, exec->policy, store, logger, solver);
+      interp.execute();
 }
 
 } // namespace caffeine

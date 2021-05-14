@@ -7,6 +7,7 @@
 #include <llvm/IR/Module.h>
 
 #include "caffeine/ADT/Span.h"
+#include "caffeine/Solver/Solver.h"
 
 extern "C" {
 #include "afl-fuzz.h"
@@ -21,6 +22,7 @@ public:
 private:
   std::unique_ptr<llvm::Module> module;
   llvm::Function* fuzz_target;
+  std::shared_ptr<Solver> solver;
 
 public:
   CaffeineMutator(std::string binary_path, afl_state_t* afl);

@@ -4,6 +4,10 @@
 #include "caffeine/Interpreter/Policy.h"
 #include "caffeine/Solver/Solver.h"
 
+extern "C" {
+#include "afl-fuzz.h"
+}
+
 namespace caffeine {
 
 /**
@@ -18,7 +22,7 @@ public:
   GuidedExecutionPolicy(AssertionList& list, std::shared_ptr<Solver> solver);
   ~GuidedExecutionPolicy() = default;
 
-  virtual bool should_queue_path(const Context& ctx);
+  bool should_queue_path(const Context& ctx) override;
 
 protected:
   GuidedExecutionPolicy(GuidedExecutionPolicy&&) = default;
