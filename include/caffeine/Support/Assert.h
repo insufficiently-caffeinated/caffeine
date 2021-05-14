@@ -1,6 +1,7 @@
 #ifndef CAFFEINE_MACROS_H
 #define CAFFEINE_MACROS_H
 
+#include "caffeine/Support/Macros.h"
 #include <string_view>
 
 namespace caffeine::detail {
@@ -50,12 +51,6 @@ struct message {
                         const char* file, message message);
 
 } // namespace caffeine::detail
-
-#ifdef __PRETTY_FUNCTION__
-#define CAFFEINE_FUNCTION __PRETTY_FUNCTION__
-#else
-#define CAFFEINE_FUNCTION __FUNCTION__
-#endif
 
 /**
  * Abort the process if the condition is not true.
