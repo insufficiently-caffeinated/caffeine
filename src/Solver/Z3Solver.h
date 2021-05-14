@@ -42,8 +42,8 @@ private:
   ConstMap constants;
 
 public:
-  Z3Model(SolverResult result, const z3::model& model, const ConstMap& map);
-  Z3Model(SolverResult result, const z3::model& model, ConstMap&& map);
+  Z3Model(const z3::model& model, const ConstMap& map);
+  Z3Model(const z3::model& model, ConstMap&& map);
 
   Value lookup(const Symbol& symbol, std::optional<size_t> size) const override;
 };

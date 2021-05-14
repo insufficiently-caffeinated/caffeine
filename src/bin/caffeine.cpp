@@ -36,7 +36,7 @@ public:
   CountingFailureLogger(std::ostream& os, llvm::Function* func)
       : PrintingFailureLogger(os), func{func} {}
 
-  void log_failure(const caffeine::Model& model, const caffeine::Context& ctx,
+  void log_failure(const caffeine::Model* model, const caffeine::Context& ctx,
                    const caffeine::Failure& failure) override {
     num_failures += 1;
     caffeine::PrintingFailureLogger::log_failure(model, ctx, failure);

@@ -20,26 +20,14 @@ class LLVMScalar;
 class LLVMValue;
 class Symbol;
 
-enum SolverResult { UNSAT, SAT, Unknown };
-
 /**
  * A set of concrete value assignments to constants that satisfy the set of
  * assertions passed to a solver.
- *
- * In the case of the model being UNSAT or Unknown there are no such possible
- * assignments and so trying to use them is an error.
  */
 class Model {
-private:
-  SolverResult result_;
-
 public:
-  Model(SolverResult result);
+  Model() = default;
   virtual ~Model() = default;
-
-  SolverResult result() const {
-    return result_;
-  }
 
   /**
    * Evaluate an expression using this model. Returns an appropriate constant
@@ -82,6 +70,51 @@ protected:
 };
 
 /**
+ * Result returned from a solver query.
+ *
+ * A SolverResult is composed of a satisfiability result (either SAT, UNSAT, or
+ * unknown) and, optionally, a model containing assignments to the various
+ * symbolic constants contained within the assertions in the solver query.
+ *
+ * However, it is only valid for a SolverResult instance to contain a model if
+ * the instance itself is SAT. Note that having a working model in any other
+ * case would be a contradiction. To avoid bugs, the constructor will assert if
+ * it is called with a model and a result other than SAT.
+ */
+class SolverResult {
+public:
+  enum Kind { UNSAT, SAT, Unknown };
+
+public:
+  SolverResult(Kind kind, std::unique_ptr<Model> model = nullptr);
+
+  bool operator==(Kind kind) const;
+  bool operator!=(Kind kind) const;
+
+  Kind kind() const;
+  // Get the model associated with this SolverResult. If this result doesn't
+  // contain a model then returns nullptr.
+  const Model* model() const;
+
+  /**
+   * Evaluate an expression using this model. Returns an appropriate constant
+   * expression (i.e. is_constant returns true) with the value of said constant.
+   *
+   * It is invalid to call this method if the result does not contain a model.
+   *
+   * Usage: end users should use this method in order to get the value of an
+   * expression in the given model.
+   */
+  Value evaluate(const Operation& expr) const;
+  Value evaluate(const LLVMScalar& expr, Context& ctx) const;
+  Value evaluate(const LLVMValue& expr, Context& ctx) const;
+
+private:
+  Kind kind_;
+  std::unique_ptr<Model> model_;
+};
+
+/**
  * SAT solver interface.
  *
  * TODO: Better explanation of how it should usually be used.
@@ -105,10 +138,6 @@ public:
    *    wouldn't be valid to perform that simplification. Note, however, that
    *    the final SAT/UNSAT result should take extra into account.
    *
-   * This includes modifying the backing expression trees and so on. Note that
-   * care must be taken not to modify expressions that have multiple references
-   * (refcount > 1) as that could modify unrelated expressions.
-   *
    * Default Implementation
    * ======================
    * By default this is implemented by calling resolve and then throwing away
@@ -124,7 +153,9 @@ public:
 
   /**
    * Validate whether the set of assertions combined with the extra assertion,
-   * if it isn't empty, is satisfiable and return a model.
+   * if it isn't empty, is satisfiable and return a model. This is fairly
+   * similar to check with the exception that it _must_ return a model if the
+   * SolverResult is SAT.
    *
    * Solvers are free to perform any modifications to the assertions vector
    * provided as long as they
@@ -135,15 +166,11 @@ public:
    *    simplify that to `true` and `x = 2`. But if extra is `x = 2` then it
    *    wouldn't be valid to perform that simplification. Note, however, that
    *    the final SAT/UNSAT result should take extra into account.
-   *
-   * This includes modifying the backing expression trees and so on. Note that
-   * care must be taken not to modify expressions that have multiple references
-   * (refcount > 1) as that could modify unrelated expressions.
    */
-  virtual std::unique_ptr<Model> resolve(AssertionList& assertions,
-                                         const Assertion& extra) = 0;
+  virtual SolverResult resolve(AssertionList& assertions,
+                               const Assertion& extra) = 0;
   // Calls resolve with an empty extra assertion.
-  std::unique_ptr<Model> resolve(AssertionList& assertions);
+  SolverResult resolve(AssertionList& assertions);
 
   Solver(const Solver&) = default;
   Solver(Solver&&) = default;
@@ -152,14 +179,7 @@ public:
   Solver& operator=(Solver&&) = default;
 };
 
-class EmptyModel final : public Model {
-public:
-  EmptyModel(SolverResult result);
-
-  Value lookup(const Symbol& symbol, std::optional<size_t> size) const override;
-};
-
-std::ostream& operator<<(std::ostream& os, SolverResult res);
+std::ostream& operator<<(std::ostream& os, const SolverResult& res);
 
 } // namespace caffeine
 

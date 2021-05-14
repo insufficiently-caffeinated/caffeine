@@ -146,12 +146,12 @@ SolverResult Context::check(std::shared_ptr<Solver> solver,
     assertions.mark_sat();
   return result;
 }
-std::unique_ptr<Model> Context::resolve(std::shared_ptr<Solver> solver,
-                                        const Assertion& extra) {
-  auto model = solver->resolve(assertions, extra);
-  if (model->result() == SolverResult::SAT)
+SolverResult Context::resolve(std::shared_ptr<Solver> solver,
+                              const Assertion& extra) {
+  auto result = solver->resolve(assertions, extra);
+  if (result == SolverResult::SAT)
     assertions.mark_sat();
-  return model;
+  return result;
 }
 
 uint64_t Context::next_constant() {

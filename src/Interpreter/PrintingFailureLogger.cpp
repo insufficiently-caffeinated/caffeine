@@ -57,21 +57,22 @@ namespace {
 
 PrintingFailureLogger::PrintingFailureLogger(std::ostream& os) : os(&os) {}
 
-void PrintingFailureLogger::log_failure(const Model& model, const Context& ctx,
+void PrintingFailureLogger::log_failure(const Model* model, const Context& ctx,
                                         const Failure& failure) {
   std::stringstream ss;
   ss << "Found assertion failure:\n";
 
-  if (model.result() == SolverResult::SAT) {
+  if (model) {
     for (const auto& [name, constant] : ctx.constants) {
       ss << "  " << name << " = ";
-      print_value(ss, model.evaluate(*constant));
+      print_value(ss, model->evaluate(*constant));
       ss << '\n';
     }
 
     ss << "Backtrace:\n";
     ctx.print_backtrace(ss);
   }
+
   if (!failure.message.empty())
     ss << "Reason:\n  " << failure.message << '\n';
 
