@@ -14,6 +14,9 @@
 #define CAFFEINE_CONCAT_(x, y) x##y
 #define CAFFEINE_CONCAT(x, y) CAFFEINE_CONCAT_(x, y)
 
+#define CAFFEINE_STRINGIFY_(x) #x
+#define CAFFEINE_STRINGIFY(x) CAFFEINE_STRINGIFY_(x)
+
 #define CAFFEINE_EXPAND(x) x
 
 #define CAFFEINE_FIRST(x, ...) x
@@ -40,5 +43,11 @@
       CAFFEINE_CONCAT(macro, 2)(__VA_ARGS__),                                  \
       CAFFEINE_CONCAT(macro, 1)(__VA_ARGS__),                                  \
       CAFFEINE_CONCAT(macro, 0)(__VA_ARGS__)))
+
+#ifdef __PRETTY_FUNCTION__
+#define CAFFEINE_FUNCTION __PRETTY_FUNCTION__
+#else
+#define CAFFEINE_FUNCTION __FUNCTION__
+#endif
 
 #endif

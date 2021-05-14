@@ -18,6 +18,7 @@ option(CAFFEINE_ENABLE_FORMAT   "Enable formatting targets" ON)
 option(CAFFEINE_BUILD_BITCODE   "If true compile tests and libraries down to bitcode, otherwise compile them to text IR" OFF)
 option(CAFFEINE_ENABLE_IR_TESTS "Enable tests which involve handwritten LLVM IR" ON)
 option(CAFFEINE_ENABLE_LIBC     "Build a bitcode libc for use in tests" OFF)
+option(CAFFEINE_ENABLE_TRACING  "Enable tracing support within caffeine" OFF)
 
 # Optimization settings
 set(CAFFEINE_ENABLE_LTO OFF CACHE STRING "Enable link-time-optimizations. Valid values: ON, OFF, FULL, THIN")
@@ -98,6 +99,9 @@ if (CAFFEINE_ENABLE_BUILD)
   include(CaffeineFlags)
   include(LLVMIRUtils)
 
+  make_directory("${CMAKE_BINARY_DIR}/gen/caffeine")
+  configure_file(Config.h.in "${CMAKE_BINARY_DIR}/gen/caffeine/Config.h")
+  
   if (CAFFEINE_ENABLE_TESTS)
     enable_testing()
   endif()
