@@ -92,27 +92,23 @@ size_t CaffeineMutator::mutate(caffeine::Span<uint8_t> data,
 
   context.heaps.set_concrete(true);
 
-  // Assert that the size and contents of the test case are the same. These assertions are used
-  // to guide the symbolic execution through the program.
-  auto assertion_list = AssertionList{
-    Assertion(ICmpOp::CreateICmpEQ(context.lookup(fuzz_target->getArg(1)).scalar().expr(), (int64_t) data.size()))
-  };
+  // Assert that the size and contents of the test case are the same. These
+  // assertions are used to guide the symbolic execution through the program.
+  auto assertion_list = AssertionList{Assertion(ICmpOp::CreateICmpEQ(
+      context.lookup(fuzz_target->getArg(1)).scalar().expr(),
+      (int64_t)data.size()))};
 
   {
     auto arr = context.lookup(fuzz_target->getArg(0));
     for (size_t i = 0; i < data.size(); i++) {
-      assertion_list.insert(
-        Assertion(
-          ICmpOp::CreateICmpEQ(
-            context.heaps[ptr.heap()][ptr.alloc()].read(
-              ptr.offset(),
-              Type(llvm::dyn_cast<llvm::PointerType>(fuzz_target->getArg(0)->getType())->getElementType()),
-              module->getDataLayout()
-            ),
-            data.data()[i]
-          )
-        )
-      );
+      assertion_list.insert(Assertion(
+          ICmpOp::CreateICmpEQ(context.heaps[ptr.heap()][ptr.alloc()].read(
+                                   ptr.offset(),
+                                   Type(llvm::dyn_cast<llvm::PointerType>(
+                                            fuzz_target->getArg(0)->getType())
+                                            ->getElementType()),
+                                   module->getDataLayout()),
+                               data.data()[i])));
     }
   }
 
@@ -131,10 +127,10 @@ size_t CaffeineMutator::mutate(caffeine::Span<uint8_t> data,
   // Use the first case as the mutated output
   bool got_first = false;
   size_t bytes_written = 0;
-  for (auto & test_case : *cases) {
+  for (auto& test_case : *cases) {
     if (test_case.size() <= max_size) {
       if (!got_first) {
-        *out_buf = (unsigned char *) malloc(test_case.size());
+        *out_buf = (unsigned char*)malloc(test_case.size());
         memcpy(*out_buf, test_case.data(), test_case.size());
         bytes_written = test_case.size();
         got_first = true;
@@ -148,7 +144,7 @@ size_t CaffeineMutator::mutate(caffeine::Span<uint8_t> data,
 }
 
 caffeine::SharedArray CaffeineMutator::model_to_testcase(const Model* model,
-                                        const Context& ctx) {
+                                                         const Context& ctx) {
   CAFFEINE_ASSERT(model, "Model must be non null");
 
   auto val = ctx.lookup_const(fuzz_target->getArg(0));

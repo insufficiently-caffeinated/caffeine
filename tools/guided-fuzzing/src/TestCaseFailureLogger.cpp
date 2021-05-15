@@ -2,7 +2,8 @@
 
 namespace caffeine {
 
-TestCaseFailureLogger::TestCaseFailureLogger(TestCaseStoragePtr cases, CaffeineMutator* mutator)
+TestCaseFailureLogger::TestCaseFailureLogger(TestCaseStoragePtr cases,
+                                             CaffeineMutator* mutator)
     : mutator{mutator}, cases{cases} {
   CAFFEINE_ASSERT(mutator, "Mutator must not be null in TestCaseFailureLogger");
 }

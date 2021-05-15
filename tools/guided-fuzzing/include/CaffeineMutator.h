@@ -33,7 +33,8 @@ public:
   CaffeineMutator(std::string binary_path, afl_state_t* afl);
   size_t mutate(caffeine::Span<uint8_t> data, unsigned char** out_buf,
                 size_t max_size);
-  caffeine::SharedArray model_to_testcase(const Model* model, const Context& ctx);
+  caffeine::SharedArray model_to_testcase(const Model* model,
+                                          const Context& ctx);
 };
 
 } // namespace caffeine

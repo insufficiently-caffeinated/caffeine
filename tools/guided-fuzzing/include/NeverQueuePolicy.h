@@ -12,10 +12,10 @@ namespace caffeine {
 class NeverQueuePolicy : public ExecutionPolicy {
   TestCaseStoragePtr cases;
   std::shared_ptr<Solver> solver;
-  CaffeineMutator *mutator;
+  CaffeineMutator* mutator;
 
 public:
-  NeverQueuePolicy(TestCaseStoragePtr cases, CaffeineMutator *mutator);
+  NeverQueuePolicy(TestCaseStoragePtr cases, CaffeineMutator* mutator);
   bool should_queue_path(const Context& ctx) override;
   void on_path_complete(const Context& ctx, ExitStatus status) override;
 };

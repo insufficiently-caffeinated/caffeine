@@ -21,9 +21,9 @@ class GuidedExecutionPolicy : public ExecutionPolicy {
   AssertionList requiredAssertions_;
   CaffeineMutator* mutator;
   TestCaseStoragePtr cases;
+
 public:
-  GuidedExecutionPolicy(AssertionList& list,
-                        CaffeineMutator* mutator,
+  GuidedExecutionPolicy(AssertionList& list, CaffeineMutator* mutator,
                         TestCaseStoragePtr cases);
   ~GuidedExecutionPolicy() = default;
 

@@ -2,7 +2,8 @@
 
 namespace caffeine {
 
-NeverQueuePolicy::NeverQueuePolicy(TestCaseStoragePtr cases, CaffeineMutator *mutator)
+NeverQueuePolicy::NeverQueuePolicy(TestCaseStoragePtr cases,
+                                   CaffeineMutator* mutator)
     : cases{cases}, mutator{mutator} {
   CAFFEINE_ASSERT(mutator, "Mutator must not be null in NeverQueuePolicy");
 }

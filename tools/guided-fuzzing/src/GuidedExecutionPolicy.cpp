@@ -11,7 +11,8 @@ GuidedExecutionPolicy::GuidedExecutionPolicy(AssertionList& list,
                                              TestCaseStoragePtr cases)
     : requiredAssertions_{list}, mutator{mutator}, cases{cases} {
   CAFFEINE_ASSERT(mutator, "Mutator must not be null in GuidedExecutionPolicy");
-  CAFFEINE_ASSERT(mutator->solver->check(list) == SolverResult::SAT, "GuidedExecutionPolicy requires satisfiable premise");
+  CAFFEINE_ASSERT(mutator->solver->check(list) == SolverResult::SAT,
+                  "GuidedExecutionPolicy requires satisfiable premise");
 }
 
 bool GuidedExecutionPolicy::should_queue_path(const Context& ctx) {
@@ -27,9 +28,9 @@ bool GuidedExecutionPolicy::should_queue_path(const Context& ctx) {
 
   // If the path that we're checking isn't SAT given the assumptions, we want
   // to see if it's SAT in general without our additional assumption so that
-  // we can create a testcase out of it. The key here is that the `NeverQueuePolicy`
-  // will turn our `ctx_copy` into a testcase after it is done running (assuming
-  // it is SAT)
+  // we can create a testcase out of it. The key here is that the
+  // `NeverQueuePolicy` will turn our `ctx_copy` into a testcase after it is
+  // done running (assuming it is SAT)
   auto store = NopStore();
   auto policy = NeverQueuePolicy(cases, mutator);
   auto ctx_copy = ctx;
