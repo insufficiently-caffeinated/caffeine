@@ -15,6 +15,9 @@ extern "C" {
 
 namespace caffeine {
 
+typedef std::vector<SharedArray> TestCaseStorage;
+typedef std::shared_ptr<TestCaseStorage> TestCaseStoragePtr;
+
 class CaffeineMutator {
 public:
   afl_state_t* afl;
@@ -22,12 +25,15 @@ public:
 private:
   std::unique_ptr<llvm::Module> module;
   llvm::Function* fuzz_target;
+
+public:
   std::shared_ptr<Solver> solver;
 
 public:
   CaffeineMutator(std::string binary_path, afl_state_t* afl);
   size_t mutate(caffeine::Span<uint8_t> data, unsigned char** out_buf,
                 size_t max_size);
+  caffeine::SharedArray model_to_testcase(const Model* model, const Context& ctx);
 };
 
 } // namespace caffeine

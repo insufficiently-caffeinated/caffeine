@@ -42,7 +42,8 @@ void Interpreter::logFailure(Context& ctx, const Assertion& assertion,
   if (result != SolverResult::SAT)
     return;
 
-  logger->log_failure(result.model(), ctx, Failure(assertion, message));
+  if (logger)
+    logger->log_failure(result.model(), ctx, Failure(assertion, message));
   policy->on_path_complete(ctx, ExecutionPolicy::Fail);
 }
 void Interpreter::queueContext(Context&& ctx) {

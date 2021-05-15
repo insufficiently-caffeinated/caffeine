@@ -2,7 +2,10 @@
 
 #include "caffeine/Interpreter/Context.h"
 #include "caffeine/Interpreter/Policy.h"
+#include "caffeine/Interpreter/Store.h"
 #include "caffeine/Solver/Solver.h"
+
+#include "include/CaffeineMutator.h"
 
 extern "C" {
 #include "afl-fuzz.h"
@@ -16,10 +19,12 @@ namespace caffeine {
  */
 class GuidedExecutionPolicy : public ExecutionPolicy {
   AssertionList requiredAssertions_;
-  std::shared_ptr<Solver> solver_;
-
+  CaffeineMutator* mutator;
+  TestCaseStoragePtr cases;
 public:
-  GuidedExecutionPolicy(AssertionList& list, std::shared_ptr<Solver> solver);
+  GuidedExecutionPolicy(AssertionList& list,
+                        CaffeineMutator* mutator,
+                        TestCaseStoragePtr cases);
   ~GuidedExecutionPolicy() = default;
 
   bool should_queue_path(const Context& ctx) override;

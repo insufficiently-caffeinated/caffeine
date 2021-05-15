@@ -10,8 +10,7 @@ extern "C" {
 
 extern "C" {
 
-caffeine::CaffeineMutator* afl_custom_init(afl_state_t* afl,
-                                           unsigned int seed) {
+caffeine::CaffeineMutator* afl_custom_init(afl_state_t* afl, unsigned int) {
   std::string fuzz_target = std::getenv("CAFFEINE_FUZZ_TARGET");
 
   caffeine::CaffeineMutator* mut =
