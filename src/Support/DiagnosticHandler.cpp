@@ -2,6 +2,7 @@
 
 #include <llvm/IR/DiagnosticInfo.h>
 #include <llvm/IR/DiagnosticPrinter.h>
+#include <llvm/Support/WithColor.h>
 
 using namespace llvm;
 
