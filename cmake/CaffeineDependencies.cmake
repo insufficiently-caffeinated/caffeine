@@ -32,6 +32,15 @@ function(caffeine_dependency PACKAGE VERSION)
   set(SUB_DIR "${CMAKE_BINARY_DIR}/_deps/${PACKAGE}/populate")
   set(PREFIX  "${CMAKE_BINARY_DIR}/_deps/${PACKAGE}")
 
+  set(old_generator "${CAFFEINE_DEPENDENCY_${PACKAGE}_GENERATOR}")
+  if (NOT "${old_generator}" STREQUAL "${CMAKE_GENERATOR}")
+    execute_process(
+      COMMAND "${CMAKE_COMMAND}" -E rm -rf "${PREFIX}"
+    )
+  endif()
+
+  set("CAFFEINE_DEPENDENCY_${PACKAGE}_GENERATOR" "${GENERATOR}" CACHE INTERNAL "")
+
   make_directory("${SUB_DIR}")
 
   set(QUOTED_ARGS "")
