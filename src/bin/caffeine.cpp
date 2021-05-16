@@ -86,8 +86,8 @@ int main(int argc, char** argv) {
   exit_on_err.setBanner(std::string(argv[0]) + ":");
 
   LLVMContext ctx;
-  ctx.setDiagnosticHandler(std::make_unique<caffeine::CaffeineDiagnosticHandler>(),
-                           true);
+  ctx.setDiagnosticHandler(
+      std::make_unique<caffeine::CaffeineDiagnosticHandler>(), true);
 
   cl::ParseCommandLineOptions(argc, argv, "symbolic executor for LLVM IR");
 
