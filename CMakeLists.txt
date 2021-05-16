@@ -5,7 +5,7 @@ if (CMAKE_VERSION VERSION_GREATER "3.16")
 endif()
 
 if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.20")
-  cmake_policy(SET CMP0116 NEW)
+  cmake_policy(SET CMP0116 OLD)
 endif()
 
 project(caffeine LANGUAGES C CXX)
@@ -101,7 +101,7 @@ if (CAFFEINE_ENABLE_BUILD)
 
   make_directory("${CMAKE_BINARY_DIR}/gen/caffeine")
   configure_file(Config.h.in "${CMAKE_BINARY_DIR}/gen/caffeine/Config.h")
-  
+
   if (CAFFEINE_ENABLE_TESTS)
     enable_testing()
   endif()
