@@ -7,7 +7,6 @@
 #include "caffeine/Support/Signal.h"
 #include "caffeine/Support/Tracing.h"
 
-#include <boost/core/demangle.hpp>
 #include <llvm/IR/Module.h>
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/Support/CommandLine.h>
