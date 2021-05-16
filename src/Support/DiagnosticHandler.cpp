@@ -6,7 +6,7 @@
 using namespace llvm;
 
 namespace caffeine {
-bool DecafDiagnosticHandler::handleDiagnostics(const DiagnosticInfo& di) {
+bool CaffeineDiagnosticHandler::handleDiagnostics(const DiagnosticInfo& di) {
   unsigned severity = di.getSeverity();
   switch (severity) {
   case DS_Error:

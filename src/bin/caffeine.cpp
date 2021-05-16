@@ -66,8 +66,6 @@ cl::opt<std::string> enable_tracing{
 
 static ExitOnError exit_on_err;
 
-namespace {} // namespace
-
 static std::unique_ptr<Module>
 loadFile(const char* argv0, const std::string& filename, LLVMContext& context) {
   llvm::SMDiagnostic error;
@@ -88,7 +86,7 @@ int main(int argc, char** argv) {
   exit_on_err.setBanner(std::string(argv[0]) + ":");
 
   LLVMContext ctx;
-  ctx.setDiagnosticHandler(std::make_unique<caffeine::DecafDiagnosticHandler>(),
+  ctx.setDiagnosticHandler(std::make_unique<caffeine::CaffeineDiagnosticHandler>(),
                            true);
 
   cl::ParseCommandLineOptions(argc, argv, "symbolic executor for LLVM IR");
