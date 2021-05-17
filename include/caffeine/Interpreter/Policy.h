@@ -54,7 +54,8 @@ public:
   //
   // Note that when the exit status is `Fail` the context will continue to be
   // used for the non-failure path if it is valid.
-  virtual void on_path_complete(const Context& ctx, ExitStatus status, const Assertion& assertion = Assertion());
+  virtual void on_path_complete(const Context& ctx, ExitStatus status,
+                                const Assertion& assertion = Assertion());
 
 protected:
   ExecutionPolicy(ExecutionPolicy&&) = default;
