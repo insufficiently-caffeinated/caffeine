@@ -34,9 +34,11 @@ function(caffeine_dependency PACKAGE VERSION)
 
   set(old_generator "$CACHE{CAFFEINE_DEPENDENCY_${PACKAGE}_GENERATOR}")
   if (NOT "${old_generator}" STREQUAL "${CMAKE_GENERATOR}")
-    execute_process(
-      COMMAND "${CMAKE_COMMAND}" -E rm -rf "${PREFIX}"
-    )
+    if ("${CMAKE_VERSION}" VERSION_LESS 3.17)
+      execute_process(COMMAND "${CMAKE_COMMAND}" -E remove_directory "${PREFIX}")
+    else()
+      execute_process(COMMAND "${CMAKE_COMMAND}" -E rm -rf "${PREFIX}")
+    endif()
   endif()
 
   set("CAFFEINE_DEPENDENCY_${PACKAGE}_GENERATOR" "${CMAKE_GENERATOR}" CACHE INTERNAL "")
