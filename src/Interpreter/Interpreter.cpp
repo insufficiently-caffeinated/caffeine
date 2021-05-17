@@ -43,7 +43,7 @@ void Interpreter::logFailure(Context& ctx, const Assertion& assertion,
     return;
 
   logger->log_failure(result.model(), ctx, Failure(assertion, message));
-  policy->on_path_complete(ctx, ExecutionPolicy::Fail);
+  policy->on_path_complete(ctx, ExecutionPolicy::Fail, assertion);
 }
 void Interpreter::queueContext(Context&& ctx) {
   policy->on_path_forked(ctx);
