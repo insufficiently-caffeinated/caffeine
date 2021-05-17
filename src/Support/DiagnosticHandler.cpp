@@ -2,11 +2,12 @@
 
 #include <llvm/IR/DiagnosticInfo.h>
 #include <llvm/IR/DiagnosticPrinter.h>
+#include <llvm/Support/WithColor.h>
 
 using namespace llvm;
 
 namespace caffeine {
-bool DecafDiagnosticHandler::handleDiagnostics(const DiagnosticInfo& di) {
+bool CaffeineDiagnosticHandler::handleDiagnostics(const DiagnosticInfo& di) {
   unsigned severity = di.getSeverity();
   switch (severity) {
   case DS_Error:

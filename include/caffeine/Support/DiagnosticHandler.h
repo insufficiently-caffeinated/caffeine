@@ -1,10 +1,10 @@
 #pragma once
 
-#include <llvm/IR/Module.h>
+#include <llvm/IR/DiagnosticHandler.h>
 
 namespace caffeine {
 
-struct DecafDiagnosticHandler : public llvm::DiagnosticHandler {
+struct CaffeineDiagnosticHandler : public llvm::DiagnosticHandler {
   bool handleDiagnostics(const llvm::DiagnosticInfo& di) override;
 };
 
