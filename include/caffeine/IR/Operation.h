@@ -18,6 +18,7 @@
 #include "caffeine/ADT/PersistentArray.h"
 #include "caffeine/ADT/Ref.h"
 #include "caffeine/ADT/SharedArray.h"
+#include "caffeine/ADT/StringInterner.h"
 #include "caffeine/IR/Type.h"
 #include "caffeine/Support/Assert.h"
 #include "caffeine/Support/CopyVTable.h"
@@ -104,11 +105,12 @@ private:
     Numbered = 1,
   };
 
-  std::variant<std::string, uint64_t> value_;
+  std::variant<InternedString, uint64_t> value_;
 
 public:
   Symbol(const std::string& name);
   Symbol(std::string&& name);
+  Symbol(std::string_view name);
   Symbol(uint64_t number);
 
   template <size_t N>
@@ -117,7 +119,7 @@ public:
   bool is_named() const;
   bool is_numbered() const;
 
-  std::string_view name() const;
+  InternedString name() const;
   uint64_t number() const;
 
   bool operator==(const Symbol& symbol) const;
@@ -350,7 +352,7 @@ private:
 
 public:
   const Symbol& symbol() const;
-  std::string_view name() const;
+  InternedString name() const;
   uint64_t number() const;
 
   bool is_numbered() const;
