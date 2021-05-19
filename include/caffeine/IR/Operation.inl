@@ -189,7 +189,8 @@ inline OpRef Operation::into_ref() const {
  * Symbol                                          *
  ***************************************************/
 template <size_t N>
-Symbol::Symbol(const char (&name)[N]) : Symbol(std::string_view(name, N)) {}
+inline Symbol::Symbol(const char (&name)[N])
+    : Symbol(std::string_view(name, N)) {}
 
 inline bool Symbol::is_named() const {
   return value_.index() == Named;
