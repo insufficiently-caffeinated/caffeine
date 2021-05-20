@@ -94,6 +94,7 @@ public:
   }
 
   llvm::iterator_range<const_iterator> unproven() const;
+  llvm::iterator_range<const_iterator> proven() const;
 
   /**
    * Create a checkpoint of the current position of the tail of the list. This
