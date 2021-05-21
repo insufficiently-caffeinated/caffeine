@@ -17,7 +17,8 @@ class NeverQueuePolicy : public ExecutionPolicy {
 public:
   NeverQueuePolicy(TestCaseStoragePtr cases, CaffeineMutator* mutator);
   bool should_queue_path(const Context& ctx) override;
-  void on_path_complete(const Context& ctx, ExitStatus status) override;
+  void on_path_complete(const Context& ctx, ExitStatus status,
+                        const Assertion& extra) override;
 };
 
 } // namespace caffeine

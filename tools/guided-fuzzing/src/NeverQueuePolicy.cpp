@@ -12,7 +12,8 @@ bool NeverQueuePolicy::should_queue_path(const Context&) {
   return false;
 }
 
-void NeverQueuePolicy::on_path_complete(const Context& ctx, ExitStatus status) {
+void NeverQueuePolicy::on_path_complete(const Context& ctx, ExitStatus status,
+                                        const Assertion&) {
   if (status != ExitStatus::Success) {
     return;
   }

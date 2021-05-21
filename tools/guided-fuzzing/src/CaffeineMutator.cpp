@@ -27,7 +27,7 @@ CaffeineMutator::CaffeineMutator(std::string binary_path, afl_state_t* afl) {
   this->afl = afl;
 
   llvm::LLVMContext context;
-  context.setDiagnosticHandler(std::make_unique<DecafDiagnosticHandler>(),
+  context.setDiagnosticHandler(std::make_unique<CaffeineDiagnosticHandler>(),
                                true);
 
   llvm::SMDiagnostic error;
