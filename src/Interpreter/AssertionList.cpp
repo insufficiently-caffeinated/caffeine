@@ -99,4 +99,13 @@ AssertionList::unproven() const {
   return llvm::iterator_range<const_iterator>(it, end());
 }
 
+llvm::iterator_range<AssertionList::const_iterator>
+AssertionList::proven() const {
+  auto it = list_.iterator_at(mark_);
+  if (it != end() && !it.valid())
+    ++it;
+
+  return llvm::iterator_range<const_iterator>(begin(), it);
+}
+
 } // namespace caffeine

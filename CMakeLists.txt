@@ -131,4 +131,10 @@ endif()
 # This is only supported for cmake >= 3.17
 if("${CMAKE_VERSION}" VERSION_GREATER_EQUAL "3.17")
   list(APPEND CMAKE_CTEST_ARGUMENTS "--output-on-failure")
+
+  include(ProcessorCount)
+  ProcessorCount(NUM_PROCESSORS)
+  if (NOT NUM_PROCESSORS EQUAL 0)
+    list(APPEND CMAKE_CTEST_ARGUMENTS "-j${NUM_PROCESSORS}")
+  endif()
 endif()
