@@ -17,8 +17,8 @@
 #include "caffeine/Solver/Z3Solver.h"
 #include "caffeine/Support/DiagnosticHandler.h"
 
-#include "include/GuidedExecutionPolicy.h"
-#include "include/TestCaseFailureLogger.h"
+#include "GuidedExecutionPolicy.h"
+#include "TestCaseFailureLogger.h"
 
 #define CAFFEINE_FUZZ_TARGET "LLVMFuzzerTestOneInput"
 

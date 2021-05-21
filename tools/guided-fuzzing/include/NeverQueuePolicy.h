@@ -5,7 +5,7 @@
 #include "caffeine/Interpreter/Store.h"
 #include "caffeine/Solver/Solver.h"
 
-#include "include/CaffeineMutator.h"
+#include "CaffeineMutator.h"
 
 namespace caffeine {
 

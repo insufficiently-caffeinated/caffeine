@@ -1,4 +1,4 @@
-#include "include/TestCaseFailureLogger.h"
+#include "TestCaseFailureLogger.h"
 
 namespace caffeine {
 

@@ -8,18 +8,12 @@ file(
   "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
 )
 
-file(
-  GLOB_RECURSE headers
-  CONFIGURE_DEPENDS
-  RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
-  "${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/include/*.inl"
-)
-
 add_library(afl-guided-mutator SHARED
   ${sources}
-  ${headers}
+)
+
+target_include_directories(afl-guided-mutator SYSTEM
+  PUBLIC "include/"
 )
 
 # The SYSTEM should silence warnings within these headers

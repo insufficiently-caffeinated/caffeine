@@ -1,6 +1,6 @@
-#include "include/GuidedExecutionPolicy.h"
-#include "include/NeverQueuePolicy.h"
-#include "include/NopStore.h"
+#include "GuidedExecutionPolicy.h"
+#include "NeverQueuePolicy.h"
+#include "NopStore.h"
 
 #include "caffeine/Interpreter/Interpreter.h"
 

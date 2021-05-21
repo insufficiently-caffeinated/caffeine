@@ -1,7 +1,7 @@
 #pragma once
 #include "caffeine/Interpreter/FailureLogger.h"
 
-#include "include/CaffeineMutator.h"
+#include "CaffeineMutator.h"
 
 #include <llvm/IR/Module.h>
 

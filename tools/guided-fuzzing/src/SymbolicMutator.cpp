@@ -6,7 +6,7 @@ extern "C" {
 #include <string>
 
 #include "caffeine/ADT/Span.h"
-#include "include/CaffeineMutator.h"
+#include "CaffeineMutator.h"
 
 extern "C" {
 
