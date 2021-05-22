@@ -18,12 +18,13 @@ namespace caffeine {
 typedef std::vector<SharedArray> TestCaseStorage;
 typedef std::shared_ptr<TestCaseStorage> TestCaseStoragePtr;
 
-class CaffeineMutator {
+struct CaffeineMutator {
 public:
   afl_state_t* afl;
 
 private:
   std::unique_ptr<llvm::Module> module;
+  std::unique_ptr<llvm::LLVMContext> llvm_context;
   llvm::Function* fuzz_target;
 
 public:
