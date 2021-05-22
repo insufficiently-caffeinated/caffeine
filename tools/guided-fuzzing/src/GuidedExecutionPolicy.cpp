@@ -1,6 +1,4 @@
 #include "GuidedExecutionPolicy.h"
-#include "NeverQueuePolicy.h"
-#include "NopStore.h"
 
 #include "caffeine/Interpreter/Interpreter.h"
 
@@ -22,22 +20,17 @@ bool GuidedExecutionPolicy::should_queue_path(const Context& ctx) {
     combined.insert(i);
   }
 
-  if (mutator->solver->check(combined) == SolverResult::SAT) {
-    return true;
+  return mutator->solver->check(combined) == SolverResult::SAT;
+}
+
+void GuidedExecutionPolicy::on_path_complete(const Context& ctx,
+                                             ExitStatus status,
+                                             const Assertion& assertion) {
+  if (status == ExitStatus::Fail) {
+    Context ctx_copy = ctx;
+    cases->push_back(mutator->model_to_testcase(
+        ctx_copy.resolve(mutator->solver, assertion).model(), ctx_copy));
   }
-
-  // If the path that we're checking isn't SAT given the assumptions, we want
-  // to see if it's SAT in general without our additional assumption so that
-  // we can create a testcase out of it. The key here is that the
-  // `NeverQueuePolicy` will turn our `ctx_copy` into a testcase after it is
-  // done running (assuming it is SAT)
-  auto store = NopStore();
-  auto policy = NeverQueuePolicy(cases, mutator);
-  auto ctx_copy = ctx;
-  Interpreter interp(&ctx_copy, &policy, &store, nullptr, mutator->solver);
-  interp.execute();
-
-  return false;
 }
 
 } // namespace caffeine

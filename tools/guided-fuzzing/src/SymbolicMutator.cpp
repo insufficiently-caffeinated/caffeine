@@ -5,8 +5,8 @@ extern "C" {
 #include <cstdlib>
 #include <string>
 
-#include "caffeine/ADT/Span.h"
 #include "CaffeineMutator.h"
+#include "caffeine/ADT/Span.h"
 
 extern "C" {
 

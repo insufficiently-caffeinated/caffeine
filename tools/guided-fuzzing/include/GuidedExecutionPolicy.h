@@ -28,6 +28,8 @@ public:
   ~GuidedExecutionPolicy() = default;
 
   bool should_queue_path(const Context& ctx) override;
+  void on_path_complete(const Context& ctx, ExitStatus status,
+                        const Assertion& assertion = Assertion()) override;
 
 protected:
   GuidedExecutionPolicy(GuidedExecutionPolicy&&) = default;

@@ -1,6 +1,7 @@
 #include "include/CaffeineMutator.h"
 
 #include <cstdlib>
+#include <iostream>
 
 #include <llvm/ADT/iterator.h>
 #include <llvm/IR/Module.h>
@@ -18,7 +19,6 @@
 #include "caffeine/Support/DiagnosticHandler.h"
 
 #include "GuidedExecutionPolicy.h"
-#include "TestCaseFailureLogger.h"
 
 #define CAFFEINE_FUZZ_TARGET "LLVMFuzzerTestOneInput"
 
@@ -114,7 +114,7 @@ size_t CaffeineMutator::mutate(caffeine::Span<uint8_t> data,
 
   auto policy = caffeine::GuidedExecutionPolicy(assertion_list, this, cases);
   auto store = caffeine::QueueingContextStore(options.num_threads);
-  auto logger = caffeine::TestCaseFailureLogger(cases, this);
+  auto logger = caffeine::PrintingFailureLogger(std::cout);
   auto exec = caffeine::Executor(&policy, &store, &logger, options);
 
   frame.insert(fuzz_target->getArg(0), LLVMValue(ptr));
