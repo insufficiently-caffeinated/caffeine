@@ -1,4 +1,4 @@
-#include "caffeine/Transforms/ConstraintSlicer.h"
+#include "caffeine/Query/ConstraintSlicer.h"
 #include "caffeine/Interpreter/AssertionList.h"
 
 namespace caffeine {

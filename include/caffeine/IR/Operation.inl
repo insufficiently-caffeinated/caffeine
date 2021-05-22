@@ -451,7 +451,7 @@ struct hash<caffeine::Operation> {
   }
 };
 
-template<>
+template <>
 struct hash<caffeine::Symbol> {
   std::size_t operator()(const caffeine::Symbol& op) const noexcept {
     return static_cast<std::size_t>(caffeine::hash_value(op));

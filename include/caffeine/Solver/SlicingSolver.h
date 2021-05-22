@@ -1,7 +1,7 @@
 #include "caffeine/ADT/WeakMap.h"
 #include "caffeine/IR/Operation.h"
+#include "caffeine/Query/ConstraintSlicer.h"
 #include "caffeine/Solver/Solver.h"
-#include "caffeine/Transforms/ConstraintSlicer.h"
 #include <llvm/ADT/SmallVector.h>
 #include <memory>
 #include <unordered_set>
