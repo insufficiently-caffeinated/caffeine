@@ -64,7 +64,8 @@ void GuidedExecutionPolicy::on_path_complete(const Context& ctx,
   if (status == ExitStatus::Fail) {
     Context ctx_copy = ctx;
     cases->push_back(mutator->model_to_testcase(
-        ctx_copy.resolve(mutator->solver, assertion).model(), ctx_copy, symbol_name));
+        ctx_copy.resolve(mutator->solver, assertion).model(), ctx_copy,
+        symbol_name));
   }
 }
 
