@@ -22,5 +22,9 @@ add_subdirectory(run-pass)
 add_subdirectory(run-fail)
 add_subdirectory(regression)
 
+if (EXISTS yarpgen and IS_DIRECTORY yarpgen)
+  add_subdirectory(yarpgen)
+endif()
+
 add_executable(skip-test skip-test.cpp)
 target_link_options(skip-test PRIVATE ${LINK_FLAGS})
