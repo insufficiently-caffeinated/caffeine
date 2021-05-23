@@ -35,7 +35,8 @@ public:
   size_t mutate(caffeine::Span<uint8_t> data, unsigned char** out_buf,
                 size_t max_size);
   caffeine::SharedArray model_to_testcase(const Model* model,
-                                          const Context& ctx);
+                                          const Context& ctx,
+                                          std::string symbol_name);
 };
 
 } // namespace caffeine

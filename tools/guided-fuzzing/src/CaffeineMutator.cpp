@@ -27,8 +27,8 @@ CaffeineMutator::CaffeineMutator(std::string binary_path, afl_state_t* afl) {
   this->afl = afl;
 
   llvm_context = std::make_unique<llvm::LLVMContext>();
-  llvm_context->setDiagnosticHandler(std::make_unique<CaffeineDiagnosticHandler>(),
-                               true);
+  llvm_context->setDiagnosticHandler(
+      std::make_unique<CaffeineDiagnosticHandler>(), true);
 
   llvm::SMDiagnostic error;
   module = llvm::parseIRFile(binary_path, error, *llvm_context);
@@ -51,10 +51,10 @@ CaffeineMutator::CaffeineMutator(std::string binary_path, afl_state_t* afl) {
   auto first_arg = fuzz_target->getArg(0);
   CAFFEINE_ASSERT(first_arg, "fuzz_target has an argument");
 
-  auto first_arg_ty =
-      llvm::dyn_cast<llvm::PointerType>(first_arg->getType());
+  auto first_arg_ty = llvm::dyn_cast<llvm::PointerType>(first_arg->getType());
   CAFFEINE_ASSERT(first_arg_ty, "First parameter must be a pointer");
-  auto intTy = llvm::dyn_cast<llvm::IntegerType>(first_arg_ty->getElementType());
+  auto intTy =
+      llvm::dyn_cast<llvm::IntegerType>(first_arg_ty->getElementType());
   CAFFEINE_ASSERT(intTy,
                   "First parameter must be a pointer to an integer array");
   CAFFEINE_ASSERT(first_arg_ty->getElementType()->getIntegerBitWidth() == 8,
@@ -98,18 +98,18 @@ size_t CaffeineMutator::mutate(caffeine::Span<uint8_t> data,
     CAFFEINE_ASSERT(ptr.is_resolved(), "Pointer must be resolved");
     auto arr = context.lookup(fuzz_target->getArg(0));
     for (size_t i = 0; i < data.size(); i++) {
-      assertion_list.insert(Assertion(
-          ICmpOp::CreateICmpEQ(context.heaps[ptr.heap()][ptr.alloc()].read(
-                                   ptr.offset(),
-                                   Type(llvm::dyn_cast<llvm::PointerType>(
-                                            first_arg_ty)
-                                            ->getElementType()),
-                                   module->getDataLayout()),
-                               data.data()[i])));
+      assertion_list.insert(Assertion(ICmpOp::CreateICmpEQ(
+          context.heaps[ptr.heap()][ptr.alloc()].read(
+              ptr.offset(),
+              Type(llvm::dyn_cast<llvm::PointerType>(first_arg_ty)
+                       ->getElementType()),
+              module->getDataLayout()),
+          data.data()[i])));
     }
   }
 
-  auto policy = caffeine::GuidedExecutionPolicy(assertion_list, this, cases);
+  auto policy =
+      caffeine::GuidedExecutionPolicy(data, "__caffeine_mut", this, cases);
   auto store = caffeine::QueueingContextStore(options.num_threads);
   auto logger = caffeine::PrintingFailureLogger(std::cout);
   auto exec = caffeine::Executor(&policy, &store, &logger, options);
@@ -140,23 +140,13 @@ size_t CaffeineMutator::mutate(caffeine::Span<uint8_t> data,
   return bytes_written;
 }
 
-caffeine::SharedArray CaffeineMutator::model_to_testcase(const Model* model,
-                                                         const Context& ctx) {
+caffeine::SharedArray
+CaffeineMutator::model_to_testcase(const Model* model, const Context& ctx,
+                                   std::string symbol_name) {
   CAFFEINE_ASSERT(model, "Model must be non null");
 
-  auto val = ctx.lookup_const(fuzz_target->getArg(0));
-  CAFFEINE_ASSERT(val, "First arg must have a value");
-  CAFFEINE_ASSERT(val->is_scalar(), "First arg must have a scalar");
-  CAFFEINE_ASSERT(val->scalar().is_pointer(),
-                  "First args Value must be a pointer");
-  auto ptr = val->scalar().pointer();
-
-  // If this is not true, we need to resolve it manually
-  CAFFEINE_ASSERT(ptr.is_resolved(), "Pointer must be resolved");
-
-  // Get the testcase
-  auto alloc = ctx.heaps[ptr.heap()][ptr.alloc()];
-  return std::move(model->evaluate(*alloc.data()).array());
+  return std::move(
+      model->evaluate(*ctx.constants.find(symbol_name)->get()).array());
 }
 
 } // namespace caffeine

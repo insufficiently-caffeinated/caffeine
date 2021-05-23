@@ -13,8 +13,9 @@ extern "C" {
 caffeine::CaffeineMutator* afl_custom_init(afl_state_t* afl, unsigned int) {
   std::string fuzz_target = std::getenv("CAFFEINE_FUZZ_TARGET");
 
-  uint8_t* alloc = (uint8_t*) malloc(sizeof(caffeine::CaffeineMutator));
-  caffeine::CaffeineMutator* mut = new(alloc) caffeine::CaffeineMutator(fuzz_target, afl);
+  uint8_t* alloc = (uint8_t*)malloc(sizeof(caffeine::CaffeineMutator));
+  caffeine::CaffeineMutator* mut =
+      new (alloc) caffeine::CaffeineMutator(fuzz_target, afl);
 
   return mut;
 }

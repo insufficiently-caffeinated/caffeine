@@ -21,6 +21,8 @@ static void assert_valid_arg(llvm::Type* type) {
   llvm::raw_string_ostream os{message};
   os << "Unsupported LLVM type: ";
   type->print(os);
+  os << "\nIf you're trying to symbolically execute a function with a buffer "
+        "as input, wrap it and call `caffeine_make_symbolics`";
 
   CAFFEINE_ABORT(message);
 }

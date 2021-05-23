@@ -18,13 +18,14 @@ namespace caffeine {
  * assertions combined with the given AssertionList is satisfiable.
  */
 class GuidedExecutionPolicy : public ExecutionPolicy {
-  AssertionList requiredAssertions_;
   CaffeineMutator* mutator;
   TestCaseStoragePtr cases;
+  caffeine::Span<uint8_t> data;
+  std::string symbol_name;
 
 public:
-  GuidedExecutionPolicy(AssertionList& list, CaffeineMutator* mutator,
-                        TestCaseStoragePtr cases);
+  GuidedExecutionPolicy(caffeine::Span<uint8_t> data, std::string symbol_name,
+                        CaffeineMutator* mutator, TestCaseStoragePtr cases);
   ~GuidedExecutionPolicy() = default;
 
   bool should_queue_path(const Context& ctx) override;
