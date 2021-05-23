@@ -4,14 +4,61 @@
 
 YARPGEN=${YARPGEN:-yarpgen}
 COUNT=${COUNT:-10}
+DIR=${DIR:-.}
+
+function stderr {
+  echo "$@" 1>&2
+}
+
+function print_help {
+  stderr "USAGE: gen-yarpgen-tests.sh [OPTIONS]"
+  stderr "Generates a series of symbolic test cases using yarpgen."
+  stderr ""
+  stderr "Options:"
+  stderr "  -n, --count <count>   set the number of test cases to generate [default = 10]"
+  stderr "  -o, --output <dir>    the directory the test cases will be generated in [default = .]"
+  stderr "      --yarpgen <path>  path to the yarpgen executable. Overrides the YARPGEN"
+  stderr "                        environment variable if specified [default = yarpgen]"
+  stderr "  -h, --help            display this help and exit"
+}
+
+while [[ $# -gt 0 ]]; do
+  key="$1"
+  shift
+
+  case "$key" in
+  -h|--help)
+    print_help
+    exit 0
+    ;;
+  --yarpgen)
+    YARPGEN="$1"
+    shift
+    ;;
+  -n|--count)
+    COUNT="$1"
+    shift
+    ;;
+  -o|--output)
+    DIR="$1"
+    shift
+    ;;
+  *)
+    stderr "Unknown argument '$key'"
+    print_help
+    exit 1
+    ;;
+  esac
+done
 
 #############################################################
 
-rm -f CMakeLists.txt
-touch CMakeLists.txt
+mkdir -p "$DIR"
+rm -f "$DIR/CMakeLists.txt"
+touch "$DIR/CMakeLists.txt"
 
 for i in $(seq 0 $COUNT); do
-  OUTDIR=./yarpgen_$i
+  OUTDIR="$DIR/yarpgen_$i"
 
   rm -rf "$OUTDIR"
   mkdir "$OUTDIR"
@@ -43,6 +90,6 @@ add_test(
 )
 EOM
 
-  echo "add_subdirectory($OUTDIR)" >> CMakeLists.txt
+  echo "add_subdirectory(yarpgen_$i)" >> "$DIR/CMakeLists.txt"
 done
 

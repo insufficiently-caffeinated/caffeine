@@ -22,5 +22,12 @@ add_subdirectory(run-pass)
 add_subdirectory(run-fail)
 add_subdirectory(regression)
 
+set(YARPGEN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/yarpgen")
+if (EXISTS "${YARPGEN_DIR}")
+  if (IS_DIRECTORY "${YARPGEN_DIR}")
+    add_subdirectory(yarpgen)
+  endif()
+endif()
+
 add_executable(skip-test skip-test.cpp)
 target_link_options(skip-test PRIVATE ${LINK_FLAGS})
