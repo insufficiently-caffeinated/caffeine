@@ -188,12 +188,9 @@ inline OpRef Operation::into_ref() const {
 /***************************************************
  * Symbol                                          *
  ***************************************************/
-inline Symbol::Symbol(const std::string& name) : value_(name) {}
-inline Symbol::Symbol(std::string&& name) : value_(std::move(name)) {}
-inline Symbol::Symbol(uint64_t number) : value_(number) {}
-
 template <size_t N>
-inline Symbol::Symbol(const char (&name)[N]) : value_(std::string(name)) {}
+inline Symbol::Symbol(const char (&name)[N])
+    : Symbol(std::string_view(name, N)) {}
 
 inline bool Symbol::is_named() const {
   return value_.index() == Named;
@@ -202,7 +199,7 @@ inline bool Symbol::is_numbered() const {
   return value_.index() == Numbered;
 }
 
-inline std::string_view Symbol::name() const {
+inline InternedString Symbol::name() const {
   return std::get<Named>(value_);
 }
 inline uint64_t Symbol::number() const {
@@ -223,7 +220,7 @@ inline const Symbol& Constant::symbol() const {
   return std::get<ConstantData>(inner_).first;
 }
 
-inline std::string_view Constant::name() const {
+inline InternedString Constant::name() const {
   CAFFEINE_ASSERT(is_named(), "tried to access name of unnamed constant");
   return symbol().name();
 }
