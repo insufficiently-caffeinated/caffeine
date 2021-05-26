@@ -104,6 +104,8 @@ public:
 
   ExecutionResult visitDbgInfoIntrinsic(llvm::DbgInfoIntrinsic&);
 
+  ExecutionResult visitUMulWithOverflowIntrinsic(llvm::IntrinsicInst& inst);
+
 private:
   void logFailure(Context& ctx, const Assertion& assertion,
                   std::string_view message = "");
