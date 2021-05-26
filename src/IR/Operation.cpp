@@ -489,6 +489,44 @@ DECL_BINOP_CREATE(FRem, ASSERT_FP);
   }                                                                            \
   static_assert(true)
 
+OpRef BinaryOp::CreateUMulOverflow(const OpRef& a, const OpRef& b) {
+  CAFFEINE_ASSERT(
+      a->type() == b->type(),
+      fmt::format(
+          FMT_STRING(
+              "BinaryOp created from operands with different types: {} != {}"),
+          a->type(), b->type()));
+  CAFFEINE_ASSERT(a->type().is_int());
+  CAFFEINE_ASSERT(b->type().is_int());
+
+  // This implementation is based on the unsigned overflow detection circuit
+  // from
+  //   Schulte, M. J., Gok, M., Balzola, P. I., & Brocato, R. W. (2000,
+  //   November). Combined unsigned and two's complement saturating multipliers.
+  //   In International Symposium on Optical Science and Technology (pp.
+  //   185-196). International Society for Optics and Photonics.
+
+  uint32_t bitwidth = a->type().bitwidth();
+
+  if (bitwidth < 2) {
+    return ConstantInt::Create(false);
+  }
+
+  auto o = extract_bit(a, bitwidth - 1);
+  auto v = BinaryOp::CreateAnd(extract_bit(a, bitwidth - 1), extract_bit(b, 1));
+
+  for (uint32_t i = 2; i < bitwidth; ++i) {
+    o = BinaryOp::CreateOr(o, extract_bit(a, bitwidth - i));
+    v = BinaryOp::CreateOr(v, BinaryOp::CreateAnd(o, extract_bit(b, i)));
+  }
+
+  auto mult =
+      BinaryOp::CreateMul(UnaryOp::CreateZExt(Type::int_ty(bitwidth + 1), a),
+                          UnaryOp::CreateZExt(Type::int_ty(bitwidth + 1), b));
+
+  return BinaryOp::CreateOr(v, extract_bit(mult, bitwidth));
+}
+
 // Note: if we want to add more overloads here then it'll be necessary to
 // overload for all integer types as once you've got 2 then C++ can no longer
 // figure out which to coerce to.

@@ -473,6 +473,11 @@ public:
   static OpRef CreateFDiv(const OpRef& lhs, const OpRef& rhs);
   static OpRef CreateFRem(const OpRef& lhs, const OpRef& rhs);
 
+  // Overflow checking methods. Return a symbolic boolean indicating whether the
+  // specified operation would overflow or underflow.
+
+  static OpRef CreateUMulOverflow(const OpRef& lhs, const OpRef& rhs);
+
   // Utility methods for creating integer arithmetic when one of the operations
   // is a constant.
 
