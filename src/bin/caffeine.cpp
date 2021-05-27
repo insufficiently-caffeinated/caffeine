@@ -23,10 +23,7 @@
 #include <thread>
 
 using namespace llvm;
-
-using caffeine::Context;
-using caffeine::Executor;
-using caffeine::Interpreter;
+using namespace caffeine;
 
 class CountingFailureLogger : public caffeine::PrintingFailureLogger {
 public:
@@ -62,6 +59,11 @@ cl::opt<std::string> enable_tracing{
     "trace",
     cl::desc("Enable tracing to the output log specified by this flag."),
     cl::value_desc("filename")};
+cl::opt<std::string> store_type{
+    "store",
+    cl::desc("Choose which solver caffeine will use. Should be one of: queue, "
+             "thread-queue."),
+    cl::value_desc("store"), cl::init("thread-queue")};
 
 static ExitOnError exit_on_err;
 
@@ -122,13 +124,22 @@ int main(int argc, char** argv) {
   options.num_threads =
       threads != 0 ? threads : std::thread::hardware_concurrency();
 
+  std::unique_ptr<ExecutionContextStore> store;
+  if (store_type == "queue")
+    store = std::make_unique<QueueingContextStore>(options.num_threads);
+  else if (store_type == "thread-queue")
+    store = std::make_unique<ThreadQueuedContextStore>(options.num_threads, 2);
+  else {
+    WithColor::error() << " unknown store type '" << store_type << "'\n";
+    return 2;
+  }
+
   auto policy = caffeine::AlwaysAllowExecutionPolicy();
-  auto store = caffeine::QueueingContextStore(options.num_threads);
-  auto exec = caffeine::Executor(&policy, &store, &logger, options);
+  auto exec = caffeine::Executor(&policy, store.get(), &logger, options);
 
   auto context = Context(function);
   context.heaps.set_concrete(!force_symbolic_allocator);
-  store.add_context(std::move(context));
+  store->add_context(std::move(context));
 
   exec.run();
 

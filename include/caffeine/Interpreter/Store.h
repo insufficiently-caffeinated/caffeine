@@ -1,6 +1,7 @@
 #pragma once
 
 #include "caffeine/ADT/Span.h"
+#include "caffeine/ADT/ThreadMap.h"
 #include "caffeine/Interpreter/Context.h"
 #include <condition_variable>
 #include <mutex>
@@ -72,6 +73,25 @@ private:
 
   bool done = false;
   std::queue<Context> queue;
+};
+
+class ThreadQueuedContextStore : public QueueingContextStore {
+public:
+  static constexpr size_t local_cache_size = 8;
+
+public:
+  explicit ThreadQueuedContextStore(size_t num_readers,
+                                    size_t cache_size = local_cache_size);
+  ~ThreadQueuedContextStore() = default;
+
+  std::optional<Context> next_context() override;
+
+  void add_context(Context&& ctx) override;
+  void add_context_multi(Span<Context> contexts) override;
+
+private:
+  ThreadMap<std::deque<Context>> locals;
+  size_t cache_size;
 };
 
 } // namespace caffeine
