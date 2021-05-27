@@ -95,6 +95,7 @@ public:
   ExecutionResult visitExtractElementInst(llvm::ExtractElementInst& inst);
   ExecutionResult visitShuffleVectorInst(llvm::ShuffleVectorInst& inst);
   ExecutionResult visitAllocaInst(llvm::AllocaInst& inst);
+  ExecutionResult visitExtractValueInst(llvm::ExtractValueInst& inst);
 
   ExecutionResult visitMemCpyInst(llvm::MemCpyInst& memcpy);
   ExecutionResult visitMemMoveInst(llvm::MemMoveInst& memmove);

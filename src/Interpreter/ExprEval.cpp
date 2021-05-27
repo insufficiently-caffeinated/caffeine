@@ -802,4 +802,15 @@ LLVMValue ExprEvaluator::visitShuffleVector(llvm::ShuffleVectorInst& inst) {
   return LLVMValue(std::move(results));
 }
 
+LLVMValue ExprEvaluator::visitExtractValue(llvm::ExtractValueInst& inst) {
+  LLVMValue result = visit(inst.getAggregateOperand());
+
+  for (unsigned idx : inst.indices()) {
+    LLVMValue member = result.member(idx);
+    result = std::move(member);
+  }
+
+  return result;
+}
+
 } // namespace caffeine

@@ -137,6 +137,7 @@ DEF_SIMPLE_OP(GetElementPtrInst, GetElementPtrInst);
 DEF_SIMPLE_OP(InsertElementInst, InsertElementInst);
 DEF_SIMPLE_OP(ExtractElementInst, ExtractElementInst);
 DEF_SIMPLE_OP(ShuffleVectorInst, ShuffleVectorInst);
+DEF_SIMPLE_OP(ExtractValueInst, ExtractValueInst);
 
 ExecutionResult Interpreter::visitUDiv(llvm::BinaryOperator& op) {
   StackFrame& frame = ctx->stack_top();
