@@ -31,7 +31,6 @@ apt-get update \
     && apt-get -y install \
         llvm-11-dev \
         clang-11 \
-        clang++-11 \
         libz-dev \
         build-essential \
         gcc-9 \
