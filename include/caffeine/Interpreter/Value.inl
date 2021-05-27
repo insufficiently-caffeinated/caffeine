@@ -58,6 +58,19 @@ inline bool LLVMValue::is_aggregate() const {
   return inner_.index() == Aggregate;
 }
 
+inline LLVMScalar& LLVMValue::scalar() {
+  CAFFEINE_ASSERT(is_scalar());
+  return vector()[0];
+}
+inline Span<LLVMScalar> LLVMValue::vector() {
+  CAFFEINE_ASSERT(is_vector());
+  return std::get<Vector>(inner_);
+}
+inline Span<LLVMValue> LLVMValue::aggregate() {
+  CAFFEINE_ASSERT(is_aggregate());
+  return std::get<Aggregate>(inner_);
+}
+
 inline const LLVMScalar& LLVMValue::scalar() const {
   CAFFEINE_ASSERT(is_scalar());
   return vector()[0];
@@ -74,20 +87,32 @@ inline llvm::ArrayRef<LLVMValue> LLVMValue::aggregate() const {
 inline size_t LLVMValue::num_elements() const {
   return vector().size();
 }
+inline LLVMScalar& LLVMValue::element(size_t idx) {
+  return vector()[idx];
+}
 inline const LLVMScalar& LLVMValue::element(size_t idx) const {
   return vector()[idx];
 }
 inline llvm::ArrayRef<LLVMScalar> LLVMValue::elements() const {
   return vector();
 }
+inline Span<LLVMScalar> LLVMValue::elements() {
+  return vector();
+}
 
 inline size_t LLVMValue::num_members() const {
   return aggregate().size();
+}
+inline LLVMValue& LLVMValue::member(size_t idx) {
+  return aggregate()[idx];
 }
 inline const LLVMValue& LLVMValue::member(size_t idx) const {
   return aggregate()[idx];
 }
 inline llvm::ArrayRef<LLVMValue> LLVMValue::members() const {
+  return aggregate();
+}
+inline Span<LLVMValue> LLVMValue::members() {
   return aggregate();
 }
 

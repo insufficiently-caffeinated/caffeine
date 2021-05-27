@@ -1,6 +1,7 @@
 #ifndef CAFFEINE_INTERP_VALUE_H
 #define CAFFEINE_INTERP_VALUE_H
 
+#include "caffeine/ADT/Span.h"
 #include "caffeine/IR/Operation.h"
 #include "caffeine/Memory/MemHeap.h"
 
@@ -80,17 +81,24 @@ public:
   bool is_vector() const;
   bool is_aggregate() const;
 
+  LLVMScalar& scalar();
+  Span<LLVMScalar> vector();
+  Span<LLVMValue> aggregate();
   const LLVMScalar& scalar() const;
   llvm::ArrayRef<LLVMScalar> vector() const;
   llvm::ArrayRef<LLVMValue> aggregate() const;
 
   size_t num_elements() const;
+  LLVMScalar& element(size_t idx);
   const LLVMScalar& element(size_t idx) const;
   llvm::ArrayRef<LLVMScalar> elements() const;
+  Span<LLVMScalar> elements();
 
   size_t num_members() const;
+  LLVMValue& member(size_t idx);
   const LLVMValue& member(size_t idx) const;
   llvm::ArrayRef<LLVMValue> members() const;
+  Span<LLVMValue> members();
 
 public:
   explicit operator ContextValue() const;
