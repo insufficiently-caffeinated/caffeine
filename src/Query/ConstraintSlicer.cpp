@@ -6,9 +6,9 @@ namespace caffeine {
 AssertionList ConstraintSlicer::slice(const AssertionList& assertions,
                                       const Assertion& extra) {
   /**
-   * The algorithm used here is quite simple, we just add all the that share
-   * variables with the unproven set, and any assertions that share variables
-   * with those ones, and so on.
+   * The algorithm used here is quite simple, we just add all the assertions
+   * that share variables with the unproven set, and any assertions that share
+   * variables with those ones, and so on.
    *
    * More formally, we could form a graph with the assertions as the vertices
    * and edges between those that share a constant. Then, we need to find all
