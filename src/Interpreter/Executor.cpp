@@ -4,6 +4,7 @@
 #include "caffeine/Solver/CanonicalizingSolver.h"
 #include "caffeine/Solver/SequenceSolver.h"
 #include "caffeine/Solver/SimplifyingSolver.h"
+#include "caffeine/Solver/SlicingSolver.h"
 #include "caffeine/Solver/Z3Solver.h"
 #include "caffeine/Support/UnsupportedOperation.h"
 
@@ -14,9 +15,9 @@ namespace caffeine {
 
 void run_worker(Executor* exec, FailureLogger* logger,
                 ExecutionContextStore* store) {
-  auto solver = caffeine::make_sequence_solver(caffeine::SimplifyingSolver(),
-                                               caffeine::CanonicalizingSolver(),
-                                               caffeine::Z3Solver());
+  auto solver = caffeine::make_sequence_solver(
+      caffeine::SimplifyingSolver(), caffeine::CanonicalizingSolver(),
+      caffeine::SlicingSolver(std::make_unique<caffeine::Z3Solver>()));
   while (auto ctx = store->next_context()) {
     auto guard_ = UnsupportedOperation::SetCurrentContext(&ctx.value());
 
