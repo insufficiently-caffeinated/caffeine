@@ -11,7 +11,6 @@ RUN apt-get update \
     && apt-get -y install \
         llvm-11-dev \
         clang-11 \
-        clang++-11 \
         clang-format \
         libz-dev \
         build-essential \
