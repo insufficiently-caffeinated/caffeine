@@ -477,6 +477,7 @@ public:
   // specified operation would overflow or underflow.
 
   static OpRef CreateUMulOverflow(const OpRef& lhs, const OpRef& rhs);
+  static OpRef CreateSMulOverflow(const OpRef& lhs, const OpRef& rhs);
 
   // Utility methods for creating integer arithmetic when one of the operations
   // is a constant.
