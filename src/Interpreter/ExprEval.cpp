@@ -812,5 +812,17 @@ LLVMValue ExprEvaluator::visitExtractValue(llvm::ExtractValueInst& inst) {
 
   return result;
 }
+LLVMValue ExprEvaluator::visitInsertValue(llvm::InsertValueInst& inst) {
+  LLVMValue agg = visit(inst.getAggregateOperand());
+  LLVMValue val = visit(inst.getInsertedValueOperand());
+
+  LLVMValue* ptr = &agg;
+  for (unsigned idx : inst.indices()) {
+    ptr = &ptr->member(idx);
+  }
+
+  *ptr = val;
+  return agg;
+}
 
 } // namespace caffeine
