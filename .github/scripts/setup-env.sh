@@ -7,7 +7,7 @@ error() {
   echo "$1" >&2
 }
 
-while [[ $# -gt 0 ]]; do
+while [ $# -gt 0 ]; do
   case $1 in
     --compiler)
       COMPILER="$2"
