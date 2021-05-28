@@ -39,3 +39,13 @@ jobs:
         run: |
           cd build
           ctest . --output-on-failure -j$(nproc)
+
+      - name: Coverage
+        if: ${{ matrix.compiler == 'clang' }}
+        env:
+          LLVM_PROFILE_FILE: "default.%p.profraw"
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: |
+          llvm-profdata-11 merge -sparse `find . -name "*.profraw"` -o default.profdata
+          llvm-cov-11 show -instr-profile ./default.profdata bin/caffeine-unittest -format=text > coverage.txt
+          bash <(curl -s https://codecov.io/bash)

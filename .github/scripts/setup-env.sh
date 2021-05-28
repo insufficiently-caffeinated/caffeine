@@ -23,6 +23,9 @@ case $COMPILER in
   clang)
     export CC=clang
     export CXX=clang++
+    # enable coverage in clang
+    export CXXFLAGS="-fprofile-instr-generate -fcoverage-mapping -g -O0"
+    export LDFLAGS="-fprofile-instr-generate -fcoverage-mapping"
     ;;
   gcc)
     export CC=gcc
