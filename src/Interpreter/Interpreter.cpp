@@ -366,6 +366,8 @@ ExecutionResult Interpreter::visitIntrinsicInst(llvm::IntrinsicInst& intrin) {
   case Intrinsic::lifetime_start:
   case Intrinsic::lifetime_end:
     return ExecutionResult::Continue;
+  case Intrinsic::umul_with_overflow:
+    return visitUMulWithOverflowIntrinsic(intrin);
   default:
     break;
   }

@@ -5,6 +5,12 @@
 
 #include <memory>
 
+namespace z3 {
+class context;
+class solver;
+class expr;
+} // namespace z3
+
 namespace caffeine {
 
 class Model;
@@ -29,6 +35,10 @@ public:
 
   SolverResult resolve(AssertionList& assertions,
                        const Assertion& extra) override;
+
+  // Evaluate an expression to a z3::expr. This is exposed for testing purposes.
+  z3::context& context();
+  z3::expr evaluate(const OpRef& expr, z3::solver& solver);
 };
 
 } // namespace caffeine

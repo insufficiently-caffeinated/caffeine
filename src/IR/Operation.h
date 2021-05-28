@@ -533,4 +533,11 @@ OpRef constant_fold(T&& value) {
   return fold(value);
 }
 
+OpRef extract_bit(const OpRef& op, uint32_t bit) {
+  CAFFEINE_ASSERT(op->type().is_int());
+  CAFFEINE_ASSERT(bit < op->type().bitwidth());
+
+  return UnaryOp::CreateTrunc(Type::int_ty(1), BinaryOp::CreateLShr(op, bit));
+}
+
 } // namespace caffeine
