@@ -2,6 +2,8 @@
 
 #include "caffeine/Interpreter/Interpreter.h"
 
+#include <iostream>
+
 namespace caffeine {
 
 Assertion create_size_assertion(const OpRef* data, size_t size) {
@@ -36,23 +38,25 @@ bool GuidedExecutionPolicy::should_queue_path(const Context& ctx) {
   AssertionList combined = ctx.assertions;
   combined.insert(create_size_assertion(symbolic_buffer, data.size()));
 
+  const llvm::DataLayout& layout = ctx.mod->getDataLayout();
+  unsigned bitwidth = layout.getPointerSizeInBits();
+
   for (size_t i = 0; i < data.size(); i++) {
     combined.insert(Assertion(ICmpOp::CreateICmpEQ(
-        LoadOp::Create(*symbolic_buffer, BinaryOp::CreateAdd(0, i)),
+        LoadOp::Create(*symbolic_buffer, BinaryOp::CreateAdd(ConstantInt::CreateZero(bitwidth), i)),
         data.data()[i])));
   }
 
-  bool all_assertions_sat =
-      mutator->solver->check(combined) == SolverResult::SAT;
-  if (all_assertions_sat) {
+  auto all_assertions_sat = mutator->solver->resolve(combined);
+  if (all_assertions_sat.kind() == SolverResult::Kind::SAT) {
     return true;
   }
 
-  Context ctx_copy = ctx;
-  SolverResult partial = mutator->solver->resolve(ctx_copy.assertions);
+  AssertionList assertions_copy = ctx.assertions;
+  SolverResult partial = mutator->solver->resolve(assertions_copy);
   if (partial.kind() == SolverResult::Kind::SAT) {
-    partial.evaluate(*ctx_copy.constants.find(symbol_name)->get()).array();
-    mutator->model_to_testcase(partial.model(), ctx, symbol_name);
+    partial.evaluate(*ctx.constants.find(symbol_name)->get()).array();
+    cases->push_back(mutator->model_to_testcase(partial.model(), ctx, symbol_name));
   }
 
   return false;

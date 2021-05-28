@@ -2,6 +2,7 @@
 
 #include <cstdio>
 #include <memory>
+#include <mutex>
 #include <string>
 
 #include <llvm/IR/Module.h>
@@ -26,6 +27,8 @@ private:
   std::unique_ptr<llvm::Module> module;
   std::unique_ptr<llvm::LLVMContext> llvm_context;
   llvm::Function* fuzz_target;
+  std::mutex termination_mutex;
+  bool terminated = false;
 
 public:
   std::shared_ptr<Solver> solver;
@@ -37,6 +40,9 @@ public:
   caffeine::SharedArray model_to_testcase(const Model* model,
                                           const Context& ctx,
                                           std::string symbol_name);
+
+  void terminate();
+  ~CaffeineMutator();
 };
 
 } // namespace caffeine
