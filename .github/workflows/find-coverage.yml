@@ -16,9 +16,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v1
 
-      - name: Configure
+      - name: Envars
         run: |
           . ./.github/scripts/setup-env.sh --compiler clang
+
+      - name: Configure
+        run: |
           echo $CXX
           mkdir -p build
           cmake -B build \
