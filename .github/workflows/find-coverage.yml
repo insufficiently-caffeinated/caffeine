@@ -1,5 +1,5 @@
 
-name: build-and-test
+name: coverage
 
 on:
   # Don't build CI for stackbot internal branches, they are already built for PRs
