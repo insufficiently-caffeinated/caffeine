@@ -19,6 +19,7 @@ jobs:
       - name: Configure
         run: |
           . ./.github/scripts/setup-env.sh --compiler clang
+          echo $CXX
           mkdir -p build
           cmake -B build \
             -DCAFFEINE_CI=ON \
