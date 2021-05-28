@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This script is meant to simplify the compilation matrix in the case where we have
 # multiple dependent definitions
