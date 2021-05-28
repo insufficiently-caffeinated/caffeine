@@ -50,5 +50,5 @@ jobs:
           find . -name "*.profraw"
           llvm-profdata-11 merge -sparse `find . -name "*.profraw"` -o default.profdata
           llvm-cov-11 show -instr-profile ./default.profdata bin/caffeine-unittest -format=text > coverage.txt
-          curl -s https://codecov.io/bash > codecov.sh
+          wget -O codecov.sh https://codecov.io/bash
           bash codecov.sh -t $CODECOV_TOKEN
