@@ -50,5 +50,6 @@ jobs:
           find . -name "*.profraw"
           llvm-profdata-11 merge -sparse `find . -name "*.profraw"` -o default.profdata
           llvm-cov-11 show -instr-profile ./default.profdata bin/caffeine-unittest -format=text > coverage.txt
-          wget -O codecov.sh https://codecov.io/bash
+          sudo apt update && sudo apt install curl # this is a bandaid until we get curl in the container
+          curl -s https://codecov.io/bash > codecov.sh
           bash codecov.sh -t $CODECOV_TOKEN
