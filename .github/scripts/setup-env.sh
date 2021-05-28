@@ -11,7 +11,8 @@ while [ $# -gt 0 ]; do
   case $1 in
     --compiler)
       COMPILER="$2"
-      break
+      shift
+      shift
       ;;
     *)
       error "Unknown option '$1'"
