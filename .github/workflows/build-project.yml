@@ -27,7 +27,6 @@ jobs:
 
       - name: Configure
         run: |
-          echo $CXX
           mkdir -p build
           cmake -B build \
             -DCAFFEINE_CI=ON \
