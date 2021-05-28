@@ -22,11 +22,11 @@ done
 
 case $COMPILER in
   clang)
-    export CC=clang
-    export CXX=clang++
+    echo "CC=clang" >> $GITHUB_ENV
+    echo "CXX=clang++" >> $GITHUB_ENV
     ;;
   gcc)
-    export CC=gcc
-    export CXX=g++
+    echo "CC=gcc" >> $GITHUB_ENV
+    echo "CXX=g++" >> $GITHUB_ENV
     ;;
 esac
