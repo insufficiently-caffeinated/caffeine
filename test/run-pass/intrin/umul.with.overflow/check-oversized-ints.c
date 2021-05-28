@@ -22,6 +22,8 @@ void test() {
   caffeine_make_symbolic(&b, sizeof(b), "b");
 
   caffeine_assume(ilog2(a) + ilog2(b) >= 32);
+  // This is a clang builtin. Documentation here:
+  // https://clang.llvm.org/docs/LanguageExtensions.html#builtin-functions
   caffeine_assert(__builtin_umul_overflow(a, b, &r));
   caffeine_assert(r == a * b);
 }
