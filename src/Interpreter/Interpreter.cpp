@@ -368,6 +368,8 @@ ExecutionResult Interpreter::visitIntrinsicInst(llvm::IntrinsicInst& intrin) {
     return ExecutionResult::Continue;
   case Intrinsic::umul_with_overflow:
     return visitUMulWithOverflowIntrinsic(intrin);
+  case Intrinsic::smul_with_overflow:
+    return visitSMulWithOverflowIntrinsic(intrin);
   default:
     break;
   }

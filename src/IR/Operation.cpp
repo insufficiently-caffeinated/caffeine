@@ -526,6 +526,55 @@ OpRef BinaryOp::CreateUMulOverflow(const OpRef& a, const OpRef& b) {
 
   return BinaryOp::CreateOr(v, extract_bit(mult, bitwidth));
 }
+OpRef BinaryOp::CreateSMulOverflow(const OpRef& a, const OpRef& b) {
+  CAFFEINE_ASSERT(
+      a->type() == b->type(),
+      fmt::format(
+          FMT_STRING(
+              "BinaryOp created from operands with different types: {} != {}"),
+          a->type(), b->type()));
+  CAFFEINE_ASSERT(a->type().is_int());
+  CAFFEINE_ASSERT(b->type().is_int());
+
+  uint32_t bitwidth = a->type().bitwidth();
+
+  // The implementation below doesn't work for 1-bit integers
+  if (bitwidth < 2) {
+    return BinaryOp::CreateAnd(a, b);
+  }
+
+  // This implementation is based on the signed overflow detection circuit from
+  //   Schulte, M. J., Gok, M., Balzola, P. I., & Brocato, R. W. (2000,
+  //   November). Combined unsigned and two's complement saturating multipliers.
+  //   In International Symposium on Optical Science and Technology (pp.
+  //   185-196). International Society for Optics and Photonics.
+  //
+  // It is also based on the internal Z3 definition of bvsmul_no_overflow
+
+  // ax_i = a_i xor a_{n-1}
+  auto ax = BinaryOp::CreateXor(BinaryOp::CreateAShr(a, bitwidth - 1), a);
+  auto bx = BinaryOp::CreateXor(BinaryOp::CreateAShr(b, bitwidth - 1), b);
+
+  auto o = extract_bit(ax, bitwidth - 2);
+  auto v =
+      BinaryOp::CreateAnd(extract_bit(ax, bitwidth - 2), extract_bit(bx, 1));
+
+  for (uint32_t i = 2; i < bitwidth - 1; ++i) {
+    o = BinaryOp::CreateOr(o, extract_bit(ax, bitwidth - i - 1));
+    v = BinaryOp::CreateOr(v, BinaryOp::CreateAnd(o, extract_bit(bx, i)));
+  }
+
+  auto sign = ICmpOp::CreateICmpEQ(extract_bit(a, bitwidth - 1),
+                                   extract_bit(b, bitwidth - 1));
+  auto mult =
+      BinaryOp::CreateMul(UnaryOp::CreateSExt(Type::int_ty(bitwidth + 1), a),
+                          UnaryOp::CreateSExt(Type::int_ty(bitwidth + 1), b));
+
+  auto overflow1 = BinaryOp::CreateXor(extract_bit(mult, bitwidth),
+                                       extract_bit(mult, bitwidth - 1));
+
+  return BinaryOp::CreateAnd(sign, BinaryOp::CreateOr(overflow1, v));
+}
 
 // Note: if we want to add more overloads here then it'll be necessary to
 // overload for all integer types as once you've got 2 then C++ can no longer
