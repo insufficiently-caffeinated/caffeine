@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # This script is meant to simplify the compilation matrix in the case where we have
 # multiple dependent definitions
@@ -11,6 +11,7 @@ while [[ $# -gt 0 ]]; do
   case $1 in
     --compiler)
       COMPILER="$2"
+      break
       ;;
     *)
       error "Unknown option '$1'"
