@@ -89,6 +89,7 @@ OpRef Allocation::read(const OpRef& offset, const Type& t,
   auto bitresult = UnaryOp::CreateZExt(Type::int_ty(bitwidth), bytes[0]);
 
   for (uint32_t i = 1; i < width; ++i) {
+    // extended = zext(bytes[i], bitwidth) << (i * 8)
     auto extended = BinaryOp::CreateShl(
         UnaryOp::CreateZExt(Type::int_ty(bitwidth), bytes[i]), (uint64_t)i * 8);
     bitresult = BinaryOp::CreateOr(bitresult, extended);
