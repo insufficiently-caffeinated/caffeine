@@ -23,10 +23,11 @@ jobs:
 
       - name: Envars
         run: |
-          . ./.github/scripts/setup-env.sh --compiler ${{ matrix.compiler }}
+          ./.github/scripts/setup-env.sh --compiler ${{ matrix.compiler }}
 
       - name: Configure
         run: |
+          echo $CXX
           mkdir -p build
           cmake -B build \
             -DCAFFEINE_CI=ON \
