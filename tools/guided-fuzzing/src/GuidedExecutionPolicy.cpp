@@ -43,7 +43,9 @@ bool GuidedExecutionPolicy::should_queue_path(const Context& ctx) {
 
   for (size_t i = 0; i < data.size(); i++) {
     combined.insert(Assertion(ICmpOp::CreateICmpEQ(
-        LoadOp::Create(*symbolic_buffer, BinaryOp::CreateAdd(ConstantInt::CreateZero(bitwidth), i)),
+        LoadOp::Create(
+            *symbolic_buffer,
+            BinaryOp::CreateAdd(ConstantInt::CreateZero(bitwidth), i)),
         data.data()[i])));
   }
 
@@ -56,7 +58,8 @@ bool GuidedExecutionPolicy::should_queue_path(const Context& ctx) {
   SolverResult partial = mutator->solver->resolve(assertions_copy);
   if (partial.kind() == SolverResult::Kind::SAT) {
     partial.evaluate(*ctx.constants.find(symbol_name)->get()).array();
-    cases->push_back(mutator->model_to_testcase(partial.model(), ctx, symbol_name));
+    cases->push_back(
+        mutator->model_to_testcase(partial.model(), ctx, symbol_name));
   }
 
   return false;
