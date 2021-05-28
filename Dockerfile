@@ -26,5 +26,6 @@ RUN apt-get update \
         libcapnp-dev \
         capnproto \
         pkg-config \
+        curl \
     && update-alternatives --install /usr/local/bin/llvm-config llvm-config /usr/bin/llvm-config-11 20 \
     && rm -rf /var/lib/apt/lists/*
