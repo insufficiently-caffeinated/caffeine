@@ -10,6 +10,8 @@
 #   that you would normally use for a library target will work here as
 #   well.
 
+include(CaffeineUtils)
+
 if (NOT DEFINED LLVM_FOUND)
   find_package(LLVM REQUIRED)
 endif()
@@ -109,22 +111,6 @@ function(llvm_library TARGET_NAME)
   set(counter 0)
   set(library "${ARG_OUTPUT}")
   set(linked  "${intermediate_dir}/linked${target_ext}")
-
-  add_custom_target(
-    "${TARGET_NAME}" ALL
-    DEPENDS "${library}"
-    SOURCES ${sources}
-  )
-
-  set_target_properties(
-    "${TARGET_NAME}"
-    PROPERTIES
-    OUTPUT              "${library}"
-    OUTPUT_NAME         "${TARGET_NAME}${target_ext}"
-    LIBRARY_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}"
-    IS_LLVM_LIBRARY     TRUE
-    LLVM_LINK_DEPENDS   ""
-  )
 
   foreach(source ${sources})
     get_property(source_language SOURCE "${source}" PROPERTY LANGUAGE)
@@ -230,7 +216,9 @@ function(llvm_library TARGET_NAME)
     COMMAND_EXPAND_LISTS
   )
 
-  add_custom_command(
+  caffeine_custom_command(
+    TARGET "${TARGET_NAME}" ALL
+    SOURCES ${sources}
     OUTPUT "${library}"
     COMMAND "${LLVM_OPT}" ARGS
       --load="$<TARGET_FILE:caffeine-opt-plugin>"
@@ -240,6 +228,15 @@ function(llvm_library TARGET_NAME)
     MAIN_DEPENDENCY "${linked}"
     DEPENDS "$<TARGET_FILE:caffeine-opt-plugin>"
     COMMENT "Generating builtin methods for ${library}"
+  )
+
+  set_target_properties(
+    "${TARGET_NAME}"
+    PROPERTIES
+    OUTPUT_NAME         "${TARGET_NAME}${target_ext}"
+    LIBRARY_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}"
+    IS_LLVM_LIBRARY     TRUE
+    LLVM_LINK_DEPENDS   ""
   )
 endfunction()
 

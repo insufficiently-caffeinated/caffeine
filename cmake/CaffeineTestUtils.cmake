@@ -1,5 +1,6 @@
 
 include(LLVMIRUtils)
+include(CaffeineUtils)
 
 # Extract the first line of the file into OUTVAR
 function(extract_first_line RESULT FILE)
@@ -106,10 +107,8 @@ function(declare_test TEST_NAME_OUT test EXPECTED)
   llvm_link_libraries     ("${test_target}" PRIVATE caffeine-builtins)
   llvm_compile_options    ("${test_target}" PRIVATE -O3)
 
-
   build_command(
     OUTPUT "${OUT_DIR}/optimized.bc"
-    MAIN_DEPENDENCY "${OUT_DIR}/lib.bc"
     COMMAND "${LLVM_OPT}" ARGS 
       "--load=$<TARGET_FILE:caffeine-opt-plugin>" 
       --caffeine-gen-test-main
@@ -117,21 +116,20 @@ function(declare_test TEST_NAME_OUT test EXPECTED)
       --internalize
       --internalize-public-api-list main
       --globaldce
-      -o <OUTPUT> <MAIN_DEPENDENCY>
+      -o <OUTPUT>
+      "$<TARGET_PROPERTY:${test_target},OUTPUT>"
     COMMENT "Optimizing ${test_target}"
-    DEPENDS "$<TARGET_FILE:caffeine-opt-plugin>"
+    DEPENDS caffeine-opt-plugin "${test_target}"
   )
 
-  build_command(
+  caffeine_custom_command(
+    TARGET "gen-${test_target}" ALL
     OUTPUT "${DIS_OUT}"
     MAIN_DEPENDENCY "${OUT_DIR}/optimized.bc"
-    COMMAND "${LLVM_DIS}" ARGS <MAIN_DEPENDENCY> -o <OUTPUT>
+    COMMAND "${LLVM_DIS}" ARGS
+      "${OUT_DIR}/optimized.bc"
+      -o "${DIS_OUT}"
     COMMENT "Disassembling test case ${test_name}"
-  )
-
-  add_custom_target(
-    "gen-${test_target}" ALL
-    DEPENDS "${DIS_OUT}"
   )
 
   if ("${EXPECTED}" STREQUAL "FAIL")
