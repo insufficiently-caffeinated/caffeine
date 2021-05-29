@@ -36,6 +36,12 @@ private:
 
 public:
   Context(llvm::Function* func);
+  // Create a context for a function and provide initial values for it's
+  // arguments. This is necessary if you want to symbolically execute a function
+  // with arguments as the inital function.
+  //
+  // Note that main is currently special-cased by the other constructor so it
+  // can be run without having to provide arguments.
   Context(llvm::Function* func, llvm::ArrayRef<OpRef> args);
 
   /**
