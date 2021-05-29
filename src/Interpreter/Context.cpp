@@ -12,31 +12,15 @@
 
 namespace caffeine {
 
-static void assert_valid_arg(llvm::Type* type) {
-  if (type->isIntegerTy() || type->isFloatingPointTy()) {
-    return;
-  }
-
-  std::string message;
-  llvm::raw_string_ostream os{message};
-  os << "Unsupported LLVM type: ";
-  type->print(os);
-
-  CAFFEINE_ABORT(message);
-}
-
 Context::Context(llvm::Function* function,
                  const std::unordered_map<llvm::Value*, OpRef>& args)
     : mod(function->front().getModule()) {
   stack.emplace_back(function);
-  StackFrame& frame = stack_top();
-
   init_args(args);
 }
 Context::Context(llvm::Function* function)
     : mod(function->front().getModule()) {
   stack.emplace_back(function);
-  StackFrame& frame = stack_top();
 
   const llvm::DataLayout& layout = mod->getDataLayout();
   if (function->getName() == "main" && function->arg_size() == 2) {
@@ -65,7 +49,7 @@ void Context::init_args(const std::unordered_map<llvm::Value*, OpRef>& args) {
                   "entry-point function");
 
   auto& frame = stack_top();
-  for (auto arg : function->args()) {
+  for (auto& arg : function->args()) {
     auto it = args.find(&arg);
     CAFFEINE_ASSERT(
         it != args.end(),
