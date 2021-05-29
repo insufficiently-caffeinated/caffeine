@@ -30,39 +30,18 @@ Context::Context(llvm::Function* function)
   stack.emplace_back(function);
   StackFrame& frame = stack_top();
 
-  if (function->getName() == "main") {
-    const llvm::DataLayout& layout = mod->getDataLayout();
+  const llvm::DataLayout& layout = mod->getDataLayout();
+  if (function->getName() == "main" && function->arg_size() == 2) {
+    auto arg0 = function->arg_begin();
+    auto arg1 = arg0 + 1;
 
-    if (function->arg_size() == 2) {
-      auto arg0 = function->arg_begin();
-      auto arg1 = arg0 + 1;
-
-      CAFFEINE_ASSERT(function->arg_size() == 2);
-
-      frame.insert(arg0, ConstantInt::Create(llvm::APInt::getNullValue(
-                             arg0->getType()->getIntegerBitWidth())));
-      frame.insert(arg1, ConstantInt::Create(llvm::APInt::getNullValue(
-                             layout.getPointerSizeInBits(
-                                 arg1->getType()->getPointerAddressSpace()))));
-    } else {
-      CAFFEINE_ASSERT(function->arg_size() == 0);
-    }
+    frame.insert(arg0, ConstantInt::Create(llvm::APInt::getNullValue(
+                           arg0->getType()->getIntegerBitWidth())));
+    frame.insert(arg1, ConstantInt::Create(llvm::APInt::getNullValue(
+                           layout.getPointerSizeInBits(
+                               arg1->getType()->getPointerAddressSpace()))));
   } else {
-    size_t i = 0;
-    for (auto& arg : function->args()) {
-      assert_valid_arg(arg.getType());
-
-      std::string name = arg.getName().str();
-      boost::trim(name);
-
-      if (name.empty())
-        name = fmt::format("arg{}", i);
-
-      frame.insert(&arg,
-                   Constant::Create(Type::from_llvm(arg.getType()), name));
-
-      i += 1;
-    }
+    CAFFEINE_ASSERT(function->arg_size() == 0);
   }
 }
 
