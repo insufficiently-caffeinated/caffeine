@@ -41,7 +41,11 @@ public:
 };
 
 cl::opt<std::string> input_filename{cl::Positional};
-cl::opt<std::string> target_method{cl::Positional};
+cl::opt<std::string> entry{
+    "entry",
+    cl::desc(
+        "Entry method that will be executed by caffeine. [default = main]"),
+    cl::value_desc("function"), cl::init("main")};
 cl::opt<bool> invert_exitcode{
     "invert-exitcode",
     cl::desc("invert the exit code. 0 if the program returns a failure, 1 "
@@ -111,10 +115,10 @@ int main(int argc, char** argv) {
     return 2;
   }
 
-  auto function = module->getFunction(target_method.getValue());
+  auto function = module->getFunction(entry.getValue());
   if (!function) {
     errs() << argv[0] << ": ";
-    WithColor::error() << " no method '" << target_method.getValue() << "'\n";
+    WithColor::error() << " no method '" << entry.getValue() << "'\n";
     return 2;
   }
 

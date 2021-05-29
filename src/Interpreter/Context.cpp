@@ -12,57 +12,43 @@
 
 namespace caffeine {
 
-static void assert_valid_arg(llvm::Type* type) {
-  if (type->isIntegerTy() || type->isFloatingPointTy()) {
-    return;
-  }
-
-  std::string message;
-  llvm::raw_string_ostream os{message};
-  os << "Unsupported LLVM type: ";
-  type->print(os);
-
-  CAFFEINE_ABORT(message);
+Context::Context(llvm::Function* function, llvm::ArrayRef<OpRef> args)
+    : mod(function->front().getModule()) {
+  stack.emplace_back(function);
+  init_args(args);
 }
-
 Context::Context(llvm::Function* function)
     : mod(function->front().getModule()) {
   stack.emplace_back(function);
-  StackFrame& frame = stack_top();
 
-  if (function->getName() == "main") {
-    const llvm::DataLayout& layout = mod->getDataLayout();
+  const llvm::DataLayout& layout = mod->getDataLayout();
+  if (function->getName() == "main" && function->arg_size() == 2) {
+    auto arg0 = function->arg_begin();
+    auto arg1 = arg0 + 1;
 
-    if (function->arg_size() == 2) {
-      auto arg0 = function->arg_begin();
-      auto arg1 = arg0 + 1;
-
-      CAFFEINE_ASSERT(function->arg_size() == 2);
-
-      frame.insert(arg0, ConstantInt::Create(llvm::APInt::getNullValue(
-                             arg0->getType()->getIntegerBitWidth())));
-      frame.insert(arg1, ConstantInt::Create(llvm::APInt::getNullValue(
-                             layout.getPointerSizeInBits(
-                                 arg1->getType()->getPointerAddressSpace()))));
-    } else {
-      CAFFEINE_ASSERT(function->arg_size() == 0);
-    }
+    // For main we expect the signature to be
+    //   int main(int argc, char** argv)
+    // However, we currently don't do anything with this so we'll effectively
+    // call main like this:
+    //   main(0, nullptr)
+    // which is not completely valid but close enough that it works.
+    init_args({ConstantInt::CreateZero(arg0->getType()->getIntegerBitWidth()),
+               ConstantInt::CreateZero(layout.getPointerSizeInBits(
+                   arg1->getType()->getPointerAddressSpace()))});
   } else {
-    size_t i = 0;
-    for (auto& arg : function->args()) {
-      assert_valid_arg(arg.getType());
+    init_args({});
+  }
+}
 
-      std::string name = arg.getName().str();
-      boost::trim(name);
+void Context::init_args(llvm::ArrayRef<OpRef> args) {
+  llvm::Function* function = stack.front().current_block->getParent();
+  CAFFEINE_ASSERT(function->arg_size() == args.size(),
+                  "Attempted to pass an invalid number of arguments to an "
+                  "entry-point function");
 
-      if (name.empty())
-        name = fmt::format("arg{}", i);
-
-      frame.insert(&arg,
-                   Constant::Create(Type::from_llvm(arg.getType()), name));
-
-      i += 1;
-    }
+  auto& frame = stack_top();
+  for (auto&& [arg_ptr, arg_val] : llvm::zip(function->args(), args)) {
+    frame.insert(&arg_ptr, arg_val);
   }
 }
 

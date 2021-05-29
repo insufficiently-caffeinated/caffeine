@@ -148,7 +148,7 @@ function(declare_test TEST_NAME_OUT test EXPECTED)
   else()
     add_test(
       NAME "${test_name}"
-      COMMAND caffeine-bin ${TEST_FLAGS} "${DIS_OUT}" main
+      COMMAND caffeine-bin ${TEST_FLAGS} "${DIS_OUT}"
     )
   endif()
 
