@@ -42,7 +42,9 @@ public:
 
 cl::opt<std::string> input_filename{cl::Positional};
 cl::opt<std::string> entry{
-    "entry", cl::desc("Entry method that will be executed by caffeine. [default = main]"),
+    "entry",
+    cl::desc(
+        "Entry method that will be executed by caffeine. [default = main]"),
     cl::value_desc("function"), cl::init("main")};
 cl::opt<bool> invert_exitcode{
     "invert-exitcode",
