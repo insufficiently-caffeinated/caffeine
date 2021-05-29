@@ -36,6 +36,8 @@ private:
 
 public:
   Context(llvm::Function* func);
+  Context(llvm::Function* func,
+          const std::unordered_map<llvm::Value*, OpRef>& args);
 
   /**
    * Create a new context that is independent from this
@@ -143,6 +145,8 @@ public:
   void print_backtrace(std::ostream& OS) const;
 
 private:
+  void init_args(const std::unordered_map<llvm::Value*, OpRef>& args);
+
   // TODO: Temporary until context redesign is completed
   friend class ExprEvaluator;
 };
