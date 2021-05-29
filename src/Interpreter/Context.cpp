@@ -12,8 +12,7 @@
 
 namespace caffeine {
 
-Context::Context(llvm::Function* function,
-                 const std::unordered_map<llvm::Value*, OpRef>& args)
+Context::Context(llvm::Function* function, llvm::ArrayRef<OpRef> args)
     : mod(function->front().getModule()) {
   stack.emplace_back(function);
   init_args(args);
@@ -33,29 +32,23 @@ Context::Context(llvm::Function* function)
     // call main like this:
     //   main(0, nullptr)
     // which is not completely valid but close enough that it works.
-    init_args(
-        {{arg0, ConstantInt::CreateZero(arg0->getType()->getIntegerBitWidth())},
-         {arg1, ConstantInt::CreateZero(layout.getPointerSizeInBits(
-                    arg1->getType()->getPointerAddressSpace()))}});
+    init_args({ConstantInt::CreateZero(arg0->getType()->getIntegerBitWidth()),
+               ConstantInt::CreateZero(layout.getPointerSizeInBits(
+                   arg1->getType()->getPointerAddressSpace()))});
   } else {
     init_args({});
   }
 }
 
-void Context::init_args(const std::unordered_map<llvm::Value*, OpRef>& args) {
+void Context::init_args(llvm::ArrayRef<OpRef> args) {
   llvm::Function* function = stack.front().current_block->getParent();
   CAFFEINE_ASSERT(function->arg_size() == args.size(),
                   "Attempted to pass an invalid number of arguments to an "
                   "entry-point function");
 
   auto& frame = stack_top();
-  for (auto& arg : function->args()) {
-    auto it = args.find(&arg);
-    CAFFEINE_ASSERT(
-        it != args.end(),
-        fmt::format("Argument '{}' was missing from argument map", arg));
-
-    frame.insert(&arg, it->second);
+  for (auto&& [arg_ptr, arg_val] : llvm::zip(function->args(), args)) {
+    frame.insert(&arg_ptr, arg_val);
   }
 }
 
