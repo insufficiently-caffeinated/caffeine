@@ -148,7 +148,7 @@ function(declare_test TEST_NAME_OUT test EXPECTED)
       add_test(
         NAME "${test_name}"
         COMMAND "${CMAKE_COMMAND}" -E env 
-          "LLVM_PROFILE_FILE=${test_target}.profraw"
+          "LLVM_PROFILE_FILE=${test_target}.%p.profraw"
         "$<TARGET_FILE:caffeine-bin>" ${TEST_FLAGS} "${DIS_OUT}"
       )
     else()
