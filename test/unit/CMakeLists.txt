@@ -18,7 +18,7 @@ target_include_directories(caffeine-unittest PRIVATE "${CMAKE_CURRENT_SOURCE_DIR
 target_include_directories(caffeine-unittest PRIVATE "${CMAKE_SOURCE_DIR}")
 target_include_directories(caffeine-unittest PRIVATE "${CMAKE_BINARY_DIR}/gen/")
 
-if (${CMAKE_VERSION} VERSION_LESS "3.10.0")
+if (${CMAKE_VERSION} VERSION_LESS "3.10.0" OR CAFFEINE_ENABLE_COVERAGE)
   add_test(NAME unit-tests COMMAND caffeine-unittest)
 else()
   # This lists all the tests individually

@@ -144,10 +144,19 @@ function(declare_test TEST_NAME_OUT test EXPECTED)
       COMMAND skip-test "${DIS_OUT}"
     )
   else()
-    add_test(
-      NAME "${test_name}"
-      COMMAND caffeine-bin ${TEST_FLAGS} "${DIS_OUT}"
-    )
+    if (CAFFEINE_ENABLE_COVERAGE)
+      add_test(
+        NAME "${test_name}"
+        COMMAND "${CMAKE_COMMAND}" -E env 
+          "LLVM_PROFILE_FILE=${test_target}.profraw"
+        "$<TARGET_FILE:caffeine-bin>" ${TEST_FLAGS} "${DIS_OUT}"
+      )
+    else()
+      add_test(
+        NAME "${test_name}"
+        COMMAND caffeine-bin ${TEST_FLAGS} "${DIS_OUT}"
+      )
+    endif()
   endif()
 
   set("${TEST_NAME_OUT}" "${test_name}" PARENT_SCOPE)
