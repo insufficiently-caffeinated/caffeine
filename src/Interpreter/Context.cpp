@@ -12,21 +12,6 @@
 
 namespace caffeine {
 
-static void assert_valid_arg(llvm::Type* type) {
-  if (type->isIntegerTy() || type->isFloatingPointTy()) {
-    return;
-  }
-
-  std::string message;
-  llvm::raw_string_ostream os{message};
-  os << "Unsupported LLVM type: ";
-  type->print(os);
-  os << "\nIf you're trying to symbolically execute a function with a buffer "
-        "as input, wrap it and call `caffeine_make_symbolics`";
-
-  CAFFEINE_ABORT(message);
-}
-
 Context::Context(llvm::Function* function, llvm::ArrayRef<OpRef> args)
     : mod(function->front().getModule()) {
   stack.emplace_back(function);
