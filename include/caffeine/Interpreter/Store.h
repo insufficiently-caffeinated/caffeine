@@ -53,7 +53,6 @@ protected:
 class QueueingContextStore : public ExecutionContextStore {
 public:
   explicit QueueingContextStore(size_t num_readers);
-  ~QueueingContextStore();
 
   std::optional<Context> next_context() override;
 

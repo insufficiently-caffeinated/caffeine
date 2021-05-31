@@ -63,10 +63,6 @@ void QueueingContextStore::shutdown() {
   condvar.notify_all();
 }
 
-QueueingContextStore::~QueueingContextStore() {
-  shutdown();
-}
-
 Context QueueingContextStore::dequeue() {
   CAFFEINE_ASSERT(!queue.empty());
 
