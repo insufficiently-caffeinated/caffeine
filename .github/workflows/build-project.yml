@@ -21,9 +21,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v1
 
+      - name: Envars
+        run: |
+          ./.github/scripts/setup-env.sh --compiler ${{ matrix.compiler }}
+
       - name: Configure
         run: |
-          . ./.github/scripts/setup-env.sh --compiler ${{ matrix.compiler }}
           mkdir -p build
           cmake -B build \
             -DCAFFEINE_CI=ON \

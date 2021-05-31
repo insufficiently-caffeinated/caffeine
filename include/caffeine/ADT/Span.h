@@ -63,6 +63,20 @@ public:
     return size() == 0;
   }
 
+  constexpr const T& front() const {
+    return (*this)[0];
+  }
+  constexpr T& front() {
+    return (*this)[0];
+  }
+
+  constexpr const T& back() const {
+    return (*this)[size() - 1];
+  }
+  constexpr T& back() {
+    return (*this)[size() - 1];
+  }
+
   constexpr T& operator[](size_t idx) const {
     assert(idx < size());
     return data()[idx];

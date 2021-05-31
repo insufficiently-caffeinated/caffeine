@@ -1,0 +1,52 @@
+
+name: coverage
+
+on:
+  # Don't build CI for stackbot internal branches, they are already built for PRs
+  push:
+    branches-ignore:
+      - stackbot/**
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: insufficientlycaffeinated/bob
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+
+      - name: Envars
+        run: |
+          ./.github/scripts/setup-env.sh --compiler clang
+
+      - name: Configure
+        run: |
+          mkdir -p build
+          cmake -B build \
+            -DCAFFEINE_CI=ON \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCAFFEINE_ENABLE_COVERAGE=ON
+
+      - name: Build
+        run: cmake --build "build" -j$(nproc)
+
+      - name: Test
+        run: |
+          cd build
+          ctest . --output-on-failure -j$(nproc)
+        env:
+          LLVM_PROFILE_FILE: "default.%p.profraw"
+
+      - name: Coverage
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: |
+          cd build
+          find . -name "*.profraw"
+          llvm-profdata-11 merge -sparse `find . -name "*.profraw"` -o default.profdata
+          llvm-cov-11 show -instr-profile default.profdata bin/caffeine-unittest caffeine \
+            -format=text > coverage.txt
+          apt update && apt install curl # this is a bandaid until we get curl in the container
+          curl -s https://codecov.io/bash > codecov.sh
+          bash codecov.sh -t $CODECOV_TOKEN

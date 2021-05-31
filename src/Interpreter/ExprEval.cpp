@@ -802,4 +802,27 @@ LLVMValue ExprEvaluator::visitShuffleVector(llvm::ShuffleVectorInst& inst) {
   return LLVMValue(std::move(results));
 }
 
+LLVMValue ExprEvaluator::visitExtractValue(llvm::ExtractValueInst& inst) {
+  LLVMValue result = visit(inst.getAggregateOperand());
+
+  for (unsigned idx : inst.indices()) {
+    LLVMValue member = result.member(idx);
+    result = std::move(member);
+  }
+
+  return result;
+}
+LLVMValue ExprEvaluator::visitInsertValue(llvm::InsertValueInst& inst) {
+  LLVMValue agg = visit(inst.getAggregateOperand());
+  LLVMValue val = visit(inst.getInsertedValueOperand());
+
+  LLVMValue* ptr = &agg;
+  for (unsigned idx : inst.indices()) {
+    ptr = &ptr->member(idx);
+  }
+
+  *ptr = val;
+  return agg;
+}
+
 } // namespace caffeine

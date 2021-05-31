@@ -137,6 +137,8 @@ DEF_SIMPLE_OP(GetElementPtrInst, GetElementPtrInst);
 DEF_SIMPLE_OP(InsertElementInst, InsertElementInst);
 DEF_SIMPLE_OP(ExtractElementInst, ExtractElementInst);
 DEF_SIMPLE_OP(ShuffleVectorInst, ShuffleVectorInst);
+DEF_SIMPLE_OP(ExtractValueInst, ExtractValueInst);
+DEF_SIMPLE_OP(InsertValueInst, InsertValueInst);
 
 ExecutionResult Interpreter::visitUDiv(llvm::BinaryOperator& op) {
   StackFrame& frame = ctx->stack_top();
@@ -364,6 +366,10 @@ ExecutionResult Interpreter::visitIntrinsicInst(llvm::IntrinsicInst& intrin) {
   case Intrinsic::lifetime_start:
   case Intrinsic::lifetime_end:
     return ExecutionResult::Continue;
+  case Intrinsic::umul_with_overflow:
+    return visitUMulWithOverflowIntrinsic(intrin);
+  case Intrinsic::smul_with_overflow:
+    return visitSMulWithOverflowIntrinsic(intrin);
   default:
     break;
   }

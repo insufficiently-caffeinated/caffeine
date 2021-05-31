@@ -86,7 +86,7 @@ llvm_compile_options    ("yarpgen-${testname}" PRIVATE -O3 -w)
 
 add_test(
   NAME "yarpgen/${testname}"
-  COMMAND caffeine-bin "$<TARGET_PROPERTY:yarpgen-${testname},OUTPUT>" main
+  COMMAND caffeine-bin "$<TARGET_PROPERTY:yarpgen-${testname},OUTPUT>"
 )
 EOM
 

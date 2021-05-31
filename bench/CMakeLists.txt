@@ -1,5 +1,6 @@
 
 include(LLVMIRUtils)
+include(CaffeineUtils)
 
 function(caffeine_benchmark NAME)
   set(sources "${ARGN}")
@@ -10,21 +11,20 @@ function(caffeine_benchmark NAME)
   llvm_include_directories(${target} PRIVATE "${CMAKE_SOURCE_DIR}/interface")
   llvm_link_libraries     (${target} PRIVATE caffeine-builtins)
 
-  add_custom_command(
+  caffeine_custom_command(
+    TARGET "gen-${target}" ALL
     OUTPUT "${target}.ll"
-    MAIN_DEPENDENCY "${out_dir}/lib.bc"
     COMMAND "${LLVM_OPT}" ARGS
       -O3
       --internalize
       --internalize-public-api-list main
       --globaldce
       -o "${out_dir}/optimized.bc"
-      "${out_dir}/lib.bc"
+      "$<TARGET_PROPERTY:${target},OUTPUT>"
     COMMAND "${LLVM_DIS}" ARGS "${out_dir}/optimized.bc" -o "${target}.ll"
     COMMENT "Optimizing bench-${NAME}"
+    DEPENDS ${target}
   )
-
-  add_custom_target("gen-${target}" ALL DEPENDS "${target}.ll")
 endfunction()
 
 caffeine_benchmark(maze          maze.c)

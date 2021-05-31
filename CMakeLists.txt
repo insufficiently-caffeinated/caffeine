@@ -25,11 +25,12 @@ set(CAFFEINE_ENABLE_LTO OFF CACHE STRING "Enable link-time-optimizations. Valid 
 set(CAFFEINE_USE_LINKER ""  CACHE STRING "Add -fuse-ld={name} to the link invocation.")
 
 # Sanitizers
-option(CAFFEINE_ENABLE_TSAN  "Build with ThreadSanitizer"  OFF)
-option(CAFFEINE_ENABLE_ASAN  "Build with AddressSanitizer" OFF)
-option(CAFFEINE_ENABLE_UBSAN "Build with UndefinedBehaviourSanitizer" OFF)
-option(CAFFEINE_ENABLE_MSAN  "Build with MemorySanitizer"  OFF)
-option(CAFFEINE_ENABLE_LSAN  "Build with LeakSanitizer"    OFF)
+option(CAFFEINE_ENABLE_TSAN      "Build with ThreadSanitizer"  OFF)
+option(CAFFEINE_ENABLE_ASAN      "Build with AddressSanitizer" OFF)
+option(CAFFEINE_ENABLE_UBSAN     "Build with UndefinedBehaviourSanitizer" OFF)
+option(CAFFEINE_ENABLE_MSAN      "Build with MemorySanitizer"  OFF)
+option(CAFFEINE_ENABLE_LSAN      "Build with LeakSanitizer"    OFF)
+option(CAFFEINE_ENABLE_COVERAGE  "Build with LLVM coverage reports" OFF)
 
 # Options used within CI but not really useful anywhere else
 option(CAFFEINE_CI            "Enable options that are inconvenient for normal development but are used in CI" OFF)
@@ -93,6 +94,7 @@ if (CAFFEINE_ENABLE_BUILD)
 
   set(IR_USE_BITCODE ${CAFFEINE_BUILD_BITCODE})
 
+  include(CaffeineCoverage)
   include(CaffeineSanitizers)
   include(CaffeineWarnings)
   include(CaffeineLinking)

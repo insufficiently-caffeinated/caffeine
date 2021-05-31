@@ -95,12 +95,17 @@ public:
   ExecutionResult visitExtractElementInst(llvm::ExtractElementInst& inst);
   ExecutionResult visitShuffleVectorInst(llvm::ShuffleVectorInst& inst);
   ExecutionResult visitAllocaInst(llvm::AllocaInst& inst);
+  ExecutionResult visitExtractValueInst(llvm::ExtractValueInst& inst);
+  ExecutionResult visitInsertValueInst(llvm::InsertValueInst& inst);
 
   ExecutionResult visitMemCpyInst(llvm::MemCpyInst& memcpy);
   ExecutionResult visitMemMoveInst(llvm::MemMoveInst& memmove);
   ExecutionResult visitMemSetInst(llvm::MemSetInst& memset);
 
   ExecutionResult visitDbgInfoIntrinsic(llvm::DbgInfoIntrinsic&);
+
+  ExecutionResult visitUMulWithOverflowIntrinsic(llvm::IntrinsicInst& inst);
+  ExecutionResult visitSMulWithOverflowIntrinsic(llvm::IntrinsicInst& inst);
 
 private:
   void logFailure(Context& ctx, const Assertion& assertion,
