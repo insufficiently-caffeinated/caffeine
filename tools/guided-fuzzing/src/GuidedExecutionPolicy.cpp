@@ -9,15 +9,13 @@ namespace caffeine {
 Assertion create_size_assertion(const OpRef* data, size_t size) {
   auto fixed_array = llvm::dyn_cast<FixedArray>(data->get());
   if (fixed_array) {
-    return std::move(
-        Assertion(ICmpOp::CreateICmpEQ(fixed_array->size(), size)));
+    return Assertion(ICmpOp::CreateICmpEQ(fixed_array->size(), size));
   }
 
   auto constant_array = llvm::dyn_cast<ConstantArray>(data->get());
   CAFFEINE_ASSERT(constant_array,
                   "OpRef `data` must be either a FixedArray or ConstantArray");
-  return std::move(
-      Assertion(ICmpOp::CreateICmpEQ(constant_array->size(), size)));
+  return Assertion(ICmpOp::CreateICmpEQ(constant_array->size(), size));
 }
 
 GuidedExecutionPolicy::GuidedExecutionPolicy(caffeine::Span<uint8_t> data,
