@@ -2,7 +2,14 @@
 
 #include "caffeine/Interpreter/Context.h"
 #include "caffeine/Interpreter/Policy.h"
+#include "caffeine/Interpreter/Store.h"
 #include "caffeine/Solver/Solver.h"
+
+#include "CaffeineMutator.h"
+
+extern "C" {
+#include "afl-fuzz.h"
+}
 
 namespace caffeine {
 
@@ -11,14 +18,19 @@ namespace caffeine {
  * assertions combined with the given AssertionList is satisfiable.
  */
 class GuidedExecutionPolicy : public ExecutionPolicy {
-  AssertionList requiredAssertions_;
-  std::shared_ptr<Solver> solver_;
+  CaffeineMutator* mutator;
+  TestCaseStoragePtr cases;
+  caffeine::Span<char> data;
+  std::string symbol_name;
 
 public:
-  GuidedExecutionPolicy(AssertionList& list, std::shared_ptr<Solver> solver);
+  GuidedExecutionPolicy(caffeine::Span<char> data, std::string symbol_name,
+                        CaffeineMutator* mutator, TestCaseStoragePtr cases);
   ~GuidedExecutionPolicy() = default;
 
-  virtual bool should_queue_path(const Context& ctx);
+  bool should_queue_path(const Context& ctx) override;
+  void on_path_complete(const Context& ctx, ExitStatus status,
+                        const Assertion& assertion = Assertion()) override;
 
 protected:
   GuidedExecutionPolicy(GuidedExecutionPolicy&&) = default;
