@@ -97,17 +97,10 @@ size_t CaffeineMutator::get_testcase(unsigned char** out_buf, size_t max_size) {
 caffeine::SharedArray
 CaffeineMutator::model_to_testcase(const Model* model, const Context& ctx,
                                    std::string symbol_name) {
-  // CAFFEINE_ASSERT(model, "Model must be non null");
-
-  // std::cout << "got testcase" << std::endl;
+  CAFFEINE_ASSERT(model, "Model must be non null");
 
   auto res = std::move(
       model->evaluate(*ctx.constants.find(symbol_name)->get()).array());
-
-  // for (auto i : res) {
-  //   std::cout << ((int)i) << " ";
-  // }
-  // std::cout << std::endl;
 
   return res;
 }
