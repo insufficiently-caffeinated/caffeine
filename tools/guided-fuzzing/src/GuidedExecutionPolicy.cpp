@@ -18,7 +18,7 @@ Assertion create_size_assertion(const OpRef* data, size_t size) {
   return Assertion(ICmpOp::CreateICmpEQ(constant_array->size(), size));
 }
 
-GuidedExecutionPolicy::GuidedExecutionPolicy(caffeine::Span<uint8_t> data,
+GuidedExecutionPolicy::GuidedExecutionPolicy(caffeine::Span<char> data,
                                              std::string symbol_name,
                                              CaffeineMutator* mutator,
                                              TestCaseStoragePtr cases)
@@ -39,16 +39,30 @@ bool GuidedExecutionPolicy::should_queue_path(const Context& ctx) {
   const llvm::DataLayout& layout = ctx.mod->getDataLayout();
   unsigned bitwidth = layout.getPointerSizeInBits();
 
-  for (size_t i = 0; i < data.size(); i++) {
+  // Small hack: if we have a FixedArray, and AFL tries to pass in a
+  // larger testcase, we get an assertion failure. To fix this, we take
+  // the minimum of the AFL data, and the FixedArray length.
+  size_t array_len = data.size();
+  auto fixed_array = llvm::dyn_cast<FixedArray>(symbolic_buffer->get());
+  if (fixed_array && fixed_array->data().size() > data.size()) {
+    return false;
+  } else if (fixed_array) {
+    array_len = std::min(array_len, fixed_array->data().size());
+  }
+
+  for (size_t i = 0; i < array_len; i++) {
     combined.insert(Assertion(ICmpOp::CreateICmpEQ(
-        LoadOp::Create(
-            *symbolic_buffer,
-            BinaryOp::CreateAdd(ConstantInt::CreateZero(bitwidth), i)),
+        LoadOp::Create(*symbolic_buffer,
+                       ConstantInt::Create(llvm::APInt(bitwidth, i))),
         data.data()[i])));
   }
 
   auto all_assertions_sat = mutator->solver->resolve(combined);
   if (all_assertions_sat.kind() == SolverResult::Kind::SAT) {
+    all_assertions_sat.evaluate(*ctx.constants.find(symbol_name)->get())
+        .array();
+    cases->push_back(mutator->model_to_testcase(all_assertions_sat.model(), ctx,
+                                                symbol_name));
     return true;
   }
 

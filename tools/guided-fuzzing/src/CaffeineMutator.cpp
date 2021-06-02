@@ -50,8 +50,7 @@ CaffeineMutator::CaffeineMutator(std::string binary_path, afl_state_t* afl) {
                                           caffeine::Z3Solver());
 }
 
-size_t CaffeineMutator::mutate(caffeine::Span<uint8_t> data,
-                               unsigned char** out_buf, size_t max_size) {
+size_t CaffeineMutator::mutate(caffeine::Span<char> data) {
   const std::lock_guard<std::mutex> lock(termination_mutex);
   if (terminated) {
     return 0;
@@ -59,8 +58,6 @@ size_t CaffeineMutator::mutate(caffeine::Span<uint8_t> data,
 
   caffeine::ExecutorOptions options;
   options.num_threads = 1;
-
-  TestCaseStoragePtr cases = std::make_shared<TestCaseStorage>();
 
   auto context = Context(this->fuzz_target);
   auto frame = context.stack_top();
@@ -74,33 +71,45 @@ size_t CaffeineMutator::mutate(caffeine::Span<uint8_t> data,
   store.add_context(std::move(context));
 
   exec.run();
+  return cases->size();
+}
 
-  // Use the first case as the mutated output
-  bool got_first = false;
-  size_t bytes_written = 0;
-  for (auto& test_case : *cases) {
-    if (test_case.size() <= max_size) {
-      if (!got_first) {
-        *out_buf = (unsigned char*)malloc(test_case.size());
-        memcpy(*out_buf, test_case.data(), test_case.size());
-        bytes_written = test_case.size();
-        got_first = true;
-      } else {
-        // TODO: Write to testcase dir manually
-      }
-    }
+size_t CaffeineMutator::get_testcase(unsigned char** out_buf, size_t max_size) {
+  while (cases->size() > 0 && cases->at(cases->size() - 1).size() > max_size) {
+    cases->pop_back();
   }
 
-  return bytes_written;
+  if (cases->size() == 0) {
+    return 0;
+  }
+
+  auto& test_case = cases->at(cases->size() - 1);
+
+  *out_buf = (unsigned char*)malloc(test_case.size());
+  memcpy(*out_buf, test_case.data(), test_case.size());
+
+  auto len = test_case.size();
+  cases->pop_back();
+
+  return len;
 }
 
 caffeine::SharedArray
 CaffeineMutator::model_to_testcase(const Model* model, const Context& ctx,
                                    std::string symbol_name) {
-  CAFFEINE_ASSERT(model, "Model must be non null");
+  // CAFFEINE_ASSERT(model, "Model must be non null");
 
-  return std::move(
+  // std::cout << "got testcase" << std::endl;
+
+  auto res = std::move(
       model->evaluate(*ctx.constants.find(symbol_name)->get()).array());
+
+  // for (auto i : res) {
+  //   std::cout << ((int)i) << " ";
+  // }
+  // std::cout << std::endl;
+
+  return res;
 }
 
 void CaffeineMutator::terminate() {

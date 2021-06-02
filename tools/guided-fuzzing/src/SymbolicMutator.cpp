@@ -3,6 +3,7 @@ extern "C" {
 }
 
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
 #include <string>
 
@@ -20,11 +21,17 @@ caffeine::CaffeineMutator* afl_custom_init(afl_state_t* afl, unsigned int) {
   return mut;
 }
 
-size_t afl_custom_fuzz(caffeine::CaffeineMutator* data, unsigned char* buf,
-                       size_t buf_size, unsigned char** out_buf, unsigned char*,
-                       size_t, size_t max_size) {
-  caffeine::Span<uint8_t> testcase(buf, buf_size);
-  return data->mutate(testcase, out_buf, max_size);
+size_t afl_custom_fuzz(caffeine::CaffeineMutator* data, unsigned char* in_buf,
+                       size_t, unsigned char** out_buf, unsigned char*, size_t,
+                       size_t max_size) {
+  *out_buf = in_buf; // Prevent AFL from thinking there was an error
+  return data->get_testcase(out_buf, max_size);
+}
+
+unsigned int afl_custom_fuzz_count(caffeine::CaffeineMutator* data, char* buf,
+                                   size_t buf_size) {
+  caffeine::Span<char> testcase(buf, buf_size);
+  return data->mutate(testcase);
 }
 
 void afl_custom_deinit(caffeine::CaffeineMutator* data) {

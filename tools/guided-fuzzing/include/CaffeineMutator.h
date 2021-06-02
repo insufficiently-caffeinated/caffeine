@@ -29,14 +29,15 @@ private:
   llvm::Function* fuzz_target;
   std::mutex termination_mutex;
   bool terminated = false;
+  TestCaseStoragePtr cases = std::make_shared<TestCaseStorage>();
 
 public:
   std::shared_ptr<Solver> solver;
 
 public:
   CaffeineMutator(std::string binary_path, afl_state_t* afl);
-  size_t mutate(caffeine::Span<uint8_t> data, unsigned char** out_buf,
-                size_t max_size);
+  size_t mutate(caffeine::Span<char> data);
+  size_t get_testcase(unsigned char** out_buf, size_t max_size);
   caffeine::SharedArray model_to_testcase(const Model* model,
                                           const Context& ctx,
                                           std::string symbol_name);
