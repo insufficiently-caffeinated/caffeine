@@ -20,11 +20,11 @@ namespace caffeine {
 class GuidedExecutionPolicy : public ExecutionPolicy {
   CaffeineMutator* mutator;
   TestCaseStoragePtr cases;
-  caffeine::Span<char> data;
+  std::string data;
   std::string symbol_name;
 
 public:
-  GuidedExecutionPolicy(caffeine::Span<char> data, std::string symbol_name,
+  GuidedExecutionPolicy(std::string_view data, std::string symbol_name,
                         CaffeineMutator* mutator, TestCaseStoragePtr cases);
   ~GuidedExecutionPolicy() = default;
 

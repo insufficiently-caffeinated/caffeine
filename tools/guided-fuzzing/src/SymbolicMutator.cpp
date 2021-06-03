@@ -3,12 +3,12 @@ extern "C" {
 }
 
 #include <cstdlib>
-#include <fstream>
-#include <iostream>
 #include <string>
 
 #include "CaffeineMutator.h"
 #include "caffeine/ADT/Span.h"
+
+unsigned count = 0;
 
 extern "C" {
 
@@ -21,10 +21,9 @@ caffeine::CaffeineMutator* afl_custom_init(afl_state_t* afl, unsigned int) {
   return mut;
 }
 
-size_t afl_custom_fuzz(caffeine::CaffeineMutator* data, unsigned char* in_buf,
-                       size_t, unsigned char** out_buf, unsigned char*, size_t,
+size_t afl_custom_fuzz(caffeine::CaffeineMutator* data, unsigned char*, size_t,
+                       unsigned char** out_buf, unsigned char*, size_t,
                        size_t max_size) {
-  *out_buf = in_buf; // Prevent AFL from thinking there was an error
   return data->get_testcase(out_buf, max_size);
 }
 
