@@ -17,6 +17,29 @@ TEST(OperationTests, vtable_is_copied) {
   ASSERT_EQ(copy->num_operands(), fixed_array->num_operands());
 }
 
+TEST(OperationTests, const_array_with_new_operands) {
+  auto sym = Symbol("name");
+  auto constant_array =
+      ConstantArray::Create(sym, {Constant::Create(Type::int_ty(1), 0)});
+
+  auto copy =
+      constant_array->with_new_operands({Constant::Create(Type::int_ty(1), 1)});
+
+  ASSERT_EQ(constant_array->num_operands(), 1);
+  ASSERT_EQ(copy->num_operands(), constant_array->num_operands());
+}
+
+TEST(OperationTests, const_array_with_new_operands_into_ref) {
+  auto constant_array = ConstantArray::Create(
+      Symbol("name"), {Constant::Create(Type::int_ty(1), 4)});
+
+  auto copy =
+      constant_array->with_new_operands({Constant::Create(Type::int_ty(1), 4)});
+
+  ASSERT_EQ(constant_array->num_operands(), 1);
+  ASSERT_EQ(copy->num_operands(), constant_array->num_operands());
+}
+
 TEST(OperationTests, const_div_by_0_does_not_fault) {
   auto value = BinaryOp::CreateUDiv(1, ConstantInt::CreateZero(64));
 
@@ -72,4 +95,36 @@ TEST(OperationTests, smul_overflow_is_valid) {
     ASSERT_EQ(res, z3::unsat) << "model:\n" << z3solver.get_model();
     z3solver.reset();
   }
+}
+
+TEST(OperationTests, create_trunc_or_zext_returns_trunc) {
+  auto target = ConstantInt::Create(llvm::APInt(16, 1));
+  auto source = Constant::Create(Type::int_ty(32), Symbol(1));
+  auto oper = UnaryOp::CreateTruncOrZExt(target->type(), source);
+
+  ASSERT_EQ(oper->opcode(), Operation::Trunc);
+}
+
+TEST(OperationTests, create_trunc_or_zext_returns_zext) {
+  auto target = ConstantInt::Create(llvm::APInt(32, 5));
+  auto source = Constant::Create(Type::int_ty(16), Symbol(1));
+  auto oper = UnaryOp::CreateTruncOrZExt(target->type(), source);
+
+  ASSERT_EQ(oper->opcode(), Operation::ZExt);
+}
+
+TEST(OperationTests, create_trunc_or_sext_returns_trunc) {
+  auto target = ConstantInt::Create(llvm::APInt(16, 1));
+  auto source = Constant::Create(Type::int_ty(32), Symbol(1));
+  auto oper = UnaryOp::CreateTruncOrSExt(target->type(), source);
+
+  ASSERT_EQ(oper->opcode(), Operation::Trunc);
+}
+
+TEST(OperationTests, create_trunc_or_sext_returns_sext) {
+  auto target = ConstantInt::Create(llvm::APInt(32, 5));
+  auto source = Constant::Create(Type::int_ty(16), Symbol(1));
+  auto oper = UnaryOp::CreateTruncOrSExt(target->type(), source);
+
+  ASSERT_EQ(oper->opcode(), Operation::SExt);
 }
