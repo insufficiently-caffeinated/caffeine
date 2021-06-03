@@ -47,3 +47,15 @@ TEST_F(ExprEvaluatorTests, does_not_create_allocation) {
   auto value = eval.try_visit(m->getNamedGlobal("data"));
   ASSERT_FALSE(value.has_value());
 }
+
+TEST_F(ExprEvaluatorTests, undef_global_fails) {
+  llvm::Module* m = module_with_global.get();
+
+  Context ctx{m->getFunction("func")};
+  ExprEvaluator::Options options;
+  options.create_allocations = true;
+  ExprEvaluator eval{&ctx, options};
+
+  auto value = eval.try_visit(m->getNamedGlobal("no_init"));
+  ASSERT_FALSE(value.has_value());
+}

@@ -3,6 +3,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-pc-linux-gnu"
 
 @data = internal global [32 x i32] zeroinitializer, align 4
+@no_init = external global [2 x i32], align 4
 
 define dso_local void @func() local_unnamed_addr #0 {
   ret void
