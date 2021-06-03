@@ -16,7 +16,7 @@ extern "C" {
 
 namespace caffeine {
 
-typedef std::vector<SharedArray> TestCaseStorage;
+typedef std::vector<std::string> TestCaseStorage;
 typedef std::shared_ptr<TestCaseStorage> TestCaseStoragePtr;
 
 struct CaffeineMutator {
@@ -30,6 +30,8 @@ private:
   std::mutex termination_mutex;
   bool terminated = false;
   TestCaseStoragePtr cases = std::make_shared<TestCaseStorage>();
+
+  std::string last_case;
 
 public:
   std::shared_ptr<Solver> solver;

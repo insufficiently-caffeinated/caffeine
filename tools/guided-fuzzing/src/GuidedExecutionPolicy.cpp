@@ -1,24 +1,20 @@
 #include "GuidedExecutionPolicy.h"
 
 #include "caffeine/Interpreter/Interpreter.h"
+#include "caffeine/Support/Tracing.h"
 
 #include <iostream>
 
 namespace caffeine {
 
-Assertion create_size_assertion(const OpRef* data, size_t size) {
-  auto fixed_array = llvm::dyn_cast<FixedArray>(data->get());
-  if (fixed_array) {
-    return Assertion(ICmpOp::CreateICmpEQ(fixed_array->size(), size));
-  }
+Assertion create_size_assertion(const OpRef& data, size_t size) {
+  auto array = llvm::dyn_cast<ArrayBase>(data.get());
+  CAFFEINE_ASSERT(array, "OpRef `data` must be an array type");
 
-  auto constant_array = llvm::dyn_cast<ConstantArray>(data->get());
-  CAFFEINE_ASSERT(constant_array,
-                  "OpRef `data` must be either a FixedArray or ConstantArray");
-  return Assertion(ICmpOp::CreateICmpEQ(constant_array->size(), size));
+  return Assertion(ICmpOp::CreateICmpEQ(array->size(), size));
 }
 
-GuidedExecutionPolicy::GuidedExecutionPolicy(caffeine::Span<char> data,
+GuidedExecutionPolicy::GuidedExecutionPolicy(std::string_view data,
                                              std::string symbol_name,
                                              CaffeineMutator* mutator,
                                              TestCaseStoragePtr cases)
@@ -34,58 +30,37 @@ bool GuidedExecutionPolicy::should_queue_path(const Context& ctx) {
   }
 
   AssertionList combined = ctx.assertions;
-  combined.insert(create_size_assertion(symbolic_buffer, data.size()));
+  combined.insert(create_size_assertion(*symbolic_buffer, data.size()));
 
   const llvm::DataLayout& layout = ctx.mod->getDataLayout();
   unsigned bitwidth = layout.getPointerSizeInBits();
 
-  // Small hack: if we have a FixedArray, and AFL tries to pass in a
-  // larger testcase, we get an assertion failure. To fix this, we take
-  // the minimum of the AFL data, and the FixedArray length.
-  size_t array_len = data.size();
-  auto fixed_array = llvm::dyn_cast<FixedArray>(symbolic_buffer->get());
-  if (fixed_array && fixed_array->data().size() > data.size()) {
-    return false;
-  } else if (fixed_array) {
-    array_len = std::min(array_len, fixed_array->data().size());
-  }
-
-  for (size_t i = 0; i < array_len; i++) {
+  for (size_t i = 0; i < data.size(); i++) {
     combined.insert(Assertion(ICmpOp::CreateICmpEQ(
         LoadOp::Create(*symbolic_buffer,
                        ConstantInt::Create(llvm::APInt(bitwidth, i))),
-        data.data()[i])));
+        (uint8_t)data[i])));
   }
 
-  auto all_assertions_sat = mutator->solver->resolve(combined);
-  if (all_assertions_sat.kind() == SolverResult::Kind::SAT) {
-    all_assertions_sat.evaluate(*ctx.constants.find(symbol_name)->get())
-        .array();
-    cases->push_back(mutator->model_to_testcase(all_assertions_sat.model(), ctx,
-                                                symbol_name));
-    return true;
-  }
-
-  AssertionList assertions_copy = ctx.assertions;
-  SolverResult partial = mutator->solver->resolve(assertions_copy);
-  if (partial.kind() == SolverResult::Kind::SAT) {
-    partial.evaluate(*ctx.constants.find(symbol_name)->get()).array();
-    cases->push_back(
-        mutator->model_to_testcase(partial.model(), ctx, symbol_name));
-  }
-
-  return false;
+  return mutator->solver->check(combined) == SolverResult::SAT;
 }
 
-void GuidedExecutionPolicy::on_path_complete(const Context& ctx,
-                                             ExitStatus status,
+void GuidedExecutionPolicy::on_path_complete(const Context& ctx, ExitStatus,
                                              const Assertion& assertion) {
-  if (status == ExitStatus::Fail) {
-    Context ctx_copy = ctx;
-    cases->push_back(mutator->model_to_testcase(
-        ctx_copy.resolve(mutator->solver, assertion).model(), ctx_copy,
-        symbol_name));
-  }
+  auto assertions = ctx.assertions;
+  auto result = mutator->solver->resolve(assertions, assertion);
+
+  if (result != SolverResult::SAT)
+    return;
+
+  auto tc = mutator->model_to_testcase(result.model(), ctx, symbol_name);
+  std::string_view tcdata(tc.data(), tc.size());
+
+  // Don't mutate to a no-change test case
+  if (tcdata == data)
+    return;
+
+  cases->emplace_back(tcdata);
 }
 
 } // namespace caffeine

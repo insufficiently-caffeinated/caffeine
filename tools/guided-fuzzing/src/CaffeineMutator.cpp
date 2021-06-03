@@ -8,6 +8,7 @@
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/Support/CommandLine.h>
 
+#include "caffeine/ADT/Guard.h"
 #include "caffeine/ADT/Span.h"
 #include "caffeine/Interpreter/Interpreter.h"
 #include "caffeine/Interpreter/Policy.h"
@@ -15,16 +16,20 @@
 #include "caffeine/Solver/CanonicalizingSolver.h"
 #include "caffeine/Solver/SequenceSolver.h"
 #include "caffeine/Solver/SimplifyingSolver.h"
+#include "caffeine/Solver/SlicingSolver.h"
 #include "caffeine/Solver/Z3Solver.h"
 #include "caffeine/Support/DiagnosticHandler.h"
+#include "caffeine/Support/Tracing.h"
 
 #include "GuidedExecutionPolicy.h"
 
 #define CAFFEINE_FUZZ_TARGET "LLVMFuzzerTestOneInput"
-#define CAFFEINE_FUZZ_START "main"
+#define CAFFEINE_FUZZ_START "__caffeine_entry_point"
 
 namespace caffeine {
 CaffeineMutator::CaffeineMutator(std::string binary_path, afl_state_t* afl) {
+  static tracing::TraceContext tracectx{"caffeine.trace"};
+
   this->afl = afl;
 
   llvm_context = std::make_unique<llvm::LLVMContext>();
@@ -45,9 +50,9 @@ CaffeineMutator::CaffeineMutator(std::string binary_path, afl_state_t* afl) {
     CAFFEINE_ABORT();
   }
 
-  solver = caffeine::make_sequence_solver(caffeine::SimplifyingSolver(),
-                                          caffeine::CanonicalizingSolver(),
-                                          caffeine::Z3Solver());
+  solver = caffeine::make_sequence_solver(
+      caffeine::SimplifyingSolver(), caffeine::CanonicalizingSolver(),
+      caffeine::SlicingSolver(std::make_unique<caffeine::Z3Solver>()));
 }
 
 size_t CaffeineMutator::mutate(caffeine::Span<char> data) {
@@ -59,8 +64,12 @@ size_t CaffeineMutator::mutate(caffeine::Span<char> data) {
   caffeine::ExecutorOptions options;
   options.num_threads = 1;
 
-  auto context = Context(this->fuzz_target);
-  auto frame = context.stack_top();
+  auto bitwidth = this->module->getDataLayout().getPointerSizeInBits();
+
+  // Create a context and pass the size in as an argument
+  auto context =
+      Context(this->fuzz_target,
+              {ConstantInt::Create(llvm::APInt(bitwidth, data.size()))});
 
   auto policy =
       caffeine::GuidedExecutionPolicy(data, "__caffeine_mut", this, cases);
@@ -75,23 +84,19 @@ size_t CaffeineMutator::mutate(caffeine::Span<char> data) {
 }
 
 size_t CaffeineMutator::get_testcase(unsigned char** out_buf, size_t max_size) {
-  while (cases->size() > 0 && cases->at(cases->size() - 1).size() > max_size) {
+  while (!cases->empty()) {
+    last_case = std::move(cases->back());
     cases->pop_back();
+
+    if (last_case.size() > max_size)
+      break;
+
+    *out_buf = (unsigned char*)last_case.data();
+    return last_case.size();
   }
 
-  if (cases->size() == 0) {
-    return 0;
-  }
-
-  auto& test_case = cases->at(cases->size() - 1);
-
-  *out_buf = (unsigned char*)malloc(test_case.size());
-  memcpy(*out_buf, test_case.data(), test_case.size());
-
-  auto len = test_case.size();
-  cases->pop_back();
-
-  return len;
+  *out_buf = nullptr;
+  return 0;
 }
 
 caffeine::SharedArray
@@ -99,8 +104,8 @@ CaffeineMutator::model_to_testcase(const Model* model, const Context& ctx,
                                    std::string symbol_name) {
   CAFFEINE_ASSERT(model, "Model must be non null");
 
-  auto res = std::move(
-      model->evaluate(*ctx.constants.find(symbol_name)->get()).array());
+  auto res =
+      std::move(model->evaluate(**ctx.constants.find(symbol_name)).array());
 
   return res;
 }
