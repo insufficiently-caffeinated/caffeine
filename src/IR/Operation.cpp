@@ -2,6 +2,7 @@
 #include "Operation.h"
 #include "caffeine/IR/Type.h"
 #include "caffeine/IR/Value.h"
+#include "caffeine/Support/Macros.h"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/container_hash/hash.hpp>
@@ -15,10 +16,12 @@
 
 namespace caffeine {
 
-#define ASSERT_SAME_TYPES(v1, v2)                                              \
-  CAFFEINE_ASSERT((v1)->type() == (v2)->type(),                                \
-                  fmt::format("arguments had different types: {} != {}",       \
-                              (v1)->type(), (v2)->type()))
+#define ASSERT_SAME_TYPES_2(v1, v2)                                            \
+  ASSERT_SAME_TYPES_3(v1, v2, "arguments had different types")
+#define ASSERT_SAME_TYPES_3(t1, t2, msg)                                       \
+  CAFFEINE_ASSERT((t1) == (t2), fmt::format("{}: {} != {}", (msg), (t1), (t2)))
+#define ASSERT_SAME_TYPES(...)                                                 \
+  CAFFEINE_INVOKE_NUMBERED(ASSERT_SAME_TYPES_, __VA_ARGS__)
 
 Operation::Operation() : opcode_(Invalid), type_(Type::void_ty()) {}
 
@@ -736,9 +739,8 @@ OpRef SelectOp::Create(const OpRef& cond, const OpRef& true_value,
   CAFFEINE_ASSERT(
       cond->type() == Type::int_ty(1),
       fmt::format("select condition was not an i1, it was {}", cond->type()));
-
-  CAFFEINE_ASSERT(true_value->type() == false_value->type(),
-                  "select values had different types");
+  ASSERT_SAME_TYPES(true_value->type(), false_value->type(),
+                    "select values had different types");
 
   return constant_fold(
       SelectOp(true_value->type(), cond, true_value, false_value));
