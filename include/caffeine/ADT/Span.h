@@ -8,6 +8,7 @@
 #include <initializer_list>
 #include <iterator>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include <llvm/ADT/SmallVector.h>
@@ -51,6 +52,10 @@ public:
   template <typename Traits, typename Alloc>
   constexpr Span(std::basic_string<T, Traits, Alloc>& str)
       : Span(str.data(), str.size()) {}
+  template <typename Traits, bool is_const = std::is_const_v<T>,
+            typename U = std::enable_if_t<is_const>>
+  constexpr Span(std::basic_string_view<std::remove_const_t<T>, Traits> view)
+      : Span(view.data(), view.size()) {}
 
   constexpr size_t size() const {
     return size_;
@@ -94,6 +99,13 @@ public:
   }
   constexpr reverse_iterator rend() const {
     return std::make_reverse_iterator(begin());
+  }
+
+  constexpr std::basic_string_view<T> view() const {
+    return std::basic_string_view<T>(data(), size());
+  }
+  constexpr operator std::basic_string_view<T>() const {
+    return view();
   }
 
   // Get a new span that is a subsection of this span.
