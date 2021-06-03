@@ -1,4 +1,5 @@
 #include "caffeine/IR/Value.h"
+#include "caffeine/IR/Operation.h"
 #include "caffeine/IR/Type.h"
 
 #include <gtest/gtest.h>
@@ -46,4 +47,44 @@ TEST(ir_value, sdiv_invalid_does_not_fault) {
   Value b{llvm::APInt::getAllOnesValue(32)};
 
   Value::bvsdiv(a, b);
+}
+
+TEST(ir_value, print_int) {
+  auto ci = ConstantInt::Create(llvm::APInt(32, 1337));
+  auto constant_int = llvm::dyn_cast<ConstantInt>(ci.get());
+  ASSERT_TRUE(constant_int);
+
+  std::stringstream output;
+  output << Value(*constant_int);
+  ASSERT_EQ(output.str(), "1337");
+}
+
+TEST(ir_value, print_float) {
+  auto cf = ConstantFloat::Create(llvm::APFloat(0.5));
+  auto constant_float = llvm::dyn_cast<ConstantFloat>(cf.get());
+  ASSERT_TRUE(constant_float);
+
+  std::stringstream output;
+  output << Value(*constant_float);
+
+  // Choose a floating point number which can be stored
+  // accurately to avoid anything like 0.5100000000000000089
+  ASSERT_EQ(output.str(), "0.5");
+}
+
+TEST(ir_value, print_array) {
+  std::stringstream output;
+  output << Value(SharedArray({0, 0, 0}), Type::int_ty(32));
+  // This is temporary, but if anyone implements that
+  // it will help them update the testcase
+  ASSERT_EQ(output.str(), "<array>");
+}
+
+TEST(ir_value, print_vector) {
+  std::stringstream output;
+  std::vector<Value> data;
+  output << Value(data);
+  // This is temporary, but if anyone implements that
+  // it will help them update the testcase
+  ASSERT_EQ(output.str(), "<vector>");
 }
