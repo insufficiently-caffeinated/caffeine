@@ -51,8 +51,7 @@ TEST(ir_value, sdiv_invalid_does_not_fault) {
 
 TEST(ir_value, print_int) {
   auto ci = ConstantInt::Create(llvm::APInt(32, 1337));
-  auto constant_int = llvm::dyn_cast<ConstantInt>(
-      ci.get());
+  auto constant_int = llvm::dyn_cast<ConstantInt>(ci.get());
   ASSERT_TRUE(constant_int);
 
   std::stringstream output;
@@ -62,8 +61,7 @@ TEST(ir_value, print_int) {
 
 TEST(ir_value, print_float) {
   auto cf = ConstantFloat::Create(llvm::APFloat(0.5));
-  auto constant_float = llvm::dyn_cast<ConstantFloat>(
-      cf.get());
+  auto constant_float = llvm::dyn_cast<ConstantFloat>(cf.get());
   ASSERT_TRUE(constant_float);
 
   std::stringstream output;
