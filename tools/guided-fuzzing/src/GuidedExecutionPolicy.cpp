@@ -23,7 +23,6 @@ GuidedExecutionPolicy::GuidedExecutionPolicy(std::string_view data,
 }
 
 bool GuidedExecutionPolicy::should_queue_path(const Context& ctx) {
-  auto traceblock = CAFFEINE_TRACE_SPAN("should_queue_path");
   auto symbolic_buffer = ctx.constants.find(symbol_name);
   if (symbolic_buffer == nullptr) {
     // Since our symbolic allocation is currently not in scope we just continue
