@@ -617,23 +617,17 @@ LLVMValue ExprEvaluator::visitBitCast(llvm::BitCastInst& inst) {
 
 LLVMValue ExprEvaluator::visitGetElementPtr(llvm::GetElementPtrInst& inst) {
   const llvm::DataLayout& layout = ctx->mod->getDataLayout();
+  auto type = inst.getType();
 
   size_t offset_elements = 1;
-  for (auto it = llvm::gep_type_begin(inst), end = llvm::gep_type_end(inst);
-       it != end; ++it) {
-    auto type = it.getOperand()->getType();
-
-    if (type->isVectorTy()) {
-      auto fixedVectorTy = llvm::dyn_cast<llvm::FixedVectorType>(type);
-      CAFFEINE_ASSERT(fixedVectorTy, "Scalable vectors are not supported");
-      CAFFEINE_ASSERT(offset_elements == 1 ||
-                      fixedVectorTy->getNumElements() == offset_elements);
-
-      offset_elements = fixedVectorTy->getNumElements();
-    }
+  if (type->isVectorTy()) {
+    auto fixedVectorTy = llvm::dyn_cast<llvm::FixedVectorType>(type);
+    CAFFEINE_ASSERT(fixedVectorTy, "Scalable vectors are not supported");
+    CAFFEINE_ASSERT(offset_elements == 1 ||
+                    fixedVectorTy->getNumElements() == offset_elements);
+    offset_elements = fixedVectorTy->getNumElements();
   }
 
-  auto type = inst.getType();
   auto ptr_width = layout.getPointerSizeInBits(type->getPointerAddressSpace());
   auto offsets =
       LLVMScalar(ConstantInt::CreateZero(ptr_width)).broadcast(offset_elements);
@@ -652,6 +646,11 @@ LLVMValue ExprEvaluator::visitGetElementPtr(llvm::GetElementPtrInst& inst) {
 
       newoffset = LLVMScalar(member_offset).broadcast(offset_elements);
     } else {
+      auto operand = visit(it.getOperand());
+      if (operand.is_scalar()) {
+        operand = operand.scalar().broadcast(offset_elements);
+      }
+
       newoffset = transform_elements(
           [&](const LLVMScalar& value) {
             OpRef index = UnaryOp::CreateTruncOrSExt(Type::int_ty(ptr_width),
@@ -659,7 +658,7 @@ LLVMValue ExprEvaluator::visitGetElementPtr(llvm::GetElementPtrInst& inst) {
             return BinaryOp::CreateMul(
                 index, layout.getTypeAllocSize(it.getIndexedType()));
           },
-          visit(it.getOperand()));
+          operand);
     }
 
     offsets = transform_elements(
