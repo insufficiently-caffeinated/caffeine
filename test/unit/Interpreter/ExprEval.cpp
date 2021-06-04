@@ -59,3 +59,23 @@ TEST_F(ExprEvaluatorTests, undef_global_fails) {
   auto value = eval.try_visit(m->getNamedGlobal("no_init"));
   ASSERT_FALSE(value.has_value());
 }
+
+TEST_F(ExprEvaluatorTests, visit_throws_when_on_nonexistant_allocation) {
+  llvm::Module* m = module_with_global.get();
+
+  Context ctx{m->getFunction("func")};
+  ExprEvaluator::Options options;
+  options.create_allocations = false;
+  ExprEvaluator eval{&ctx, options};
+
+  auto global = m->getNamedGlobal("data");
+
+  try {
+    eval.visit(*global);
+    FAIL();
+  } catch (ExprEvaluator::Unevaluatable& e) {
+    std::string message = e.what();
+    ASSERT_TRUE(message.find("evaluate expression") != std::string::npos);
+    ASSERT_EQ(e.expr(), global);
+  }
+}
