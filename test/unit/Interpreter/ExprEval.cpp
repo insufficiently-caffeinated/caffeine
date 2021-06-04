@@ -2,6 +2,7 @@
 #include "caffeine/Interpreter/Context.h"
 #include "caffeine/Solver/Solver.h"
 #include "caffeine/Solver/Z3Solver.h"
+#include "caffeine/Support/UnsupportedOperation.h"
 #include <gtest/gtest.h>
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/Support/SourceMgr.h>
@@ -78,4 +79,16 @@ TEST_F(ExprEvaluatorTests, visit_throws_when_on_nonexistant_allocation) {
     ASSERT_TRUE(message.find("evaluate expression") != std::string::npos);
     ASSERT_EQ(e.expr(), global);
   }
+}
+
+TEST_F(ExprEvaluatorTests, throw_on_unsupported_value_type) {
+  llvm::Module* m = module_with_global.get();
+
+  auto func = m->getFunction("func");
+  auto block = &func->getBasicBlockList().front();
+
+  Context ctx{func};
+  ExprEvaluator eval{&ctx};
+
+  ASSERT_THROW(eval.visit(block), UnsupportedOperationException);
 }
