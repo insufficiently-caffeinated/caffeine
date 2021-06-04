@@ -57,7 +57,7 @@ TEST(ir_type, print_ptr) {
     ASSERT_EQ(output.str(), "void*");
 }
 
-TEST(ir_type, print_ptr) {
+TEST(ir_type, print_array) {
     std::stringstream output;
     Type type = Type::array_ty(4);
     output << type;
@@ -65,7 +65,7 @@ TEST(ir_type, print_ptr) {
     ASSERT_EQ(output.str(), "array");
 }
 
-TEST(ir_type, print_ptr) {
+TEST(ir_type, print_vector) {
     std::stringstream output;
     Type type = Type::vector_ty();
     output << type;
