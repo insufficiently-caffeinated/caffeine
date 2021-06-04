@@ -7,7 +7,7 @@ To start, delete your `build` directory and recreate it, then
 run the following command to set up coverage.
 
 ```
-CC=clang CXX=clang++ CXXFLAGS="-fprofile-instr-generate -fcoverage-mapping -g -O0" LDFLAGS="-fprofile-instr-generate -fcoverage-mapping" cmake ..
+CC=clang CXX=clang++ cmake -DCMAKE_BUILD_TYPE=Debug -DCAFFEINE_ENABLE_COVERAGE=ON ..
 ```
 
 This ensures we're using clang and all files are compiled with
