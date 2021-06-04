@@ -164,6 +164,4 @@ void AutoTraceBlock::annotate_detail(std::string_view name,
 
 #endif
 
-
-
 } // namespace caffeine::tracing
