@@ -141,6 +141,8 @@ public:
 
 private:
   OpRef scalarize(const LLVMScalar& scalar) const;
+  LLVMScalar select(const LLVMScalar& cond, const LLVMScalar& t_val,
+                    const LLVMScalar& f_val) const;
 
 private:
   Context* ctx;

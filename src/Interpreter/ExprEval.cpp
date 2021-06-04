@@ -696,6 +696,27 @@ LLVMValue ExprEvaluator::visitGetElementPtr(llvm::GetElementPtrInst& inst) {
       base, offsets);
 }
 
+LLVMScalar ExprEvaluator::select(const LLVMScalar& cond,
+                                 const LLVMScalar& t_val,
+                                 const LLVMScalar& f_val) const {
+  if (!t_val.is_pointer() && !f_val.is_pointer())
+    return SelectOp::Create(cond.expr(), t_val.expr(), f_val.expr());
+
+  const Pointer& t_ptr = t_val.pointer();
+  const Pointer& f_ptr = f_val.pointer();
+  CAFFEINE_ASSERT(t_ptr.heap() == f_ptr.heap());
+
+  if (t_ptr.alloc() == f_ptr.alloc()) {
+    return Pointer(
+        t_ptr.alloc(),
+        SelectOp::Create(cond.expr(), t_ptr.offset(), f_ptr.offset()),
+        t_ptr.heap());
+  }
+
+  return Pointer(SelectOp::Create(cond.expr(), t_ptr.value(ctx->heaps),
+                                  f_ptr.value(ctx->heaps)),
+                 t_ptr.heap());
+}
 LLVMValue ExprEvaluator::visitSelectInst(llvm::SelectInst& op) {
   auto cond = visit(op.getCondition());
   auto t_val = visit(op.getTrueValue());
@@ -708,23 +729,7 @@ LLVMValue ExprEvaluator::visitSelectInst(llvm::SelectInst& op) {
   return transform_elements(
       [&](const LLVMScalar& cond, const LLVMScalar& t_val,
           const LLVMScalar& f_val) -> LLVMScalar {
-        if (!t_val.is_pointer() && !f_val.is_pointer())
-          return SelectOp::Create(cond.expr(), t_val.expr(), f_val.expr());
-
-        const Pointer& t_ptr = t_val.pointer();
-        const Pointer& f_ptr = f_val.pointer();
-        CAFFEINE_ASSERT(t_ptr.heap() == f_ptr.heap());
-
-        if (t_ptr.alloc() == f_ptr.alloc()) {
-          return Pointer(
-              t_ptr.alloc(),
-              SelectOp::Create(cond.expr(), t_ptr.offset(), f_ptr.offset()),
-              t_ptr.heap());
-        }
-
-        return Pointer(SelectOp::Create(cond.expr(), t_ptr.value(ctx->heaps),
-                                        f_ptr.value(ctx->heaps)),
-                       t_ptr.heap());
+        return select(cond, t_val, f_val);
       },
       cond, t_val, f_val);
 }
@@ -733,28 +738,36 @@ LLVMValue ExprEvaluator::visitInsertElement(llvm::InsertElementInst& inst) {
   auto vec_ = visit(inst.getOperand(0));
   auto vec = vec_.vector();
 
-  auto elt = scalarize(visit(inst.getOperand(1)).scalar());
+  auto elt = visit(inst.getOperand(1)).scalar();
   auto idx = visit(inst.getOperand(2)).scalar().expr();
 
   LLVMValue::OpVector result;
   result.reserve(vec.size());
   for (size_t i = 0; i < vec.size(); ++i) {
-    result.emplace_back(
-        SelectOp::Create(ICmpOp::CreateICmpEQ(idx, i), elt, scalarize(vec[i])));
+    result.push_back(select(ICmpOp::CreateICmpEQ(idx, i), elt, vec[i]));
   }
 
   return LLVMValue(std::move(result));
 }
 LLVMValue ExprEvaluator::visitExtractElement(llvm::ExtractElementInst& inst) {
-  auto vec_ = visit(inst.getOperand(0));
+  auto vec_ = visit(inst.getVectorOperand());
   auto vec = vec_.vector();
 
   auto idx = visit(inst.getOperand(1)).scalar().expr();
+  auto type = inst.getType();
 
-  OpRef result = Undef::Create(Type::from_llvm(inst.getType()));
+  const auto& layout = inst.getModule()->getDataLayout();
+
+  LLVMScalar result =
+      type->isPointerTy()
+          ? LLVMScalar(
+                Pointer(Undef::Create(Type::int_ty(layout.getPointerSizeInBits(
+                            type->getPointerAddressSpace()))),
+                        type->getPointerAddressSpace()))
+          : LLVMScalar(Undef::Create(Type::from_llvm(type)));
+
   for (size_t i = 0; i < vec.size(); ++i) {
-    result = SelectOp::Create(ICmpOp::CreateICmpEQ(idx, i), scalarize(vec[i]),
-                              result);
+    result = select(ICmpOp::CreateICmpEQ(idx, i), vec[i], result);
   }
 
   return LLVMValue(result);
