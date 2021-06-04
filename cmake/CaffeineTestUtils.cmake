@@ -119,12 +119,16 @@ function(declare_test TEST_NAME_OUT test EXPECTED)
       -o <OUTPUT>
       "$<TARGET_PROPERTY:${test_target},OUTPUT>"
     COMMENT "Optimizing ${test_target}"
-    DEPENDS caffeine-opt-plugin "${test_target}"
+    DEPENDS 
+      caffeine-opt-plugin
+      "${test_target}"
+      "$<TARGET_PROPERTY:${test_target},OUTPUT>"
   )
 
   caffeine_custom_command(
     TARGET "gen-${test_target}" ALL
     OUTPUT "${DIS_OUT}"
+    DEPENDS "${OUT_DIR}/optimized.bc"
     MAIN_DEPENDENCY "${OUT_DIR}/optimized.bc"
     COMMAND "${LLVM_DIS}" ARGS
       "${OUT_DIR}/optimized.bc"

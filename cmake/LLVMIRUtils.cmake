@@ -227,7 +227,7 @@ function(llvm_library TARGET_NAME)
       -o "${library}" "${linked}"
     MAIN_DEPENDENCY "${linked}"
     DEPENDS "$<TARGET_FILE:caffeine-opt-plugin>"
-    COMMENT "Generating builtin methods for ${library}"
+    COMMENT "Generating builtin methods for ${library_rel}"
   )
 
   set_target_properties(
