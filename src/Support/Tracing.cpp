@@ -68,6 +68,10 @@ bool TraceContext::is_enabled() const {
   return !!impl;
 }
 
+bool TraceContext::tracing_enabled() {
+  return !!trace_sink;
+}
+
 struct AutoTraceBlock::Impl {
   capnp::MallocMessageBuilder message;
   llvm::SmallVector<
@@ -103,6 +107,7 @@ struct AutoTraceBlock::Impl {
   }
 };
 
+AutoTraceBlock::AutoTraceBlock() {}
 AutoTraceBlock::AutoTraceBlock(std::string_view name) {
   if (trace_sink) {
     impl = std::make_unique<Impl>();

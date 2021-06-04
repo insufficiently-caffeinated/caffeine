@@ -31,11 +31,15 @@ public:
   ~TraceContext();
 
   bool is_enabled() const;
+  static bool tracing_enabled();
 #else
   TraceContext(const char*) {}
   ~TraceContext() = default;
 
   bool is_enabled() const {
+    return false;
+  }
+  static bool tracing_enabled() {
     return false;
   }
 #endif
@@ -92,6 +96,19 @@ public:
   // limit can cause problems for traces with large annotations.
   static constexpr size_t MAX_ANNOTATION_SIZE = 32 * 1024;
 
+public:
+  static AutoTraceBlock empty() {
+    return AutoTraceBlock();
+  }
+
+private:
+#if CAFFEINE_ENABLE_TRACING
+  AutoTraceBlock();
+#else
+  AutoTraceBlock() = default;
+#endif
+
+public:
 #if CAFFEINE_ENABLE_TRACING
   AutoTraceBlock(std::string_view name);
   ~AutoTraceBlock();
@@ -173,10 +190,12 @@ namespace detail {
  * AutoTraceBlock instance that you can add custom annotations to.
  */
 #define CAFFEINE_TRACE_SPAN(name)                                              \
-  ::caffeine::tracing::AutoTraceBlock(name)                                    \
-      .annotate("line", CAFFEINE_STRINGIFY(__LINE__))                          \
-      .annotate("file", __FILE__)                                              \
-      .annotate("func", CAFFEINE_FUNCTION)                                     \
-      .annotate_func(::caffeine::tracing::detail::annotate_tid)
+  (::caffeine::tracing::TraceContext::tracing_enabled()                        \
+       ? ::caffeine::tracing::AutoTraceBlock(name)                             \
+             .annotate("line", CAFFEINE_STRINGIFY(__LINE__))                   \
+             .annotate("file", __FILE__)                                       \
+             .annotate("func", CAFFEINE_FUNCTION)                              \
+             .annotate_func(::caffeine::tracing::detail::annotate_tid)         \
+       : ::caffeine::tracing::AutoTraceBlock::empty())
 
 } // namespace caffeine::tracing
