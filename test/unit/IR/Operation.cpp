@@ -149,3 +149,20 @@ TEST(OperationTests, int_load_store_simplify_to_noop) {
   ASSERT_EQ((Operation::Opcode)read->opcode(), Operation::ConstantNumbered);
   ASSERT_EQ(value, read) << read;
 }
+
+TEST(OperationTests, float_load_store_simplify_to_noop) {
+  auto layout = llvm::DataLayout(X86_64_LINUX);
+  auto value = Constant::Create(Type::type_of<float>(), 0);
+  auto alloc = Allocation(
+      ConstantInt::CreateZero(64), ConstantInt::Create(llvm::APInt(64, 4)),
+      AllocOp::Create(ConstantInt::Create(llvm::APInt(64, 4)),
+                      ConstantInt::CreateZero(8)),
+      AllocationKind::Alloca, AllocationPermissions::ReadWrite);
+
+  alloc.write(ConstantInt::CreateZero(64), value, layout);
+  auto read =
+      alloc.read(ConstantInt::CreateZero(64), Type::type_of<float>(), layout);
+
+  ASSERT_EQ((Operation::Opcode)read->opcode(), Operation::ConstantNumbered);
+  ASSERT_EQ(value, read) << read;
+}

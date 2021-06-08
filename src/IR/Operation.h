@@ -113,6 +113,9 @@ public:
 
 template <bool move_out = false>
 class ConstantFolder : public ConstOpVisitor<ConstantFolder<move_out>, OpRef> {
+private:
+  using BaseType = ConstOpVisitor<ConstantFolder<move_out>, OpRef>;
+
 public:
 #define TRY_CONST_INT(expr)                                                    \
   do {                                                                         \
@@ -445,6 +448,17 @@ public:
       return ConstantInt::Create(val->value().sext(op.type().bitwidth()));
 
     return this->visitUnaryOp(op);
+  }
+  OpRef visitBitcast(const UnaryOp& op) {
+    {
+      OpRef value;
+      if (matches(op.operand(), matching::Bitcast(value)) &&
+          value->type() == op.type()) {
+        return value;
+      }
+    }
+
+    return BaseType::visitBitcast(op);
   }
 
   OpRef visitSelectOp(const SelectOp& op) {
