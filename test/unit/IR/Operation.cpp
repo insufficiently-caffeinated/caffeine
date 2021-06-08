@@ -1,10 +1,15 @@
 
 #include "caffeine/IR/Operation.h"
+#include "caffeine/Memory/MemHeap.h"
 #include "caffeine/Solver/Z3Solver.h"
 #include <gtest/gtest.h>
 #include <z3++.h>
 
 using namespace caffeine;
+
+// LLVM data layout string for x64_64-pc-linux-gnu
+static const char* const X86_64_LINUX =
+    "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128";
 
 TEST(OperationTests, vtable_is_copied) {
   auto fixed_array = FixedArray::Create(Type::int_ty(32),
@@ -127,4 +132,20 @@ TEST(OperationTests, create_trunc_or_sext_returns_sext) {
   auto oper = UnaryOp::CreateTruncOrSExt(target->type(), source);
 
   ASSERT_EQ(oper->opcode(), Operation::SExt);
+}
+
+TEST(OperationTests, int_load_store_simplify_to_noop) {
+  auto layout = llvm::DataLayout(X86_64_LINUX);
+  auto value = Constant::Create(Type::int_ty(32), 0);
+  auto alloc = Allocation(
+      ConstantInt::CreateZero(64), ConstantInt::Create(llvm::APInt(64, 4)),
+      AllocOp::Create(ConstantInt::Create(llvm::APInt(64, 4)),
+                      ConstantInt::CreateZero(8)),
+      AllocationKind::Alloca, AllocationPermissions::ReadWrite);
+
+  alloc.write(ConstantInt::CreateZero(64), value, layout);
+  auto read = alloc.read(ConstantInt::CreateZero(64), Type::int_ty(32), layout);
+
+  ASSERT_EQ((Operation::Opcode)read->opcode(), Operation::ConstantNumbered);
+  ASSERT_EQ(value, read) << read;
 }
