@@ -12,6 +12,24 @@
 
 namespace caffeine {
 namespace {
+  void dump_symbolic_backtrace(void*) {
+    try {
+      if (const auto* context =
+              caffeine::UnsupportedOperation::CurrentContextUnsafe()) {
+        std::stringstream output;
+        output << "\nSymbolic Backtrace\n";
+        context->print_backtrace(output);
+        llvm::errs() << output.str();
+      } else {
+        llvm::errs() << "\nNo symbolic backtrace available\n";
+      }
+    } catch (...) {
+      llvm::errs() << "ERROR: Exception was thrown while attempting to print "
+                      "backtraces\n";
+    }
+    llvm::errs().flush();
+  }
+
 #ifdef __unix__
   // clang-format off
   static constexpr const int signals[] = {
@@ -46,23 +64,6 @@ namespace {
       raise(sig);
   }
 #endif
-
-  void dump_symbolic_backtrace(void*) {
-    try {
-      if (const auto* context =
-              caffeine::UnsupportedOperation::CurrentContextUnsafe()) {
-        std::stringstream output;
-        output << "\nSymbolic Backtrace\n";
-        context->print_backtrace(output);
-        llvm::errs() << output.rdbuf();
-      }
-    } catch (...) {
-      llvm::errs() << "ERROR: Exception was thrown while attempting to print "
-                      "backtraces\n";
-    }
-    llvm::errs().flush();
-  }
-
 } // namespace
 
 void RegisterSignalHandlers() {
