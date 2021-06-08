@@ -318,6 +318,7 @@ public:
 };
 
 std::ostream& operator<<(std::ostream& os, const Operation& op);
+std::ostream& operator<<(std::ostream& os, Operation::Opcode opcode);
 
 /**
  * Base class for all array-typed operations.
