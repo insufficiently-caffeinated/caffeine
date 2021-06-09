@@ -8,7 +8,7 @@ if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.20")
   cmake_policy(SET CMP0116 OLD)
 endif()
 
-project(caffeine LANGUAGES C CXX)
+project(caffeine LANGUAGES C CXX VERSION 0.0.0)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
@@ -44,6 +44,8 @@ mark_as_advanced(CAFFEINE_ENABLE_BUILD BUILD_SHARED_LIBS)
 ###########################################################
 #            Non-option cmake configuration               #
 ###########################################################
+set(CAFFEINE_VERSION ${PROJECT_VERSION})
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
 # C++17 has a bunch of nice stuff, seems like a good level to target.
@@ -140,3 +142,56 @@ if("${CMAKE_VERSION}" VERSION_GREATER_EQUAL "3.17")
     list(APPEND CMAKE_CTEST_ARGUMENTS "-j${NUM_PROCESSORS}")
   endif()
 endif()
+
+###########################################################
+#               Installation Configuration                #
+###########################################################
+include(GNUInstallDirs)
+
+set(INCLUDE_INSTALL_DIR include)
+set(IR_INSTALL_DIR      lib/caffeine)
+
+install(
+  TARGETS caffeine caffeine-bin caffeine-opt-plugin EXPORT CaffeineTargets
+  RUNTIME       DESTINATION "${CMAKE_INSTALL_BINDIR}"
+  LIBRARY       DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+  ARCHIVE       DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+  PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+)
+
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+  "${CMAKE_CURRENT_BINARY_DIR}/CaffeineConfigVersion.cmake"
+  COMPATIBILITY ExactVersion # Keep until 1.0
+)
+configure_package_config_file(
+  cmake/CaffeineConfig.cmake.in "${CMAKE_BINARY_DIR}/caffeine-config.cmake"
+  INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/caffeine"
+  PATH_VARS
+    INCLUDE_INSTALL_DIR
+    IR_INSTALL_DIR
+)
+
+install(EXPORT CaffeineTargets
+  FILE CaffeineTargets.cmake
+  DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/caffeine"
+  NAMESPACE caffeine::
+)
+install(
+  FILES
+    "${CMAKE_BINARY_DIR}/caffeine-config.cmake"
+    "${CMAKE_BINARY_DIR}/CaffeineConfigVersion.cmake"
+  DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/caffeine"
+)
+install(
+  FILES
+    "$<TARGET_PROPERTY:caffeine-builtins,OUTPUT>"
+    "$<$<BOOL:${CAFFEINE_ENABLE_LIBC}>:$<TARGET_PROPERTY:libc,OUTPUT>>"
+  DESTINATION "${CMAKE_INSTALL_LIBDIR}/caffeine"
+)
+
+install(
+  DIRECTORY interface
+  DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/caffeine"
+)
+

@@ -33,18 +33,20 @@ list(APPEND sources ${CAPNP_SRCS})
 
 add_library(caffeine ${sources} ${headers})
 
-target_include_directories(caffeine PUBLIC "${CMAKE_BINARY_DIR}/gen/")
+target_include_directories(caffeine PUBLIC "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/gen>")
 
 target_include_directories(caffeine
-  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}"
-  PUBLIC "${CMAKE_SOURCE_DIR}/include"
+  PRIVATE  "${CMAKE_CURRENT_SOURCE_DIR}"
+  PUBLIC # Needs to be different between install and build configs
+    "$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>"
+    $<INSTALL_INTERFACE:include/caffeine>
+  PUBLIC
 )
 
 # The SYSTEM should silence warnings within these headers
 target_include_directories(caffeine SYSTEM
   PUBLIC "${LLVM_INCLUDE_DIRS}"
   PUBLIC "${Z3_INCLUDE_DIRS}"
-  PUBLIC "${FMT_INCLUDE_DIRS}"
   PUBLIC "${Boost_INCLUDE_DIRS}"
 )
 
@@ -56,4 +58,20 @@ target_link_libraries(caffeine PUBLIC
   immer
   magic_enum::magic_enum
   CapnProto::capnp-rpc
+)
+
+install(
+  DIRECTORY "${CMAKE_SOURCE_DIR}/include/caffeine"
+  TYPE INCLUDE
+  FILES_MATCHING PATTERN "*.h"
+                 PATTERN "*.hpp"
+                 PATTERN "*.inl"
+)
+
+install(
+  DIRECTORY "${CMAKE_BINARY_DIR}/gen/caffeine"
+  TYPE INCLUDE
+  FILES_MATCHING PATTERN "*.h"
+                 PATTERN "*.hpp"
+                 PATTERN "*.inl"
 )

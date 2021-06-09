@@ -1,0 +1,25 @@
+set(CAFFEINE_VERSION @CAFFEINE_VERSION@)
+
+@PACKAGE_INIT@
+
+include("${CMAKE_CURRENT_LIST_DIR}/CaffeineTargets.cmake")
+
+set_and_check(CAFFEINE_INCLUDE_DIRS  "@PACKAGE_INCLUDE_INSTALL_DIR@")
+set_and_check(CAFFEINE_IR_LIBS_DIR   "@PACKAGE_IR_INSTALL_DIR@")
+set_and_check(CAFFEINE_BUILTINS      "@PACKAGE_IR_INSTALL_DIR@/caffeine-builtins.ll")
+set(CAFFEINE_LIBRARIES     caffeine::caffeine)
+
+add_library(caffeine             ALIAS caffeine::caffeine)
+add_library(caffeine::opt-plugin ALIAS caffeine::caffeine-opt-plugin)
+
+if (EXISTS "@PACKAGE_IR_INSTALL_DIR@/libc.ll")
+  set_and_check(CAFFEINE_LIBC "@PACKAGE_IR_INSTALL_DIR@/libc.ll")
+endif()
+
+add_library(caffeine::interface INTERFACE IMPORTED)
+set_target_properties(
+  caffeine::interface PROPERTIES
+  INTERFACE_INCLUDE_DIRECTORIES "${CAFFEINE_INCLUDE_DIRS}/caffeine/interface"
+)
+
+check_required_components(caffeine)
