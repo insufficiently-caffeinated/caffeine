@@ -12,6 +12,7 @@ project(caffeine LANGUAGES C CXX)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
+include(CMakeDependentOption)
 
 option(CAFFEINE_ENABLE_TESTS    "Enable test targets" ON)
 option(CAFFEINE_ENABLE_FORMAT   "Enable formatting targets" ON)
@@ -19,6 +20,11 @@ option(CAFFEINE_BUILD_BITCODE   "If true compile tests and libraries down to bit
 option(CAFFEINE_ENABLE_IR_TESTS "Enable tests which involve handwritten LLVM IR" ON)
 option(CAFFEINE_ENABLE_LIBC     "Build a bitcode libc for use in tests" OFF)
 option(CAFFEINE_ENABLE_TRACING  "Enable tracing support within caffeine" OFF)
+
+cmake_dependent_option(
+  CAFFEINE_TRACING_EXPENSIVE_ANNOTATIONS "Enable expensive tracing annotations" OFF
+  "CAFFEINE_ENABLE_TRACING" OFF
+)
 
 # Optimization settings
 set(CAFFEINE_ENABLE_LTO OFF CACHE STRING "Enable link-time-optimizations. Valid values: ON, OFF, FULL, THIN")

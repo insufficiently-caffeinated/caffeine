@@ -3,4 +3,7 @@
 
 #cmakedefine01 CAFFEINE_ENABLE_TRACING
 
+// Whether to generate expensive tracing annotations
+#cmakedefine01 CAFFEINE_TRACING_EXPENSIVE_ANNOTATIONS
+
 #endif

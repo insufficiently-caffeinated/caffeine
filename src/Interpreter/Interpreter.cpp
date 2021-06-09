@@ -5,12 +5,15 @@
 #include "caffeine/Interpreter/Store.h"
 #include "caffeine/Interpreter/Value.h"
 #include "caffeine/Support/Assert.h"
+#include "caffeine/Support/LLVMFmt.h"
+#include "caffeine/Support/Tracing.h"
 #include "caffeine/Support/UnsupportedOperation.h"
 
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/combine.hpp>
 #include <boost/range/iterator_range.hpp>
 #include <fmt/format.h>
+#include <fmt/ostream.h>
 #include <llvm/IR/GetElementPtrTypeIterator.h>
 #include <llvm/Support/raw_ostream.h>
 
@@ -63,6 +66,9 @@ Interpreter Interpreter::cloneWith(Context* ctx) {
 }
 
 void Interpreter::execute() {
+  auto frameblock = CAFFEINE_TRACE_SPAN("Interpreter::execute");
+  (void)frameblock;
+  
   while (true) {
     StackFrame& frame = ctx->stack_top();
 
@@ -70,6 +76,8 @@ void Interpreter::execute() {
                     "Instruction pointer ran off end of block.");
 
     llvm::Instruction& inst = *frame.current;
+    auto traceblock = CAFFEINE_TRACE_SPAN(fmt::format(FMT_STRING("{}"), inst));
+    traceblock.annotate("cat", "instruction");
 
     // Note: Need to increment the iterator before actually doing
     //       anything with the instruction since instructions can
@@ -77,6 +85,20 @@ void Interpreter::execute() {
     ++frame.current;
 
     ExecutionResult res = visit(inst);
+
+    if (traceblock.is_enabled() && !ctx->stack.empty()) {
+      // Printing expressions can be potentially very expensive so we only do it
+      // if expensive annotations are enabled.
+      if (CAFFEINE_TRACING_EXPENSIVE_ANNOTATIONS) {
+        auto& frame = ctx->stack_top();
+        auto it = frame.variables.find(&inst);
+        if (it != frame.variables.end()) {
+          traceblock.annotate("value", fmt::format("{}", it->second));
+        }
+      }
+    }
+
+    traceblock.close();
 
     if (!res.contexts().empty()) {
       auto& ctxs = res.contexts();
@@ -337,10 +359,10 @@ ExecutionResult Interpreter::visitSwitchInst(llvm::SwitchInst& inst) {
   return forks;
 }
 ExecutionResult Interpreter::visitCallInst(llvm::CallInst& call) {
-  if (call.isIndirectCall())
+  auto func = call.getCalledFunction();
+  if (!func)
     return visitIndirectCall(call);
 
-  auto func = call.getCalledFunction();
   CAFFEINE_ASSERT(!func->isIntrinsic(),
                   fmt::format("bad function call '{}': intrinsic function "
                               "calls should be handled by visitIntrinsic",
@@ -379,7 +401,7 @@ ExecutionResult Interpreter::visitIntrinsicInst(llvm::IntrinsicInst& intrin) {
 }
 ExecutionResult Interpreter::visitIndirectCall(llvm::CallInst& call) {
   CAFFEINE_ASSERT(
-      call.isIndirectCall(),
+      call.isIndirectCall() || !call.getCalledFunction(),
       "visitIndirectCall called with a non-indirect call instruction");
 
   auto pointer = ctx->lookup(call.getCalledOperand()).scalar().pointer();
