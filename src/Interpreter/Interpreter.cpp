@@ -68,7 +68,7 @@ Interpreter Interpreter::cloneWith(Context* ctx) {
 void Interpreter::execute() {
   auto frameblock = CAFFEINE_TRACE_SPAN("Interpreter::execute");
   (void)frameblock;
-  
+
   while (true) {
     StackFrame& frame = ctx->stack_top();
 
