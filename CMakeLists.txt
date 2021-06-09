@@ -192,6 +192,12 @@ install(
 )
 
 install(
+  DIRECTORY
+    scripts/vcpkg
+  DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/caffeine"
+)
+
+install(
   DIRECTORY interface
   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/caffeine"
 )
