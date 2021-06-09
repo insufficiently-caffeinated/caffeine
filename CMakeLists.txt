@@ -76,50 +76,6 @@ mark_as_advanced(CAFFEINE_FMTONLY)
 # Disable messages for targets on makefile generators
 set_property(GLOBAL PROPERTY TARGET_MESSAGES OFF)
 
-if (CAFFEINE_ENABLE_BUILD)
-
-  # LLVM Requires an exact version specification so we need to do one
-  # find_package call for each LLVM version we want to support
-  find_package(LLVM 11.1 QUIET)
-  if (NOT LLVM_FOUND)
-    find_package(LLVM 11.0 REQUIRED)
-  endif()
-
-  # TODO: We should have an option to download and build these locally if needed.
-  find_package(GTest REQUIRED)
-  find_package(Z3 4.8.7 REQUIRED)
-  find_package(Boost REQUIRED)
-  find_package(fmt REQUIRED)
-  find_package(CapnProto REQUIRED)
-
-  include(CaffeineDependencies)
-
-  set(IR_USE_BITCODE ${CAFFEINE_BUILD_BITCODE})
-
-  include(CaffeineCoverage)
-  include(CaffeineSanitizers)
-  include(CaffeineWarnings)
-  include(CaffeineLinking)
-  include(CaffeineFlags)
-  include(LLVMIRUtils)
-
-  make_directory("${CMAKE_BINARY_DIR}/gen/caffeine")
-  configure_file(Config.h.in "${CMAKE_BINARY_DIR}/gen/caffeine/Config.h")
-
-  if (CAFFEINE_ENABLE_TESTS)
-    enable_testing()
-  endif()
-
-  add_subdirectory(src)
-  add_subdirectory(libraries)
-  add_subdirectory(tools)
-  add_subdirectory(bench)
-
-  if (CAFFEINE_ENABLE_TESTS)
-    add_subdirectory(test)
-  endif()
-endif()
-
 find_program(CLANG_FORMAT clang-format)
 if (CLANG_FORMAT STREQUAL "CLANG_FORMAT-NOTFOUND")
   message(
@@ -130,6 +86,51 @@ if (CLANG_FORMAT STREQUAL "CLANG_FORMAT-NOTFOUND")
   )
 else()
   include(CaffeineFormatting)
+endif()
+
+if (NOT CAFFEINE_ENABLE_BUILD)
+  return()
+endif()
+
+# LLVM Requires an exact version specification so we need to do one
+# find_package call for each LLVM version we want to support
+find_package(LLVM 11.1 QUIET)
+if (NOT LLVM_FOUND)
+  find_package(LLVM 11.0 REQUIRED)
+endif()
+
+# TODO: We should have an option to download and build these locally if needed.
+find_package(GTest REQUIRED)
+find_package(Z3 4.8.7 REQUIRED)
+find_package(Boost REQUIRED)
+find_package(fmt REQUIRED)
+find_package(CapnProto REQUIRED)
+
+include(CaffeineDependencies)
+
+set(IR_USE_BITCODE ${CAFFEINE_BUILD_BITCODE})
+
+include(CaffeineCoverage)
+include(CaffeineSanitizers)
+include(CaffeineWarnings)
+include(CaffeineLinking)
+include(CaffeineFlags)
+include(LLVMIRUtils)
+
+make_directory("${CMAKE_BINARY_DIR}/gen/caffeine")
+configure_file(Config.h.in "${CMAKE_BINARY_DIR}/gen/caffeine/Config.h")
+
+if (CAFFEINE_ENABLE_TESTS)
+  enable_testing()
+endif()
+
+add_subdirectory(src)
+add_subdirectory(libraries)
+add_subdirectory(tools)
+add_subdirectory(bench)
+
+if (CAFFEINE_ENABLE_TESTS)
+  add_subdirectory(test)
 endif()
 
 # This is only supported for cmake >= 3.17
