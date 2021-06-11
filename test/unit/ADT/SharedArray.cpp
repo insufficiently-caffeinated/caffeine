@@ -76,20 +76,39 @@ TEST_F(SharedArrayTest, copy_and_modify_small_shared_array) {
 
   cpy.store(0, 10);
   ASSERT_TRUE(cpy != array);
+
+  SharedArray second_cpy = cpy;
+  ASSERT_TRUE(cpy == second_cpy);
 }
 
 TEST_F(SharedArrayTest, copy_and_modify_large_shared_array) {
   SharedArray array = large;
 
-  for (size_t i = 0; i < array.size(); ++i) {
+  for (size_t i = 0; i < array.size() / 2; ++i) {
     array.store(i, i % 128);
   }
 
   SharedArray cpy = array;
   ASSERT_TRUE(cpy == array);
 
-  cpy.store(0, 10);
+  for (size_t i = 0; i < array.size() / 2; ++i) {
+    cpy.store(i, (i+10) % 128);
+  }
   ASSERT_TRUE(cpy != array);
+
+  SharedArray second_cpy = cpy;
+  ASSERT_TRUE(cpy == second_cpy);
+}
+
+TEST_F(SharedArrayTest, move_and_modify_small_shared_array) {
+  SharedArray array(large);
+  {
+    SharedArray sm(small);
+    array = sm;
+  }
+  for (size_t i = 0; i < array.size(); ++i) {
+    ASSERT_TRUE(array[i] == small[i]);
+  }
 }
 
 TEST_F(SharedArrayTest, equality_operator_tests) {
