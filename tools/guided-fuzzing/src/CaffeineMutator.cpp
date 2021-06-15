@@ -5,6 +5,7 @@
 
 #include <llvm/ADT/iterator.h>
 #include <llvm/IR/Module.h>
+#include <llvm/IR/IRBuilder.h>
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/Support/CommandLine.h>
 
@@ -25,6 +26,7 @@
 
 #define CAFFEINE_FUZZ_TARGET "LLVMFuzzerTestOneInput"
 #define CAFFEINE_FUZZ_START "__caffeine_entry_point"
+#define CAFFEINE_MAKE_SYMBOLIC "caffeine_make_symbolic"
 
 namespace caffeine {
 CaffeineMutator::CaffeineMutator(std::string binary_path, afl_state_t* afl) {
@@ -44,10 +46,64 @@ CaffeineMutator::CaffeineMutator(std::string binary_path, afl_state_t* afl) {
     CAFFEINE_ABORT();
   }
 
+  auto bitwidth = this->module->getDataLayout().getPointerSizeInBits();
+
+  // Create CAFFEINE_FUZZ_START automatically
   fuzz_target = module->getFunction(CAFFEINE_FUZZ_START);
-  if (fuzz_target == nullptr) {
-    llvm::WithColor::error() << "No method '" << CAFFEINE_FUZZ_START << "'\n";
-    CAFFEINE_ABORT();
+  if (!fuzz_target) {
+    fuzz_target = llvm::Function::Create(
+      llvm::FunctionType::get(
+        llvm::Type::getVoidTy(*llvm_context),
+        llvm::Type::getIntNTy(*llvm_context, bitwidth),
+        false
+      ),
+      llvm::Function::InternalLinkage,
+      CAFFEINE_FUZZ_START,
+      *module
+    );
+
+    auto llvm_fuzz_target = module->getFunction(CAFFEINE_FUZZ_TARGET);
+    if (llvm_fuzz_target == nullptr) {
+      llvm::WithColor::error() << "No method '" << CAFFEINE_FUZZ_TARGET << "'\n";
+      CAFFEINE_ABORT();
+    }
+
+    auto caffeine_make_symbolic = module->getFunction(CAFFEINE_MAKE_SYMBOLIC);
+    if (caffeine_make_symbolic == nullptr) {
+      llvm::WithColor::error() << "No method '" << CAFFEINE_MAKE_SYMBOLIC << "'\n";
+      CAFFEINE_ABORT();
+    }
+
+    auto bb = llvm::IRBuilder{llvm::BasicBlock::Create(*llvm_context, "body", fuzz_target)};
+
+    auto alloca = bb.CreateAlloca(
+      llvm::Type::getInt8PtrTy(*llvm_context),
+      module->getDataLayout().getAllocaAddrSpace(),
+      fuzz_target->getArg(0)
+    );
+
+    bb.CreateCall(
+      llvm::FunctionType::get(
+        llvm::Type::getIntNTy(*llvm_context, bitwidth),
+        {llvm::Type::getInt8PtrTy(*llvm_context),
+        llvm::Type::getIntNTy(*llvm_context, bitwidth),
+        llvm::Type::getInt8PtrTy(*llvm_context)},
+        false
+      ),
+      caffeine_make_symbolic,
+      {alloca, fuzz_target->getArg(0), bb.CreateGlobalStringPtr(CAFFEINE_MAKE_SYMBOLIC)}
+    );
+
+    bb.CreateCall(
+      llvm::FunctionType::get(
+        llvm::Type::getIntNTy(*llvm_context, bitwidth),
+        {llvm::Type::getInt8PtrTy(*llvm_context),
+        llvm::Type::getIntNTy(*llvm_context, bitwidth)},
+        false
+      ),
+      llvm_fuzz_target,
+      {fuzz_target->getArg(0)}
+    );
   }
 
   solver = caffeine::make_sequence_solver(
