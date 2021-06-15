@@ -236,6 +236,17 @@ std::ostream& operator<<(std::ostream& os, const Operation& op) {
   }
   return os << ')';
 }
+std::ostream& operator<<(std::ostream& os, Operation::Opcode opcode) {
+  switch (opcode) {
+#define HANDLE_OP(opcode, opname, opclass)                                     \
+  case Operation::opcode:                                                      \
+    return os << #opcode;
+#include "caffeine/IR/Operation.def"
+
+  default:
+    return os << "Unknown(" << (uint16_t)opcode << ")";
+  }
+}
 
 /***************************************************
  * OperationCache                                  *
