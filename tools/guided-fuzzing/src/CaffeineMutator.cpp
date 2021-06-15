@@ -4,8 +4,8 @@
 #include <iostream>
 
 #include <llvm/ADT/iterator.h>
-#include <llvm/IR/Module.h>
 #include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/Module.h>
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/Support/CommandLine.h>
 
@@ -30,9 +30,9 @@
 
 namespace caffeine {
 class NullFailureLogger : public caffeine::FailureLogger {
-  NullFailureLogger() {};
+  NullFailureLogger(){};
   void log_failure(const caffeine::Model*, const caffeine::Context&,
-               const caffeine::Failure&) override {}
+                   const caffeine::Failure&) override {}
 };
 
 CaffeineMutator::CaffeineMutator(std::string binary_path, afl_state_t* afl) {
@@ -58,58 +58,48 @@ CaffeineMutator::CaffeineMutator(std::string binary_path, afl_state_t* afl) {
   fuzz_target = module->getFunction(CAFFEINE_FUZZ_START);
   if (!fuzz_target) {
     fuzz_target = llvm::Function::Create(
-      llvm::FunctionType::get(
-        llvm::Type::getVoidTy(*llvm_context),
-        llvm::Type::getIntNTy(*llvm_context, bitwidth),
-        false
-      ),
-      llvm::Function::InternalLinkage,
-      CAFFEINE_FUZZ_START,
-      *module
-    );
+        llvm::FunctionType::get(llvm::Type::getVoidTy(*llvm_context),
+                                llvm::Type::getIntNTy(*llvm_context, bitwidth),
+                                false),
+        llvm::Function::InternalLinkage, CAFFEINE_FUZZ_START, *module);
 
     auto llvm_fuzz_target = module->getFunction(CAFFEINE_FUZZ_TARGET);
     if (llvm_fuzz_target == nullptr) {
-      llvm::WithColor::error() << "No method '" << CAFFEINE_FUZZ_TARGET << "'\n";
+      llvm::WithColor::error()
+          << "No method '" << CAFFEINE_FUZZ_TARGET << "'\n";
       CAFFEINE_ABORT();
     }
 
     auto caffeine_make_symbolic = module->getFunction(CAFFEINE_MAKE_SYMBOLIC);
     if (caffeine_make_symbolic == nullptr) {
-      llvm::WithColor::error() << "No method '" << CAFFEINE_MAKE_SYMBOLIC << "'\n";
+      llvm::WithColor::error()
+          << "No method '" << CAFFEINE_MAKE_SYMBOLIC << "'\n";
       CAFFEINE_ABORT();
     }
 
-    auto bb = llvm::IRBuilder{llvm::BasicBlock::Create(*llvm_context, "body", fuzz_target)};
+    auto bb = llvm::IRBuilder{
+        llvm::BasicBlock::Create(*llvm_context, "body", fuzz_target)};
 
-    auto alloca = bb.CreateAlloca(
-      llvm::Type::getInt8PtrTy(*llvm_context),
-      module->getDataLayout().getAllocaAddrSpace(),
-      fuzz_target->getArg(0)
-    );
-
-    bb.CreateCall(
-      llvm::FunctionType::get(
-        llvm::Type::getIntNTy(*llvm_context, bitwidth),
-        {llvm::Type::getInt8PtrTy(*llvm_context),
-        llvm::Type::getIntNTy(*llvm_context, bitwidth),
-        llvm::Type::getInt8PtrTy(*llvm_context)},
-        false
-      ),
-      caffeine_make_symbolic,
-      {alloca, fuzz_target->getArg(0), bb.CreateGlobalStringPtr("__caffeine_mut")}
-    );
+    auto alloca = bb.CreateAlloca(llvm::Type::getInt8PtrTy(*llvm_context),
+                                  module->getDataLayout().getAllocaAddrSpace(),
+                                  fuzz_target->getArg(0));
 
     bb.CreateCall(
-      llvm::FunctionType::get(
-        llvm::Type::getIntNTy(*llvm_context, bitwidth),
-        {llvm::Type::getInt8PtrTy(*llvm_context),
-        llvm::Type::getIntNTy(*llvm_context, bitwidth)},
-        false
-      ),
-      llvm_fuzz_target,
-      {alloca, fuzz_target->getArg(0)}
-    );
+        llvm::FunctionType::get(llvm::Type::getIntNTy(*llvm_context, bitwidth),
+                                {llvm::Type::getInt8PtrTy(*llvm_context),
+                                 llvm::Type::getIntNTy(*llvm_context, bitwidth),
+                                 llvm::Type::getInt8PtrTy(*llvm_context)},
+                                false),
+        caffeine_make_symbolic,
+        {alloca, fuzz_target->getArg(0),
+         bb.CreateGlobalStringPtr("__caffeine_mut")});
+
+    bb.CreateCall(llvm::FunctionType::get(
+                      llvm::Type::getIntNTy(*llvm_context, bitwidth),
+                      {llvm::Type::getInt8PtrTy(*llvm_context),
+                       llvm::Type::getIntNTy(*llvm_context, bitwidth)},
+                      false),
+                  llvm_fuzz_target, {alloca, fuzz_target->getArg(0)});
 
     bb.CreateRetVoid();
   }
@@ -172,8 +162,7 @@ CaffeineMutator::model_to_testcase(const Model* model, const Context& ctx,
   if (val == nullptr) {
     return std::nullopt;
   }
-  auto res =
-      std::move(model->evaluate(**val).array());
+  auto res = std::move(model->evaluate(**val).array());
 
   return res;
 }

@@ -40,9 +40,9 @@ public:
   CaffeineMutator(std::string binary_path, afl_state_t* afl);
   size_t mutate(caffeine::Span<char> data);
   size_t get_testcase(unsigned char** out_buf, size_t max_size);
-  std::optional<caffeine::SharedArray> model_to_testcase(const Model* model,
-                                          const Context& ctx,
-                                          std::string symbol_name);
+  std::optional<caffeine::SharedArray>
+  model_to_testcase(const Model* model, const Context& ctx,
+                    std::string symbol_name);
 
   void terminate();
   ~CaffeineMutator();
