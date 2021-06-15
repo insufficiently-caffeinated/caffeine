@@ -54,7 +54,10 @@ void GuidedExecutionPolicy::on_path_complete(const Context& ctx, ExitStatus,
     return;
 
   auto tc = mutator->model_to_testcase(result.model(), ctx, symbol_name);
-  std::string_view tcdata(tc.data(), tc.size());
+  if (tc == std::nullopt) {
+    return;
+  }
+  std::string_view tcdata(tc->data(), tc->size());
 
   // Don't mutate to a no-change test case
   if (tcdata == data)

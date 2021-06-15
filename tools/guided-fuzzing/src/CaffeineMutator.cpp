@@ -29,6 +29,12 @@
 #define CAFFEINE_MAKE_SYMBOLIC "caffeine_make_symbolic"
 
 namespace caffeine {
+class NullFailureLogger : public caffeine::FailureLogger {
+  NullFailureLogger() {};
+  void log_failure(const caffeine::Model*, const caffeine::Context&,
+               const caffeine::Failure&) override {}
+};
+
 CaffeineMutator::CaffeineMutator(std::string binary_path, afl_state_t* afl) {
   static tracing::TraceContext tracectx{"caffeine.trace"};
 
@@ -91,7 +97,7 @@ CaffeineMutator::CaffeineMutator(std::string binary_path, afl_state_t* afl) {
         false
       ),
       caffeine_make_symbolic,
-      {alloca, fuzz_target->getArg(0), bb.CreateGlobalStringPtr(CAFFEINE_MAKE_SYMBOLIC)}
+      {alloca, fuzz_target->getArg(0), bb.CreateGlobalStringPtr("__caffeine_mut")}
     );
 
     bb.CreateCall(
@@ -102,8 +108,10 @@ CaffeineMutator::CaffeineMutator(std::string binary_path, afl_state_t* afl) {
         false
       ),
       llvm_fuzz_target,
-      {fuzz_target->getArg(0)}
+      {alloca, fuzz_target->getArg(0)}
     );
+
+    bb.CreateRetVoid();
   }
 
   solver = caffeine::make_sequence_solver(
@@ -155,13 +163,17 @@ size_t CaffeineMutator::get_testcase(unsigned char** out_buf, size_t max_size) {
   return 0;
 }
 
-caffeine::SharedArray
+std::optional<caffeine::SharedArray>
 CaffeineMutator::model_to_testcase(const Model* model, const Context& ctx,
                                    std::string symbol_name) {
   CAFFEINE_ASSERT(model, "Model must be non null");
 
+  auto val = ctx.constants.find(symbol_name);
+  if (val == nullptr) {
+    return std::nullopt;
+  }
   auto res =
-      std::move(model->evaluate(**ctx.constants.find(symbol_name)).array());
+      std::move(model->evaluate(**val).array());
 
   return res;
 }
