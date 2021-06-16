@@ -404,7 +404,7 @@ LLVMValue ExprEvaluator::visitConstantExpr(llvm::ConstantExpr& expr) {
  *********************************************/
 
 LLVMValue ExprEvaluator::visitInstruction(llvm::Instruction& inst) {
-  CAFFEINE_ABORT(
+  CAFFEINE_UNSUPPORTED(
       fmt::format("Instruction '{}' not implemented! Full expression: {}",
                   inst.getOpcodeName(), inst));
 }
