@@ -35,27 +35,11 @@ class NullFailureLogger : public caffeine::FailureLogger {
                    const caffeine::Failure&) override {}
 };
 
-CaffeineMutator::CaffeineMutator(std::string binary_path, afl_state_t* afl) {
-  static tracing::TraceContext tracectx{"caffeine.trace"};
-
-  this->afl = afl;
-
-  llvm_context = std::make_unique<llvm::LLVMContext>();
-  llvm_context->setDiagnosticHandler(
-      std::make_unique<CaffeineDiagnosticHandler>(), true);
-
-  llvm::SMDiagnostic error;
-  module = llvm::parseIRFile(binary_path, error, *llvm_context);
-
-  if (!module) {
-    error.print("caffeine-mutator", llvm::errs());
-    CAFFEINE_ABORT();
-  }
-
-  auto bitwidth = this->module->getDataLayout().getPointerSizeInBits();
-
-  // Create CAFFEINE_FUZZ_START automatically
-  fuzz_target = module->getFunction(CAFFEINE_FUZZ_START);
+llvm::Function*
+getTargetFunction(std::unique_ptr<llvm::Module>& module,
+                  std::unique_ptr<llvm::LLVMContext>& llvm_context) {
+  llvm::Function* fuzz_target = module->getFunction(CAFFEINE_FUZZ_START);
+  auto bitwidth = module->getDataLayout().getPointerSizeInBits();
   if (!fuzz_target) {
     fuzz_target = llvm::Function::Create(
         llvm::FunctionType::get(llvm::Type::getVoidTy(*llvm_context),
@@ -103,6 +87,29 @@ CaffeineMutator::CaffeineMutator(std::string binary_path, afl_state_t* afl) {
 
     bb.CreateRetVoid();
   }
+
+  return fuzz_target;
+}
+
+CaffeineMutator::CaffeineMutator(std::string binary_path, afl_state_t* afl) {
+  static tracing::TraceContext tracectx{"caffeine.trace"};
+
+  this->afl = afl;
+
+  llvm_context = std::make_unique<llvm::LLVMContext>();
+  llvm_context->setDiagnosticHandler(
+      std::make_unique<CaffeineDiagnosticHandler>(), true);
+
+  llvm::SMDiagnostic error;
+  module = llvm::parseIRFile(binary_path, error, *llvm_context);
+
+  if (!module) {
+    error.print("caffeine-mutator", llvm::errs());
+    CAFFEINE_ABORT();
+  }
+
+  // Create CAFFEINE_FUZZ_START automatically
+  fuzz_target = getTargetFunction(module, llvm_context);
 
   solver = caffeine::make_sequence_solver(
       caffeine::SimplifyingSolver(), caffeine::CanonicalizingSolver(),
