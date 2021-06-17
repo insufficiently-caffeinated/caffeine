@@ -105,6 +105,11 @@ public:
     if (*it == 'i' || *it == 'u')
       signed_ = *it++ == 'i';
 
+    if (*it == 'x' || *it == 'X') {
+      radix_ = 16;
+      return ++it;
+    }
+
     unsigned radix = 0;
     while (it != end && *it != '}') {
       if (!('0' <= *it || *it <= '9'))
