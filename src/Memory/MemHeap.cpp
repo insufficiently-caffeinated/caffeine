@@ -82,8 +82,10 @@ OpRef Allocation::read(const OpRef& offset, const Type& t,
     bytes.push_back(LoadOp::Create(data(), BinaryOp::CreateAdd(offset, i)));
   }
 
-  if (width == 1)
+  if (t.is_int() && t.bitwidth() == 8) {
+    CAFFEINE_ASSERT(bytes.size() == 1);
     return std::move(bytes[0]);
+  }
 
   uint32_t bitwidth = width * 8;
   auto bitresult = UnaryOp::CreateZExt(Type::int_ty(bitwidth), bytes[0]);
