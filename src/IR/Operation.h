@@ -419,6 +419,9 @@ public:
     if (const auto* val = llvm::dyn_cast<ConstantInt>(op.operand().get()))
       return ConstantInt::Create(val->value().trunc(op.type().bitwidth()));
 
+    if (op.type() == op.operand()->type())
+      return op.operand();
+
     return this->visitUnaryOp(op);
   }
   OpRef visitZExt(const UnaryOp& op) {
@@ -426,6 +429,9 @@ public:
 
     if (const auto* val = llvm::dyn_cast<ConstantInt>(op.operand().get()))
       return ConstantInt::Create(val->value().zext(op.type().bitwidth()));
+
+    if (op.type() == op.operand()->type())
+      return op.operand();
 
     OpRef inner;
     // (zext.ixx (trunc.iyy v)) -> (and v (ixx (2^yy - 1)))
@@ -446,6 +452,9 @@ public:
   OpRef visitSExt(const UnaryOp& op) {
     if (const auto* val = llvm::dyn_cast<ConstantInt>(op.operand().get()))
       return ConstantInt::Create(val->value().sext(op.type().bitwidth()));
+
+    if (op.type() == op.operand()->type())
+      return op.operand();
 
     return this->visitUnaryOp(op);
   }
