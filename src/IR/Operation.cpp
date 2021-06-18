@@ -648,21 +648,21 @@ DECL_UNOP_CREATE(FIsNaN, ASSERT_FP, Type::int_ty(1));
 OpRef UnaryOp::CreateTrunc(Type tgt, const OpRef& operand) {
   CAFFEINE_ASSERT(tgt.is_int());
   CAFFEINE_ASSERT(operand->type().is_int());
-  CAFFEINE_ASSERT(tgt.bitwidth() < operand->type().bitwidth());
+  CAFFEINE_ASSERT(tgt.bitwidth() <= operand->type().bitwidth());
 
   return Create(Opcode::Trunc, operand, tgt);
 }
 OpRef UnaryOp::CreateZExt(Type tgt, const OpRef& operand) {
   CAFFEINE_ASSERT(tgt.is_int());
   CAFFEINE_ASSERT(operand->type().is_int());
-  CAFFEINE_ASSERT(tgt.bitwidth() > operand->type().bitwidth());
+  CAFFEINE_ASSERT(tgt.bitwidth() >= operand->type().bitwidth());
 
   return Create(Opcode::ZExt, operand, tgt);
 }
 OpRef UnaryOp::CreateSExt(Type tgt, const OpRef& operand) {
   CAFFEINE_ASSERT(tgt.is_int());
   CAFFEINE_ASSERT(operand->type().is_int());
-  CAFFEINE_ASSERT(tgt.bitwidth() > operand->type().bitwidth());
+  CAFFEINE_ASSERT(tgt.bitwidth() >= operand->type().bitwidth());
 
   return Create(Opcode::SExt, operand, tgt);
 }
