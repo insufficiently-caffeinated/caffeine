@@ -113,6 +113,9 @@ public:
 
 template <bool move_out = false>
 class ConstantFolder : public ConstOpVisitor<ConstantFolder<move_out>, OpRef> {
+private:
+  using BaseType = ConstOpVisitor<ConstantFolder<move_out>, OpRef>;
+
 public:
 #define TRY_CONST_INT(expr)                                                    \
   do {                                                                         \
@@ -238,6 +241,8 @@ public:
   }
 
   OpRef visitAnd(const BinaryOp& op) {
+    namespace m = matching;
+
     if (is_constant_int(op.lhs(), 0))
       return op.lhs();
     if (is_constant_int(op.rhs(), 0))
@@ -250,9 +255,42 @@ public:
 
     TRY_CONST_INT(ConstantInt::Create(lhs.value() & rhs.value()));
 
+    {
+      OpRef mask, value, shift;
+      // (and (lshr x s) m) -> (lshr (and x (shl m s)) s)
+      // ... but only if m and s are constants
+      if ((matches(op.lhs(), m::ConstantInt(mask)) &&
+           matches(op.rhs(), m::LShr(value, m::ConstantInt(shift)))) ||
+          (matches(op.rhs(), m::ConstantInt(mask)) &&
+           matches(op.lhs(), m::LShr(value, m::ConstantInt(shift))))) {
+        return BinaryOp::CreateLShr(
+            BinaryOp::CreateAnd(value, BinaryOp::CreateShl(mask, shift)),
+            shift);
+      }
+    }
+
+    {
+      OpRef mask1, mask2, value;
+      // (and (and x m1) m2) -> (and x (and m1 m2))
+      // .. where m1 and m2 are constants
+      if (matches(op.lhs(), m::ConstantInt(mask1))) {
+        if (matches(op.rhs(), m::And(m::ConstantInt(mask2), value)) ||
+            matches(op.rhs(), m::And(value, m::ConstantInt(mask2)))) {
+          return BinaryOp::CreateAnd(value, BinaryOp::CreateAnd(mask1, mask2));
+        }
+      } else if (matches(op.rhs(), m::ConstantInt(mask1))) {
+        if (matches(op.lhs(), m::And(m::ConstantInt(mask2), value)) ||
+            matches(op.lhs(), m::And(value, m::ConstantInt(mask2)))) {
+          return BinaryOp::CreateAnd(value, BinaryOp::CreateAnd(mask1, mask2));
+        }
+      }
+    }
+
     return this->visitBinaryOp(op);
   }
   OpRef visitOr(const BinaryOp& op) {
+    namespace m = matching;
+
     if (is_constant_int(op.lhs(), 0))
       return op.rhs();
     if (is_constant_int(op.rhs(), 0))
@@ -264,6 +302,15 @@ public:
       return op.rhs();
 
     TRY_CONST_INT(ConstantInt::Create(lhs.value() | rhs.value()));
+
+    {
+      OpRef value1, value2, mask1, mask2;
+      if (matches(op.lhs(), m::And(value1, m::ConstantInt(mask1))) &&
+          matches(op.rhs(), m::And(value2, m::ConstantInt(mask2))) &&
+          value1 == value2) {
+        return BinaryOp::CreateAnd(value1, BinaryOp::CreateOr(mask1, mask2));
+      }
+    }
 
     return this->visitBinaryOp(op);
   }
@@ -281,10 +328,28 @@ public:
     return this->visitBinaryOp(op);
   }
   OpRef visitShl(const BinaryOp& op) {
+    namespace m = matching;
+
     if (is_constant_int(op.lhs(), 0) || is_constant_int(op.rhs(), 0))
       return op.lhs();
 
     TRY_CONST_INT(ConstantInt::Create(lhs.value() << rhs.value()));
+
+    OpRef lshift, rshift, value;
+    if (matches(op.lhs(), m::LShr(value, m::ConstantInt(rshift))) &&
+        matches(op.rhs(), m::ConstantInt(lshift))) {
+      auto lv = llvm::cast<ConstantInt>(*lshift).value();
+      auto rv = llvm::cast<ConstantInt>(*rshift).value();
+      uint64_t shift = llvm::cast<ConstantInt>(*lshift).value().getLimitedValue(
+          op.type().bitwidth());
+
+      if (lv == rv && shift != op.type().bitwidth()) {
+        auto mask = ConstantInt::Create(
+            llvm::APInt::getBitsSetFrom(op.type().bitwidth(), shift));
+
+        return BinaryOp::CreateAnd(value, mask);
+      }
+    }
 
     return this->visitBinaryOp(op);
   }
@@ -354,11 +419,33 @@ public:
     if (const auto* val = llvm::dyn_cast<ConstantInt>(op.operand().get()))
       return ConstantInt::Create(val->value().trunc(op.type().bitwidth()));
 
+    if (op.type() == op.operand()->type())
+      return op.operand();
+
     return this->visitUnaryOp(op);
   }
   OpRef visitZExt(const UnaryOp& op) {
+    namespace m = matching;
+
     if (const auto* val = llvm::dyn_cast<ConstantInt>(op.operand().get()))
       return ConstantInt::Create(val->value().zext(op.type().bitwidth()));
+
+    if (op.type() == op.operand()->type())
+      return op.operand();
+
+    OpRef inner;
+    // (zext.ixx (trunc.iyy v)) -> (and v (ixx (2^yy - 1)))
+    if (matches(op.operand(), m::Trunc(inner))) {
+      auto bw1 = op.type().bitwidth();
+      auto bw2 = inner->type().bitwidth();
+
+      auto tbw = op.operand()->type().bitwidth();
+
+      if (bw1 == bw2) {
+        auto mask = ConstantInt::Create(llvm::APInt::getLowBitsSet(bw1, tbw));
+        return BinaryOp::CreateAnd(inner, mask);
+      }
+    }
 
     return this->visitUnaryOp(op);
   }
@@ -366,7 +453,21 @@ public:
     if (const auto* val = llvm::dyn_cast<ConstantInt>(op.operand().get()))
       return ConstantInt::Create(val->value().sext(op.type().bitwidth()));
 
+    if (op.type() == op.operand()->type())
+      return op.operand();
+
     return this->visitUnaryOp(op);
+  }
+  OpRef visitBitcast(const UnaryOp& op) {
+    {
+      OpRef value;
+      if (matches(op.operand(), matching::Bitcast(value)) &&
+          value->type() == op.type()) {
+        return value;
+      }
+    }
+
+    return BaseType::visitBitcast(op);
   }
 
   OpRef visitSelectOp(const SelectOp& op) {
