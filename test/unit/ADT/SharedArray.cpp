@@ -104,7 +104,7 @@ TEST_F(SharedArrayTest, move_and_modify_small_shared_array) {
   SharedArray array(large);
   {
     SharedArray sm(small);
-    array = sm;
+    array = std::move(sm);
   }
   for (size_t i = 0; i < array.size(); ++i) {
     ASSERT_TRUE(array[i] == small[i]);
