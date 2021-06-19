@@ -25,8 +25,8 @@
 #include "GuidedExecutionPolicy.h"
 
 #define CAFFEINE_FUZZ_TARGET "LLVMFuzzerTestOneInput"
-#define CAFFEINE_FUZZ_START "__caffeine_entry_point"
-#define CAFFEINE_MAKE_SYMBOLIC "caffeine_make_symbolic"
+#define CAFFEINE_FUZZ_START "caffeine.entry_point"
+#define CAFFEINE_MAKE_SYMBOLIC "caffeine_builtin_symbolic_alloca"
 
 namespace caffeine {
 class NullFailureLogger : public caffeine::FailureLogger {
@@ -64,19 +64,14 @@ getTargetFunction(std::unique_ptr<llvm::Module>& module,
     auto bb = llvm::IRBuilder{
         llvm::BasicBlock::Create(*llvm_context, "body", fuzz_target)};
 
-    auto alloca = bb.CreateAlloca(llvm::Type::getInt8PtrTy(*llvm_context),
-                                  module->getDataLayout().getAllocaAddrSpace(),
-                                  fuzz_target->getArg(0));
-
-    bb.CreateCall(
-        llvm::FunctionType::get(llvm::Type::getIntNTy(*llvm_context, bitwidth),
-                                {llvm::Type::getInt8PtrTy(*llvm_context),
-                                 llvm::Type::getIntNTy(*llvm_context, bitwidth),
-                                 llvm::Type::getInt8PtrTy(*llvm_context)},
-                                false),
+    auto alloca = bb.CreateCall(
+        llvm::FunctionType::get(
+            llvm::Type::getIntNPtrTy(*llvm_context, bitwidth),
+            {llvm::Type::getIntNTy(*llvm_context, bitwidth),
+             llvm::Type::getInt8PtrTy(*llvm_context)},
+            false),
         caffeine_make_symbolic,
-        {alloca, fuzz_target->getArg(0),
-         bb.CreateGlobalStringPtr("__caffeine_mut")});
+        {fuzz_target->getArg(0), bb.CreateGlobalStringPtr("__caffeine_mut")});
 
     bb.CreateCall(llvm::FunctionType::get(
                       llvm::Type::getIntNTy(*llvm_context, bitwidth),
