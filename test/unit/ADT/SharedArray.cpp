@@ -92,7 +92,7 @@ TEST_F(SharedArrayTest, copy_and_modify_large_shared_array) {
   ASSERT_TRUE(cpy == array);
 
   for (size_t i = 0; i < array.size() / 2; ++i) {
-    cpy.store(i, (i+10) % 128);
+    cpy.store(i, (i + 10) % 128);
   }
   ASSERT_TRUE(cpy != array);
 
