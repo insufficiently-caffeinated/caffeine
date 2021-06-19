@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include <llvm/ADT/iterator.h>
+#include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/Support/CommandLine.h>
@@ -24,9 +25,67 @@
 #include "GuidedExecutionPolicy.h"
 
 #define CAFFEINE_FUZZ_TARGET "LLVMFuzzerTestOneInput"
-#define CAFFEINE_FUZZ_START "__caffeine_entry_point"
+#define CAFFEINE_FUZZ_START "caffeine.entry_point"
+#define CAFFEINE_MAKE_SYMBOLIC "caffeine_builtin_symbolic_alloca"
 
 namespace caffeine {
+class NullFailureLogger : public caffeine::FailureLogger {
+  NullFailureLogger(){};
+  void log_failure(const caffeine::Model*, const caffeine::Context&,
+                   const caffeine::Failure&) override {}
+};
+
+llvm::Function*
+getTargetFunction(std::unique_ptr<llvm::Module>& module,
+                  std::unique_ptr<llvm::LLVMContext>& llvm_context) {
+  llvm::Function* fuzz_target = module->getFunction(CAFFEINE_FUZZ_START);
+  auto bitwidth = module->getDataLayout().getPointerSizeInBits();
+  if (!fuzz_target) {
+    fuzz_target = llvm::Function::Create(
+        llvm::FunctionType::get(llvm::Type::getVoidTy(*llvm_context),
+                                llvm::Type::getIntNTy(*llvm_context, bitwidth),
+                                false),
+        llvm::Function::InternalLinkage, CAFFEINE_FUZZ_START, *module);
+
+    auto llvm_fuzz_target = module->getFunction(CAFFEINE_FUZZ_TARGET);
+    if (llvm_fuzz_target == nullptr) {
+      llvm::WithColor::error()
+          << "No method '" << CAFFEINE_FUZZ_TARGET << "'\n";
+      CAFFEINE_ABORT();
+    }
+
+    auto caffeine_make_symbolic = module->getFunction(CAFFEINE_MAKE_SYMBOLIC);
+    if (caffeine_make_symbolic == nullptr) {
+      llvm::WithColor::error()
+          << "No method '" << CAFFEINE_MAKE_SYMBOLIC << "'\n";
+      CAFFEINE_ABORT();
+    }
+
+    auto bb = llvm::IRBuilder{
+        llvm::BasicBlock::Create(*llvm_context, "body", fuzz_target)};
+
+    auto alloca = bb.CreateCall(
+        llvm::FunctionType::get(
+            llvm::Type::getIntNPtrTy(*llvm_context, bitwidth),
+            {llvm::Type::getIntNTy(*llvm_context, bitwidth),
+             llvm::Type::getInt8PtrTy(*llvm_context)},
+            false),
+        caffeine_make_symbolic,
+        {fuzz_target->getArg(0), bb.CreateGlobalStringPtr("__caffeine_mut")});
+
+    bb.CreateCall(llvm::FunctionType::get(
+                      llvm::Type::getIntNTy(*llvm_context, bitwidth),
+                      {llvm::Type::getInt8PtrTy(*llvm_context),
+                       llvm::Type::getIntNTy(*llvm_context, bitwidth)},
+                      false),
+                  llvm_fuzz_target, {alloca, fuzz_target->getArg(0)});
+
+    bb.CreateRetVoid();
+  }
+
+  return fuzz_target;
+}
+
 CaffeineMutator::CaffeineMutator(std::string binary_path, afl_state_t* afl) {
   static tracing::TraceContext tracectx{"caffeine.trace"};
 
@@ -44,11 +103,8 @@ CaffeineMutator::CaffeineMutator(std::string binary_path, afl_state_t* afl) {
     CAFFEINE_ABORT();
   }
 
-  fuzz_target = module->getFunction(CAFFEINE_FUZZ_START);
-  if (fuzz_target == nullptr) {
-    llvm::WithColor::error() << "No method '" << CAFFEINE_FUZZ_START << "'\n";
-    CAFFEINE_ABORT();
-  }
+  // Create CAFFEINE_FUZZ_START automatically
+  fuzz_target = getTargetFunction(module, llvm_context);
 
   solver = caffeine::make_sequence_solver(
       caffeine::SimplifyingSolver(), caffeine::CanonicalizingSolver(),
@@ -99,13 +155,16 @@ size_t CaffeineMutator::get_testcase(unsigned char** out_buf, size_t max_size) {
   return 0;
 }
 
-caffeine::SharedArray
+std::optional<caffeine::SharedArray>
 CaffeineMutator::model_to_testcase(const Model* model, const Context& ctx,
                                    std::string symbol_name) {
   CAFFEINE_ASSERT(model, "Model must be non null");
 
-  auto res =
-      std::move(model->evaluate(**ctx.constants.find(symbol_name)).array());
+  auto val = ctx.constants.find(symbol_name);
+  if (val == nullptr) {
+    return std::nullopt;
+  }
+  auto res = std::move(model->evaluate(**val).array());
 
   return res;
 }
