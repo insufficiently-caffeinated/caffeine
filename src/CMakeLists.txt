@@ -36,19 +36,22 @@ add_library(caffeine ${sources} ${headers})
 target_include_directories(caffeine PUBLIC "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/gen>")
 
 target_include_directories(caffeine
-  PRIVATE  "${CMAKE_CURRENT_SOURCE_DIR}"
+  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}"
   PUBLIC # Needs to be different between install and build configs
     "$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>"
     $<INSTALL_INTERFACE:include/caffeine>
-  PUBLIC
 )
 
+function(include_sys_nonempty TARGET VIS DIRS)
+  if (NOT "${DIRS}" STREQUAL "")
+    target_include_directories("${TARGET}" SYSTEM "${VIS}" "${DIRS}")
+  endif()
+endfunction()
+
 # The SYSTEM should silence warnings within these headers
-target_include_directories(caffeine SYSTEM
-  PUBLIC "${LLVM_INCLUDE_DIRS}"
-  PUBLIC "${Z3_INCLUDE_DIRS}"
-  PUBLIC "${Boost_INCLUDE_DIRS}"
-)
+include_sys_nonempty(caffeine PUBLIC "${LLVM_INCLUDE_DIRS}")
+include_sys_nonempty(caffeine PUBLIC "${Z3_INCLUDE_DIRS}")
+include_sys_nonempty(caffeine PUBLIC "${Boost_INCLUDE_DIRS}")
 
 target_link_options(caffeine PUBLIC ${LINK_FLAGS})
 target_link_libraries(caffeine PUBLIC
