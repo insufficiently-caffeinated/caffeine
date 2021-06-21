@@ -541,6 +541,17 @@ const MemHeap& MemHeapMgr::operator[](unsigned index) const {
   return it->getSecond();
 }
 
+Allocation& MemHeapMgr::ptr_allocation(const Pointer& ptr) {
+  CAFFEINE_ASSERT(ptr.is_resolved(),
+                  "cannot get allocation for an unresolved pointer");
+  return (*this)[ptr.heap()][ptr.alloc()];
+}
+const Allocation& MemHeapMgr::ptr_allocation(const Pointer& ptr) const {
+  CAFFEINE_ASSERT(ptr.is_resolved(),
+                  "cannot get allocation for an unresolved pointer");
+  return (*this)[ptr.heap()][ptr.alloc()];
+}
+
 Assertion MemHeapMgr::check_valid(const Pointer& ptr, uint32_t width) {
   return check_valid(ptr, ConstantInt::Create(llvm::APInt(
                               ptr.offset()->type().bitwidth(), width)));
