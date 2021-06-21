@@ -331,6 +331,14 @@ public:
   MemHeap& operator[](unsigned index);
   const MemHeap& operator[](unsigned index) const;
 
+  /**
+   * Get the allocation that this pointer corresponds to.
+   *
+   * If the pointer is not resolved then this will cause an assertion failure.
+   */
+  Allocation& ptr_allocation(const Pointer& ptr);
+  const Allocation& ptr_allocation(const Pointer& ptr) const;
+
   Assertion check_valid(const Pointer& value, uint32_t width);
   Assertion check_valid(const Pointer& value, const OpRef& width);
   Assertion check_starts_allocation(const Pointer& value);
