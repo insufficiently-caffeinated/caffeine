@@ -1,5 +1,6 @@
 #include "caffeine/Memory/Allocator.h"
 #include "caffeine/Support/Assert.h"
+#include "caffeine/Support/LLVMFmt.h"
 #include <algorithm>
 #include <immer/flex_vector_transient.hpp>
 #include <llvm/ADT/Hashing.h>
@@ -81,7 +82,10 @@ std::optional<llvm::APInt> BuddyAllocator::allocate(const llvm::APInt& size_,
 
 void BuddyAllocator::deallocate(const llvm::APInt& addr) {
   auto it = allocated.find(addr);
-  CAFFEINE_ASSERT(it, "attempted to deallocate an invalid address");
+  CAFFEINE_ASSERT(
+      it, fmt::format(
+              FMT_STRING("attempted to deallocate an invalid address: 0x{:x}"),
+              addr));
 
   size_t index = *it;
   const auto& nodes = this->nodes.get();
