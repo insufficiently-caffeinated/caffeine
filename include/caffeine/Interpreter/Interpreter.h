@@ -125,6 +125,8 @@ private:
   ExecutionResult visitFree(llvm::CallInst& inst);
 
   ExecutionResult visitBuiltinResolve(llvm::CallInst& inst);
+
+  friend class TransformBuilder;
 };
 
 } // namespace caffeine
