@@ -1,5 +1,5 @@
 
-add_library(caffeine-assert
+add_library(caffeine-assert OBJECT
   Assert.cpp
   "${CMAKE_SOURCE_DIR}/include/caffeine/Support/Assert.h"
 )
