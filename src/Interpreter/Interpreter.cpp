@@ -28,6 +28,39 @@ namespace {
   static uint64_t MAX_FIXED_CONSTANT_SIZE = 10 * 1024 * 1024;
 } // namespace
 
+template <ExecutionResult (Interpreter::*kFunc)(llvm::CallInst&)>
+struct as_nonmember {
+private:
+  static ExecutionResult func_impl(Interpreter& interp, llvm::CallInst& inst) {
+    return std::invoke(kFunc, interp, inst);
+  }
+
+public:
+  static constexpr InterpreterFunction value = &func_impl;
+};
+
+template <ExecutionResult (Interpreter::*kFunc)(llvm::CallInst&)>
+static constexpr InterpreterFunction as_nonmember_v =
+    as_nonmember<kFunc>::value;
+
+std::unordered_map<std::string_view, InterpreterFunction>&
+Interpreter::extern_functions() {
+  static std::unordered_map<std::string_view, InterpreterFunction>
+      kExternFunctions = ([] {
+        std::unordered_map<std::string_view, InterpreterFunction> funcs;
+        auto reg = [&](std::string_view name, InterpreterFunction func) {
+          funcs.insert({name, func});
+        };
+
+        reg("_setjmp", as_nonmember_v<&Interpreter::visitSetjmp>);
+        reg("longjmp", as_nonmember_v<&Interpreter::visitLongjmp>);
+
+        return funcs;
+      })();
+
+  return kExternFunctions;
+}
+
 ExecutionResult::ExecutionResult(Status status) : status_(status) {}
 ExecutionResult::ExecutionResult(llvm::SmallVector<Context, 2>&& contexts)
     : status_(Dead), contexts_(std::move(contexts)) {}
@@ -600,6 +633,10 @@ ExecutionResult Interpreter::visitExternFunc(llvm::CallInst& call) {
     return visitBuiltinResolve(call);
   if (name == "caffeine_builtin_symbolic_alloca")
     return visitSymbolicAlloca(call);
+
+  auto it = extern_functions().find(name);
+  if (it != extern_functions().end())
+    return it->second(*this, call);
 
   CAFFEINE_ABORT(
       fmt::format("external function '{}' not implemented", name.str()));

@@ -1,6 +1,7 @@
 #ifndef CAFFEINE_INTERP_INTERPRETER_H
 #define CAFFEINE_INTERP_INTERPRETER_H
 
+#include <iostream>
 #include <memory>
 
 #include "caffeine/IR/Assertion.h"
@@ -8,6 +9,7 @@
 #include "caffeine/Interpreter/FailureLogger.h"
 #include "caffeine/Interpreter/Options.h"
 #include "caffeine/Support/Assert.h"
+#include "caffeine/Support/Macros.h"
 
 #include <llvm/IR/InstVisitor.h>
 
@@ -15,6 +17,7 @@ namespace caffeine {
 
 class ExecutionPolicy;
 class ExecutionContextStore;
+class Interpreter;
 
 class ExecutionResult {
 public:
@@ -43,6 +46,8 @@ private:
   Status status_;
   ContextVec contexts_;
 };
+
+typedef ExecutionResult (*InterpreterFunction)(Interpreter&, llvm::CallInst&);
 
 class Interpreter : public llvm::InstVisitor<Interpreter, ExecutionResult> {
 private:
@@ -126,7 +131,14 @@ private:
 
   ExecutionResult visitBuiltinResolve(llvm::CallInst& inst);
 
+  ExecutionResult visitSetjmp(llvm::CallInst& inst);
+  ExecutionResult visitLongjmp(llvm::CallInst& inst);
+
   friend class TransformBuilder;
+
+public:
+  static std::unordered_map<std::string_view, InterpreterFunction>&
+  extern_functions();
 };
 
 } // namespace caffeine

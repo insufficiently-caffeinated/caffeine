@@ -38,6 +38,9 @@ public:
   // Allocations within the current frame.
   std::vector<StackAllocation> allocations;
 
+  uint64_t frame_id;
+
+public:
   StackFrame(llvm::Function* function);
 
   /**
@@ -54,6 +57,9 @@ public:
    */
   void insert(llvm::Value* value, const OpRef& expr);
   void insert(llvm::Value* value, const LLVMValue& exprs);
+
+private:
+  static std::atomic<uint64_t> next_frame_id;
 };
 
 } // namespace caffeine
