@@ -127,11 +127,67 @@ Value ModelEvaluator::visitBitcast(const UnaryOp& op) {
   return Value::bitcast(visit(op[0]), op.type());
 }
 
+Value ModelEvaluator::visitFpTrunc(const UnaryOp&) {
+  CAFFEINE_UNIMPLEMENTED();
+}
+Value ModelEvaluator::visitFpExt(const UnaryOp&) {
+  CAFFEINE_UNIMPLEMENTED();
+}
+Value ModelEvaluator::visitFpToUI(const UnaryOp&) {
+  CAFFEINE_UNIMPLEMENTED();
+}
+Value ModelEvaluator::visitFpToSI(const UnaryOp&) {
+  CAFFEINE_UNIMPLEMENTED();
+}
+Value ModelEvaluator::visitUIToFp(const UnaryOp&) {
+  CAFFEINE_UNIMPLEMENTED();
+}
+Value ModelEvaluator::visitSIToFp(const UnaryOp&) {
+  CAFFEINE_UNIMPLEMENTED();
+}
+
+Value ModelEvaluator::visitAlloc(const AllocOp& op) {
+  auto size = visit(*op.size()).apint().getLimitedValue();
+  CAFFEINE_ASSERT(size <= (uint64_t)SIZE_MAX);
+
+  std::vector<char> bytes;
+  bytes.resize(size, 0);
+
+  return Value(SharedArray(std::move(bytes)),
+               Type::int_ty(op.size()->type().bitwidth()));
+}
+
 Value ModelEvaluator::visitLoad(const LoadOp& op) {
   return Value::load(visit(op[0]), visit(op[1]));
 }
 Value ModelEvaluator::visitStore(const StoreOp& op) {
   return Value::store(visit(op[0]), visit(op[1]), visit(op[2]));
+}
+
+Value ModelEvaluator::visitFunctionObject(const FunctionObject&) {
+  CAFFEINE_ABORT("Attempted to evaluate a function object directly?");
+}
+
+Value ModelEvaluator::visitUndef(const Undef&) {
+  CAFFEINE_ABORT("Attempted to evaluate an undef value");
+}
+
+Value ModelEvaluator::visitICmp(const ICmpOp& op) {
+  Value lhs = visit(op[0]);
+  Value rhs = visit(op[1]);
+
+  switch (op.comparison()) {
+  case ICmpOpcode::EQ:
+    return Value(lhs == rhs);
+  case ICmpOpcode::NE:
+    return Value(lhs != rhs);
+  default:
+    CAFFEINE_UNIMPLEMENTED();
+  }
+}
+
+Value ModelEvaluator::visitFCmp(const FCmpOp&) {
+  CAFFEINE_UNIMPLEMENTED();
 }
 
 } // namespace caffeine

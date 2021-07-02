@@ -64,6 +64,9 @@ public:
   Value(const llvm::APInt& apint);
   Value(llvm::APInt&& apint);
 
+  // Construct a 1-bit integer with the boolean value
+  explicit Value(bool ival);
+
   Value(const llvm::APFloat& apfloat);
   Value(llvm::APFloat&& apfloat);
 
