@@ -499,40 +499,21 @@ ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
   return ops.execute(this);
 }
 ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
-  auto value = ctx->lookup(inst.getOperand(0));
-  auto dest = ctx->lookup(inst.getOperand(1));
-  auto op_ty = inst.getOperand(0)->getType();
+  auto dest = inst.getPointerOperand();
+  auto value = ctx->lookup(inst.getValueOperand());
 
   const llvm::DataLayout& layout = inst.getModule()->getDataLayout();
-  const Pointer& pointer = dest.scalar().pointer();
 
-  auto assertion = ctx->heaps.check_valid(
-      pointer, layout.getTypeStoreSize(inst.getOperand(0)->getType()));
-  if (ctx->check(solver, !assertion) == SolverResult::SAT) {
-    logFailure(*ctx, !assertion, "invalid pointer store");
+  auto ops = TransformBuilder();
+  auto resolved = ops.resolve(dest, inst.getValueOperand()->getType());
+  ops.transform([&](TransformBuilder::ContextState& state) {
+    auto ptr = state.lookup(resolved).scalar().pointer();
+    Allocation& alloc = state.ctx.heaps.ptr_allocation(ptr);
+    alloc.write(ptr.offset(), inst.getValueOperand()->getType(), value,
+                state.ctx.heaps, layout);
+  });
 
-    // If we're getting an out-of-bounds access then there's a pretty good
-    // chance that we'll find that we can overlap with just about any other
-    // allocation. This isn't likely to produce useful bugs so we'll kill the
-    // context here.
-    return ExecutionResult::Dead;
-  }
-
-  auto resolved = ctx->heaps.resolve(solver, pointer, *ctx);
-  auto forks = ctx->fork(resolved.size());
-
-  for (auto [fork, ptr] : llvm::zip(forks, resolved)) {
-    Allocation& alloc = fork.heaps[ptr.heap()][ptr.alloc()];
-    fork.add(
-        alloc.check_inbounds(ptr.offset(), layout.getTypeStoreSize(op_ty)));
-    alloc.write(ptr.offset(), op_ty, value, fork.heaps, layout);
-
-    if (!pointer.is_resolved()) {
-      fork.backprop(pointer, ptr);
-    }
-  }
-
-  return forks;
+  return ops.execute(this);
 }
 ExecutionResult Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {
   auto& frame = ctx->stack_top();
