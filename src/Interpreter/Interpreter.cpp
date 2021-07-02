@@ -136,6 +136,10 @@ void Interpreter::execute() {
 
     if (!res.contexts().empty()) {
       auto& ctxs = res.contexts();
+      if (ctxs.size() == 1) {
+        *ctx = std::move(ctxs[0]);
+        continue;
+      }
 
       auto it =
           std::remove_if(ctxs.begin(), ctxs.end(), [&](const Context& ctx) {
