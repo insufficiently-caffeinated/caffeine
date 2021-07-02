@@ -20,7 +20,7 @@ namespace caffeine {
 
 ExprEvaluator::Unevaluatable::Unevaluatable(llvm::Value* expr,
                                             const char* context)
-    : expr_(expr), context_(context) {
+    : UnsupportedOperationException(""), expr_(expr), context_(context) {
   CAFFEINE_ASSERT(expr != nullptr);
 }
 
@@ -46,19 +46,13 @@ OpRef ExprEvaluator::scalarize(const LLVMScalar& scalar) const {
   return scalar.pointer().value(ctx->heaps);
 }
 
-LLVMValue ExprEvaluator::visit_internal(llvm::Value* val) {
+LLVMValue ExprEvaluator::visit(llvm::Value* val) {
   const auto& frame = ctx->stack_top();
   auto it = frame.variables.find(val);
   if (it != frame.variables.end())
     return it->second;
 
   return evaluate(val);
-}
-
-LLVMValue ExprEvaluator::visit(llvm::Value* val) {
-  try {
-    return visit_internal(val);
-  } catch (Unevaluatable& e) { CAFFEINE_UNSUPPORTED(e.what()); }
 }
 LLVMValue ExprEvaluator::visit(llvm::Value& val) {
   return visit(&val);
@@ -111,7 +105,7 @@ LLVMValue ExprEvaluator::evaluate(llvm::Value& val) {
 
 std::optional<LLVMValue> ExprEvaluator::try_visit(llvm::Value* val) {
   try {
-    return visit_internal(val);
+    return visit(val);
   } catch (Unevaluatable&) { return std::nullopt; }
 }
 
