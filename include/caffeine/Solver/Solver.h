@@ -19,6 +19,7 @@ class Context;
 class LLVMScalar;
 class LLVMValue;
 class Symbol;
+class ModelEvaluator;
 
 /**
  * A set of concrete value assignments to constants that satisfy the set of
@@ -67,6 +68,7 @@ protected:
   Model& operator=(Model&&) = default;
 
   friend class ExprEvaluator;
+  friend class ModelEvaluator;
 };
 
 /**

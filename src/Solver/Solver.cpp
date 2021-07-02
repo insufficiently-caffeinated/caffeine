@@ -3,6 +3,7 @@
 #include "caffeine/IR/Value.h"
 #include "caffeine/IR/Visitor.h"
 #include "caffeine/Interpreter/Context.h"
+#include "caffeine/Solver/ModelEval.h"
 
 #include <fmt/format.h>
 #include <fmt/ostream.h>
@@ -173,11 +174,11 @@ Value SolverResult::evaluate(const LLVMValue& expr, Context& ctx) const {
 }
 
 Value Model::evaluate(const Operation& expr) const {
-  return ExprEvaluator(this).visit(expr);
+  return ModelEvaluator(this).visit(expr);
 }
 
 Value Model::evaluate(const LLVMScalar& scalar, Context& ctx) const {
-  ExprEvaluator evaluator{this};
+  ModelEvaluator evaluator{this};
 
   if (scalar.is_pointer())
     return evaluator.visit(*scalar.pointer().value(ctx.heaps));
@@ -185,7 +186,7 @@ Value Model::evaluate(const LLVMScalar& scalar, Context& ctx) const {
 }
 
 Value Model::evaluate(const LLVMValue& expr, Context& ctx) const {
-  ExprEvaluator evaluator{this};
+  ModelEvaluator evaluator{this};
 
   if (expr.is_scalar())
     return evaluate(expr.scalar(), ctx);
