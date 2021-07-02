@@ -231,13 +231,18 @@ SolverResult Z3Solver::resolve(AssertionList& assertions,
   if (extra.is_constant_value(false))
     return SolverResult::UNSAT;
 
+  for (const Assertion& assertion : assertions) {
+    if (assertion.is_constant_value(false))
+      return SolverResult::UNSAT;
+  }
+
   auto block = CAFFEINE_TRACE_SPAN("Z3Solver::resolve");
 
   z3::solver solver = impl->tactic.mk_solver();
   Z3Model::ConstMap constMap;
 
   Z3OpVisitor visitor{&solver, constMap};
-  for (Assertion assertion : assertions) {
+  for (const Assertion& assertion : assertions) {
     if (assertion.is_empty()) {
       continue;
     }
