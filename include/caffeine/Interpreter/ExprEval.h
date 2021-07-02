@@ -48,6 +48,10 @@ public:
 
   explicit ExprEvaluator(Context* ctx, Options options = Options());
 
+private:
+  LLVMValue visit_internal(llvm::Value* val);
+
+public:
   LLVMValue visit(llvm::Value* val);
   LLVMValue visit(llvm::Value& val);
 
