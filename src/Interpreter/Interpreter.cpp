@@ -3,6 +3,7 @@
 #include "caffeine/Interpreter/Policy.h"
 #include "caffeine/Interpreter/StackFrame.h"
 #include "caffeine/Interpreter/Store.h"
+#include "caffeine/Interpreter/TransformBuilder.h"
 #include "caffeine/Interpreter/Value.h"
 #include "caffeine/Support/Assert.h"
 #include "caffeine/Support/LLVMFmt.h"
@@ -487,41 +488,15 @@ ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
   //       single-threaded code. If that ever changes then this will need to be
   //       revisited.
 
-  auto operand = ctx->lookup(inst.getOperand(0));
-  const llvm::DataLayout& layout = inst.getModule()->getDataLayout();
+  auto operand = inst.getOperand(0);
 
-  // TODO: What are the vector semantics for loads?
-  const Pointer& pointer = operand.scalar().pointer();
+  auto ops = TransformBuilder();
+  auto resolved = ops.resolve(operand, inst.getType());
+  auto loaded = ops.read(resolved, inst.getType());
 
-  auto assertion =
-      ctx->heaps.check_valid(pointer, layout.getTypeStoreSize(inst.getType()));
-  if (ctx->check(solver, !assertion) == SolverResult::SAT) {
-    logFailure(*ctx, !assertion, "invalid pointer load");
+  ops.assign(&inst, loaded);
 
-    // If we're getting an out-of-bounds access then there's a pretty good
-    // chance that we'll find that we can overlap with just about any other
-    // allocation. This isn't likely to produce useful bugs so we'll kill the
-    // context here.
-    return ExecutionResult::Dead;
-  }
-
-  auto resolved = ctx->heaps.resolve(solver, pointer, *ctx);
-  auto forks = ctx->fork(resolved.size());
-
-  for (auto [fork, ptr] : llvm::zip(forks, resolved)) {
-    Allocation& alloc = fork.heaps[ptr.heap()][ptr.alloc()];
-    fork.add(alloc.check_inbounds(ptr.offset(),
-                                  layout.getTypeStoreSize(inst.getType())));
-
-    auto value = alloc.read(ptr.offset(), inst.getType(), layout);
-    fork.stack_top().insert(&inst, value);
-
-    if (!pointer.is_resolved()) {
-      fork.backprop(pointer, ptr);
-    }
-  }
-
-  return forks;
+  return ops.execute(this);
 }
 ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
   auto value = ctx->lookup(inst.getOperand(0));
