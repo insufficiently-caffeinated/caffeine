@@ -27,5 +27,9 @@ RUN apt-get update \
         capnproto \
         pkg-config \
         curl \
-    && update-alternatives --install /usr/local/bin/llvm-config llvm-config /usr/bin/llvm-config-11 20 \
     && rm -rf /var/lib/apt/lists/*
+RUN update-alternatives --install /usr/local/bin/llvm-config llvm-config /usr/bin/llvm-config-11 20 \
+    && update-alternatives --install /usr/local/bin/clang++ clang++ /usr/bin/clang-11 20
+RUN curl -o go.tar.gz https://golang.org/dl/go1.16.5.linux-amd64.tar.gz -L && rm -rf /usr/local/go && tar -C /usr/local -xzf go.tar.gz && rm go.tar.gz \
+    && echo 'export PATH=$PATH:/usr/local/go/bin:/root/go/bin' >> /root/.bashrc
+RUN /usr/local/go/bin/go install github.com/SRI-CSL/gllvm/cmd/...@v1.3.0
