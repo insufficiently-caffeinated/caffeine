@@ -4,6 +4,7 @@
 #include "caffeine/ADT/SlotMap.h"
 #include "caffeine/IR/Operation.h"
 #include "caffeine/Memory/Allocator.h"
+#include "caffeine/Memory/BumpAllocator.h"
 #include <climits>
 #include <llvm/ADT/APInt.h>
 #include <llvm/ADT/DenseMap.h>
@@ -219,7 +220,7 @@ private:
 
   slot_map<Allocation> allocs_;
   unsigned index_;
-  std::variant<std::monostate, BuddyAllocator, std::monostate> allocator_;
+  std::variant<std::monostate, BumpAllocator, std::monostate> allocator_;
 
 public:
   MemHeap(unsigned index, bool concrete = true);

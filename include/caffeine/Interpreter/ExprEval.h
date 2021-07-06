@@ -1,6 +1,7 @@
 #pragma once
 
 #include "caffeine/IR/Operation.h"
+#include "caffeine/Support/UnsupportedOperation.h"
 #include <llvm/IR/InstVisitor.h>
 #include <optional>
 #include <stdexcept>
@@ -33,7 +34,7 @@ public:
     constexpr Options() noexcept {}
   };
 
-  class Unevaluatable : public std::exception {
+  class Unevaluatable : public UnsupportedOperationException {
   private:
     llvm::Value* expr_;
     const char* context_;
@@ -42,12 +43,13 @@ public:
   public:
     explicit Unevaluatable(llvm::Value* expr, const char* context = nullptr);
 
-    const char* what() const throw() override;
+    const char* what() const noexcept override;
     llvm::Value* expr() const;
   };
 
   explicit ExprEvaluator(Context* ctx, Options options = Options());
 
+public:
   LLVMValue visit(llvm::Value* val);
   LLVMValue visit(llvm::Value& val);
 

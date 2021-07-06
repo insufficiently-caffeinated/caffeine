@@ -20,7 +20,7 @@ namespace caffeine {
 
 ExprEvaluator::Unevaluatable::Unevaluatable(llvm::Value* expr,
                                             const char* context)
-    : expr_(expr), context_(context) {
+    : UnsupportedOperationException(""), expr_(expr), context_(context) {
   CAFFEINE_ASSERT(expr != nullptr);
 }
 
