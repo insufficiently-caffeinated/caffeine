@@ -15,6 +15,7 @@ namespace caffeine {
 
 Value::Value(const APInt& apint) : inner_(apint) {}
 Value::Value(APInt&& apint) : inner_(std::move(apint)) {}
+Value::Value(bool ival) : Value(llvm::APInt((uint64_t)ival, 1)) {}
 
 Value::Value(const APFloat& apfloat) : inner_(apfloat) {}
 Value::Value(APFloat&& apfloat) : inner_(std::move(apfloat)) {}
