@@ -61,6 +61,7 @@ target_link_libraries(caffeine PUBLIC
   immer
   magic_enum::magic_enum
   CapnProto::capnp-rpc
+  Boost::thread
 )
 
 install(
