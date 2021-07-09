@@ -14,11 +14,9 @@
 
 namespace caffeine::tracing {
 
-namespace detail {
-  void annotate_tid(AutoTraceBlock& block) {
-    block.annotate("tid", fmt::format("{}", std::this_thread::get_id()));
-  }
-} // namespace detail
+void AutoTraceBlock::annotate_tid(AutoTraceBlock& block) {
+  block.annotate("tid", fmt::format("{}", std::this_thread::get_id()));
+}
 
 #if CAFFEINE_ENABLE_TRACING
 
