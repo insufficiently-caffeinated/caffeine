@@ -1,9 +1,9 @@
 #include "caffeine/Interpreter/ThreadQueueStore.h"
 #include "caffeine/Support/Tracing.h"
 #include <chrono>
+#include <fmt/format.h>
 #include <iostream>
 #include <iterator>
-#include <fmt/format.h>
 
 namespace caffeine {
 
@@ -137,7 +137,7 @@ std::optional<Context> ThreadQueueContextStore::next_context() {
 }
 
 void ThreadQueueContextStore::add_context(Context&& ctx) {
-  auto block = CAFFEINE_TRACE_SPAN("TQCS::add_context");
+  [[maybe_unused]] auto block = CAFFEINE_TRACE_SPAN("TQCS::add_context");
   auto [lock, tqueue] = get_thread_queue();
   auto queue_lock = std::unique_lock(tqueue->mutex);
 
@@ -146,7 +146,7 @@ void ThreadQueueContextStore::add_context(Context&& ctx) {
 }
 
 void ThreadQueueContextStore::add_context_multi(Span<Context> ctxs) {
-  auto block = CAFFEINE_TRACE_SPAN("TQCS::add_context_multi");
+  [[maybe_unused]] auto block = CAFFEINE_TRACE_SPAN("TQCS::add_context_multi");
   auto [lock, tqueue] = get_thread_queue();
   auto queue_lock = std::unique_lock(tqueue->mutex);
 

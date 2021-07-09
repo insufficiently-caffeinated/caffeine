@@ -10,6 +10,26 @@
 
 namespace caffeine {
 
+/**
+ * Work-stealing context store.
+ *
+ * This context store keeps a deque of contexts for each thread. When a thread
+ * adds new work to the store then it pushes the work items on the front of its
+ * own deque. Then, when a thread needs a new context it will first attempt to
+ * take work from the front of its own queue. If there is nothing within its
+ * queue then it will randomly attempt to steal from the back of another
+ * thread's queue every 100ms until it finds a non-empty other queue.
+ *
+ * This has 2 main advantages:
+ * 1. The item returned from the context store for a thread is highly likely to
+ *    be one that was just inserted. This means that it will likely be in cache.
+ * 2. When there is no work threads don't waste lots of CPU time spinning on a
+ *    condition variable.
+ *
+ * It does, however, have the disadvantage that no prioritization is done
+ * between work items so this will not necessarily efficiently distribute over
+ * the work space.
+ */
 class ThreadQueueContextStore : public ExecutionContextStore {
 private:
   struct ThreadQueue {
