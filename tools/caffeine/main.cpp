@@ -140,7 +140,9 @@ int main(int argc, char** argv) {
   }
 
   auto policy = caffeine::AlwaysAllowExecutionPolicy();
-  auto exec = caffeine::Executor(&policy, store.get(), &logger, options);
+  auto builder = caffeine::SolverBuilder::with_default();
+  auto exec =
+      caffeine::Executor(&policy, store.get(), &logger, &builder, options);
 
   auto context = Context(function);
   context.heaps.set_concrete(!force_symbolic_allocator);

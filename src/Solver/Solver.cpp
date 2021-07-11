@@ -3,7 +3,11 @@
 #include "caffeine/IR/Value.h"
 #include "caffeine/IR/Visitor.h"
 #include "caffeine/Interpreter/Context.h"
+#include "caffeine/Solver/CanonicalizingSolver.h"
 #include "caffeine/Solver/ModelEval.h"
+#include "caffeine/Solver/SimplifyingSolver.h"
+#include "caffeine/Solver/SlicingSolver.h"
+#include "caffeine/Solver/Z3Solver.h"
 
 #include <fmt/format.h>
 #include <fmt/ostream.h>
@@ -95,6 +99,62 @@ SolverResult Solver::check(AssertionList& assertions, const Assertion& extra) {
 
 SolverResult Solver::resolve(AssertionList& assertions) {
   return resolve(assertions, Assertion());
+}
+
+TransformSolver::TransformSolver(const std::shared_ptr<Solver>& base)
+    : base(base) {
+  CAFFEINE_ASSERT(base);
+}
+
+SolverResult TransformSolver::check(AssertionList& assertions,
+                                    const Assertion& extra) {
+  switch (this->transform(assertions, extra)) {
+  case SolverResult::SAT:
+    CAFFEINE_ABORT("TransformSolver::transform returned SAT");
+  case SolverResult::UNSAT:
+    return SolverResult::UNSAT;
+  case SolverResult::Unknown:
+    return base->check(assertions, extra);
+  }
+  CAFFEINE_UNREACHABLE();
+}
+
+SolverResult TransformSolver::resolve(AssertionList& assertions,
+                                      const Assertion& extra) {
+  switch (this->transform(assertions, extra)) {
+  case SolverResult::SAT:
+    CAFFEINE_ABORT("TransformSolver::transform returned SAT");
+  case SolverResult::UNSAT:
+    return SolverResult::UNSAT;
+  case SolverResult::Unknown:
+    return base->resolve(assertions, extra);
+  }
+  CAFFEINE_UNREACHABLE();
+}
+
+SolverBuilder::SolverBuilder(const BaseFn& base) : base(base) {}
+
+SolverBuilder SolverBuilder::with_default() {
+  auto builder = SolverBuilder(std::make_shared<Z3Solver>);
+  builder.with<SimplifyingSolver>();
+  builder.with<CanonicalizingSolver>();
+  builder.with<SlicingSolver>();
+  return builder;
+}
+
+SolverBuilder& SolverBuilder::with(const InterFn& func) {
+  stack.push_back(func);
+  return *this;
+}
+
+std::shared_ptr<Solver> SolverBuilder::build() const {
+  auto solver = this->base();
+
+  // Need to iterate through backwards
+  for (auto it = stack.rbegin(); it != stack.rend(); ++it)
+    solver = (*it)(solver);
+
+  return solver;
 }
 
 std::ostream& operator<<(std::ostream& os, const SolverResult& res) {

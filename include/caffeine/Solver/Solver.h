@@ -1,6 +1,7 @@
 #ifndef CAFFEINE_SOLVER_SOLVER_H
 #define CAFFEINE_SOLVER_SOLVER_H
 
+#include <functional>
 #include <iosfwd>
 #include <memory>
 #include <vector>
@@ -179,6 +180,68 @@ public:
 
   Solver& operator=(const Solver&) = default;
   Solver& operator=(Solver&&) = default;
+};
+
+/**
+ * Base class for solvers which perform transformations.
+ */
+class TransformSolver : public Solver {
+public:
+  TransformSolver(const std::shared_ptr<Solver>& base);
+
+protected:
+  /**
+   * Perform some transformation on the list of assertions.
+   *
+   * This method may return either UNSAT or Unknown. If it returns UNSAT then no
+   * lower solvers will be invoked and UNSAT will be returned, otherwise if it
+   * returns Unknown then the modified list of assertions will passed onto the
+   * inner query.
+   */
+  virtual SolverResult::Kind transform(AssertionList& assertions,
+                                       const Assertion& extra) = 0;
+
+protected:
+  SolverResult check(AssertionList& assertions,
+                     const Assertion& extra) override;
+  SolverResult resolve(AssertionList& assertions,
+                       const Assertion& extra) override;
+
+protected:
+  std::shared_ptr<Solver> base;
+};
+
+class SolverBuilder {
+public:
+  using BaseFn = std::function<std::shared_ptr<Solver>()>;
+  using InterFn =
+      std::function<std::shared_ptr<Solver>(const std::shared_ptr<Solver>&)>;
+
+private:
+  BaseFn base;
+  std::vector<InterFn> stack;
+
+public:
+  // Create a solver with the initial bottom-level solver.
+  SolverBuilder(const BaseFn& base);
+
+  static SolverBuilder with_default();
+
+  // Add a new solver to the top of the solver stack.
+  SolverBuilder& with(const InterFn& func);
+
+  template <typename T>
+  SolverBuilder& with() {
+    return with([](const std::shared_ptr<Solver>& solver) {
+      return std::make_shared<T>(solver);
+    });
+  }
+
+  // Build the full solver.
+  //
+  // This can be called from multiple threads safely provided all the individual
+  // consructor functions are thread-safe.
+  std::shared_ptr<Solver> build() const;
 };
 
 std::ostream& operator<<(std::ostream& os, const SolverResult& res);

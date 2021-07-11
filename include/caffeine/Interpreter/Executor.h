@@ -23,19 +23,21 @@ private:
   ExecutionPolicy* policy;
   ExecutionContextStore* store;
   FailureLogger* logger;
+  const SolverBuilder* builder;
   ExecutorOptions options;
-
-  friend void run_worker(Executor* exec, FailureLogger* logger,
-                         ExecutionContextStore* store);
 
 public:
   Executor(ExecutionPolicy* policy, ExecutionContextStore* store,
-           FailureLogger* logger, const ExecutorOptions& options = {});
+           FailureLogger* logger, const SolverBuilder* builder,
+           const ExecutorOptions& options = {});
 
   /**
    * Runs the contexts in its possesion until there are none left
    */
   void run();
+
+private:
+  void run_worker();
 };
 
 } // namespace caffeine

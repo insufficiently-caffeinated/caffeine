@@ -10,8 +10,8 @@
 
 namespace caffeine {
 
-SolverResult SimplifyingSolver::resolve(AssertionList& assertions,
-                                        const Assertion&) {
+SolverResult::Kind SimplifyingSolver::transform(AssertionList& assertions,
+                                                const Assertion&) {
   transforms::simplify(assertions);
   return SolverResult::Unknown;
 }
