@@ -77,11 +77,6 @@ Operation::Operation(Operation&& op) noexcept
   copy_vtable(op);
 }
 
-Operation::~Operation() {
-  if (opcode_ != FixedArray)
-    OperationCache::cache.erase(*this);
-}
-
 Operation& Operation::operator=(const Operation& op) {
   // Do inner first for exception safety.
   inner_ = op.inner_;
@@ -245,72 +240,6 @@ std::ostream& operator<<(std::ostream& os, Operation::Opcode opcode) {
 
   default:
     return os << "Unknown(" << (uint16_t)opcode << ")";
-  }
-}
-
-/***************************************************
- * OperationCache                                  *
- ***************************************************/
-OperationCache OperationCache::cache{};
-
-OpRef OperationCache::find(size_t key, const Operation& op) {
-
-  auto [start, end] = map.equal_range(key);
-  for (auto it = start; it != end;) {
-    auto shared = it->second.lock();
-
-    if (!shared) {
-      it = map.erase(it);
-      continue;
-    }
-
-    if (*shared == op)
-      return shared;
-
-    ++it;
-  }
-
-  return nullptr;
-}
-
-OpRef OperationCache::intern(Operation&& op) {
-  size_t key = (size_t)hash_value(op);
-
-  std::unique_lock<std::mutex> lock{mutex};
-  auto cached = find(key, op);
-  if (cached)
-    return cached;
-
-  auto shared = std::make_shared<Operation>(std::move(op));
-  map.emplace(key, shared);
-
-  return shared;
-}
-OpRef OperationCache::intern(const Operation& op) {
-  size_t key = (size_t)hash_value(op);
-
-  std::unique_lock<std::mutex> lock{mutex};
-  auto cached = find(key, op);
-  if (cached)
-    return cached;
-
-  auto shared = std::make_shared<Operation>(op);
-  map.emplace(key, shared);
-
-  return shared;
-}
-
-void OperationCache::erase(const Operation& op) {
-  std::unique_lock<std::mutex> lock{mutex};
-  auto key = (size_t)hash_value(op);
-  auto [start, end] = map.equal_range(key);
-
-  for (auto it = start; it != end;) {
-    if (it->second.expired()) {
-      it = map.erase(it);
-    } else {
-      ++it;
-    }
   }
 }
 
