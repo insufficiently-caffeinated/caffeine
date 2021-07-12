@@ -132,19 +132,12 @@ caffeine_dependency(
 )
 
 caffeine_dependency(
-  AFLplusplus    ""
-  GIT_REPOSITORY https://github.com/AFLplusplus/AFLplusplus
-  GIT_TAG        3.12c
-  GIT_SHALLOW    TRUE
-  GIT_SUBMODULES ""
+  AFLplusplus                ""
+  GIT_REPOSITORY             https://github.com/AFLplusplus/AFLplusplus
+  GIT_TAG                    3.12c
+  GIT_SHALLOW                TRUE
+  GIT_SUBMODULES             ""
   PATCH_COMMAND  "${CMAKE_COMMAND}"
     "${CMAKE_SOURCE_DIR}/cmake/AFLplusplus.patch"
     -P "${CMAKE_SOURCE_DIR}/cmake/CaffeinePatch.cmake"
-)
-
-caffeine_dependency(
-  tsl-hopscotch-map 2.3.0
-  GIT_REPOSITORY    https://github.com/Tessil/hopscotch-map
-  GIT_TAG           v2.3.0
-  GIT_SHALLOW       TRUE
 )
