@@ -6,6 +6,13 @@
 
 namespace caffeine {
 
+/**
+ * Global cache for operations.
+ *
+ * In order to allow for efficient comparisons of operations caffeine memoizes
+ * operation creation. This class is responsible for caching operations that are
+ * currently in use.
+ */
 class OperationCache {
 private:
   struct hasher {
