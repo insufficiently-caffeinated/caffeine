@@ -3,6 +3,7 @@
 #include "caffeine/Interpreter/Interpreter.h"
 #include "caffeine/Interpreter/Policy.h"
 #include "caffeine/Interpreter/Store.h"
+#include "caffeine/Interpreter/ThreadQueueStore.h"
 #include "caffeine/Support/DiagnosticHandler.h"
 #include "caffeine/Support/Signal.h"
 #include "caffeine/Support/Tracing.h"
@@ -132,7 +133,7 @@ int main(int argc, char** argv) {
   if (store_type == "queue")
     store = std::make_unique<QueueingContextStore>(options.num_threads);
   else if (store_type == "thread-queue")
-    store = std::make_unique<ThreadQueuedContextStore>(options.num_threads, 2);
+    store = std::make_unique<ThreadQueueContextStore>(options.num_threads);
   else {
     WithColor::error() << " unknown store type '" << store_type << "'\n";
     return 2;

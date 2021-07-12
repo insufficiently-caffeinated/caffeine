@@ -71,45 +71,4 @@ Context QueueingContextStore::dequeue() {
   return ctx;
 }
 
-ThreadQueuedContextStore::ThreadQueuedContextStore(size_t num_readers,
-                                                   size_t cache_size)
-    : QueueingContextStore(num_readers), cache_size(cache_size) {}
-
-std::optional<Context> ThreadQueuedContextStore::next_context() {
-  auto& queue = locals.get_or_insert();
-  if (!queue.empty()) {
-    Context ctx = std::move(queue.back());
-    queue.pop_back();
-    return ctx;
-  }
-
-  return QueueingContextStore::next_context();
-}
-
-void ThreadQueuedContextStore::add_context(Context&& ctx) {
-  auto* queue = locals.get();
-  if (!queue)
-    return QueueingContextStore::add_context(std::move(ctx));
-
-  if (queue->size() >= cache_size) {
-    QueueingContextStore::add_context(std::move(queue->front()));
-    queue->pop_front();
-  }
-
-  queue->push_back(std::move(ctx));
-}
-void ThreadQueuedContextStore::add_context_multi(Span<Context> ctxs) {
-  auto* queue = locals.get();
-  if (!queue)
-    return QueueingContextStore::add_context_multi(ctxs);
-
-  while (queue->size() < cache_size && !ctxs.empty()) {
-    queue->push_back(std::move(ctxs.front()));
-    ctxs = ctxs.subslice(1);
-  }
-
-  if (!ctxs.empty())
-    QueueingContextStore::add_context_multi(ctxs);
-}
-
 } // namespace caffeine

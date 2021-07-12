@@ -174,14 +174,26 @@ public:
     return std::move(*this);
   }
 
+  static AutoTraceBlock with_common(std::string_view name, const char* line,
+                                    const char* file, const char* func) {
+    if (TraceContext::tracing_enabled()) {
+      return AutoTraceBlock(name)
+          .annotate("line", line)
+          .annotate("file", file)
+          .annotate("func", func)
+          .annotate_func(annotate_tid);
+    } else {
+      return empty();
+    }
+  }
+
 public:
   AutoTraceBlock(const AutoTraceBlock&) = delete;
   AutoTraceBlock& operator=(const AutoTraceBlock&) = delete;
-};
 
-namespace detail {
-  void annotate_tid(AutoTraceBlock& block);
-}
+private:
+  static void annotate_tid(AutoTraceBlock& block);
+};
 
 /**
  * Open a trace block and record some common trace metadata.
@@ -190,12 +202,7 @@ namespace detail {
  * AutoTraceBlock instance that you can add custom annotations to.
  */
 #define CAFFEINE_TRACE_SPAN(name)                                              \
-  (::caffeine::tracing::TraceContext::tracing_enabled()                        \
-       ? ::caffeine::tracing::AutoTraceBlock(name)                             \
-             .annotate("line", CAFFEINE_STRINGIFY(__LINE__))                   \
-             .annotate("file", __FILE__)                                       \
-             .annotate("func", CAFFEINE_FUNCTION)                              \
-             .annotate_func(::caffeine::tracing::detail::annotate_tid)         \
-       : ::caffeine::tracing::AutoTraceBlock::empty())
+  ::caffeine::tracing::AutoTraceBlock::with_common(                            \
+      (name), CAFFEINE_STRINGIFY(__LINE__), __FILE__, CAFFEINE_FUNCTION)
 
 } // namespace caffeine::tracing
