@@ -31,6 +31,7 @@ jobs:
       - name: Setup environment variables
         run: |
           ./.github/scripts/setup-env.sh --compiler clang
+          echo "default.%p.profraw" >> $GITHUB_ENV
 
       - name: Configure
         run: |
@@ -45,10 +46,7 @@ jobs:
 
       - name: Test
         run: |
-          cd build
-          ctest . --output-on-failure -j$(nproc)
-        env:
-          LLVM_PROFILE_FILE: "default.%p.profraw"
+          ctest build --output-on-failure -j$(nproc)
 
       - name: Coverage
         env:

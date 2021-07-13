@@ -69,5 +69,4 @@ jobs:
 
       - name: Test
         run: |
-          cd build
-          ctest . --output-on-failure -j$(nproc)
+          ctest build --output-on-failure -j$(nproc)
