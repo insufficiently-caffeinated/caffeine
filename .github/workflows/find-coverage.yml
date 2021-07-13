@@ -31,7 +31,7 @@ jobs:
       - name: Setup environment variables
         run: |
           ./.github/scripts/setup-env.sh --compiler clang
-          echo "default.%p.profraw" >> $GITHUB_ENV
+          echo "LLVM_PROFILE_FILE=default.%p.profraw" >> $GITHUB_ENV
 
       - name: Configure
         run: |
