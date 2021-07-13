@@ -23,8 +23,8 @@ done
 
 case $COMPILER in
   clang)
-    echo "CC=clang" >> $GITHUB_ENV
-    echo "CXX=clang++" >> $GITHUB_ENV
+    echo "CC=clang-11" >> $GITHUB_ENV
+    echo "CXX=clang++-11" >> $GITHUB_ENV
     ;;
   gcc)
     echo "CC=gcc" >> $GITHUB_ENV
