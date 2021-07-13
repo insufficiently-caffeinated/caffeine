@@ -575,6 +575,7 @@ OpRef OperationSimplifier<M>::visitFixedArray(const FixedArray& op) {
   return std::make_shared<Operation>(op);
 }
 
+// Note that these have to be after all the method definitions
 template class OperationSimplifier<true>;
 template class OperationSimplifier<false>;
 
