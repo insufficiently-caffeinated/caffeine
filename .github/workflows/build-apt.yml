@@ -17,8 +17,6 @@ jobs:
       fail-fast: false
     steps:
       - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
 
       - name: Install required dependencies
         # ubuntu-latest already has many of the packages we want installed. See
@@ -30,26 +28,31 @@ jobs:
             libfmt-dev \
             libboost-all-dev \
             capnproto libcapnp-dev \
-            git-restore-mtime
+            ccache
           sudo ./.github/scripts/update-alternatives-llvm.sh 11 20
           go get github.com/SRI-CSL/gllvm/cmd/...
 
       - name: Set up compiler env vars
         run: |
           ./.github/scripts/setup-env.sh --compiler ${{ matrix.compiler }}
+          ./.github/scripts/setup-ccache.sh
 
-      # If we don't do this then all the files have newer timestamps then those
-      # in the cache and no reuse of anything within the build folder occurs.
-      # This script just sets the time of files according to their commit times.
-      - name: Restore time stamps according to commit times
-        run: git restore-mtime
+      - name: Export Cache Timestamp
+        id: ccache-cache-timestamp
+        shell: cmake -P {0}
+        run: |
+          string(TIMESTAMP current_date "%Y-%m-%d-%H;%M;%S" UTC)
+          message("::set-output name=timestamp::${current_date}")
 
       - uses: actions/cache@v2
         env:
-          cache-name: cache-build
+          cache-name: cache-ccache
+          cache-key-base: cache-ccache-${{ runner.os }}-${{ matrix.compiler }}
         with:
-          path: build
-          key: ${{ env.cache-name }}-os-${{ runner.os }}-compiler-${{ matrix.compiler }}
+          path: .ccache
+          key: ${{ env.cache-key-base }}-${{ steps.ccache-cache-timestamp.outputs.timestamp }}
+          restore-keys: |
+            ${{ env.cache-key-base }}-
 
       # Note: We set CMP0116 to OLD to silence warnings that don't apply since
       #       we keep the policy as OLD anyway.
@@ -58,6 +61,8 @@ jobs:
           mkdir -p build
           cmake -B build -S . -G Ninja \
             -DCMAKE_POLICY_WARNING_CMP0116=OLD \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DCAFFEINE_CI=ON \
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
             -DCAFFEINE_ENABLE_UBSAN=ON \
