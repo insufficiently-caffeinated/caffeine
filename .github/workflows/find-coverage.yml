@@ -11,12 +11,24 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: insufficientlycaffeinated/bob
     steps:
       - name: Checkout
         uses: actions/checkout@v1
 
-      - name: Envars
+      - name: Install dependencies
+        # ubuntu-latest already has many of the packages we want installed. See
+        # https://github.com/actions/virtual-environments/blob/main/images/linux/Ubuntu2004-README.md
+        run: |
+          sudo apt-get install -y \
+            ninja-build \
+            libgtest-dev \
+            libfmt-dev \
+            libboost-all-dev \
+            capnproto libcapnp-dev
+          sudo ./.github/scripts/update-alternatives-llvm.sh 11 20
+          go get github.com/SRI-CSL/gllvm/cmd/...
+
+      - name: Setup environment variables
         run: |
           ./.github/scripts/setup-env.sh --compiler clang
 
@@ -29,7 +41,7 @@ jobs:
             -DCAFFEINE_ENABLE_COVERAGE=ON
 
       - name: Build
-        run: cmake --build "build" -j$(nproc)
+        run: cmake --build build
 
       - name: Test
         run: |
@@ -44,9 +56,8 @@ jobs:
         run: |
           cd build
           find . -name "*.profraw"
-          llvm-profdata-11 merge -sparse `find . -name "*.profraw"` -o default.profdata
-          llvm-cov-11 show -instr-profile default.profdata bin/caffeine-unittest caffeine \
+          llvm-profdata merge -sparse `find . -name "*.profraw"` -o default.profdata
+          llvm-cov show -instr-profile default.profdata bin/caffeine-unittest caffeine \
             -format=text > coverage.txt
-          apt update && apt install curl # this is a bandaid until we get curl in the container
           curl -s https://codecov.io/bash > codecov.sh
           bash codecov.sh -t $CODECOV_TOKEN
