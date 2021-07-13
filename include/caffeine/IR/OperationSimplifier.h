@@ -5,6 +5,12 @@
 
 namespace caffeine {
 
+/**
+ * Visitor to simplify operation expressions.
+ *
+ * This is called internally by the various derived construction functions so
+ * you should never have to use it directly.
+ */
 template <bool MoveOut = false>
 class OperationSimplifier
     : public ConstOpVisitor<OperationSimplifier<MoveOut>, OpRef> {
