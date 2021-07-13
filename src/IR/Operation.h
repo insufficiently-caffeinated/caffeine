@@ -1,21 +1,15 @@
 #pragma once
 
-#include "caffeine/IR/Matching.h"
 #include "caffeine/IR/Operation.h"
-#include "caffeine/IR/OperationCache.h"
 #include "caffeine/IR/OperationSimplifier.h"
-#include "caffeine/IR/Value.h"
-#include "caffeine/IR/Visitor.h"
 #include <llvm/Support/MathExtras.h>
-#include <memory>
-#include <mutex>
-#include <unordered_map>
-
-/**
- * This header has a bunch of utility methods for constant folding.
- */
 
 namespace caffeine {
+
+inline uint64_t ilog2(uint64_t x) {
+  bool ispow2 = (x & (x - 1)) == 0;
+  return sizeof(x) * CHAR_BIT - llvm::countLeadingZeros(x) - (ispow2 ? 1 : 0);
+}
 
 template <typename T>
 OpRef constant_fold(T& value) {
