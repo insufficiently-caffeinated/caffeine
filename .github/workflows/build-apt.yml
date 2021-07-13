@@ -1,0 +1,73 @@
+name: build-apt
+
+on:
+  # Don't build CI for stackbot internal branches, they are already built for PRs
+  push:
+    branches-ignore:
+      - stackbot/**
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        compiler: [clang, gcc]
+      # We explicitly want to run all the compilers
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Install required dependencies
+        # ubuntu-latest already has many of the packages we want installed. See
+        # https://github.com/actions/virtual-environments/blob/main/images/linux/Ubuntu2004-README.md
+        run: |
+          sudo apt-get install -y \
+            ninja-build \
+            libgtest-dev \
+            libfmt-dev \
+            libboost-all-dev \
+            capnproto libcapnp-dev \
+            git-restore-mtime
+          sudo ./.github/scripts/update-alternatives-llvm.sh 11 20
+          go get github.com/SRI-CSL/gllvm/cmd/...
+
+      - name: Set up compiler env vars
+        run: |
+          ./.github/scripts/setup-env.sh --compiler ${{ matrix.compiler }}
+
+      # If we don't do this then all the files have newer timestamps then those
+      # in the cache and no reuse of anything within the build folder occurs.
+      # This script just sets the time of files according to their commit times.
+      - name: Restore time stamps according to commit times
+        run: git restore-mtime
+
+      - uses: actions/cache@v2
+        env:
+          cache-name: cache-build
+        with:
+          path: build
+          key: ${{ env.cache-name }}-os-${{ runner.os }}-compiler-${{ matrix.compiler }}
+
+      # Note: We set CMP0116 to OLD to silence warnings that don't apply since
+      #       we keep the policy as OLD anyway.
+      - name: Configure
+        run: |
+          mkdir -p build
+          cmake -B build -S . -G Ninja \
+            -DCMAKE_POLICY_WARNING_CMP0116=OLD \
+            -DCAFFEINE_CI=ON \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCAFFEINE_ENABLE_UBSAN=ON \
+            -DCAFFEINE_ENABLE_ASAN=ON \
+            -DCAFFEINE_ENABLE_LIBC=ON
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        run: |
+          cd build
+          ctest . --output-on-failure -j$(nproc)
