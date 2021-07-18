@@ -207,4 +207,3 @@ install(
   DIRECTORY interface
   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/caffeine"
 )
-
