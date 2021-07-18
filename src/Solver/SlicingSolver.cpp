@@ -3,8 +3,8 @@
 
 namespace caffeine {
 
-SlicingSolver::SlicingSolver(std::unique_ptr<Solver>&& inner)
-    : inner(std::move(inner)) {}
+SlicingSolver::SlicingSolver(const std::shared_ptr<Solver>& inner)
+    : inner(inner) {}
 
 SolverResult SlicingSolver::check(AssertionList& assertions,
                                   const Assertion& extra) {

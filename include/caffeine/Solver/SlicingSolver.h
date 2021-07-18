@@ -11,10 +11,10 @@ namespace caffeine {
 class SlicingSolver : public Solver {
 private:
   ConstraintSlicer slicer;
-  std::unique_ptr<Solver> inner;
+  std::shared_ptr<Solver> inner;
 
 public:
-  SlicingSolver(std::unique_ptr<Solver>&& inner);
+  SlicingSolver(const std::shared_ptr<Solver>& inner);
 
   SolverResult check(AssertionList& assertions, const Assertion& extra);
   SolverResult resolve(AssertionList& assertions, const Assertion& extra);
