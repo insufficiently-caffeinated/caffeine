@@ -2,6 +2,7 @@
 
 #include "caffeine/IR/Matching.h"
 #include "caffeine/IR/Operation.h"
+#include "caffeine/IR/OperationCache.h"
 #include "caffeine/IR/Value.h"
 #include "caffeine/IR/Visitor.h"
 #include <llvm/Support/MathExtras.h>
@@ -93,24 +94,6 @@ inline uint64_t ilog2(uint64_t x) {
   return sizeof(x) * CHAR_BIT - llvm::countLeadingZeros(x) - (ispow2 ? 1 : 0);
 }
 
-class OperationCache {
-private:
-  std::mutex mutex;
-  std::unordered_multimap<size_t, std::weak_ptr<const Operation>> map;
-
-  OpRef find(size_t key, const Operation& op);
-
-public:
-  OperationCache() = default;
-
-  OpRef intern(Operation&& op);
-  OpRef intern(const Operation& op);
-
-  void erase(const Operation& op);
-
-  static OperationCache cache;
-};
-
 template <bool move_out = false>
 class ConstantFolder : public ConstOpVisitor<ConstantFolder<move_out>, OpRef> {
 private:
@@ -140,10 +123,10 @@ public:
 
   OpRef visitOperation(const Operation& op) {
     if constexpr (move_out) {
-      return OperationCache::cache.intern(
+      return OperationCache::default_cache()->cache(
           std::move(const_cast<Operation&>(op)));
     } else {
-      return OperationCache::cache.intern(op);
+      return OperationCache::default_cache()->cache(op);
     }
   }
 
@@ -555,6 +538,10 @@ public:
         }
         return output;
       }
+
+      auto cached = OperationCache::default_cache()->intern(op.data());
+      if (cached != op.data())
+        return LoadOp::Create(cached, op.offset());
     }
 
     return this->visitOperation(op);
@@ -567,6 +554,10 @@ public:
       auto data = fixedarray->data();
       data.set(offset_cnst->value().getLimitedValue(), op.value());
       return FixedArray::Create(op.offset()->type(), data);
+    } else if (fixedarray) {
+      auto cached = OperationCache::default_cache()->intern(op.data());
+      if (cached != op.data())
+        return StoreOp::Create(cached, op.offset(), op.value());
     }
 
     return this->visitArrayBase(op);
