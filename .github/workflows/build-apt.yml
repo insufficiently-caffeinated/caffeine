@@ -13,6 +13,7 @@ jobs:
     strategy:
       matrix:
         compiler: [clang, gcc]
+        mode: [Debug, RelWithDebInfo]
       # We explicitly want to run all the compilers
       fail-fast: false
     steps:
@@ -33,7 +34,7 @@ jobs:
 
       - uses: hendrikmuhs/ccache-action@v1
         with:
-          key: ccache-${{ runner.os }}-${{ matrix.compiler }}
+          key: ccache-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mode }}
 
       - name: Set up compiler env vars
         run: |
@@ -49,7 +50,7 @@ jobs:
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DCAFFEINE_CI=ON \
-            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_BUILD_TYPE=${{ matrix.mode }} \
             -DCAFFEINE_ENABLE_UBSAN=ON \
             -DCAFFEINE_ENABLE_ASAN=ON \
             -DCAFFEINE_ENABLE_LIBC=ON
