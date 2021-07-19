@@ -28,7 +28,8 @@ Allocation::Allocation(const OpRef& address, const OpRef& size,
 Allocation::Allocation(const OpRef& address, const ConstantInt& size,
                        const OpRef& data, AllocationKind kind,
                        AllocationPermissions permissions)
-    : Allocation(address, make_ref<Operation>(size), data, kind, permissions) {}
+    : Allocation(address, std::make_shared<Operation>(size), data, kind,
+                 permissions) {}
 
 void Allocation::overwrite(const OpRef& newdata) {
   CAFFEINE_ASSERT(perms_ & AllocationPermissions::Write,

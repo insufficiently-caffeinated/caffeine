@@ -43,9 +43,11 @@ option(CAFFEINE_CI            "Enable options that are inconvenient for normal d
 option(CAFFEINE_ENABLE_BUILD  "Enable normal build targets" ON)
 
 option(BUILD_SHARED_LIBS "Build libcaffeine as a shared library" OFF)
+option(CAFFEINE_ENABLE_IMPLICIT_CONSTANT_FOLDING "" ON)
 
 # Usually users probably don't want to disable the entirety of the project
 mark_as_advanced(CAFFEINE_ENABLE_BUILD BUILD_SHARED_LIBS)
+mark_as_advanced(CAFFEINE_ENABLE_IMPLICIT_CONSTANT_FOLDING)
 
 ###########################################################
 #            Non-option cmake configuration               #

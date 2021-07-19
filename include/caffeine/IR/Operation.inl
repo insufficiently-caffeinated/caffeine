@@ -182,7 +182,7 @@ inline OpRef Operation::into_ref() const {
 
   if (auto strong = weak.lock())
     return strong;
-  return make_ref<Operation>(*this);
+  return std::make_shared<Operation>(*this);
 }
 
 /***************************************************
