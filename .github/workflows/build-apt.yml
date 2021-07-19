@@ -13,6 +13,7 @@ jobs:
     strategy:
       matrix:
         compiler: [clang, gcc]
+        mode: [Debug, RelWithDebInfo]
       # We explicitly want to run all the compilers
       fail-fast: false
     steps:
@@ -27,32 +28,17 @@ jobs:
             libgtest-dev \
             libfmt-dev \
             libboost-all-dev \
-            capnproto libcapnp-dev \
-            ccache
+            capnproto libcapnp-dev
           sudo ./.github/scripts/update-alternatives-llvm.sh 11 20
           go get github.com/SRI-CSL/gllvm/cmd/...
+
+      - uses: hendrikmuhs/ccache-action@v1
+        with:
+          key: ccache-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mode }}
 
       - name: Set up compiler env vars
         run: |
           ./.github/scripts/setup-env.sh --compiler ${{ matrix.compiler }}
-          ./.github/scripts/setup-ccache.sh
-
-      - name: Export Cache Timestamp
-        id: ccache-cache-timestamp
-        shell: cmake -P {0}
-        run: |
-          string(TIMESTAMP current_date "%Y-%m-%d-%H;%M;%S" UTC)
-          message("::set-output name=timestamp::${current_date}")
-
-      - uses: actions/cache@v2
-        env:
-          cache-name: cache-ccache
-          cache-key-base: cache-ccache-${{ runner.os }}-${{ matrix.compiler }}
-        with:
-          path: .ccache
-          key: ${{ env.cache-key-base }}-${{ steps.ccache-cache-timestamp.outputs.timestamp }}
-          restore-keys: |
-            ${{ env.cache-key-base }}-
 
       # Note: We set CMP0116 to OLD to silence warnings that don't apply since
       #       we keep the policy as OLD anyway.
@@ -64,7 +50,7 @@ jobs:
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DCAFFEINE_CI=ON \
-            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_BUILD_TYPE=${{ matrix.mode }} \
             -DCAFFEINE_ENABLE_UBSAN=ON \
             -DCAFFEINE_ENABLE_ASAN=ON \
             -DCAFFEINE_ENABLE_LIBC=ON
