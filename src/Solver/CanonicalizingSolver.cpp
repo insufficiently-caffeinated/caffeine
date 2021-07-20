@@ -10,8 +10,8 @@
 
 namespace caffeine {
 
-SolverResult CanonicalizingSolver::resolve(AssertionList& assertions,
-                                           const Assertion&) {
+SolverResult::Kind CanonicalizingSolver::transform(AssertionList& assertions,
+                                                   const Assertion&) {
   transforms::canonicalize(assertions);
   return SolverResult::Unknown;
 }

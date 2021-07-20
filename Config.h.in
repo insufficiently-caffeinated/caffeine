@@ -8,4 +8,8 @@
 // Whether to generate expensive tracing annotations
 #cmakedefine01 CAFFEINE_TRACING_EXPENSIVE_ANNOTATIONS
 
+// Whether to implicitly apply simplification rules as expressions are being
+// built. This should almost always be enabled.
+#cmakedefine CAFFEINE_ENABLE_IMPLICIT_CONSTANT_FOLDING
+
 #endif

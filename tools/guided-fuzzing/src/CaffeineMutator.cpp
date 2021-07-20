@@ -14,11 +14,6 @@
 #include "caffeine/Interpreter/Interpreter.h"
 #include "caffeine/Interpreter/Policy.h"
 #include "caffeine/Interpreter/Store.h"
-#include "caffeine/Solver/CanonicalizingSolver.h"
-#include "caffeine/Solver/SequenceSolver.h"
-#include "caffeine/Solver/SimplifyingSolver.h"
-#include "caffeine/Solver/SlicingSolver.h"
-#include "caffeine/Solver/Z3Solver.h"
 #include "caffeine/Support/DiagnosticHandler.h"
 #include "caffeine/Support/Tracing.h"
 
@@ -106,9 +101,7 @@ CaffeineMutator::CaffeineMutator(std::string binary_path, afl_state_t* afl) {
   // Create CAFFEINE_FUZZ_START automatically
   fuzz_target = getTargetFunction(module, llvm_context);
 
-  solver = caffeine::make_sequence_solver(
-      caffeine::SimplifyingSolver(), caffeine::CanonicalizingSolver(),
-      caffeine::SlicingSolver(std::make_unique<caffeine::Z3Solver>()));
+  solver = SolverBuilder::with_default().build();
 }
 
 size_t CaffeineMutator::mutate(caffeine::Span<char> data) {
@@ -131,7 +124,8 @@ size_t CaffeineMutator::mutate(caffeine::Span<char> data) {
       caffeine::GuidedExecutionPolicy(data, "__caffeine_mut", this, cases);
   auto store = caffeine::QueueingContextStore(options.num_threads);
   auto logger = caffeine::PrintingFailureLogger(std::cout);
-  auto exec = caffeine::Executor(&policy, &store, &logger, options);
+  auto builder = caffeine::SolverBuilder::with_default();
+  auto exec = caffeine::Executor(&policy, &store, &logger, &builder, options);
 
   store.add_context(std::move(context));
 

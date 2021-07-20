@@ -141,3 +141,10 @@ caffeine_dependency(
     "${CMAKE_SOURCE_DIR}/cmake/AFLplusplus.patch"
     -P "${CMAKE_SOURCE_DIR}/cmake/CaffeinePatch.cmake"
 )
+
+caffeine_dependency(
+  tsl-hopscotch-map 2.3.0
+  GIT_REPOSITORY    https://github.com/Tessil/hopscotch-map
+  GIT_TAG           v2.3.0
+  GIT_SHALLOW       TRUE
+)

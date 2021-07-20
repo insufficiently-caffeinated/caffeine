@@ -77,11 +77,6 @@ Operation::Operation(Operation&& op) noexcept
   copy_vtable(op);
 }
 
-Operation::~Operation() {
-  if (opcode_ != FixedArray)
-    OperationCache::cache.erase(*this);
-}
-
 Operation& Operation::operator=(const Operation& op) {
   // Do inner first for exception safety.
   inner_ = op.inner_;
@@ -249,72 +244,6 @@ std::ostream& operator<<(std::ostream& os, Operation::Opcode opcode) {
 }
 
 /***************************************************
- * OperationCache                                  *
- ***************************************************/
-OperationCache OperationCache::cache{};
-
-OpRef OperationCache::find(size_t key, const Operation& op) {
-
-  auto [start, end] = map.equal_range(key);
-  for (auto it = start; it != end;) {
-    auto shared = it->second.lock();
-
-    if (!shared) {
-      it = map.erase(it);
-      continue;
-    }
-
-    if (*shared == op)
-      return shared;
-
-    ++it;
-  }
-
-  return nullptr;
-}
-
-OpRef OperationCache::intern(Operation&& op) {
-  size_t key = (size_t)hash_value(op);
-
-  std::unique_lock<std::mutex> lock{mutex};
-  auto cached = find(key, op);
-  if (cached)
-    return cached;
-
-  auto shared = std::make_shared<Operation>(std::move(op));
-  map.emplace(key, shared);
-
-  return shared;
-}
-OpRef OperationCache::intern(const Operation& op) {
-  size_t key = (size_t)hash_value(op);
-
-  std::unique_lock<std::mutex> lock{mutex};
-  auto cached = find(key, op);
-  if (cached)
-    return cached;
-
-  auto shared = std::make_shared<Operation>(op);
-  map.emplace(key, shared);
-
-  return shared;
-}
-
-void OperationCache::erase(const Operation& op) {
-  std::unique_lock<std::mutex> lock{mutex};
-  auto key = (size_t)hash_value(op);
-  auto [start, end] = map.equal_range(key);
-
-  for (auto it = start; it != end;) {
-    if (it->second.expired()) {
-      it = map.erase(it);
-    } else {
-      ++it;
-    }
-  }
-}
-
-/***************************************************
  * Symbol                                          *
  ***************************************************/
 Symbol::Symbol(const std::string& name)
@@ -341,10 +270,10 @@ Constant::Constant(Type t, Symbol&& symbol)
                 ConstantData(std::move(symbol), nullptr)) {}
 
 OpRef Constant::Create(Type t, const Symbol& symbol) {
-  return OpRef(new Constant(t, symbol));
+  return Constant::Create(t, Symbol(symbol));
 }
 OpRef Constant::Create(Type t, Symbol&& symbol) {
-  return OpRef(new Constant(t, std::move(symbol)));
+  return constant_fold(Constant(t, std::move(symbol)));
 }
 
 Operation::Opcode Constant::op_for_symbol(const Symbol& symbol) {
@@ -367,13 +296,13 @@ Value ConstantInt::as_value() const {
 }
 
 OpRef ConstantInt::Create(const llvm::APInt& iconst) {
-  return OpRef(new ConstantInt(iconst));
+  return Create(llvm::APInt(iconst));
 }
 OpRef ConstantInt::Create(llvm::APInt&& iconst) {
-  return OpRef(new ConstantInt(iconst));
+  return constant_fold(ConstantInt(iconst));
 }
 OpRef ConstantInt::Create(bool value) {
-  return ConstantInt::Create(llvm::APInt(1, static_cast<uint64_t>(value)));
+  return Create(llvm::APInt(1, static_cast<uint64_t>(value)));
 }
 OpRef ConstantInt::Create(const Value& value) {
   return Create(value.apint());
@@ -393,13 +322,13 @@ ConstantFloat::ConstantFloat(llvm::APFloat&& fconst)
                 std::move(fconst)) {}
 
 OpRef ConstantFloat::Create(const llvm::APFloat& fconst) {
-  return OpRef(new ConstantFloat(fconst));
+  return Create(llvm::APFloat(fconst));
 }
 OpRef ConstantFloat::Create(llvm::APFloat&& fconst) {
-  return OpRef(new ConstantFloat(fconst));
+  return constant_fold(ConstantFloat(fconst));
 }
 OpRef ConstantFloat::Create(double value) {
-  return OpRef(new ConstantFloat(llvm::APFloat(value)));
+  return Create(llvm::APFloat(value));
 }
 
 /***************************************************
@@ -416,7 +345,7 @@ OpRef ConstantArray::Create(const Symbol& symbol, const OpRef& size) {
 OpRef ConstantArray::Create(Symbol&& symbol, const OpRef& size) {
   CAFFEINE_ASSERT(size->type().is_int());
 
-  return OpRef(new ConstantArray(std::move(symbol), size));
+  return constant_fold(ConstantArray(std::move(symbol), size));
 }
 
 OpRef ConstantArray::with_new_operands(llvm::ArrayRef<OpRef> operands) const {

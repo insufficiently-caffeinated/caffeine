@@ -14,12 +14,12 @@ namespace caffeine {
  *
  * Always returns unknown.
  */
-class SimplifyingSolver final : public Solver {
+class SimplifyingSolver final : public TransformSolver {
 public:
-  SimplifyingSolver() = default;
+  using TransformSolver::TransformSolver;
 
-  SolverResult resolve(AssertionList& assertions,
-                       const Assertion& extra) override;
+  SolverResult::Kind transform(AssertionList& assertions,
+                               const Assertion& extra) override;
 };
 
 } // namespace caffeine
