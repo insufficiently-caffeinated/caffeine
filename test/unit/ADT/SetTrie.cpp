@@ -58,3 +58,12 @@ TEST(SetTrie, insert_superset) {
   ASSERT_TRUE(trie.contains_subset({0, 1, 2}));
   ASSERT_TRUE(trie.contains_subset({1, 2, 3}));
 }
+
+TEST(SetTrie, long_prefix) {
+  SetTrie<int> trie;
+
+  trie.insert({1, 2, 3, 4, 5, 6, 7, 8});
+  trie.insert({1});
+
+  ASSERT_TRUE(trie.contains_subset({1}));
+}
