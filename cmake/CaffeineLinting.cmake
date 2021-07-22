@@ -42,8 +42,7 @@ foreach(source ${lint_sources})
   add_custom_command(
     OUTPUT "${stamp_dir}/${source}"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${stamp_dir}/${source_dir}"
-    COMMAND ${CLANG_TIDY} "${CMAKE_SOURCE_DIR}/${source}" --fix -p ${CMAKE_BINARY_DIR}/compile_commands.json > "${stamp_dir}/${source}"
-    COMMAND [ -s "${stamp_dir}/${source}" ] && ${CMAKE_COMMAND} -E cat "${stamp_dir}/${source}" && exit 1
+    COMMAND ${CLANG_TIDY} "${CMAKE_SOURCE_DIR}/${source}" --fix --warnings-as-errors=* -p ${CMAKE_BINARY_DIR}/compile_commands.json | tee "${stamp_dir}/${source}"
     DEPENDS "${CMAKE_SOURCE_DIR}/${source}"
     COMMENT "Linting and fixing ${source}"
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
