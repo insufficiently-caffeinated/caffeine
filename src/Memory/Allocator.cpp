@@ -9,7 +9,7 @@ namespace caffeine {
 
 BuddyAllocator::BuddyAllocator(llvm::APInt base, llvm::APInt size)
     : base(std::move(base)), size(std::move(size)) {
-  int32_t log = size.exactLogBase2();
+  int32_t log = this->size.exactLogBase2();
   CAFFEINE_ASSERT(log != -1, "Heap size was not a power of 2");
 
   SparseVector<Node> nodes;
