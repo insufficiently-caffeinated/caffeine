@@ -14,7 +14,7 @@ jobs:
       matrix:
         compiler: [clang, gcc]
         mode: [Debug, RelWithDebInfo]
-      # We explicitly want to run all the compilers
+      # We explicitly want to run all the compilers, don't fail any of them
       fail-fast: false
     steps:
       - uses: actions/checkout@v2
