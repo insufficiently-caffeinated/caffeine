@@ -195,6 +195,8 @@ z3::expr Z3OpVisitor::visitFixedArray(const FixedArray& op) {
     return op_code;                                                            \
   }
 
+#define CAFFEINE_UNOP_UNIMPLEMENTED(op) return visitOperation(op)
+
 // clang-format off
 CAFFEINE_BINOP_IMPL(Add, lhs + rhs)
 CAFFEINE_BINOP_IMPL(Sub, lhs - rhs)
@@ -411,6 +413,24 @@ z3::expr Z3OpVisitor::visitSExt(const UnaryOp& op) {
 
   return z3::sext(src, op.type().bitwidth() - src.get_sort().bv_size());
 }
+z3::expr Z3OpVisitor::visitSIToFp(const UnaryOp& op) {
+  CAFFEINE_UNOP_UNIMPLEMENTED(op);
+}
+z3::expr Z3OpVisitor::visitUIToFp(const UnaryOp& op) {
+  CAFFEINE_UNOP_UNIMPLEMENTED(op);
+}
+z3::expr Z3OpVisitor::visitFpToSI(const UnaryOp& op) {
+  CAFFEINE_UNOP_UNIMPLEMENTED(op);
+}
+z3::expr Z3OpVisitor::visitFpToUI(const UnaryOp& op) {
+  CAFFEINE_UNOP_UNIMPLEMENTED(op);
+}
+z3::expr Z3OpVisitor::visitFpExt(const UnaryOp& op) {
+  CAFFEINE_UNOP_UNIMPLEMENTED(op);
+}
+z3::expr Z3OpVisitor::visitFpTrunc(const UnaryOp& op) {
+  CAFFEINE_UNOP_UNIMPLEMENTED(op);
+}
 
 z3::expr Z3OpVisitor::visitLoad(const LoadOp& op) {
   return z3::select(visit(op[0]), visit(op[1]));
@@ -423,6 +443,10 @@ z3::expr Z3OpVisitor::visitAlloc(const AllocOp& op) {
   auto index_width = op.size()->type().bitwidth();
 
   return z3::const_array(ctx->bv_sort(index_width), value);
+}
+
+z3::expr Z3OpVisitor::visitFunctionObject(const FunctionObject&) {
+  CAFFEINE_ABORT("Encountered a symbolic FunctionObject instance");
 }
 
 } // namespace caffeine
