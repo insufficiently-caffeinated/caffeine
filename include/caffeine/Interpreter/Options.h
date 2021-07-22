@@ -1,6 +1,8 @@
 #ifndef CAFFEINE_INTERPRETER_OPTIONS_H
 #define CAFFEINE_INTERPRETER_OPTIONS_H
 
+#include <cstdint>
+
 namespace caffeine {
 
 struct InterpreterOptions {

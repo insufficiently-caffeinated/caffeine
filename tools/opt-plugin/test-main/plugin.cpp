@@ -66,11 +66,7 @@ namespace {
         name = fmt::format("arg{}", i);
       }
 
-      // Note: need to include the nul terminator
-      auto value = ConstantDataArray::getRaw(name, name.size() + 1,
-                                             Type::getInt8Ty(m->getContext()));
-      auto ident = new GlobalVariable(*m, value->getType(), true,
-                                      GlobalVariable::InternalLinkage, value);
+      auto ident = builder.CreateGlobalString(name);
       auto idptr = ConstantExpr::getBitCast(ident, i8_p);
       auto size = ConstantInt::get(
           intptr, APInt(layout.getPointerSizeInBits(),

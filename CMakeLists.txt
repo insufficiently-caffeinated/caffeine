@@ -94,6 +94,18 @@ else()
   include(CaffeineFormatting)
 endif()
 
+find_program(CLANG_TIDY clang-tidy)
+if (CLANG_TIDY STREQUAL "CLANG_TIDY-NOTFOUND")
+  message(
+    ${CAFFEINE_WARNING}
+    "Unable to find clang-format. "
+    "Formatting target will not be configured. "
+    "Specify CLANG_FORMAT to re-enable formatting."
+  )
+else()
+  include(CaffeineLinting)
+endif()
+
 if (NOT CAFFEINE_ENABLE_BUILD)
   return()
 endif()
@@ -207,4 +219,3 @@ install(
   DIRECTORY interface
   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/caffeine"
 )
-
