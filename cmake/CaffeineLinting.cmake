@@ -29,7 +29,7 @@ foreach(source ${lint_sources})
   add_custom_command(
     OUTPUT "${stamp_dir}/${source}"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${stamp_dir}/${source_dir}"
-    COMMAND ${CLANG_TIDY} "${CMAKE_SOURCE_DIR}/${source}" --warnings-as-errors=* -p ${CMAKE_BINARY_DIR}/compile_commands.json | tee "${stamp_dir}/${source}"
+    COMMAND ${CLANG_TIDY} "${CMAKE_SOURCE_DIR}/${source}" --use-color --warnings-as-errors=* -p ${CMAKE_BINARY_DIR}/compile_commands.json | tee "${stamp_dir}/${source}"
     DEPENDS "${CMAKE_SOURCE_DIR}/${source}"
     COMMENT "Linting ${source}"
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
@@ -42,7 +42,7 @@ foreach(source ${lint_sources})
   add_custom_command(
     OUTPUT "${stamp_dir}/${source}"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${stamp_dir}/${source_dir}"
-    COMMAND ${CLANG_TIDY} "${CMAKE_SOURCE_DIR}/${source}" --fix --warnings-as-errors=* -p ${CMAKE_BINARY_DIR}/compile_commands.json | tee "${stamp_dir}/${source}"
+    COMMAND ${CLANG_TIDY} "${CMAKE_SOURCE_DIR}/${source}" --use-color --fix --warnings-as-errors=* -p ${CMAKE_BINARY_DIR}/compile_commands.json | tee "${stamp_dir}/${source}"
     DEPENDS "${CMAKE_SOURCE_DIR}/${source}"
     COMMENT "Linting and fixing ${source}"
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
