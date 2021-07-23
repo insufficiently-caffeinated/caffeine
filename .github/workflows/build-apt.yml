@@ -14,7 +14,7 @@ jobs:
       matrix:
         compiler: [clang, gcc]
         mode: [Debug, RelWithDebInfo]
-      # We explicitly want to run all the compilers
+      # We explicitly want to run all the compilers, don't fail any of them
       fail-fast: false
     steps:
       - uses: actions/checkout@v2
@@ -23,6 +23,7 @@ jobs:
         # ubuntu-latest already has many of the packages we want installed. See
         # https://github.com/actions/virtual-environments/blob/main/images/linux/Ubuntu2004-README.md
         run: |
+          sudo apt-get update
           sudo apt-get install -y \
             ninja-build \
             libgtest-dev \
