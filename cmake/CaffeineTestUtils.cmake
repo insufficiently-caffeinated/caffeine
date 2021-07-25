@@ -68,8 +68,8 @@ function(declare_test TEST_NAME_OUT test EXPECTED)
   string(REGEX REPLACE "\\\\|/" "_" test_target "${test_name}")
 
   get_filename_component(test_ext "${test_name}" LAST_EXT)
-  
-  if (NOT CAFFEINE_ENABLE_IR_TESTS AND 
+
+  if (NOT CAFFEINE_ENABLE_IR_TESTS AND
       ("${test_ext}" STREQUAL ".ll" OR "${test_ext}" STREQUAL ".bc"))
     add_test(
       NAME "${test_name}"
@@ -105,12 +105,15 @@ function(declare_test TEST_NAME_OUT test EXPECTED)
   add_dependencies        ("${test_target}" caffeine-builtins)
   llvm_include_directories("${test_target}" PRIVATE "$<TARGET_PROPERTY:caffeine-builtins,INCLUDE_DIRECTORIES>")
   llvm_link_libraries     ("${test_target}" PRIVATE caffeine-builtins)
+  if (CAFFEINE_ENABLE_LIBC AND "${test_ext}" STREQUAL ".cpp")
+    llvm_link_libraries     ("${test_target}" PRIVATE libcxx)
+  endif()
   llvm_compile_options    ("${test_target}" PRIVATE -O3)
 
   build_command(
     OUTPUT "${OUT_DIR}/optimized.bc"
-    COMMAND "${LLVM_OPT}" ARGS 
-      "--load=$<TARGET_FILE:caffeine-opt-plugin>" 
+    COMMAND "${LLVM_OPT}" ARGS
+      "--load=$<TARGET_FILE:caffeine-opt-plugin>"
       --caffeine-gen-test-main
       --caffeine-gen-builtins
       --internalize
@@ -119,7 +122,7 @@ function(declare_test TEST_NAME_OUT test EXPECTED)
       -o <OUTPUT>
       "$<TARGET_PROPERTY:${test_target},OUTPUT>"
     COMMENT "Optimizing ${test_target}"
-    DEPENDS 
+    DEPENDS
       caffeine-opt-plugin
       "${test_target}"
       "$<TARGET_PROPERTY:${test_target},OUTPUT>"
@@ -151,7 +154,7 @@ function(declare_test TEST_NAME_OUT test EXPECTED)
     if (CAFFEINE_ENABLE_COVERAGE)
       add_test(
         NAME "${test_name}"
-        COMMAND "${CMAKE_COMMAND}" -E env 
+        COMMAND "${CMAKE_COMMAND}" -E env
           "LLVM_PROFILE_FILE=${test_target}.%p.profraw"
         "$<TARGET_FILE:caffeine-bin>" ${TEST_FLAGS} "${DIS_OUT}"
       )

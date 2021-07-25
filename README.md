@@ -44,7 +44,8 @@ apt-get update \
         libboost-all-dev \
         libcapnp-dev \
         capnproto \
-        pkg-config
+        pkg-config \
+        jq
 ```
 - Run cmake and make
   - Navigate to the project's root directory
