@@ -359,10 +359,12 @@ ExecutionResult Interpreter::visitReturnInst(llvm::ReturnInst& inst) {
   if (ctx->empty())
     return ExecutionResult::Stop;
 
-  if (result.has_value()) {
-    auto& parent = ctx->stack_top();
-    auto& caller = *std::prev(parent.current);
+  auto& parent = ctx->stack_top();
+  auto& caller = *std::prev(parent.current);
 
+  performInvokeReturn(parent, caller);
+
+  if (result.has_value()) {
     parent.insert(&caller, std::move(*result));
   }
 
@@ -406,8 +408,13 @@ ExecutionResult Interpreter::visitCallBase(llvm::CallBase& callBase) {
                               "calls should be handled by visitIntrinsic",
                               func->getName().str()));
 
-  if (func->empty())
-    return visitExternFunc(callBase);
+  if (func->empty()) {
+    ExecutionResult res = visitExternFunc(callBase);
+    if (!ctx->stack.empty()) {
+      performInvokeReturn(ctx->stack_top(), callBase);
+    }
+    return res;
+  }
 
   StackFrame callee{func};
   for (auto [arg, val] : llvm::zip(func->args(), callBase.args())) {
@@ -880,6 +887,18 @@ ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallBase& call) {
   }
 
   return forks;
+}
+
+void Interpreter::performInvokeReturn(StackFrame& frameContainingInvoke,
+                                      llvm::Instruction& caller) {
+  auto invoke = llvm::dyn_cast<llvm::InvokeInst>(&caller);
+  std::cout << "opcodename " << caller.getOpcodeName() << std::endl;
+  if (invoke) {
+    // If the parent is an `Invoke` instruction, a call will always
+    // return to the normal branch
+
+    frameContainingInvoke.jump_to(invoke->getNormalDest());
+  }
 }
 
 } // namespace caffeine

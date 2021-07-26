@@ -120,6 +120,12 @@ private:
   void queueContext(Context&& ctx);
   Interpreter cloneWith(Context* ctx);
 
+  // Used to branch to the appropriate normal return path for functions that
+  // are returning and need to do different things based on whether they were
+  // called or invoked
+  void performInvokeReturn(StackFrame& frameContainingInvoke,
+                           llvm::Instruction& invoke);
+
 private:
   ExecutionResult visitExternFunc(llvm::CallBase& inst);
 
