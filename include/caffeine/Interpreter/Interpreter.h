@@ -47,7 +47,7 @@ private:
   ContextVec contexts_;
 };
 
-typedef ExecutionResult (*InterpreterFunction)(Interpreter&, llvm::CallInst&);
+typedef ExecutionResult (*InterpreterFunction)(Interpreter&, llvm::CallBase&);
 
 class Interpreter : public llvm::InstVisitor<Interpreter, ExecutionResult> {
 private:
@@ -87,10 +87,12 @@ public:
   ExecutionResult visitBranchInst(llvm::BranchInst& inst);
   ExecutionResult visitReturnInst(llvm::ReturnInst& inst);
   ExecutionResult visitSwitchInst(llvm::SwitchInst& inst);
+  ExecutionResult visitCallBase(llvm::CallBase& inst);
   ExecutionResult visitCallInst(llvm::CallInst& inst);
   ExecutionResult visitSelectInst(llvm::SelectInst& inst);
   ExecutionResult visitIntrinsicInst(llvm::IntrinsicInst& inst);
-  ExecutionResult visitIndirectCall(llvm::CallInst& inst);
+  ExecutionResult visitIndirectCall(llvm::CallBase& inst);
+  ExecutionResult visitInvokeInst(llvm::InvokeInst& invoke);
 
   ExecutionResult visitGetElementPtrInst(llvm::GetElementPtrInst& inst);
   ExecutionResult visitLoadInst(llvm::LoadInst& inst);
@@ -119,20 +121,20 @@ private:
   Interpreter cloneWith(Context* ctx);
 
 private:
-  ExecutionResult visitExternFunc(llvm::CallInst& inst);
+  ExecutionResult visitExternFunc(llvm::CallBase& inst);
 
-  ExecutionResult visitAssume(llvm::CallInst& inst);
-  ExecutionResult visitAssert(llvm::CallInst& inst);
-  ExecutionResult visitSymbolicAlloca(llvm::CallInst& inst);
+  ExecutionResult visitAssume(llvm::CallBase& inst);
+  ExecutionResult visitAssert(llvm::CallBase& inst);
+  ExecutionResult visitSymbolicAlloca(llvm::CallBase& inst);
 
-  ExecutionResult visitMalloc(llvm::CallInst& inst);
-  ExecutionResult visitCalloc(llvm::CallInst& inst);
-  ExecutionResult visitFree(llvm::CallInst& inst);
+  ExecutionResult visitMalloc(llvm::CallBase& inst);
+  ExecutionResult visitCalloc(llvm::CallBase& inst);
+  ExecutionResult visitFree(llvm::CallBase& inst);
 
-  ExecutionResult visitBuiltinResolve(llvm::CallInst& inst);
+  ExecutionResult visitBuiltinResolve(llvm::CallBase& inst);
 
-  ExecutionResult visitSetjmp(llvm::CallInst& inst);
-  ExecutionResult visitLongjmp(llvm::CallInst& inst);
+  ExecutionResult visitSetjmp(llvm::CallBase& inst);
+  ExecutionResult visitLongjmp(llvm::CallBase& inst);
 
   friend class TransformBuilder;
 
