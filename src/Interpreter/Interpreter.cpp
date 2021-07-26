@@ -892,11 +892,9 @@ ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallBase& call) {
 void Interpreter::performInvokeReturn(StackFrame& frameContainingInvoke,
                                       llvm::Instruction& caller) {
   auto invoke = llvm::dyn_cast<llvm::InvokeInst>(&caller);
-  std::cout << "opcodename " << caller.getOpcodeName() << std::endl;
   if (invoke) {
     // If the parent is an `Invoke` instruction, a call will always
     // return to the normal branch
-
     frameContainingInvoke.jump_to(invoke->getNormalDest());
   }
 }
