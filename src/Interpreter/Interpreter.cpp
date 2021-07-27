@@ -902,7 +902,6 @@ void Interpreter::performInvokeReturn(llvm::Instruction& caller) {
     return;
   }
 
-
   auto invoke = llvm::dyn_cast<llvm::InvokeInst>(&caller);
   if (invoke) {
     // If the parent is an `Invoke` instruction, a call will always

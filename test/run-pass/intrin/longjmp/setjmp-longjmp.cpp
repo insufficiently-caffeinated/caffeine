@@ -16,9 +16,7 @@ extern "C" void test(int a) {
   case 0:
     try {
       inner_func(buf, a);
-    } catch (...) {
-      caffeine_assert(false);
-    }
+    } catch (...) { caffeine_assert(false); }
   default:
     caffeine_assert(false);
     break;
