@@ -362,7 +362,7 @@ ExecutionResult Interpreter::visitReturnInst(llvm::ReturnInst& inst) {
   auto& parent = ctx->stack_top();
   auto& caller = *std::prev(parent.current);
 
-  performInvokeReturn(caller);
+  performInvokeReturn(*ctx, caller);
 
   if (result.has_value()) {
     parent.insert(&caller, std::move(*result));
@@ -616,7 +616,7 @@ ExecutionResult Interpreter::visitAssume(llvm::CallBase& call) {
   auto cond = ctx->lookup(call.getArgOperand(0));
   ctx->add(cond.scalar().expr());
 
-  performInvokeReturn(call);
+  performInvokeReturn(*ctx, call);
 
   // Don't check whether adding the assumption causes this path to become
   // dead since assumptions are rare, solver calls are expensive, and it'll
@@ -634,7 +634,7 @@ ExecutionResult Interpreter::visitAssert(llvm::CallBase& call) {
 
   ctx->add(assertion);
 
-  performInvokeReturn(call);
+  performInvokeReturn(*ctx, call);
   return ExecutionResult::Continue;
 }
 
@@ -714,7 +714,7 @@ ExecutionResult Interpreter::visitSymbolicAlloca(llvm::CallBase& call) {
                           address_space)));
   frame.allocations.emplace_back(alloc, address_space);
 
-  performInvokeReturn(call);
+  performInvokeReturn(*ctx, call);
 
   return ExecutionResult::Continue;
 }
@@ -744,6 +744,7 @@ ExecutionResult Interpreter::visitMalloc(llvm::CallBase& call) {
         &call, LLVMValue(Pointer(ConstantInt::Create(llvm::APInt(ptr_width, 0)),
                                  address_space)));
     queueContext(std::move(forked));
+    performInvokeReturn(forked, call);
   }
 
   auto size_op = UnaryOp::CreateTruncOrZExt(Type::int_ty(ptr_width), size);
@@ -758,7 +759,7 @@ ExecutionResult Interpreter::visitMalloc(llvm::CallBase& call) {
       LLVMValue(Pointer(alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)),
                         address_space)));
 
-  performInvokeReturn(call);
+  performInvokeReturn(*ctx, call);
 
   return ExecutionResult::Continue;
 }
@@ -783,6 +784,7 @@ ExecutionResult Interpreter::visitCalloc(llvm::CallBase& call) {
         &call, LLVMValue(Pointer(ConstantInt::Create(llvm::APInt(ptr_width, 0)),
                                  address_space)));
     queueContext(std::move(forked));
+    performInvokeReturn(forked, call);
   }
 
   auto size_op = UnaryOp::CreateTruncOrZExt(Type::int_ty(ptr_width), size);
@@ -797,7 +799,7 @@ ExecutionResult Interpreter::visitCalloc(llvm::CallBase& call) {
       LLVMValue(Pointer(alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)),
                         address_space)));
 
-  performInvokeReturn(call);
+  performInvokeReturn(*ctx, call);
 
   return ExecutionResult::Continue;
 }
@@ -845,9 +847,10 @@ ExecutionResult Interpreter::visitFree(llvm::CallBase& call) {
     Allocation& alloc = fork.heaps[ptr.heap()][ptr.alloc()];
     fork.add(ICmpOp::CreateICmpEQ(ptr.value(fork.heaps), alloc.address()));
     fork.heaps[ptr.heap()].deallocate(ptr.alloc());
+    performInvokeReturn(fork, call);
   }
 
-  performInvokeReturn(call);
+  performInvokeReturn(*ctx, call);
 
   return forks;
 }
@@ -890,15 +893,17 @@ ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallBase& call) {
     if (!mem.is_resolved()) {
       fork.backprop(mem, ptr);
     }
+
+    performInvokeReturn(fork, call);
   }
 
-  performInvokeReturn(call);
+  performInvokeReturn(*ctx, call);
 
   return forks;
 }
 
-void Interpreter::performInvokeReturn(llvm::Instruction& caller) {
-  if (ctx->stack.empty()) {
+void Interpreter::performInvokeReturn(Context& ctx_, llvm::Instruction& caller) {
+  if (ctx_.stack.empty()) {
     return;
   }
 
@@ -906,7 +911,7 @@ void Interpreter::performInvokeReturn(llvm::Instruction& caller) {
   if (invoke) {
     // If the parent is an `Invoke` instruction, a call will always
     // return to the normal branch
-    ctx->stack_top().jump_to(invoke->getNormalDest());
+    ctx_.stack_top().jump_to(invoke->getNormalDest());
   }
 }
 
