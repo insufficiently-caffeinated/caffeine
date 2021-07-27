@@ -902,7 +902,8 @@ ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallBase& call) {
   return forks;
 }
 
-void Interpreter::performInvokeReturn(Context& ctx_, llvm::Instruction& caller) {
+void Interpreter::performInvokeReturn(Context& ctx_,
+                                      llvm::Instruction& caller) {
   if (ctx_.stack.empty()) {
     return;
   }
