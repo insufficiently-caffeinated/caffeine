@@ -123,11 +123,22 @@ ExecutionResult Interpreter::visitSetjmp(llvm::CallBase& inst) {
   auto ops = TransformBuilder();
 
   auto resolved = ops.resolve(inst.getArgOperand(0), jmpbuf_ty);
+  auto invoke = llvm::dyn_cast<llvm::InvokeInst>(&inst);
   ops.transform([&](TransformBuilder::ContextState& state) {
     auto ptr = state.lookup(resolved).scalar().pointer();
 
     Allocation& alloc = state.ctx.heaps[ptr.heap()][ptr.alloc()];
     alloc.write(ptr.offset(), jmpbuf_ty, jmpbuf, state.ctx.heaps, layout);
+
+    if (state.ctx.stack.empty()) {
+      return;
+    }
+
+    if (invoke) {
+      // If the parent is an `Invoke` instruction, a call will always
+      // return to the normal branch
+      state.ctx.stack_top().jump_to(invoke->getNormalDest());
+    }
   });
   ops.assign(&inst,
              ConstantInt::CreateZero(inst.getType()->getIntegerBitWidth()));

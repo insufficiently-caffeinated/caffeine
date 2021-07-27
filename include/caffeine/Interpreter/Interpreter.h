@@ -122,9 +122,9 @@ private:
 
   // Used to branch to the appropriate normal return path for functions that
   // are returning and need to do different things based on whether they were
-  // called or invoked
-  void performInvokeReturn(StackFrame& frameContainingInvoke,
-                           llvm::Instruction& invoke);
+  // called or invoked. Only works if the top of the stack frames contains the
+  // invoke instruction
+  void performInvokeReturn(llvm::Instruction& invoke);
 
 private:
   ExecutionResult visitExternFunc(llvm::CallBase& inst);

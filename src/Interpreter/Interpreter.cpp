@@ -362,7 +362,7 @@ ExecutionResult Interpreter::visitReturnInst(llvm::ReturnInst& inst) {
   auto& parent = ctx->stack_top();
   auto& caller = *std::prev(parent.current);
 
-  performInvokeReturn(parent, caller);
+  performInvokeReturn(caller);
 
   if (result.has_value()) {
     parent.insert(&caller, std::move(*result));
@@ -408,13 +408,8 @@ ExecutionResult Interpreter::visitCallBase(llvm::CallBase& callBase) {
                               "calls should be handled by visitIntrinsic",
                               func->getName().str()));
 
-  if (func->empty()) {
-    ExecutionResult res = visitExternFunc(callBase);
-    if (!ctx->stack.empty()) {
-      performInvokeReturn(ctx->stack_top(), callBase);
-    }
-    return res;
-  }
+  if (func->empty())
+    return visitExternFunc(callBase);
 
   StackFrame callee{func};
   for (auto [arg, val] : llvm::zip(func->args(), callBase.args())) {
@@ -621,6 +616,8 @@ ExecutionResult Interpreter::visitAssume(llvm::CallBase& call) {
   auto cond = ctx->lookup(call.getArgOperand(0));
   ctx->add(cond.scalar().expr());
 
+  performInvokeReturn(call);
+
   // Don't check whether adding the assumption causes this path to become
   // dead since assumptions are rare, solver calls are expensive, and it'll
   // get caught at the next conditional branch anyway.
@@ -637,6 +634,7 @@ ExecutionResult Interpreter::visitAssert(llvm::CallBase& call) {
 
   ctx->add(assertion);
 
+  performInvokeReturn(call);
   return ExecutionResult::Continue;
 }
 
@@ -716,6 +714,8 @@ ExecutionResult Interpreter::visitSymbolicAlloca(llvm::CallBase& call) {
                           address_space)));
   frame.allocations.emplace_back(alloc, address_space);
 
+  performInvokeReturn(call);
+
   return ExecutionResult::Continue;
 }
 
@@ -758,6 +758,8 @@ ExecutionResult Interpreter::visitMalloc(llvm::CallBase& call) {
       LLVMValue(Pointer(alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)),
                         address_space)));
 
+  performInvokeReturn(call);
+
   return ExecutionResult::Continue;
 }
 ExecutionResult Interpreter::visitCalloc(llvm::CallBase& call) {
@@ -794,6 +796,8 @@ ExecutionResult Interpreter::visitCalloc(llvm::CallBase& call) {
       &call,
       LLVMValue(Pointer(alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)),
                         address_space)));
+
+  performInvokeReturn(call);
 
   return ExecutionResult::Continue;
 }
@@ -843,6 +847,8 @@ ExecutionResult Interpreter::visitFree(llvm::CallBase& call) {
     fork.heaps[ptr.heap()].deallocate(ptr.alloc());
   }
 
+  performInvokeReturn(call);
+
   return forks;
 }
 
@@ -886,16 +892,22 @@ ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallBase& call) {
     }
   }
 
+  performInvokeReturn(call);
+
   return forks;
 }
 
-void Interpreter::performInvokeReturn(StackFrame& frameContainingInvoke,
-                                      llvm::Instruction& caller) {
+void Interpreter::performInvokeReturn(llvm::Instruction& caller) {
+  if (ctx->stack.empty()) {
+    return;
+  }
+
+
   auto invoke = llvm::dyn_cast<llvm::InvokeInst>(&caller);
   if (invoke) {
     // If the parent is an `Invoke` instruction, a call will always
     // return to the normal branch
-    frameContainingInvoke.jump_to(invoke->getNormalDest());
+    ctx->stack_top().jump_to(invoke->getNormalDest());
   }
 }
 
