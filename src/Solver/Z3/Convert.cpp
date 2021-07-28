@@ -51,6 +51,12 @@ namespace {
     CAFFEINE_UNREACHABLE();
   }
 
+  Symbol name_to_symbol(const z3::symbol& symbol) {
+    if (symbol.kind() == Z3_STRING_SYMBOL)
+      return Symbol(symbol.str());
+    return Symbol(symbol.to_int());
+  }
+
   z3::sort type_to_sort(z3::context& ctx, const Type& type) {
     switch (type.kind()) {
     case Type::Integer:
@@ -596,6 +602,24 @@ OpRef Z3ExprConverter::visit_app(const z3::expr& expr) {
   // clang-format on
   case Z3_OP_BNUM:
     return ConstantInt::Create(z3_to_apint(expr));
+
+  case Z3_OP_UNINTERPRETED: {
+    // An uninterpreted function is how Z3 represents symbolic constants.
+    auto sort = expr.get_sort();
+    auto name = expr.decl().name();
+
+    if (sort.is_bv()) {
+      return Constant::Create(Type::int_ty(sort.bv_size()),
+                              name_to_symbol(name));
+    } else if (sort.is_fpa()) {
+      return Constant::Create(
+          Type::float_ty(sort.fpa_ebits(), sort.fpa_sbits()),
+          name_to_symbol(name));
+    } else {
+      throw UnsupportedConversion(fmt::format(
+          FMT_STRING("Unsupported Z3 constant kind {}"), sort.to_string()));
+    }
+  }
 
   default:
     throw UnsupportedConversion(fmt::format(
