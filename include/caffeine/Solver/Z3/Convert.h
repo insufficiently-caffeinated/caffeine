@@ -52,4 +52,21 @@ public:
   }
 };
 
+class Z3ExprConverter {
+  tsl::hopscotch_map<unsigned, OpRef> cached;
+
+  class UnsupportedConversion {};
+
+public:
+  Z3ExprConverter() = default;
+
+  std::optional<OpRef> convert(const z3::expr& expr);
+
+private:
+  OpRef visit(const z3::expr& expr);
+  OpRef visit_detail(const z3::expr& expr);
+
+  OpRef visit_app(const z3::expr& expr);
+};
+
 } // namespace caffeine

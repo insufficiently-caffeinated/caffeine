@@ -74,7 +74,7 @@ namespace {
 } // namespace
 
 /***************************************************
- * Z3OpVisitor                                     *
+ * Operation to Z3                                 *
  ***************************************************/
 
 Z3OpVisitor::Z3OpVisitor(z3::solver* solver, Z3ConstMap& constMap)
@@ -447,6 +447,154 @@ z3::expr Z3OpVisitor::visitAlloc(const AllocOp& op) {
 
 z3::expr Z3OpVisitor::visitFunctionObject(const FunctionObject&) {
   CAFFEINE_ABORT("Encountered a symbolic FunctionObject instance");
+}
+
+/***************************************************
+ * Z3 to Operation                                 *
+ ***************************************************/
+
+std::optional<OpRef> Z3ExprConverter::convert(const z3::expr& expr) {
+  try {
+    return visit(expr);
+  } catch (UnsupportedConversion&) { return std::nullopt; }
+}
+
+OpRef Z3ExprConverter::visit(const z3::expr& expr) {
+  auto it = cached.find(expr.id());
+  if (it != cached.end())
+    return it->second;
+
+  auto value = visit(expr);
+  cached.emplace(expr.id(), value);
+  return value;
+}
+
+OpRef Z3ExprConverter::visit_detail(const z3::expr& expr) {
+  switch (expr.kind()) {
+  case Z3_APP_AST:
+    return visit_app(expr);
+  case Z3_NUMERAL_AST:
+  case Z3_VAR_AST:
+  case Z3_QUANTIFIER_AST:
+  case Z3_SORT_AST:
+  case Z3_FUNC_DECL_AST:
+    throw UnsupportedConversion();
+
+  default:
+    throw UnsupportedConversion();
+  }
+}
+
+OpRef Z3ExprConverter::visit_app(const z3::expr& expr) {
+#define CASE_2(fn, msg)                                                        \
+  CAFFEINE_ASSERT(                                                             \
+      expr.num_args() == 2,                                                    \
+      fmt::format("Invalid number of arguments for Z3 expression kind {} "     \
+                  "(expected 2). Full expression:\n{}",                        \
+                  msg, expr.to_string()));                                     \
+  return fn(visit(expr.arg(0)), visit(expr.arg(1)))
+
+  auto decl = expr.decl();
+
+  switch (decl.decl_kind()) {
+  case Z3_OP_TRUE:
+  case Z3_OP_BIT1:
+    return ConstantInt::Create(true);
+  case Z3_OP_FALSE:
+  case Z3_OP_BIT0:
+    return ConstantInt::Create(false);
+  case Z3_OP_EQ:
+    CAFFEINE_ASSERT(expr.num_args() == 2);
+    return ICmpOp::CreateICmpEQ(visit(expr.arg(0)), visit(expr.arg(1)));
+  case Z3_OP_DISTINCT: {
+    auto num_args = expr.num_args();
+    auto value = ConstantInt::Create(true);
+
+    for (size_t i = 0; i < num_args; ++i) {
+      for (size_t j = i + 1; j < num_args; ++j) {
+        value = BinaryOp::CreateAnd(
+            value,
+            ICmpOp::CreateICmpNE(visit(expr.arg(i)), visit(expr.arg(j))));
+      }
+    }
+
+    return value;
+  }
+  case Z3_OP_ITE:
+    CAFFEINE_ASSERT(expr.num_args() == 3);
+    return SelectOp::Create(visit(expr.arg(0)), visit(expr.arg(1)),
+                            visit(expr.arg(2)));
+
+  case Z3_OP_BAND:
+  case Z3_OP_AND: {
+    auto num_args = expr.num_args();
+    auto value = ConstantInt::Create(true);
+
+    for (size_t i = 0; i < num_args; ++i) {
+      value = BinaryOp::CreateAnd(value, visit(expr.arg(i)));
+    }
+
+    return value;
+  }
+
+  case Z3_OP_BOR:
+  case Z3_OP_OR: {
+    auto num_args = expr.num_args();
+    auto value = ConstantInt::Create(false);
+
+    for (size_t i = 0; i < num_args; ++i) {
+      value = BinaryOp::CreateOr(value, visit(expr.arg(i)));
+    }
+
+    return value;
+  }
+
+  case Z3_OP_BXOR:
+  case Z3_OP_XOR:
+    CASE_2(BinaryOp::CreateXor, "Z3_OP_BXOR or Z3_OP_XOR");
+
+  case Z3_OP_BNOT:
+  case Z3_OP_NOT:
+    CAFFEINE_ASSERT(expr.num_args() == 1);
+    return UnaryOp::CreateNot(visit(expr.arg(0)));
+
+  case Z3_OP_BNEG:
+    CAFFEINE_ASSERT(expr.num_args() == 1);
+    return UnaryOp::CreateNeg(visit(expr.arg(0)));
+
+  // clang-format off
+  case Z3_OP_BADD:  CASE_2(BinaryOp::CreateAdd, "Z3_OP_BADD");
+  case Z3_OP_BSUB:  CASE_2(BinaryOp::CreateSub, "Z3_OP_BSUB");
+  case Z3_OP_BMUL:  CASE_2(BinaryOp::CreateMul, "Z3_OP_BMUL");
+  case Z3_OP_BSDIV: CASE_2(BinaryOp::CreateSDiv, "Z3_OP_BSDIV");
+  case Z3_OP_BUDIV: CASE_2(BinaryOp::CreateUDiv, "Z3_OP_BUDIV");
+  case Z3_OP_BSREM: CASE_2(BinaryOp::CreateSRem, "Z3_OP_BSREM");
+  case Z3_OP_BUREM: CASE_2(BinaryOp::CreateURem, "Z3_OP_BUREM");
+  case Z3_OP_BSMOD: throw UnsupportedConversion();
+
+  case Z3_OP_ULEQ: CASE_2(ICmpOp::CreateICmpULE, "Z3_OP_ULEQ");
+  case Z3_OP_SLEQ: CASE_2(ICmpOp::CreateICmpSLE, "Z3_OP_SLEQ");
+  case Z3_OP_UGEQ: CASE_2(ICmpOp::CreateICmpUGE, "Z3_OP_UGEQ");
+  case Z3_OP_SGEQ: CASE_2(ICmpOp::CreateICmpSGE, "Z3_OP_SGEQ");
+  case Z3_OP_ULT:  CASE_2(ICmpOp::CreateICmpULT, "Z3_OP_ULT");
+  case Z3_OP_SLT:  CASE_2(ICmpOp::CreateICmpSLT, "Z3_OP_SLT");
+  case Z3_OP_UGT:  CASE_2(ICmpOp::CreateICmpUGT, "Z3_OP_UGT");
+  case Z3_OP_SGT:  CASE_2(ICmpOp::CreateICmpSGT, "Z3_OP_SGT");
+
+  case Z3_OP_BNAND: CASE_2(BinaryOp::CreateNand, "Z3_OP_BNAND");
+  case Z3_OP_BNOR:  CASE_2(BinaryOp::CreateNor,  "Z3_OP_BNOR");
+  case Z3_OP_BXNOR: CASE_2(BinaryOp::CreateXnor, "Z3_OP_BXNOR");
+  case Z3_OP_BSHL:  CASE_2(BinaryOp::CreateShl,  "Z3_OP_BSHL");
+  case Z3_OP_BLSHR: CASE_2(BinaryOp::CreateLShr, "Z3_OP_BLSHR");
+  case Z3_OP_BASHR: CASE_2(BinaryOp::CreateAShr, "Z3_OP_BASHR");
+
+  // clang-format on
+  case Z3_OP_BNUM:
+    throw UnsupportedConversion();
+
+  default:
+    throw UnsupportedConversion();
+  }
 }
 
 } // namespace caffeine
