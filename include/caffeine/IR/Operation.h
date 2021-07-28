@@ -467,6 +467,9 @@ public:
   static OpRef CreateShl(const OpRef& lhs, const OpRef& rhs);
   static OpRef CreateLShr(const OpRef& lhs, const OpRef& rhs);
   static OpRef CreateAShr(const OpRef& lhs, const OpRef& rhs);
+  static OpRef CreateNand(const OpRef& lhs, const OpRef& rhs);
+  static OpRef CreateNor(const OpRef& lhs, const OpRef& rhs);
+  static OpRef CreateXnor(const OpRef& lhs, const OpRef& rhs);
 
   static OpRef CreateFAdd(const OpRef& lhs, const OpRef& rhs);
   static OpRef CreateFSub(const OpRef& lhs, const OpRef& rhs);
@@ -501,6 +504,9 @@ public:
   CAFFEINE_DECL_BINOP_INT_CONST(Shl);
   CAFFEINE_DECL_BINOP_INT_CONST(LShr);
   CAFFEINE_DECL_BINOP_INT_CONST(AShr);
+  CAFFEINE_DECL_BINOP_INT_CONST(Nand);
+  CAFFEINE_DECL_BINOP_INT_CONST(Nor);
+  CAFFEINE_DECL_BINOP_INT_CONST(Xnor);
 
 #undef CAFFEINE_DECL_BINOP_INT_CONST
 
@@ -522,6 +528,7 @@ public:
   static OpRef Create(Opcode op, const OpRef& operand);
   static OpRef Create(Opcode op, const OpRef& operand, Type returnType);
   static OpRef CreateNot(const OpRef& operand);
+  static OpRef CreateNeg(const OpRef& operand);
   static OpRef CreateFNeg(const OpRef& operand);
   static OpRef CreateFIsNaN(const OpRef& operand);
 

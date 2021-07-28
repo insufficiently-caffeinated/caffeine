@@ -432,6 +432,17 @@ DECL_BINOP_CREATE(FRem, ASSERT_FP);
   }                                                                            \
   static_assert(true)
 
+OpRef BinaryOp::CreateNand(const OpRef& lhs, const OpRef& rhs) {
+  return UnaryOp::CreateNot(BinaryOp::CreateAnd(lhs, rhs));
+}
+OpRef BinaryOp::CreateNor(const OpRef& lhs, const OpRef& rhs) {
+  return UnaryOp::CreateNot(BinaryOp::CreateOr(lhs, rhs));
+}
+OpRef BinaryOp::CreateXnor(const OpRef& lhs, const OpRef& rhs) {
+  return BinaryOp::CreateOr(BinaryOp::CreateAnd(lhs, rhs),
+                            BinaryOp::CreateNor(lhs, rhs));
+}
+
 OpRef BinaryOp::CreateUMulOverflow(const OpRef& a, const OpRef& b) {
   CAFFEINE_ASSERT(
       a->type() == b->type(),
@@ -541,6 +552,9 @@ DEF_INT_BINOP_CONST_CREATE(Xor);
 DEF_INT_BINOP_CONST_CREATE(Shl);
 DEF_INT_BINOP_CONST_CREATE(LShr);
 DEF_INT_BINOP_CONST_CREATE(AShr);
+DEF_INT_BINOP_CONST_CREATE(Nand);
+DEF_INT_BINOP_CONST_CREATE(Nor);
+DEF_INT_BINOP_CONST_CREATE(Xnor);
 
 #undef DEF_INT_BINOP_CONST_CREATE
 #undef DEF_INT_BINOP_CONST_CREATE_DETAIL
@@ -573,6 +587,10 @@ OpRef UnaryOp::Create(Opcode op, const OpRef& operand, Type returnType) {
 DECL_UNOP_CREATE(Not, ASSERT_INT, operand->type());
 DECL_UNOP_CREATE(FNeg, ASSERT_FP, operand->type());
 DECL_UNOP_CREATE(FIsNaN, ASSERT_FP, Type::int_ty(1));
+
+OpRef UnaryOp::CreateNeg(const OpRef& operand) {
+  return BinaryOp::CreateSub(0, operand);
+}
 
 OpRef UnaryOp::CreateTrunc(Type tgt, const OpRef& operand) {
   CAFFEINE_ASSERT(tgt.is_int());
