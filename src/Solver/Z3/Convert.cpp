@@ -1,4 +1,5 @@
 #include "caffeine/Solver/Z3/Convert.h"
+#include "../Z3Solver.h"
 #include "caffeine/Support/Assert.h"
 #include "caffeine/Support/UnsupportedOperation.h"
 #include <fmt/format.h>
@@ -474,25 +475,29 @@ OpRef Z3ExprConverter::visit_detail(const z3::expr& expr) {
   case Z3_APP_AST:
     return visit_app(expr);
   case Z3_NUMERAL_AST:
+    return visit_numeral(expr);
   case Z3_VAR_AST:
   case Z3_QUANTIFIER_AST:
   case Z3_SORT_AST:
   case Z3_FUNC_DECL_AST:
-    throw UnsupportedConversion();
 
   default:
-    throw UnsupportedConversion();
+    throw UnsupportedConversion(
+        fmt::format(FMT_STRING("Unable to convert expr of kind {}"),
+                    magic_enum::enum_name(expr.kind())));
   }
 }
 
 OpRef Z3ExprConverter::visit_app(const z3::expr& expr) {
 #define CASE_2(fn, msg)                                                        \
-  CAFFEINE_ASSERT(                                                             \
-      expr.num_args() == 2,                                                    \
-      fmt::format("Invalid number of arguments for Z3 expression kind {} "     \
-                  "(expected 2). Full expression:\n{}",                        \
-                  msg, expr.to_string()));                                     \
-  return fn(visit(expr.arg(0)), visit(expr.arg(1)))
+  do {                                                                         \
+    if (expr.num_args() != 2)                                                  \
+      throw UnsupportedConversion(                                             \
+          fmt::format("Invalid number of arguments for Z3 expression kind {} " \
+                      "(expected 2). Full expression:\n{}",                    \
+                      msg, expr.to_string()));                                 \
+    return fn(visit(expr.arg(0)), visit(expr.arg(1)));                         \
+  } while (false)
 
   auto decl = expr.decl();
 
@@ -590,11 +595,16 @@ OpRef Z3ExprConverter::visit_app(const z3::expr& expr) {
 
   // clang-format on
   case Z3_OP_BNUM:
-    throw UnsupportedConversion();
+    return ConstantInt::Create(z3_to_apint(expr));
 
   default:
-    throw UnsupportedConversion();
+    throw UnsupportedConversion(fmt::format(
+        FMT_STRING("Unsupported Z3 AST type {}"), decl.decl_kind()));
   }
+}
+
+OpRef Z3ExprConverter::visit_numeral(const z3::expr&) {
+  throw UnsupportedConversion("numerals are unsupported right now");
 }
 
 } // namespace caffeine

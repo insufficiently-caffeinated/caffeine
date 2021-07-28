@@ -55,7 +55,21 @@ public:
 class Z3ExprConverter {
   tsl::hopscotch_map<unsigned, OpRef> cached;
 
-  class UnsupportedConversion {};
+  class UnsupportedConversion : std::exception {
+  private:
+    std::string msg;
+
+  public:
+    explicit UnsupportedConversion(
+        std::string&& msg = "unable to convert expression")
+        : msg(std::move(msg)) {}
+    explicit UnsupportedConversion(const std::string& msg)
+        : UnsupportedConversion(std::string(msg)) {}
+
+    const char* what() const throw() override {
+      return msg.c_str();
+    }
+  };
 
 public:
   Z3ExprConverter() = default;
@@ -67,6 +81,7 @@ private:
   OpRef visit_detail(const z3::expr& expr);
 
   OpRef visit_app(const z3::expr& expr);
+  OpRef visit_numeral(const z3::expr& expr);
 };
 
 } // namespace caffeine
