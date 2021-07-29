@@ -25,7 +25,7 @@ public:
   using ContextVec = llvm::SmallVector<Context, 2>;
 
   ExecutionResult(Status status);
-  ExecutionResult(ContextVec&& contexts);
+  ExecutionResult(ContextVec&& contexts, Status status=Dead);
 
   Status status() const {
     return status_;
@@ -124,7 +124,7 @@ private:
   // are returning and need to do different things based on whether they were
   // called or invoked. Only works if the top of the stack frames contains the
   // invoke instruction
-  void performInvokeReturn(Context& ctx, llvm::Instruction& invoke);
+  static void performInvokeReturn(Context& ctx, llvm::Instruction& invoke);
 
 private:
   ExecutionResult visitExternFunc(llvm::CallBase& inst);

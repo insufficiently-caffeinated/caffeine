@@ -63,8 +63,8 @@ Interpreter::extern_functions() {
 }
 
 ExecutionResult::ExecutionResult(Status status) : status_(status) {}
-ExecutionResult::ExecutionResult(llvm::SmallVector<Context, 2>&& contexts)
-    : status_(Dead), contexts_(std::move(contexts)) {}
+ExecutionResult::ExecutionResult(llvm::SmallVector<Context, 2>&& contexts, Status status)
+    : status_(status), contexts_(std::move(contexts)) {}
 
 Interpreter::Interpreter(Context* ctx, ExecutionPolicy* policy,
                          ExecutionContextStore* store, FailureLogger* logger,
@@ -408,8 +408,28 @@ ExecutionResult Interpreter::visitCallBase(llvm::CallBase& callBase) {
                               "calls should be handled by visitIntrinsic",
                               func->getName().str()));
 
-  if (func->empty())
-    return visitExternFunc(callBase);
+  if (func->empty()) {
+    auto* prev_inst = &*ctx->stack_top().current;
+    auto invoke = llvm::dyn_cast<llvm::InvokeInst>(&callBase);
+    auto res = visitExternFunc(callBase);
+
+    if (!invoke)
+      return res;
+
+    if (res.empty()) {
+      if (&*ctx->stack_top().current == prev_inst) {
+        performInvokeReturn(*ctx, *invoke);
+      }
+    } else {
+      for (auto& ctx_ : res.contexts()) {
+        if (&*ctx_.stack_top().current == prev_inst) {
+          performInvokeReturn(ctx_, *invoke);
+        }
+      }
+    }
+
+    return res;
+  }
 
   StackFrame callee{func};
   for (auto [arg, val] : llvm::zip(func->args(), callBase.args())) {
@@ -616,8 +636,6 @@ ExecutionResult Interpreter::visitAssume(llvm::CallBase& call) {
   auto cond = ctx->lookup(call.getArgOperand(0));
   ctx->add(cond.scalar().expr());
 
-  performInvokeReturn(*ctx, call);
-
   // Don't check whether adding the assumption causes this path to become
   // dead since assumptions are rare, solver calls are expensive, and it'll
   // get caught at the next conditional branch anyway.
@@ -634,7 +652,6 @@ ExecutionResult Interpreter::visitAssert(llvm::CallBase& call) {
 
   ctx->add(assertion);
 
-  performInvokeReturn(*ctx, call);
   return ExecutionResult::Continue;
 }
 
@@ -714,8 +731,6 @@ ExecutionResult Interpreter::visitSymbolicAlloca(llvm::CallBase& call) {
                           address_space)));
   frame.allocations.emplace_back(alloc, address_space);
 
-  performInvokeReturn(*ctx, call);
-
   return ExecutionResult::Continue;
 }
 
@@ -744,7 +759,6 @@ ExecutionResult Interpreter::visitMalloc(llvm::CallBase& call) {
         &call, LLVMValue(Pointer(ConstantInt::Create(llvm::APInt(ptr_width, 0)),
                                  address_space)));
     queueContext(std::move(forked));
-    performInvokeReturn(forked, call);
   }
 
   auto size_op = UnaryOp::CreateTruncOrZExt(Type::int_ty(ptr_width), size);
@@ -758,8 +772,6 @@ ExecutionResult Interpreter::visitMalloc(llvm::CallBase& call) {
       &call,
       LLVMValue(Pointer(alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)),
                         address_space)));
-
-  performInvokeReturn(*ctx, call);
 
   return ExecutionResult::Continue;
 }
@@ -784,7 +796,6 @@ ExecutionResult Interpreter::visitCalloc(llvm::CallBase& call) {
         &call, LLVMValue(Pointer(ConstantInt::Create(llvm::APInt(ptr_width, 0)),
                                  address_space)));
     queueContext(std::move(forked));
-    performInvokeReturn(forked, call);
   }
 
   auto size_op = UnaryOp::CreateTruncOrZExt(Type::int_ty(ptr_width), size);
@@ -798,8 +809,6 @@ ExecutionResult Interpreter::visitCalloc(llvm::CallBase& call) {
       &call,
       LLVMValue(Pointer(alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)),
                         address_space)));
-
-  performInvokeReturn(*ctx, call);
 
   return ExecutionResult::Continue;
 }
@@ -847,10 +856,7 @@ ExecutionResult Interpreter::visitFree(llvm::CallBase& call) {
     Allocation& alloc = fork.heaps[ptr.heap()][ptr.alloc()];
     fork.add(ICmpOp::CreateICmpEQ(ptr.value(fork.heaps), alloc.address()));
     fork.heaps[ptr.heap()].deallocate(ptr.alloc());
-    performInvokeReturn(fork, call);
   }
-
-  performInvokeReturn(*ctx, call);
 
   return forks;
 }
@@ -893,11 +899,7 @@ ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallBase& call) {
     if (!mem.is_resolved()) {
       fork.backprop(mem, ptr);
     }
-
-    performInvokeReturn(fork, call);
   }
-
-  performInvokeReturn(*ctx, call);
 
   return forks;
 }

@@ -123,22 +123,11 @@ ExecutionResult Interpreter::visitSetjmp(llvm::CallBase& inst) {
   auto ops = TransformBuilder();
 
   auto resolved = ops.resolve(inst.getArgOperand(0), jmpbuf_ty);
-  auto invoke = llvm::dyn_cast<llvm::InvokeInst>(&inst);
   ops.transform([&](TransformBuilder::ContextState& state) {
     auto ptr = state.lookup(resolved).scalar().pointer();
 
     Allocation& alloc = state.ctx.heaps[ptr.heap()][ptr.alloc()];
     alloc.write(ptr.offset(), jmpbuf_ty, jmpbuf, state.ctx.heaps, layout);
-
-    if (state.ctx.stack.empty()) {
-      return;
-    }
-
-    if (invoke) {
-      // If the parent is an `Invoke` instruction, a call will always
-      // return to the normal branch
-      state.ctx.stack_top().jump_to(invoke->getNormalDest());
-    }
   });
   ops.assign(&inst,
              ConstantInt::CreateZero(inst.getType()->getIntegerBitWidth()));
@@ -198,6 +187,8 @@ ExecutionResult Interpreter::visitLongjmp(llvm::CallBase& inst) {
     insert_fn(std::move(state));
   });
 
+  std::cout << "tried to longjump" << std::endl;
+
   ops.transform_fork([&](ContextState&& state, InsertFn& insert_fn) -> void {
     auto input = state.lookup(concrete);
 
@@ -236,12 +227,30 @@ ExecutionResult Interpreter::visitLongjmp(llvm::CallBase& inst) {
       ++frame.current;
       CAFFEINE_ASSERT(frame.current != frame.current_block->end());
     }
-    // Don't want to execute _setjmp again
-    ++frame.current;
+
+    // Now we need to check if the caller is an invoke instruction and
+    // go to the default return flow
+    llvm::InvokeInst* invoke = llvm::dyn_cast<llvm::InvokeInst>(&*frame.current);
+    if (invoke) {
+      std::cout << "oh boy we're jumping back to an invoke" << std::endl;
+      performInvokeReturn(state.ctx, *frame.current);
+    } else {
+      // Don't want to execute _setjmp again
+      ++frame.current;
+    }
 
     insert_fn(std::move(state));
   });
 
-  return ops.execute(this);
+  std::cout << "did most things related to longjumping" << std::endl;
+
+  ExecutionResult res = ops.execute(this);
+
+  if (res.empty()) {
+    std::cout << "res was empty" << std::endl;
+    std::cout << "res status " << res.status() << std::endl;
+  }
+
+  return res;
 }
 } // namespace caffeine
