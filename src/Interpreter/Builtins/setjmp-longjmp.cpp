@@ -53,7 +53,7 @@ namespace {
   //       program. This will not work when we want to make caffeine
   //       distributed. However, I don't see another good way to write this for
   //       now so I'm leaving it.
-  LLVMValue getJmpBuf(uint64_t stack_id, llvm::CallInst& inst) {
+  LLVMValue getJmpBuf(uint64_t stack_id, llvm::CallBase& inst) {
     return LLVMValue(llvm::ArrayRef<LLVMValue>{
         LLVMValue(ConstantInt::Create(llvm::APInt(64, stack_id))),
         LLVMValue(ConstantInt::Create(llvm::APInt(
@@ -87,7 +87,7 @@ namespace {
           if (&inst != jmp_tgt)
             continue;
 
-          llvm::CallInst* call = llvm::dyn_cast<llvm::CallInst>(jmp_tgt);
+          llvm::CallBase* call = llvm::dyn_cast<llvm::CallBase>(jmp_tgt);
           if (!call)
             continue;
 
@@ -103,7 +103,7 @@ namespace {
   }
 } // namespace
 
-ExecutionResult Interpreter::visitSetjmp(llvm::CallInst& inst) {
+ExecutionResult Interpreter::visitSetjmp(llvm::CallBase& inst) {
   CAFFEINE_ASSERT(inst.getNumArgOperands() == 1,
                   "Invalid signature for _setjmp");
 
@@ -135,7 +135,7 @@ ExecutionResult Interpreter::visitSetjmp(llvm::CallInst& inst) {
   return ops.execute(this);
 }
 
-ExecutionResult Interpreter::visitLongjmp(llvm::CallInst& inst) {
+ExecutionResult Interpreter::visitLongjmp(llvm::CallBase& inst) {
   CAFFEINE_ASSERT(inst.getNumArgOperands() == 2,
                   "Invalid signature for longjmp");
   CAFFEINE_ASSERT(inst.getArgOperand(0)->getType()->isPointerTy(),
@@ -225,8 +225,17 @@ ExecutionResult Interpreter::visitLongjmp(llvm::CallInst& inst) {
       ++frame.current;
       CAFFEINE_ASSERT(frame.current != frame.current_block->end());
     }
-    // Don't want to execute _setjmp again
-    ++frame.current;
+
+    // Now we need to check if the caller is an invoke instruction and
+    // go to the default return flow
+    llvm::InvokeInst* invoke =
+        llvm::dyn_cast<llvm::InvokeInst>(&*frame.current);
+    if (invoke) {
+      performInvokeReturn(state.ctx, *frame.current);
+    } else {
+      // Don't want to execute _setjmp again
+      ++frame.current;
+    }
 
     insert_fn(std::move(state));
   });

@@ -39,7 +39,8 @@ jobs:
           cmake -B build \
             -DCAFFEINE_CI=ON \
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-            -DCAFFEINE_ENABLE_COVERAGE=ON
+            -DCAFFEINE_ENABLE_COVERAGE=ON \
+            -DCAFFEINE_ENABLE_LIBC=ON
 
       - name: Build
         run: cmake --build build -j$(nproc)

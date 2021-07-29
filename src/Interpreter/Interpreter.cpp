@@ -29,10 +29,10 @@ namespace {
   static uint64_t MAX_FIXED_CONSTANT_SIZE = 10 * 1024 * 1024;
 } // namespace
 
-template <ExecutionResult (Interpreter::*kFunc)(llvm::CallInst&)>
+template <ExecutionResult (Interpreter::*kFunc)(llvm::CallBase&)>
 struct as_nonmember {
 private:
-  static ExecutionResult func_impl(Interpreter& interp, llvm::CallInst& inst) {
+  static ExecutionResult func_impl(Interpreter& interp, llvm::CallBase& inst) {
     return std::invoke(kFunc, interp, inst);
   }
 
@@ -40,7 +40,7 @@ public:
   static constexpr InterpreterFunction value = &func_impl;
 };
 
-template <ExecutionResult (Interpreter::*kFunc)(llvm::CallInst&)>
+template <ExecutionResult (Interpreter::*kFunc)(llvm::CallBase&)>
 static constexpr InterpreterFunction as_nonmember_v =
     as_nonmember<kFunc>::value;
 
@@ -63,8 +63,9 @@ Interpreter::extern_functions() {
 }
 
 ExecutionResult::ExecutionResult(Status status) : status_(status) {}
-ExecutionResult::ExecutionResult(llvm::SmallVector<Context, 2>&& contexts)
-    : status_(Dead), contexts_(std::move(contexts)) {}
+ExecutionResult::ExecutionResult(llvm::SmallVector<Context, 2>&& contexts,
+                                 Status status)
+    : status_(status), contexts_(std::move(contexts)) {}
 
 Interpreter::Interpreter(Context* ctx, ExecutionPolicy* policy,
                          ExecutionContextStore* store, FailureLogger* logger,
@@ -359,10 +360,12 @@ ExecutionResult Interpreter::visitReturnInst(llvm::ReturnInst& inst) {
   if (ctx->empty())
     return ExecutionResult::Stop;
 
-  if (result.has_value()) {
-    auto& parent = ctx->stack_top();
-    auto& caller = *std::prev(parent.current);
+  auto& parent = ctx->stack_top();
+  auto& caller = *std::prev(parent.current);
 
+  performInvokeReturn(*ctx, caller);
+
+  if (result.has_value()) {
     parent.insert(&caller, std::move(*result));
   }
 
@@ -396,27 +399,53 @@ ExecutionResult Interpreter::visitSwitchInst(llvm::SwitchInst& inst) {
 
   return forks;
 }
-ExecutionResult Interpreter::visitCallInst(llvm::CallInst& call) {
-  auto func = call.getCalledFunction();
+ExecutionResult Interpreter::visitCallBase(llvm::CallBase& callBase) {
+  auto func = callBase.getCalledFunction();
   if (!func)
-    return visitIndirectCall(call);
+    return visitIndirectCall(callBase);
 
   CAFFEINE_ASSERT(!func->isIntrinsic(),
                   fmt::format("bad function call '{}': intrinsic function "
                               "calls should be handled by visitIntrinsic",
                               func->getName().str()));
 
-  if (func->empty())
-    return visitExternFunc(call);
+  if (func->empty()) {
+    auto* prev_inst = &*ctx->stack_top().current;
+    auto invoke = llvm::dyn_cast<llvm::InvokeInst>(&callBase);
+    auto res = visitExternFunc(callBase);
+
+    if (!invoke)
+      return res;
+
+    if (res.empty()) {
+      if (&*ctx->stack_top().current == prev_inst) {
+        performInvokeReturn(*ctx, *invoke);
+      }
+    } else {
+      for (auto& ctx_ : res.contexts()) {
+        if (&*ctx_.stack_top().current == prev_inst) {
+          performInvokeReturn(ctx_, *invoke);
+        }
+      }
+    }
+
+    return res;
+  }
 
   StackFrame callee{func};
-  for (auto [arg, val] : llvm::zip(func->args(), call.args())) {
+  for (auto [arg, val] : llvm::zip(func->args(), callBase.args())) {
     callee.insert(&arg, ctx->lookup(val.get()));
   }
 
   ctx->push(std::move(callee));
 
   return ExecutionResult::Continue;
+}
+ExecutionResult Interpreter::visitCallInst(llvm::CallInst& call) {
+  return visitCallBase(call);
+}
+ExecutionResult Interpreter::visitInvokeInst(llvm::InvokeInst& invoke) {
+  return visitCallBase(invoke);
 }
 ExecutionResult Interpreter::visitIntrinsicInst(llvm::IntrinsicInst& intrin) {
   namespace Intrinsic = llvm::Intrinsic;
@@ -437,7 +466,7 @@ ExecutionResult Interpreter::visitIntrinsicInst(llvm::IntrinsicInst& intrin) {
   CAFFEINE_ABORT(fmt::format("Intrinsic function '{}' is not supported",
                              intrin.getCalledFunction()->getName().str()));
 }
-ExecutionResult Interpreter::visitIndirectCall(llvm::CallInst& call) {
+ExecutionResult Interpreter::visitIndirectCall(llvm::CallBase& call) {
   CAFFEINE_ASSERT(
       call.isIndirectCall() || !call.getCalledFunction(),
       "visitIndirectCall called with a non-indirect call instruction");
@@ -460,7 +489,7 @@ ExecutionResult Interpreter::visitIndirectCall(llvm::CallInst& call) {
   auto resolved = ctx->heaps.resolve(solver, pointer, *ctx);
   auto resolved_forks = ctx->fork(resolved.size());
 
-  auto newcall = llvm::cast<llvm::CallInst>(call.clone());
+  auto newcall = llvm::cast<llvm::CallBase>(call.clone());
   auto _guard = llvm::unique_value(newcall);
 
   llvm::SmallVector<Context, 2> forks;
@@ -473,7 +502,7 @@ ExecutionResult Interpreter::visitIndirectCall(llvm::CallInst& call) {
         llvm::cast<FunctionObject>(*alloc.data()).function());
 
     Interpreter interp = cloneWith(&fork);
-    auto result = interp.visitCall(*newcall);
+    auto result = interp.visitCallBase(*newcall);
 
     if (!result.empty()) {
       auto& contexts = result.contexts();
@@ -569,7 +598,7 @@ ExecutionResult Interpreter::visitDbgInfoIntrinsic(llvm::DbgInfoIntrinsic&) {
  * External function                               *
  ***************************************************/
 
-ExecutionResult Interpreter::visitExternFunc(llvm::CallInst& call) {
+ExecutionResult Interpreter::visitExternFunc(llvm::CallBase& call) {
   auto func = call.getCalledFunction();
   auto name = func->getName();
 
@@ -602,7 +631,7 @@ ExecutionResult Interpreter::visitExternFunc(llvm::CallInst& call) {
       fmt::format("external function '{}' not implemented", name.str()));
 }
 
-ExecutionResult Interpreter::visitAssume(llvm::CallInst& call) {
+ExecutionResult Interpreter::visitAssume(llvm::CallBase& call) {
   CAFFEINE_ASSERT(call.getNumArgOperands() == 1);
 
   auto cond = ctx->lookup(call.getArgOperand(0));
@@ -613,7 +642,7 @@ ExecutionResult Interpreter::visitAssume(llvm::CallInst& call) {
   // get caught at the next conditional branch anyway.
   return ExecutionResult::Continue;
 }
-ExecutionResult Interpreter::visitAssert(llvm::CallInst& call) {
+ExecutionResult Interpreter::visitAssert(llvm::CallBase& call) {
   CAFFEINE_ASSERT(call.getNumArgOperands() == 1);
 
   auto cond = ctx->lookup(call.getArgOperand(0));
@@ -655,7 +684,7 @@ std::optional<std::string> readSymbolicName(std::shared_ptr<Solver> solver,
   return std::string(start, end);
 }
 
-ExecutionResult Interpreter::visitSymbolicAlloca(llvm::CallInst& call) {
+ExecutionResult Interpreter::visitSymbolicAlloca(llvm::CallBase& call) {
   auto size = ctx->lookup(call.getArgOperand(0)).scalar().expr();
   auto name = ctx->lookup(call.getArgOperand(1)).scalar().pointer();
 
@@ -710,7 +739,7 @@ ExecutionResult Interpreter::visitSymbolicAlloca(llvm::CallInst& call) {
  * caffeine_malloc is a more limited version of malloc that expects the input
  * size to never be 0.
  */
-ExecutionResult Interpreter::visitMalloc(llvm::CallInst& call) {
+ExecutionResult Interpreter::visitMalloc(llvm::CallBase& call) {
   CAFFEINE_ASSERT(call.getNumArgOperands() == 1, "Invalid malloc signature");
   CAFFEINE_ASSERT(call.getType()->isPointerTy(), "Invalid malloc signature");
 
@@ -747,7 +776,7 @@ ExecutionResult Interpreter::visitMalloc(llvm::CallInst& call) {
 
   return ExecutionResult::Continue;
 }
-ExecutionResult Interpreter::visitCalloc(llvm::CallInst& call) {
+ExecutionResult Interpreter::visitCalloc(llvm::CallBase& call) {
   CAFFEINE_ASSERT(call.getNumArgOperands() == 1, "Invalid calloc signature");
   CAFFEINE_ASSERT(call.getType()->isPointerTy(), "Invalid calloc signature");
 
@@ -788,7 +817,7 @@ ExecutionResult Interpreter::visitCalloc(llvm::CallInst& call) {
  * caffeine_free is a more limited version of free that doesn't expect the input
  * to be a null pointer.
  */
-ExecutionResult Interpreter::visitFree(llvm::CallInst& call) {
+ExecutionResult Interpreter::visitFree(llvm::CallBase& call) {
   CAFFEINE_ASSERT(call.getNumArgOperands() == 1, "Invalid free signature");
   CAFFEINE_ASSERT(call.getType()->isVoidTy(), "Invalid free signature");
   CAFFEINE_ASSERT(call.getArgOperand(0)->getType()->isPointerTy(),
@@ -833,7 +862,7 @@ ExecutionResult Interpreter::visitFree(llvm::CallInst& call) {
   return forks;
 }
 
-ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallInst& call) {
+ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallBase& call) {
   const llvm::DataLayout& layout = call.getModule()->getDataLayout();
 
   auto mem = ctx->lookup(call.getArgOperand(0)).scalar().pointer();
@@ -874,6 +903,20 @@ ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallInst& call) {
   }
 
   return forks;
+}
+
+void Interpreter::performInvokeReturn(Context& ctx_,
+                                      llvm::Instruction& caller) {
+  if (ctx_.stack.empty()) {
+    return;
+  }
+
+  auto invoke = llvm::dyn_cast<llvm::InvokeInst>(&caller);
+  if (invoke) {
+    // If the parent is an `Invoke` instruction, a call will always
+    // return to the normal branch
+    ctx_.stack_top().jump_to(invoke->getNormalDest());
+  }
 }
 
 } // namespace caffeine
