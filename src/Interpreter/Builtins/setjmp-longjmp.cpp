@@ -187,8 +187,6 @@ ExecutionResult Interpreter::visitLongjmp(llvm::CallBase& inst) {
     insert_fn(std::move(state));
   });
 
-  std::cout << "tried to longjump" << std::endl;
-
   ops.transform_fork([&](ContextState&& state, InsertFn& insert_fn) -> void {
     auto input = state.lookup(concrete);
 
@@ -233,7 +231,6 @@ ExecutionResult Interpreter::visitLongjmp(llvm::CallBase& inst) {
     llvm::InvokeInst* invoke =
         llvm::dyn_cast<llvm::InvokeInst>(&*frame.current);
     if (invoke) {
-      std::cout << "oh boy we're jumping back to an invoke" << std::endl;
       performInvokeReturn(state.ctx, *frame.current);
     } else {
       // Don't want to execute _setjmp again
@@ -243,15 +240,6 @@ ExecutionResult Interpreter::visitLongjmp(llvm::CallBase& inst) {
     insert_fn(std::move(state));
   });
 
-  std::cout << "did most things related to longjumping" << std::endl;
-
-  ExecutionResult res = ops.execute(this);
-
-  if (res.empty()) {
-    std::cout << "res was empty" << std::endl;
-    std::cout << "res status " << res.status() << std::endl;
-  }
-
-  return res;
+  return ops.execute(this);
 }
 } // namespace caffeine

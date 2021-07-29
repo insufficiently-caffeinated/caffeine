@@ -66,8 +66,7 @@ ExecutionResult TransformBuilder::execute(Interpreter* interp) const {
     *interp->ctx = std::move(output[0]);
     return ExecutionResult::Continue;
   } else {
-    return ExecutionResult(std::move(output),
-                           ExecutionResult::Status::Continue);
+    return ExecutionResult(std::move(output), ExecutionResult::Status::Dead);
   }
 }
 
