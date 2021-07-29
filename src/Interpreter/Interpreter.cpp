@@ -63,8 +63,8 @@ Interpreter::extern_functions() {
 }
 
 ExecutionResult::ExecutionResult(Status status) : status_(status) {}
-ExecutionResult::ExecutionResult(llvm::SmallVector<Context, 2>&& contexts)
-    : status_(Dead), contexts_(std::move(contexts)) {}
+ExecutionResult::ExecutionResult(llvm::SmallVector<Context, 2>&& contexts, Status status)
+    : status_(status), contexts_(std::move(contexts)) {}
 
 Interpreter::Interpreter(Context* ctx, ExecutionPolicy* policy,
                          ExecutionContextStore* store, FailureLogger* logger,

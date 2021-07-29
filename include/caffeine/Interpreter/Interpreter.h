@@ -25,7 +25,7 @@ public:
   using ContextVec = llvm::SmallVector<Context, 2>;
 
   ExecutionResult(Status status);
-  ExecutionResult(ContextVec&& contexts);
+  ExecutionResult(ContextVec&& contexts, Status status=Dead);
 
   Status status() const {
     return status_;
