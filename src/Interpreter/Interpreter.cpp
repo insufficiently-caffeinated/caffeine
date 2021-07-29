@@ -63,7 +63,8 @@ Interpreter::extern_functions() {
 }
 
 ExecutionResult::ExecutionResult(Status status) : status_(status) {}
-ExecutionResult::ExecutionResult(llvm::SmallVector<Context, 2>&& contexts, Status status)
+ExecutionResult::ExecutionResult(llvm::SmallVector<Context, 2>&& contexts,
+                                 Status status)
     : status_(status), contexts_(std::move(contexts)) {}
 
 Interpreter::Interpreter(Context* ctx, ExecutionPolicy* policy,

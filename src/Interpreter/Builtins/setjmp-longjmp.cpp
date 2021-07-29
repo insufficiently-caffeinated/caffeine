@@ -230,7 +230,8 @@ ExecutionResult Interpreter::visitLongjmp(llvm::CallBase& inst) {
 
     // Now we need to check if the caller is an invoke instruction and
     // go to the default return flow
-    llvm::InvokeInst* invoke = llvm::dyn_cast<llvm::InvokeInst>(&*frame.current);
+    llvm::InvokeInst* invoke =
+        llvm::dyn_cast<llvm::InvokeInst>(&*frame.current);
     if (invoke) {
       std::cout << "oh boy we're jumping back to an invoke" << std::endl;
       performInvokeReturn(state.ctx, *frame.current);
