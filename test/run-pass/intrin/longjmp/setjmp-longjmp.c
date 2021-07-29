@@ -1,3 +1,4 @@
+// SKIP TEST
 #include "caffeine.h"
 
 #include <setjmp.h>
