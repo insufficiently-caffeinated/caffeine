@@ -136,6 +136,7 @@ private:
   ExecutionResult visitMalloc(llvm::CallBase& inst);
   ExecutionResult visitCalloc(llvm::CallBase& inst);
   ExecutionResult visitFree(llvm::CallBase& inst);
+  ExecutionResult visitPosixMemalign(llvm::CallBase& inst);
 
   ExecutionResult visitBuiltinResolve(llvm::CallBase& inst);
 

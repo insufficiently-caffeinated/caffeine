@@ -27,6 +27,10 @@ void caffeine_free(void* mem);
 // it with the provided name
 void* caffeine_builtin_symbolic_alloca(size_t size, const char* name);
 
+// This is a more limited version of posix_memalign that expects
+// size != 0 && alignment % 2 == 0 && alignment % sizeof(void *) == 0
+int caffeine_builtin_posix_memalign(void **memptr, size_t alignment, size_t size);
+
 /***************************************************
  * Pointer Functions                               *
  ***************************************************/

@@ -1,6 +1,7 @@
 
 #include "caffeine-builtins.h"
 #include <stddef.h>
+#include <errno.h>
 
 void* malloc(size_t size) {
   if (size == 0)
@@ -23,4 +24,16 @@ void free(void* mem) {
     return;
 
   return caffeine_free(mem);
+}
+
+int posix_memalign(void **memptr, size_t alignment, size_t size) {
+  if (size == 0) {
+    *memptr = NULL;
+  }
+
+  if (alignment % 2 != 0 || alignment % sizeof(void *) != 0) {
+    return EINVAL;
+  }
+
+  return caffeine_builtin_posix_memalign(memptr, alignment, size);
 }
