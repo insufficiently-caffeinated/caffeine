@@ -126,6 +126,11 @@ private:
   // invoke instruction
   static void performInvokeReturn(Context& ctx, llvm::Instruction& invoke);
 
+  // Make a symbolic allocation
+  LLVMValue memoryAllocate(llvm::CallBase& call, const OpRef& size,
+                           const OpRef& alignment,
+                           const llvm::DataLayout& layout, int address_space);
+
 private:
   ExecutionResult visitExternFunc(llvm::CallBase& inst);
 
