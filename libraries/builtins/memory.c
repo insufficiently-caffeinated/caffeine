@@ -35,5 +35,11 @@ int posix_memalign(void **memptr, size_t alignment, size_t size) {
     return EINVAL;
   }
 
-  return caffeine_builtin_posix_memalign(memptr, alignment, size);
+  void * res = caffeine_malloc_align(size, alignment);
+  if (res == NULL) {
+    return ENOMEM;
+  }
+
+  *memptr = res;
+  return 0;
 }

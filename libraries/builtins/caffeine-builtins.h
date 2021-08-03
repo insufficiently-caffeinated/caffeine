@@ -19,6 +19,9 @@
 // This is a more limited version of malloc that expects size != 0
 void* caffeine_malloc(size_t size);
 void* caffeine_calloc(size_t size);
+// This is a version of malloc that allows users to specify alignment. It expects
+// size != 0 && alignment % 2 == 0 && alignment % sizeof(void *) == 0
+void* caffeine_malloc_align(size_t size, size_t alignment);
 
 // This is a more limited version of free that expects mem != nullptr
 void caffeine_free(void* mem);
@@ -26,10 +29,6 @@ void caffeine_free(void* mem);
 // This creates an allocation with symbolic value and given size and associates
 // it with the provided name
 void* caffeine_builtin_symbolic_alloca(size_t size, const char* name);
-
-// This is a more limited version of posix_memalign that expects
-// size != 0 && alignment % 2 == 0 && alignment % sizeof(void *) == 0
-int caffeine_builtin_posix_memalign(void **memptr, size_t alignment, size_t size);
 
 /***************************************************
  * Pointer Functions                               *
