@@ -327,27 +327,32 @@ LLVMValue ExprEvaluator::visitGlobalVariable(llvm::GlobalVariable& global) {
     throw Unevaluatable(&global, "global had no initializer");
   }
 
-  OpRef data =
-      visitGlobalData(*global.getInitializer(), global.getAddressSpace());
-  const auto& array = llvm::cast<ArrayBase>(*data);
-
   const llvm::DataLayout& layout = ctx->mod->getDataLayout();
   unsigned bitwidth = layout.getPointerSizeInBits();
-  unsigned alignment = global.getAlignment();
+  llvm::Type* type = global.getInitializer()->getType();
+  OpRef size = ConstantInt::Create(
+      llvm::APInt(bitwidth, layout.getTypeAllocSize(type).getFixedSize()));
+  OpRef alloc_data = AllocOp::Create(size, ConstantInt::CreateZero(8));
+
   auto perms = global.isConstant() ? AllocationPermissions::Write
                                    : AllocationPermissions::ReadWrite;
 
+  unsigned alignment = global.getAlignment();
+
   auto alloc = ctx->heaps[global.getAddressSpace()].allocate(
-      array.size(), ConstantInt::Create(llvm::APInt(bitwidth, alignment)), data,
+      size, ConstantInt::Create(llvm::APInt(bitwidth, alignment)), alloc_data,
       AllocationKind::Global, perms, *ctx);
 
-  auto pointer = LLVMValue(
+  auto ptr =
       Pointer(alloc, ConstantInt::Create(llvm::APInt::getNullValue(bitwidth)),
-              global.getAddressSpace()));
+              global.getAddressSpace());
+  auto res = LLVMValue(ptr);
 
-  ctx->globals.emplace(&global, pointer);
+  ctx->globals.emplace(&global, res);
 
-  return pointer;
+  visitGlobalData(*global.getInitializer(), ptr, global.getAddressSpace());
+
+  return res;
 }
 
 LLVMValue ExprEvaluator::visitFunction(llvm::Function& func) {
@@ -371,28 +376,24 @@ LLVMValue ExprEvaluator::visitFunction(llvm::Function& func) {
   return pointer;
 }
 
-OpRef ExprEvaluator::visitGlobalData(llvm::Constant& constant, unsigned AS) {
+void ExprEvaluator::visitGlobalData(llvm::Constant& constant, Pointer& ptr,
+                                    unsigned AS) {
   llvm::Type* type = constant.getType();
   const llvm::DataLayout& layout = ctx->mod->getDataLayout();
   unsigned bitwidth = layout.getPointerSizeInBits(AS);
 
-  OpRef size = ConstantInt::Create(
-      llvm::APInt(bitwidth, layout.getTypeAllocSize(type).getFixedSize()));
-  OpRef alloc_data = AllocOp::Create(size, ConstantInt::CreateZero(8));
-
   // Don't bother to evaluate the rest of the initializer if we already know
   // that we're going to get all zeros.
   if (llvm::isa<llvm::ConstantAggregateZero>(constant))
-    return alloc_data;
+    return;
 
   LLVMValue value = visit(&constant);
 
-  Allocation alloc{ConstantInt::CreateZero(bitwidth), size, alloc_data,
-                   AllocationKind::Alloca, AllocationPermissions::ReadWrite};
-  alloc.write(ConstantInt::CreateZero(bitwidth), type, value, ctx->heaps,
-              layout);
+  OpRef size = ConstantInt::Create(
+      llvm::APInt(bitwidth, layout.getTypeAllocSize(type).getFixedSize()));
 
-  return alloc.data();
+  ctx->heaps.ptr_allocation(ptr).write(ConstantInt::CreateZero(bitwidth), type,
+                                       value, ctx->heaps, layout);
 }
 LLVMValue ExprEvaluator::visitConstantExpr(llvm::ConstantExpr& expr) {
   auto inst = llvm::unique_value(expr.getAsInstruction());

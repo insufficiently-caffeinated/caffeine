@@ -1,6 +1,7 @@
 #pragma once
 
 #include "caffeine/IR/Operation.h"
+#include "caffeine/Memory/MemHeap.h"
 #include "caffeine/Support/UnsupportedOperation.h"
 #include <llvm/IR/InstVisitor.h>
 #include <optional>
@@ -82,7 +83,7 @@ public:
   LLVMValue visitFunction(llvm::Function& func);
 
   // Extras
-  OpRef visitGlobalData(llvm::Constant& cnst, unsigned AS);
+  void visitGlobalData(llvm::Constant& cnst, Pointer& ptr, unsigned AS);
   LLVMValue visitConstantExpr(llvm::ConstantExpr& expr);
 
   /*********************************************
