@@ -99,7 +99,7 @@ TransformBuilder::Value TransformBuilder::resolve(Argument pointer,
     auto forks = ctx.fork(resolved.size());
 
     for (auto [fork, ptr] : llvm::zip(forks, resolved)) {
-      Allocation& alloc = fork.heaps[ptr.heap()][ptr.alloc()];
+      Allocation& alloc = fork.heaps.ptr_allocation(ptr);
       fork.add(
           alloc.check_inbounds(ptr.offset(), layout.getTypeStoreSize(type)));
 

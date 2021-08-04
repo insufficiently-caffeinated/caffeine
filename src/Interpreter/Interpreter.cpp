@@ -371,6 +371,23 @@ ExecutionResult Interpreter::visitReturnInst(llvm::ReturnInst& inst) {
 
   return ExecutionResult::Continue;
 }
+ExecutionResult Interpreter::visitResumeInst(llvm::ResumeInst& inst) {
+  LLVMValue result = ctx->lookup(inst.getOperand(0));
+
+  ctx->pop();
+
+  if (ctx->empty())
+    return ExecutionResult::Stop;
+
+  auto& parent = ctx->stack_top();
+  auto& caller = *std::prev(parent.current);
+
+  performInvokeReturn(*ctx, caller, false);
+
+  parent.insert(&caller, std::move(result));
+
+  return ExecutionResult::Continue;
+}
 ExecutionResult Interpreter::visitSwitchInst(llvm::SwitchInst& inst) {
   auto cond = ctx->lookup(inst.getCondition()).scalar().expr();
 
@@ -489,13 +506,15 @@ ExecutionResult Interpreter::visitIndirectCall(llvm::CallBase& call) {
   auto resolved = ctx->heaps.resolve(solver, pointer, *ctx);
   auto resolved_forks = ctx->fork(resolved.size());
 
-  auto newcall = llvm::cast<llvm::CallBase>(call.clone());
-  auto _guard = llvm::unique_value(newcall);
+  auto callclone = call.clone();
+  auto _guard = llvm::unique_value(callclone);
+  auto newcall = llvm::cast<llvm::CallBase>(callclone);
+  CAFFEINE_ASSERT(newcall, "Cast must not fail");
 
   llvm::SmallVector<Context, 2> forks;
 
   for (auto [fork, ptr] : llvm::zip(resolved_forks, resolved)) {
-    Allocation& alloc = fork.heaps[ptr.heap()][ptr.alloc()];
+    Allocation& alloc = fork.heaps.ptr_allocation(ptr);
     fork.add(ICmpOp::CreateICmp(ICmpOpcode::EQ, alloc.address(),
                                 pointer.value(fork.heaps)));
     newcall->setCalledFunction(
@@ -658,7 +677,7 @@ ExecutionResult Interpreter::visitAssert(llvm::CallBase& call) {
 
 std::optional<std::string> readSymbolicName(std::shared_ptr<Solver> solver,
                                             Context* ctx, const Pointer& ptr) {
-  const auto& alloc = ctx->heaps[ptr.heap()][ptr.alloc()];
+  const auto& alloc = ctx->heaps.ptr_allocation(ptr);
 
   auto result = ctx->resolve(solver);
   if (result != SolverResult::SAT) {
@@ -795,7 +814,7 @@ ExecutionResult Interpreter::visitFree(llvm::CallBase& call) {
 
   auto err_start =
       std::remove_if(resolved.begin(), resolved.end(), [&](const Pointer& ptr) {
-        const Allocation& alloc = ctx->heaps[ptr.heap()][ptr.alloc()];
+        const Allocation& alloc = ctx->heaps.ptr_allocation(ptr);
 
         auto assertion = Assertion(
             ICmpOp::CreateICmpEQ(ptr.value(ctx->heaps), alloc.address()));
@@ -813,7 +832,7 @@ ExecutionResult Interpreter::visitFree(llvm::CallBase& call) {
   auto forks = ctx->fork(resolved.size());
 
   for (auto [fork, ptr] : llvm::zip(forks, resolved)) {
-    Allocation& alloc = fork.heaps[ptr.heap()][ptr.alloc()];
+    Allocation& alloc = fork.heaps.ptr_allocation(ptr);
     fork.add(ICmpOp::CreateICmpEQ(ptr.value(fork.heaps), alloc.address()));
     fork.heaps[ptr.heap()].deallocate(ptr.alloc());
   }
@@ -864,8 +883,8 @@ ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallBase& call) {
   return forks;
 }
 
-void Interpreter::performInvokeReturn(Context& ctx_,
-                                      llvm::Instruction& caller) {
+void Interpreter::performInvokeReturn(Context& ctx_, llvm::Instruction& caller,
+                                      bool normal) {
   if (ctx_.stack.empty()) {
     return;
   }
@@ -874,7 +893,11 @@ void Interpreter::performInvokeReturn(Context& ctx_,
   if (invoke) {
     // If the parent is an `Invoke` instruction, a call will always
     // return to the normal branch
-    ctx_.stack_top().jump_to(invoke->getNormalDest());
+    if (normal) {
+      ctx_.stack_top().jump_to(invoke->getNormalDest());
+    } else {
+      ctx_.stack_top().jump_to(invoke->getUnwindDest());
+    }
   }
 }
 

@@ -126,7 +126,7 @@ ExecutionResult Interpreter::visitSetjmp(llvm::CallBase& inst) {
   ops.transform([&](TransformBuilder::ContextState& state) {
     auto ptr = state.lookup(resolved).scalar().pointer();
 
-    Allocation& alloc = state.ctx.heaps[ptr.heap()][ptr.alloc()];
+    Allocation& alloc = state.ctx.heaps.ptr_allocation(ptr);
     alloc.write(ptr.offset(), jmpbuf_ty, jmpbuf, state.ctx.heaps, layout);
   });
   ops.assign(&inst,

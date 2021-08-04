@@ -86,6 +86,7 @@ public:
   ExecutionResult visitPHINode(llvm::PHINode& node);
   ExecutionResult visitBranchInst(llvm::BranchInst& inst);
   ExecutionResult visitReturnInst(llvm::ReturnInst& inst);
+  ExecutionResult visitResumeInst(llvm::ResumeInst& inst);
   ExecutionResult visitSwitchInst(llvm::SwitchInst& inst);
   ExecutionResult visitCallBase(llvm::CallBase& inst);
   ExecutionResult visitCallInst(llvm::CallInst& inst);
@@ -124,7 +125,8 @@ private:
   // are returning and need to do different things based on whether they were
   // called or invoked. Only works if the top of the stack frames contains the
   // invoke instruction
-  static void performInvokeReturn(Context& ctx, llvm::Instruction& invoke);
+  static void performInvokeReturn(Context& ctx, llvm::Instruction& invoke,
+                                  bool normal = true);
 
 private:
   ExecutionResult visitExternFunc(llvm::CallBase& inst);
