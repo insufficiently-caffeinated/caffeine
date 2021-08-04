@@ -610,10 +610,10 @@ ExecutionResult Interpreter::visitExternFunc(llvm::CallBase& call) {
   if (name == "caffeine_assume")
     return visitAssume(call);
 
-  if (name == "caffeine_malloc")
-    return visitMalloc(call);
   if (name == "caffeine_calloc")
     return visitCalloc(call);
+  if (name == "caffeine_malloc_aligned")
+    return visitMallocAlign(call);
   if (name == "caffeine_free")
     return visitFree(call);
 
@@ -735,47 +735,6 @@ ExecutionResult Interpreter::visitSymbolicAlloca(llvm::CallBase& call) {
   return ExecutionResult::Continue;
 }
 
-/**
- * caffeine_malloc is a more limited version of malloc that expects the input
- * size to never be 0.
- */
-ExecutionResult Interpreter::visitMalloc(llvm::CallBase& call) {
-  CAFFEINE_ASSERT(call.getNumArgOperands() == 1, "Invalid malloc signature");
-  CAFFEINE_ASSERT(call.getType()->isPointerTy(), "Invalid malloc signature");
-
-  auto size = ctx->lookup(call.getArgOperand(0)).scalar().expr();
-  const llvm::DataLayout& layout = call.getModule()->getDataLayout();
-
-  unsigned address_space = call.getType()->getPointerAddressSpace();
-  auto ptr_width = layout.getPointerSizeInBits(address_space);
-
-  CAFFEINE_ASSERT(size->type().is_int(), "Invalid malloc signature");
-  CAFFEINE_ASSERT(size->type().bitwidth() ==
-                      layout.getIndexSizeInBits(address_space),
-                  "Invalid malloc signature");
-
-  if (options.malloc_can_return_null) {
-    Context forked = ctx->fork_once();
-    forked.stack_top().insert(
-        &call, LLVMValue(Pointer(ConstantInt::Create(llvm::APInt(ptr_width, 0)),
-                                 address_space)));
-    queueContext(std::move(forked));
-  }
-
-  auto size_op = UnaryOp::CreateTruncOrZExt(Type::int_ty(ptr_width), size);
-  auto alloc = ctx->heaps[address_space].allocate(
-      size_op,
-      ConstantInt::Create(llvm::APInt(ptr_width, options.malloc_alignment)),
-      AllocOp::Create(size_op, ConstantInt::Create(llvm::APInt(8, 0xDD))),
-      AllocationKind::Malloc, AllocationPermissions::ReadWrite, *ctx);
-
-  ctx->stack_top().insert(
-      &call,
-      LLVMValue(Pointer(alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)),
-                        address_space)));
-
-  return ExecutionResult::Continue;
-}
 ExecutionResult Interpreter::visitCalloc(llvm::CallBase& call) {
   CAFFEINE_ASSERT(call.getNumArgOperands() == 1, "Invalid calloc signature");
   CAFFEINE_ASSERT(call.getType()->isPointerTy(), "Invalid calloc signature");
