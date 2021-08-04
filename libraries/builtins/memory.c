@@ -7,7 +7,7 @@ void* malloc(size_t size) {
   if (size == 0)
     return NULL;
 
-  return caffeine_malloc(size);
+  return caffeine_malloc_aligned(size, 16);
 }
 
 void* calloc(size_t num, size_t size) {
@@ -35,7 +35,7 @@ int posix_memalign(void **memptr, size_t alignment, size_t size) {
     return EINVAL;
   }
 
-  void * res = caffeine_malloc_align(size, alignment);
+  void * res = caffeine_malloc_aligned(size, alignment);
   if (res == NULL) {
     return ENOMEM;
   }

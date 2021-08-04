@@ -16,12 +16,10 @@
  * Memory Allocation Functions                     *
  ***************************************************/
 
-// This is a more limited version of malloc that expects size != 0
-void* caffeine_malloc(size_t size);
 void* caffeine_calloc(size_t size);
 // This is a version of malloc that allows users to specify alignment. It expects
 // size != 0 && alignment % 2 == 0 && alignment % sizeof(void *) == 0
-void* caffeine_malloc_align(size_t size, size_t alignment);
+void* caffeine_malloc_aligned(size_t size, size_t alignment);
 
 // This is a more limited version of free that expects mem != nullptr
 void caffeine_free(void* mem);

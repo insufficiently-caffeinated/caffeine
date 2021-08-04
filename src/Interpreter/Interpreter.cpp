@@ -610,11 +610,9 @@ ExecutionResult Interpreter::visitExternFunc(llvm::CallBase& call) {
   if (name == "caffeine_assume")
     return visitAssume(call);
 
-  if (name == "caffeine_malloc")
-    return visitMalloc(call);
   if (name == "caffeine_calloc")
     return visitCalloc(call);
-  if (name == "caffeine_malloc_align")
+  if (name == "caffeine_malloc_aligned")
     return visitMallocAlign(call);
   if (name == "caffeine_free")
     return visitFree(call);
@@ -737,33 +735,6 @@ ExecutionResult Interpreter::visitSymbolicAlloca(llvm::CallBase& call) {
   return ExecutionResult::Continue;
 }
 
-/**
- * caffeine_malloc is a more limited version of malloc that expects the input
- * size to never be 0.
- */
-ExecutionResult Interpreter::visitMalloc(llvm::CallBase& call) {
-  CAFFEINE_ASSERT(call.getNumArgOperands() == 1, "Invalid malloc signature");
-  CAFFEINE_ASSERT(call.getType()->isPointerTy(), "Invalid malloc signature");
-
-  auto size = ctx->lookup(call.getArgOperand(0)).scalar().expr();
-  const llvm::DataLayout& layout = call.getModule()->getDataLayout();
-  unsigned address_space = call.getType()->getPointerAddressSpace();
-  auto ptr_width = layout.getPointerSizeInBits(address_space);
-
-  CAFFEINE_ASSERT(size->type().is_int(), "Invalid malloc signature");
-  CAFFEINE_ASSERT(size->type().bitwidth() ==
-                      layout.getIndexSizeInBits(address_space),
-                  "Invalid malloc signature");
-
-  LLVMValue res = memoryAllocate(
-      call, size,
-      ConstantInt::Create(llvm::APInt(ptr_width, options.malloc_alignment)),
-      layout, address_space);
-
-  ctx->stack_top().insert(&call, res);
-
-  return ExecutionResult::Continue;
-}
 ExecutionResult Interpreter::visitCalloc(llvm::CallBase& call) {
   CAFFEINE_ASSERT(call.getNumArgOperands() == 1, "Invalid calloc signature");
   CAFFEINE_ASSERT(call.getType()->isPointerTy(), "Invalid calloc signature");
