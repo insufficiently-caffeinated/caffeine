@@ -35,4 +35,3 @@ file(GLOB tests CONFIGURE_DEPENDS *.c *.ll *.cpp)
 foreach(test ${tests})
   add_regression_test("${test}")
 endforeach()
-
