@@ -343,9 +343,8 @@ LLVMValue ExprEvaluator::visitGlobalVariable(llvm::GlobalVariable& global) {
       size, ConstantInt::Create(llvm::APInt(bitwidth, alignment)), alloc_data,
       AllocationKind::Global, perms, *ctx);
 
-  auto ptr =
-      Pointer(alloc, ConstantInt::Create(llvm::APInt::getNullValue(bitwidth)),
-              global.getAddressSpace());
+  auto ptr = Pointer(alloc, ConstantInt::CreateZero(bitwidth),
+                     global.getAddressSpace());
   auto res = LLVMValue(ptr);
 
   ctx->globals.emplace(&global, res);
