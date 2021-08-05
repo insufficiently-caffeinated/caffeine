@@ -350,7 +350,8 @@ LLVMValue ExprEvaluator::visitGlobalVariable(llvm::GlobalVariable& global) {
 
   ctx->globals.emplace(&global, res);
 
-  visitGlobalData(*global.getInitializer(), ptr, global.getAddressSpace());
+  visitGlobalData(*global.getInitializer(), ctx->heaps.ptr_allocation(ptr),
+                  global.getAddressSpace());
 
   return res;
 }
@@ -376,7 +377,7 @@ LLVMValue ExprEvaluator::visitFunction(llvm::Function& func) {
   return pointer;
 }
 
-void ExprEvaluator::visitGlobalData(llvm::Constant& constant, Pointer& ptr,
+void ExprEvaluator::visitGlobalData(llvm::Constant& constant, Allocation& alloc,
                                     unsigned AS) {
   llvm::Type* type = constant.getType();
   const llvm::DataLayout& layout = ctx->mod->getDataLayout();
@@ -389,11 +390,8 @@ void ExprEvaluator::visitGlobalData(llvm::Constant& constant, Pointer& ptr,
 
   LLVMValue value = visit(&constant);
 
-  OpRef size = ConstantInt::Create(
-      llvm::APInt(bitwidth, layout.getTypeAllocSize(type).getFixedSize()));
-
-  ctx->heaps.ptr_allocation(ptr).write(ConstantInt::CreateZero(bitwidth), type,
-                                       value, ctx->heaps, layout);
+  alloc.write(ConstantInt::CreateZero(bitwidth), type, value, ctx->heaps,
+              layout);
 }
 LLVMValue ExprEvaluator::visitConstantExpr(llvm::ConstantExpr& expr) {
   auto inst = llvm::unique_value(expr.getAsInstruction());
