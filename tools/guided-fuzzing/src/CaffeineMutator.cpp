@@ -31,7 +31,7 @@ class NullFailureLogger : public caffeine::FailureLogger {
 };
 
 llvm::Function*
-getTargetFunction(std::unique_ptr<llvm::Module>& module,
+getTargetFunction(std::shared_ptr<llvm::Module>& module,
                   std::unique_ptr<llvm::LLVMContext>& llvm_context) {
   llvm::Function* fuzz_target = module->getFunction(CAFFEINE_FUZZ_START);
   auto bitwidth = module->getDataLayout().getPointerSizeInBits();
@@ -110,7 +110,7 @@ size_t CaffeineMutator::mutate(caffeine::Span<char> data) {
     return 0;
   }
 
-  caffeine::ExecutorOptions options;
+  caffeine::ExecutorOptions options(module);
   options.num_threads = 1;
 
   auto bitwidth = this->module->getDataLayout().getPointerSizeInBits();

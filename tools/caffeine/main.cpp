@@ -108,7 +108,8 @@ int main(int argc, char** argv) {
     }
   }
 
-  auto module = loadFile(argv[0], input_filename.getValue(), ctx);
+  std::shared_ptr<llvm::Module> module =
+      loadFile(argv[0], input_filename.getValue(), ctx);
   if (!module) {
     errs() << argv[0] << ": ";
     WithColor::error() << " loading file '" << input_filename.getValue()
@@ -125,7 +126,7 @@ int main(int argc, char** argv) {
 
   auto logger = CountingFailureLogger{std::cout, function};
 
-  caffeine::ExecutorOptions options;
+  caffeine::ExecutorOptions options(module);
   options.num_threads =
       threads != 0 ? threads : std::thread::hardware_concurrency();
 

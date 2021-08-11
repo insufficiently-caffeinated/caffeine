@@ -7,6 +7,8 @@
 #include "caffeine/Interpreter/FailureLogger.h"
 #include "caffeine/Interpreter/Store.h"
 
+#include <llvm/IR/PassManager.h>
+
 namespace caffeine {
 
 class ExecutionPolicy;
@@ -14,8 +16,10 @@ class ExecutionContextStore;
 
 struct ExecutorOptions {
   uint32_t num_threads = 2;
+  std::shared_ptr<llvm::PassManager<llvm::Module>> pass_manager;
+  std::shared_ptr<llvm::Module> mod;
 
-  constexpr ExecutorOptions() = default;
+  ExecutorOptions(std::shared_ptr<llvm::Module> module);
 };
 
 class Executor {
@@ -29,10 +33,11 @@ private:
 public:
   Executor(ExecutionPolicy* policy, ExecutionContextStore* store,
            FailureLogger* logger, const SolverBuilder* builder,
-           const ExecutorOptions& options = {});
+           const ExecutorOptions& options);
 
   /**
-   * Runs the contexts in its possesion until there are none left
+   * Runs optimization passes on the LLVM module and then runs the contexts in
+   * its possesion until there are none left
    */
   void run();
 

@@ -3,10 +3,17 @@
 #include "caffeine/Interpreter/Store.h"
 #include "caffeine/Support/UnsupportedOperation.h"
 
+#include <memory>
 #include <thread>
 #include <z3++.h>
 
 namespace caffeine {
+
+ExecutorOptions::ExecutorOptions(std::shared_ptr<llvm::Module> module)
+    : mod{module} {
+  pass_manager = std::make_shared<llvm::PassManager<llvm::Module>>();
+  // TODO: Add manadatory Caffeine passes
+}
 
 void Executor::run_worker() {
   auto solver = builder->build();
@@ -36,6 +43,13 @@ Executor::Executor(ExecutionPolicy* policy, ExecutionContextStore* store,
       options(options) {}
 
 void Executor::run() {
+  CAFFEINE_ASSERT(
+      options.mod,
+      "Module must be specified in ExecutorOptions for optimization passes");
+
+  auto module_analysis_manager = llvm::ModuleAnalysisManager();
+  options.pass_manager->run(*options.mod, module_analysis_manager);
+
   if (options.num_threads == 1) {
     run_worker();
     return;

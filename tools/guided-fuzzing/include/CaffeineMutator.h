@@ -24,7 +24,7 @@ public:
   afl_state_t* afl;
 
 private:
-  std::unique_ptr<llvm::Module> module;
+  std::shared_ptr<llvm::Module> module;
   std::unique_ptr<llvm::LLVMContext> llvm_context;
   llvm::Function* fuzz_target;
   std::mutex termination_mutex;
