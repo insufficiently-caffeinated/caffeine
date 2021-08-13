@@ -9,11 +9,11 @@
 
 namespace caffeine {
 
-namespace serializer {
+namespace serialize {
 
-using caffeine::serializer::protos::TestCase;
-using caffeine::serializer::protos::Symbol;
-using caffeine::serializer::protos::Value;
+using caffeine::serialize::protos::TestCase;
+using caffeine::serialize::protos::Symbol;
+using caffeine::serialize::protos::Value;
 using capnp::word;
 using kj::byte;
 
@@ -63,6 +63,6 @@ std::unordered_map<std::string, std::string> deserialize_test_case(std::vector<c
     return result;
 }
 
-} // namespace serializer
+} // namespace serialize
 
 } // namespace caffeine

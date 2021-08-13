@@ -8,12 +8,12 @@
 
 namespace caffeine {
 
-namespace serializer {
+namespace serialize {
 
 std::vector<char> serialize_test_case(const std::unordered_map<std::string, std::string>& symbols);
 std::unordered_map<std::string, std::string> deserialize_test_case(std::vector<char>& data);
 
-} // namespace serializer
+} // namespace serialize
 
 } // namespace caffeine
 

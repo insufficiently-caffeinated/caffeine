@@ -1,7 +1,7 @@
 @0xa5a2c19ddf8b8759;
 
 using Cxx = import "/capnp/c++.capnp";
-$Cxx.namespace("caffeine::serializer::protos");
+$Cxx.namespace("caffeine::serialize::protos");
 
 struct Value {
   array @0 :Data;
