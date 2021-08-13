@@ -11,26 +11,26 @@ namespace caffeine {
 
 namespace serialize {
 
-using caffeine::serialize::protos::TestCase;
-using caffeine::serialize::protos::Symbol;
-using caffeine::serialize::protos::Value;
-using capnp::word;
-using kj::byte;
+  using caffeine::serialize::protos::Symbol;
+  using caffeine::serialize::protos::TestCase;
+  using caffeine::serialize::protos::Value;
+  using capnp::word;
+  using kj::byte;
 
-
-std::vector<char> serialize_test_case(const std::unordered_map<std::string, std::string>& symbols)
-{
+  std::vector<char> serialize_test_case(
+      const std::unordered_map<std::string, std::string>& symbols) {
     ::capnp::MallocMessageBuilder message;
     TestCase::Builder testcase = message.initRoot<TestCase>();
-    ::capnp::List<Symbol>::Builder testcases = testcase.initSymbols(symbols.size());
+    ::capnp::List<Symbol>::Builder testcases =
+        testcase.initSymbols(symbols.size());
     unsigned int index = 0;
     for (const auto& [name, value] : symbols) {
-        Symbol::Builder v = testcases[index];
-        v.setName(name.c_str());
-        auto symbol = v.initSymbol();
-        const byte * b = reinterpret_cast<const unsigned char *>(value.c_str());
-        symbol.setArray(capnp::Data::Reader(b, value.size()));
-        ++index;
+      Symbol::Builder v = testcases[index];
+      v.setName(name.c_str());
+      auto symbol = v.initSymbol();
+      const byte* b = reinterpret_cast<const unsigned char*>(value.c_str());
+      symbol.setArray(capnp::Data::Reader(b, value.size()));
+      ++index;
     }
 
     kj::VectorOutputStream stream;
@@ -39,11 +39,11 @@ std::vector<char> serialize_test_case(const std::unordered_map<std::string, std:
     std::vector<char> result(bytes.size());
     std::copy(bytes.begin(), bytes.end(), result.begin());
     return result;
-}
+  }
 
-std::unordered_map<std::string, std::string> deserialize_test_case(std::vector<char>& data)
-{
-    byte * ptr = reinterpret_cast<byte *>(data.data());
+  std::unordered_map<std::string, std::string>
+  deserialize_test_case(std::vector<char>& data) {
+    byte* ptr = reinterpret_cast<byte*>(data.data());
     kj::ArrayPtr<byte> bufferPtr = kj::arrayPtr(ptr, sizeof(data.size()));
 
     kj::ArrayInputStream stream(bufferPtr);
@@ -53,15 +53,15 @@ std::unordered_map<std::string, std::string> deserialize_test_case(std::vector<c
 
     std::unordered_map<std::string, std::string> result;
     for (Symbol::Reader symbol : testcase.getSymbols()) {
-        std::string name = std::string(symbol.getName().cStr());
-        std::string value;
-        Value::Reader val = symbol.getSymbol();
-        auto array = val.getArray();
-        value = std::string(array.begin(), array.end());
-        result[name] = value;
+      std::string name = std::string(symbol.getName().cStr());
+      std::string value;
+      Value::Reader val = symbol.getSymbol();
+      auto array = val.getArray();
+      value = std::string(array.begin(), array.end());
+      result[name] = value;
     }
     return result;
-}
+  }
 
 } // namespace serialize
 
