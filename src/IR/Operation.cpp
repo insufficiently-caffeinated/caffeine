@@ -42,20 +42,20 @@ Operation::Operation(Opcode op, Type t, const OpRef* operands)
   // It'll mess up constructors and destructors.
   CAFFEINE_ASSERT(op != Invalid);
   // No opcodes have > 3 operands
-  CAFFEINE_ASSERT(num_operands() <= 3, "Invalid opcode");
+  CAFFEINE_ASSERT(detail::opcode_nargs(opcode_) <= 3, "Invalid opcode");
 }
 
 Operation::Operation(Opcode op, Type t, const OpRef& op0)
     : opcode_(static_cast<uint16_t>(op)), type_(t), inner_(OpVec{op0}) {
   CAFFEINE_ASSERT(detail::opcode_base(opcode_) != 1,
                   "Tried to create a constant with operands");
-  CAFFEINE_ASSERT(num_operands() == 1);
+  CAFFEINE_ASSERT(detail::opcode_nargs(opcode_) == 1);
 }
 Operation::Operation(Opcode op, Type t, const OpRef& op0, const OpRef& op1)
     : opcode_(static_cast<uint16_t>(op)), type_(t), inner_(OpVec{op0, op1}) {
   CAFFEINE_ASSERT(detail::opcode_base(opcode_) != 1,
                   "Tried to create a constant with operands");
-  CAFFEINE_ASSERT(num_operands() == 2);
+  CAFFEINE_ASSERT(detail::opcode_nargs(opcode_) == 2);
 }
 Operation::Operation(Opcode op, Type t, const OpRef& op0, const OpRef& op1,
                      const OpRef& op2)
@@ -63,7 +63,7 @@ Operation::Operation(Opcode op, Type t, const OpRef& op0, const OpRef& op1,
       inner_(OpVec{op0, op1, op2}) {
   CAFFEINE_ASSERT(detail::opcode_base(opcode_) != 1,
                   "Tried to create a constant with operands");
-  CAFFEINE_ASSERT(num_operands() == 3);
+  CAFFEINE_ASSERT(detail::opcode_nargs(opcode_) == 3);
 }
 
 Operation::Operation(const Operation& op)

@@ -1,6 +1,5 @@
 #include "caffeine/Support/UnsupportedOperation.h"
 #include "caffeine/Interpreter/Context.h"
-#include <boost/core/demangle.hpp>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 #include <llvm/Support/Signals.h>
@@ -15,8 +14,6 @@ std::atomic<bool> UnsupportedOperation::RecoverFailures{true};
 void UnsupportedOperation::Abort(const char* condition, const char* function,
                                  unsigned int line, const char* file,
                                  std::string_view message) {
-  auto demangled = boost::core::demangle(function);
-
   std::stringstream output;
   fmt::print(output,
              "Unsupported operation: {}\n"
