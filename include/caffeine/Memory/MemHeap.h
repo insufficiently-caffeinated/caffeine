@@ -333,6 +333,13 @@ public:
   const MemHeap& operator[](unsigned index) const;
 
   /**
+   * Shortcut function for accessing the function heap. This is equivalent to
+   * heaps[MemHeapMgr::FUNCTION_INDEX].
+   */
+  MemHeap& function_heap();
+  const MemHeap& function_heap() const;
+
+  /**
    * Get the allocation that this pointer corresponds to.
    *
    * If the pointer is not resolved then this will cause an assertion failure.

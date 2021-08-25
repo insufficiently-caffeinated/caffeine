@@ -14,6 +14,7 @@
 #include <llvm/Support/raw_ostream.h>
 #include <magic_enum.hpp>
 
+#include <algorithm>
 #include <iostream>
 
 namespace caffeine {
@@ -363,14 +364,15 @@ LLVMValue ExprEvaluator::visitFunction(llvm::Function& func) {
   const llvm::DataLayout& layout = ctx->mod->getDataLayout();
   unsigned bitwidth = layout.getPointerSizeInBits();
 
-  auto alloc = ctx->heaps[MemHeapMgr::FUNCTION_INDEX].allocate(
-      ConstantInt::Create(llvm::APInt(bitwidth, layout.getPointerSize())),
+  auto& heap = ctx->heaps.function_heap();
+  auto alloc = heap.allocate(
+      ConstantInt::Create(llvm::APInt(
+          bitwidth, std::max<uint64_t>(func.getInstructionCount(), 1))),
       ConstantInt::CreateZero(bitwidth), FunctionObject::Create(&func),
       AllocationKind::Global, AllocationPermissions::Execute, *ctx);
 
-  auto pointer = LLVMValue(
-      Pointer(alloc, ConstantInt::Create(llvm::APInt::getNullValue(bitwidth)),
-              MemHeapMgr::FUNCTION_INDEX));
+  auto pointer = LLVMValue(Pointer(alloc, ConstantInt::CreateZero(bitwidth),
+                                   MemHeapMgr::FUNCTION_INDEX));
 
   ctx->globals.emplace(&func, pointer);
   return pointer;
