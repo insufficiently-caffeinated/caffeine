@@ -99,19 +99,6 @@ namespace brq
 
     static mark_t mark;
 
-    static mark_t operator<<( string_builder &bld, mark_t ) { return mark_t( bld ); }
-    static pad operator<<( string_builder &bld, pad p ) { return pad( bld, p ); }
-
-    static string_builder &operator<<( mark_t m, pad p )
-    {
-        return pad::write( *m.b, p.width, m.mark, p.ch, false );
-    }
-
-    static string_builder &operator<<( pad p, mark_t )
-    {
-        return pad::write( *p.mark.b, p.width, p.mark.mark, p.ch, true );
-    }
-
     template< typename transform_t, typename stream_t >
     struct string_transform
     {
@@ -214,7 +201,7 @@ namespace brq
         return generator( [=]( auto s ) { return split( s, d, reverse ); }, s );
     }
 
-    static std::string tabulate( std::string_view s )
+    static inline std::string tabulate( std::string_view s )
     {
         std::vector< int > cols;
         std::string out;
@@ -330,29 +317,6 @@ namespace brq
         auto begin = s.data(), end = begin + s.size();
         auto parse_end = std::from_chars( begin, end, a ).ptr;
         return parse_end == end ? parse_result() : no_parse( "error parsing ", s, " as a number" );
-    }
-
-    static parse_result from_string( std::string_view s, bool &f )
-    {
-        if ( s == "yes" || s == "true" || s == "1" )
-        {
-            f = true;
-            return {};
-        }
-
-        if ( s == "no" || s == "false" || s == "0" )
-        {
-            f = false;
-            return {};
-        }
-
-        return no_parse( "expected boolean but got '", s, "'" );
-    }
-
-    static parse_result from_string( std::string_view s, std::string &v )
-    {
-        v = s;
-        return {};
     }
 
     template< typename container >

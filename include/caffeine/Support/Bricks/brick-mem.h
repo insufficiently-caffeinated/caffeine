@@ -28,13 +28,21 @@
 #include <iostream>
 #include <iomanip>
 
-#include <brick-types.h>
-#include <brick-string.h>
-#include <brick-hash.h>
-#include <brick-shmem.h>
-#include <brick-mmap.h>
-#include <brick-bitlevel.h>
-#include "brick-ptr"
+#define NVALGRIND 1
+#ifndef NVALGRIND
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#include <memcheck.h>
+#pragma GCC diagnostic pop
+#endif
+
+#include "brick-types.h"
+#include "brick-string.h"
+#include "brick-hash.h"
+#include "brick-shmem.h"
+#include "brick-mmap.h"
+#include "brick-bitlevel.h"
+#include "brick-ptr.h"
 
 namespace brick {
 

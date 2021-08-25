@@ -44,7 +44,7 @@
 #include <deque> // for tests
 #include <cstddef>
 
-#include <brick-assert.h>
+#include "brick-assert.h"
 
 namespace brick {
 namespace query {

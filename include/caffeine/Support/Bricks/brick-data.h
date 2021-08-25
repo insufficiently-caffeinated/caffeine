@@ -43,8 +43,8 @@
 #include <iterator>
 #include <memory>
 
-#include <brick-assert.h>
-#include <brick-types.h>
+#include "brick-assert.h"
+#include "brick-types.h"
 
 namespace brick {
 namespace data {
