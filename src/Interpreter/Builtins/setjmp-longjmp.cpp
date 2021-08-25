@@ -71,7 +71,7 @@ namespace {
     llvm::Module* module = ctx.mod;
     llvm::Function* setjmp_fn = module->getFunction("_setjmp");
 
-    if (setjmp_fn)
+    if (!setjmp_fn)
       return std::nullopt;
 
     for (size_t i = ctx.stack.size(); i != 0; --i) {
