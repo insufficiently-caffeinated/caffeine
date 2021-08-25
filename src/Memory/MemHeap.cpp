@@ -542,6 +542,13 @@ const MemHeap& MemHeapMgr::operator[](unsigned index) const {
   return it->getSecond();
 }
 
+MemHeap& MemHeapMgr::function_heap() {
+  return (*this)[MemHeapMgr::FUNCTION_INDEX];
+}
+const MemHeap& MemHeapMgr::function_heap() const {
+  return (*this)[MemHeapMgr::FUNCTION_INDEX];
+}
+
 Allocation& MemHeapMgr::ptr_allocation(const Pointer& ptr) {
   CAFFEINE_ASSERT(ptr.is_resolved(),
                   "cannot get allocation for an unresolved pointer");
