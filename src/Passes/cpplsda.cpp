@@ -1,12 +1,20 @@
 // -*- C++ -*- (c) 2017 Vladimír Štill <xstill@fi.muni.cz>
 
-#include <lart/support/pass.h>
-#include <lart/support/meta.h>
-#include <lart/divine/cppeh.h>
+// Permission to use, copy, modify, and distribute this software for any
+// purpose with or without fee is hereby granted, provided that the above
+// copyright notice and this permission notice appear in all copies.
 
-DIVINE_RELAX_WARNINGS
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+// ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+// ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+// OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+#include "caffeine/Passes/cppeh.h"
+
 #include <llvm/Analysis/EHPersonalities.h>
-DIVINE_UNRELAX_WARNINGS
 
 /*
  * This file contains the `AddCppLSDA` pass that is responsible for insertion
@@ -29,15 +37,9 @@ DIVINE_UNRELAX_WARNINGS
  * in the function's metadata.
  */
 
-namespace lart {
-namespace divine {
+namespace caffeine {
 
 struct AddCppLSDA {
-
-    static PassMeta meta() {
-        return passMeta< AddCppLSDA >( "AddCppLSDA",
-                "Add language specific data for C++ LSDA to function's LLVM metadata" );
-    }
 
     void run( llvm::Module &mod )
     {
@@ -65,10 +67,4 @@ struct AddCppLSDA {
     }
 };
 
-PassMeta lsda() {
-    return compositePassMeta< AddCppLSDA >( "lsda",
-            "Add LSDA for exception handling." );
-}
-}
-}
-
+} // namespace caffeine

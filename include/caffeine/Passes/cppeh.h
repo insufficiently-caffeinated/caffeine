@@ -21,17 +21,19 @@
 
 /* see libcxxabi/src/cxa_personality.cpp for detailed info on LSDA layout  */
 
-DIVINE_RELAX_WARNINGS
-#include <llvm/IR/Instructions.h>
 #include <llvm/IR/Constants.h>
+#include <llvm/IR/DataLayout.h>
 #include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Instructions.h>
+#include <llvm/IR/Module.h>
 #include <llvm/BinaryFormat/Dwarf.h>
-DIVINE_UNRELAX_WARNINGS
-#include <brick-types>
-#include <brick-query>
-#include <brick-data>
-#include <brick-mem>
-#include <brick-llvm>
+
+#include "caffeine/Support/Bricks/brick-types.h"
+#include "caffeine/Support/Bricks/brick-query.h"
+#include "caffeine/Support/Bricks/brick-data.h"
+#include "caffeine/Support/Bricks/brick-mem.h"
+#include "caffeine/Support/Bricks/brick-llvm.h"
+
 #include <vector>
 #include <set>
 
@@ -67,8 +69,7 @@ DIVINE_UNRELAX_WARNINGS
  * generate a specific LSDA in DWARF-like format.
  */
 
-namespace lart {
-namespace divine {
+namespace caffeine {
 
 namespace dwarf = llvm::dwarf;
 
@@ -337,5 +338,4 @@ struct CppEhTab
     ConstVec _typeInfos, _exceptSpecs;
 };
 
-}
 }
