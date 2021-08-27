@@ -1,10 +1,14 @@
-#include <llvm/Pass.h>
+#include <llvm/IR/PassManager.h>
 
 namespace caffeine {
 
-struct AddCppLSDA : llvm::ModulePass {
-
-  bool runOnModule(llvm::Module& mod) override;
+class AddCppLSDA : public llvm::PassInfoMixin<AddCppLSDA> {
+public:
+  llvm::PreservedAnalyses run(llvm::Module& mod,
+                              llvm::ModuleAnalysisManager& AM);
+  static bool isRequired() {
+    return true;
+  }
 };
 
 } // namespace caffeine

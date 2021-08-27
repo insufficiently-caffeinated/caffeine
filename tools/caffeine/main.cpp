@@ -4,11 +4,13 @@
 #include "caffeine/Interpreter/Policy.h"
 #include "caffeine/Interpreter/Store.h"
 #include "caffeine/Interpreter/ThreadQueueStore.h"
+#include "caffeine/Passes/CppLsda.h"
 #include "caffeine/Support/DiagnosticHandler.h"
 #include "caffeine/Support/Signal.h"
 #include "caffeine/Support/Tracing.h"
 
 #include <llvm/IR/Module.h>
+#include <llvm/IR/PassManager.h>
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/InitLLVM.h>
@@ -115,6 +117,12 @@ int main(int argc, char** argv) {
                        << "'\n";
     return 2;
   }
+
+  llvm::ModulePassManager mpm;
+  llvm::ModuleAnalysisManager mam;
+  AddCppLSDA lsdaPass;
+  mpm.addPass(lsdaPass);
+  mpm.run(*module, mam);
 
   auto function = module->getFunction(entry.getValue());
   if (!function) {

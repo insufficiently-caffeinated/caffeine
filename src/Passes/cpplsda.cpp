@@ -40,10 +40,10 @@
 
 namespace caffeine {
 
-bool AddCppLSDA::runOnModule(llvm::Module& mod) {
+llvm::PreservedAnalyses AddCppLSDA::run(llvm::Module& mod,
+                                        llvm::ModuleAnalysisManager&) {
   auto& ctx = mod.getContext();
   auto vptr = llvm::Type::getInt8PtrTy(ctx);
-  bool modified = false;
   for (auto& fn : mod) {
     // We only care about functions that have the GNU_CXX  personality
     // function
@@ -58,8 +58,6 @@ bool AddCppLSDA::runOnModule(llvm::Module& mod) {
       continue; // This function won't do any catching, filtering nor cleanup
                 // and has no LSDA
 
-    modified = true;
-
     // Attach the LSDA as metadata of this function
     auto glo = new llvm::GlobalVariable(
         mod, lsda->getType(), true, llvm::GlobalValue::InternalLinkage, lsda,
@@ -69,7 +67,7 @@ bool AddCppLSDA::runOnModule(llvm::Module& mod) {
     fn.setMetadata("lart.lsda", llvm::MDTuple::get(ctx, {lsdam}));
   }
 
-  return modified;
+  return llvm::PreservedAnalyses::all();
 }
 
 } // namespace caffeine
