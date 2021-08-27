@@ -12,6 +12,7 @@
 #include <llvm/IR/Module.h>
 #include <llvm/IR/PassManager.h>
 #include <llvm/IRReader/IRReader.h>
+#include <llvm/Passes/PassBuilder.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/InitLLVM.h>
 #include <llvm/Support/WithColor.h>
@@ -122,6 +123,9 @@ int main(int argc, char** argv) {
   llvm::ModuleAnalysisManager mam;
   AddCppLSDA lsdaPass;
   mpm.addPass(lsdaPass);
+
+  llvm::PassBuilder passBuilder;
+  passBuilder.registerModuleAnalyses(mam);
   mpm.run(*module, mam);
 
   auto function = module->getFunction(entry.getValue());
