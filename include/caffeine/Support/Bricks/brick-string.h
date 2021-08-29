@@ -48,15 +48,6 @@ auto operator<<(string_builder& b, const std::pair<A, B>& p) noexcept
   return b << "[ " << p.first << ", " << p.second << " ]";
 }
 
-static string_builder& operator<<(string_builder& b,
-                                  decltype(std::hex) manip) noexcept {
-  if (manip == std::hex)
-    b._hex = true;
-  if (manip == std::dec)
-    b._hex = false;
-  return b;
-}
-
 struct mark_t {
   string_builder* b = nullptr;
   int32_t mark;

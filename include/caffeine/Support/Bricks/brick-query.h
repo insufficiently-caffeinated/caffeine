@@ -181,7 +181,6 @@ namespace query {
     struct R : Collection {
       R(Collection&& c) : Collection(std::move(c)) {}
 
-      using iterator = typename Collection::reverse_iterator;
       auto begin() {
         return Collection::rbegin();
       }

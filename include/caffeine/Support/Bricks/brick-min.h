@@ -203,17 +203,6 @@ struct string_builder {
   }
 
   template <typename C>
-  auto operator<<(const C& c) noexcept
-      -> std::enable_if_t<!std::is_convertible_v<C, std::string_view> &&
-                              !std::is_convertible_v<C, std::u32string_view>,
-                          decltype(c.has_value(), *this << *c)> {
-    if (c.has_value())
-      return *this << "[ " << *c << " ]";
-    else
-      return *this << "<null>";
-  }
-
-  template <typename C>
   auto operator<<(const C& c) noexcept -> std::enable_if_t<
       !std::is_convertible_v<C, std::string_view> &&
           !std::is_convertible_v<C, std::u32string_view> &&
