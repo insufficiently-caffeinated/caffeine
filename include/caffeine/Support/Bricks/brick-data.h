@@ -457,8 +457,8 @@ namespace data {
     map _map;
 
     void _validate() {
-      bool prevSet = false;
-      T prev;
+      [[maybe_unused]] bool prevSet = false;
+      [[maybe_unused]] T prev;
       for (const auto& p : _map) {
         ASSERT(_less(p.first, p.second));
         ASSERT(!prevSet || _less(prev, p.first));
@@ -1586,7 +1586,7 @@ namespace t_data {
       ASSERT_EQ(set.size(), 0);
       set._validate();
 
-      auto i = set.insert(4, 8);
+      [[maybe_unused]] auto i = set.insert(4, 8);
       ASSERT(!set.empty());
       ASSERT_EQ(set.size(), 1);
       ASSERT(!i.had_intersection);

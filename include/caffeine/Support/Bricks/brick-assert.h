@@ -53,12 +53,12 @@
 
 #ifdef NDEBUG
 
-#define ASSERT(...) static_cast<decltype(__VA_ARGS__, void(0))>(0)
-#define ASSERT_PRED(...) static_cast<decltype(__VA_ARGS__, void(0))>(0)
-#define ASSERT_EQ(...) static_cast<decltype(__VA_ARGS__, void(0))>(0)
-#define ASSERT_LEQ(...) static_cast<decltype(__VA_ARGS__, void(0))>(0)
-#define ASSERT_LT(...) static_cast<decltype(__VA_ARGS__, void(0))>(0)
-#define ASSERT_NEQ(...) static_cast<decltype(__VA_ARGS__, void(0))>(0)
+#define ASSERT(...) ((void)0)
+#define ASSERT_PRED(...) ((void)0)
+#define ASSERT_EQ(...) ((void)0)
+#define ASSERT_LEQ(...) ((void)0)
+#define ASSERT_LT(...) ((void)0)
+#define ASSERT_NEQ(...) ((void)0)
 
 #else
 
