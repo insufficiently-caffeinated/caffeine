@@ -23,6 +23,12 @@
 #include <array>
 #include <cstdint>
 
+#ifdef __GNUC__
+#define BRICKS_ALWAYS_INLINE [[gnu::always_inline]]
+#else
+#define BRICKS_ALWAYS_INLINE
+#endif
+
 namespace brq::impl {
 /* constants and elementary operations by Leonid Yuriev <leo@yuriev.ru> */
 
@@ -34,18 +40,17 @@ static const uint64_t prime_4 = UINT64_C(0x9C06FAF4D023E3AB);
 static const uint64_t prime_5 = UINT64_C(0xC060724A8424F345);
 static const uint64_t prime_6 = UINT64_C(0xCB5AF53AE3AAAC31);
 
-[[gnu::always_inline]] static inline uint64_t rot64(uint64_t v, unsigned s) {
+BRICKS_ALWAYS_INLINE static inline uint64_t rot64(uint64_t v, unsigned s) {
   return (v >> s) | (v << (64 - s));
 }
 
-[[gnu::always_inline]] static inline uint64_t mux64(uint64_t v,
-                                                    uint64_t prime) {
+BRICKS_ALWAYS_INLINE static inline uint64_t mux64(uint64_t v, uint64_t prime) {
   __uint128_t r = __uint128_t(v) * __uint128_t(prime);
   return uint64_t(r >> 64) ^ uint64_t(r);
 }
 
-[[gnu::always_inline]] static inline uint64_t
-mix64(uint64_t v, uint64_t p) /* xor-mul-xor */
+BRICKS_ALWAYS_INLINE static inline uint64_t mix64(uint64_t v,
+                                                  uint64_t p) /* xor-mul-xor */
 {
   v *= p;
   return v ^ rot64(v, 41);
@@ -124,7 +129,7 @@ struct hash_state {
     state[3] ^= impl::mux64(u, impl::prime_0);
   }
 
-  [[gnu::always_inline]] inline void mix_if_needed() {
+  BRICKS_ALWAYS_INLINE inline void mix_if_needed() {
     if (counter && counter % 32 == 0)
       mix();
   }
@@ -148,7 +153,7 @@ struct hash_state {
    * uses 32-byte blocks and assumes 32-byte alignment; the size of the
    * data can be arbitrary though */
 
-  [[gnu::always_inline]] inline void update(const uint8_t* bytes, int count) {
+  BRICKS_ALWAYS_INLINE inline void update(const uint8_t* bytes, int count) {
     while (counter % 8 && count)
       update_aligned(*bytes++), count -= 1;
 
@@ -179,8 +184,8 @@ struct hash_state {
   }
 
   template <bool strict = false>
-  [[gnu::always_inline]] inline void update_aligned(const uint8_t* data,
-                                                    int count) {
+  BRICKS_ALWAYS_INLINE inline void update_aligned(const uint8_t* data,
+                                                  int count) {
     ASSERT_EQ(counter % 32, 0);
     const uint64_t* d64 = reinterpret_cast<const uint64_t*>(data);
 

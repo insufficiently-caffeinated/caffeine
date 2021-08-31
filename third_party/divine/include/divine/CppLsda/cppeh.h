@@ -28,11 +28,11 @@
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Module.h>
 
-#include "caffeine/Support/Bricks/brick-data.h"
-#include "caffeine/Support/Bricks/brick-llvm.h"
-#include "caffeine/Support/Bricks/brick-mem.h"
-#include "caffeine/Support/Bricks/brick-query.h"
-#include "caffeine/Support/Bricks/brick-types.h"
+#include "divine/Bricks/brick-data.h"
+#include "divine/Bricks/brick-llvm.h"
+#include "divine/Bricks/brick-mem.h"
+#include "divine/Bricks/brick-query.h"
+#include "divine/Bricks/brick-types.h"
 
 #include <set>
 #include <vector>

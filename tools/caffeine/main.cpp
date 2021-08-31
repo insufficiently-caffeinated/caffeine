@@ -4,10 +4,11 @@
 #include "caffeine/Interpreter/Policy.h"
 #include "caffeine/Interpreter/Store.h"
 #include "caffeine/Interpreter/ThreadQueueStore.h"
-#include "caffeine/Passes/CppLsda.h"
 #include "caffeine/Support/DiagnosticHandler.h"
 #include "caffeine/Support/Signal.h"
 #include "caffeine/Support/Tracing.h"
+
+#include "divine/Passes/CppLsda.h"
 
 #include <llvm/IR/Module.h>
 #include <llvm/IR/PassManager.h>

@@ -12,8 +12,8 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-#include "caffeine/Passes/CppLsda.h"
-#include "caffeine/Passes/cppeh.h"
+#include "divine/Passes/CppLsda.h"
+#include "divine/CppLsda/cppeh.h"
 
 #include <llvm/Analysis/EHPersonalities.h>
 
