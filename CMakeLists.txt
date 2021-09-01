@@ -148,6 +148,7 @@ add_subdirectory(src)
 add_subdirectory(libraries)
 add_subdirectory(tools)
 add_subdirectory(bench)
+add_subdirectory(third_party)
 
 if (CAFFEINE_ENABLE_TESTS)
   add_subdirectory(test)
@@ -173,7 +174,7 @@ set(INCLUDE_INSTALL_DIR include)
 set(IR_INSTALL_DIR      lib/caffeine)
 
 install(
-  TARGETS caffeine caffeine-bin caffeine-opt-plugin EXPORT CaffeineTargets
+  TARGETS caffeine caffeine-bin caffeine-opt-plugin divine EXPORT CaffeineTargets
   RUNTIME       DESTINATION "${CMAKE_INSTALL_BINDIR}"
   LIBRARY       DESTINATION "${CMAKE_INSTALL_LIBDIR}"
   ARCHIVE       DESTINATION "${CMAKE_INSTALL_LIBDIR}"

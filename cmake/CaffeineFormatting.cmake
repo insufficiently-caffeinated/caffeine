@@ -2,7 +2,7 @@
 function(create_formatting_targets)
 
 # Include any source directories that contain formattable code here
-set(checked_dirs include src test tools)
+set(checked_dirs include src test third_party tools)
 set(fmt_sources "")
 
 foreach(directory ${checked_dirs})

@@ -8,8 +8,12 @@
 #include "caffeine/Support/Signal.h"
 #include "caffeine/Support/Tracing.h"
 
+#include "divine/Passes/CppLsda.h"
+
 #include <llvm/IR/Module.h>
+#include <llvm/IR/PassManager.h>
 #include <llvm/IRReader/IRReader.h>
+#include <llvm/Passes/PassBuilder.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/InitLLVM.h>
 #include <llvm/Support/WithColor.h>
@@ -115,6 +119,15 @@ int main(int argc, char** argv) {
                        << "'\n";
     return 2;
   }
+
+  llvm::ModulePassManager mpm;
+  llvm::ModuleAnalysisManager mam;
+  divine::AddCppLSDA lsdaPass;
+  mpm.addPass(lsdaPass);
+
+  llvm::PassBuilder passBuilder;
+  passBuilder.registerModuleAnalyses(mam);
+  mpm.run(*module, mam);
 
   auto function = module->getFunction(entry.getValue());
   if (!function) {

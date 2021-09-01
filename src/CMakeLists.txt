@@ -63,6 +63,7 @@ target_link_libraries(caffeine PUBLIC
   CapnProto::capnp-rpc
   Boost::thread
   tsl::hopscotch_map
+  divine
 )
 
 install(
