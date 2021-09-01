@@ -1,6 +1,6 @@
 #include <llvm/IR/PassManager.h>
 
-namespace caffeine {
+namespace divine {
 
 class AddCppLSDA : public llvm::PassInfoMixin<AddCppLSDA> {
 public:
@@ -11,4 +11,4 @@ public:
   }
 };
 
-} // namespace caffeine
+} // namespace divine

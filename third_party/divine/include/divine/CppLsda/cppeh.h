@@ -69,7 +69,7 @@
  * generate a specific LSDA in DWARF-like format.
  */
 
-namespace caffeine {
+namespace divine {
 
 namespace dwarf = llvm::dwarf;
 
@@ -332,4 +332,4 @@ struct CppEhTab {
   ConstVec _typeInfos, _exceptSpecs;
 };
 
-} // namespace caffeine
+} // namespace divine

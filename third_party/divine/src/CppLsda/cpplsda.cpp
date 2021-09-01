@@ -38,7 +38,7 @@
  * in the function's metadata.
  */
 
-namespace caffeine {
+namespace divine {
 
 llvm::PreservedAnalyses AddCppLSDA::run(llvm::Module& mod,
                                         llvm::ModuleAnalysisManager&) {
@@ -70,4 +70,4 @@ llvm::PreservedAnalyses AddCppLSDA::run(llvm::Module& mod,
   return llvm::PreservedAnalyses::all();
 }
 
-} // namespace caffeine
+} // namespace divine
