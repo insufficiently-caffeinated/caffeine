@@ -45,8 +45,11 @@ public:
   }
 };
 
-cl::OptionCategory caffeine_options("Caffeine options", "Options to control caffeine");
-cl::opt<std::string> input_filename{cl::Positional, cl::Required, cl::cat(caffeine_options), cl::desc("<input file>")};
+cl::OptionCategory caffeine_options("Caffeine options",
+                                    "Options to control caffeine");
+cl::opt<std::string> input_filename{cl::Positional, cl::Required,
+                                    cl::cat(caffeine_options),
+                                    cl::desc("<input file>")};
 cl::opt<std::string> entry{
     "entry",
     cl::desc(
@@ -55,16 +58,20 @@ cl::opt<std::string> entry{
 cl::opt<bool> invert_exitcode{
     "invert-exitcode",
     cl::desc("invert the exit code. 0 if the program returns a failure, 1 "
-             "otherwise. All other exit codes remain the same."), cl::cat(caffeine_options),};
+             "otherwise. All other exit codes remain the same."),
+    cl::cat(caffeine_options),
+};
 cl::opt<size_t> threads{
-    "t", cl::desc("the number of threads to use. 0 means num_cpus"), cl::cat(caffeine_options)};
+    "t", cl::desc("the number of threads to use. 0 means num_cpus"),
+    cl::cat(caffeine_options)};
 cl::opt<bool> force_symbolic_allocator{
     "force-symbolic-allocator",
     cl::desc("force caffeine to only use the symbolic allocator. By default, "
              "caffeine will assign concrete addresses to allocations made by "
              "the program under test if possible. This option disables that "
              "and forces all allocations to have symbolic addresses. This "
-             "may be much slower than allowing concrete addresses."), cl::cat(caffeine_options)};
+             "may be much slower than allowing concrete addresses."),
+    cl::cat(caffeine_options)};
 cl::opt<std::string> enable_tracing{
     "trace",
     cl::desc("Enable tracing to the output log specified by this flag."),
@@ -73,7 +80,8 @@ cl::opt<std::string> store_type{
     "store",
     cl::desc("Choose which solver caffeine will use. Should be one of: queue, "
              "thread-queue."),
-    cl::value_desc("store"), cl::init("thread-queue"), cl::cat(caffeine_options)};
+    cl::value_desc("store"), cl::init("thread-queue"),
+    cl::cat(caffeine_options)};
 
 static ExitOnError exit_on_err;
 
