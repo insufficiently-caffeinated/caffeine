@@ -1,6 +1,9 @@
 
 build/
 .vscode/
+vcpkg/
+
+bazel-*
 
 # Prerequisites
 *.d
