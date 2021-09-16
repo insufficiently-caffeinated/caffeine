@@ -10,6 +10,7 @@
 #include <fmt/ostream.h>
 #include <immer/vector_transient.hpp>
 #include <llvm/ADT/Hashing.h>
+#include <llvm/ADT/SmallString.h>
 #include <llvm/Support/raw_ostream.h>
 
 #define SIZE_BITS (sizeof(size_t) * CHAR_BIT)
@@ -186,7 +187,11 @@ std::ostream& operator<<(std::ostream& os, const Operation& op) {
   }
 
   if (const auto* constant = llvm::dyn_cast<ConstantInt>(&op)) {
-    return print_cons(os, op.type(), constant->value().toString(10, false));
+    llvm::SmallString<32> value;
+    constant->value().toString(value, 10, false);
+
+    return print_cons(os, op.type(),
+                      std::string_view(value.data(), value.size()));
   }
 
   if (const auto* constant = llvm::dyn_cast<ConstantFloat>(&op)) {

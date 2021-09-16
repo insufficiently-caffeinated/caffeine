@@ -280,9 +280,12 @@ Value Value::store(const Value& data, const Value& index, const Value& byte) {
 }
 
 std::ostream& operator<<(std::ostream& os, const Value& v) {
-  if (v.is_int())
-    return os << v.apint().toString(10, false);
-  else if (v.is_float()) {
+  if (v.is_int()) {
+    llvm::SmallString<32> value;
+    v.apint().toString(value, 10, false);
+
+    return os << std::string_view(value.data(), value.size());
+  } else if (v.is_float()) {
     llvm::SmallString<256> str;
     v.apfloat().toString(str);
 
