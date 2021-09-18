@@ -8,7 +8,7 @@
 #include "caffeine/Support/Signal.h"
 #include "caffeine/Support/Tracing.h"
 
-#include "divine/Passes/CppLsda.h"
+#include <divine/Passes/CppLsda.h>
 
 #include <llvm/IR/Module.h>
 #include <llvm/IR/PassManager.h>

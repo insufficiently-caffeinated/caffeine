@@ -2,8 +2,10 @@
 build/
 .vscode/
 vcpkg/
+.cache
 
 bazel-*
+compile_commands.json
 
 # Prerequisites
 *.d
