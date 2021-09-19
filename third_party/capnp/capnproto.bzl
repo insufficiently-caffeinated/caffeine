@@ -74,7 +74,7 @@ def _capnp_proto(ctx):
         outputs = ctx.outputs.outs,
         executable = ctx.executable.capnpc,
         arguments = [args],
-        # mnemonic = "GenCapnp",
+        mnemonic = "GenCapnp",
     )
 
     return result
