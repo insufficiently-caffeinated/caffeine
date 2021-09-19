@@ -7,10 +7,6 @@
 
 #include "CaffeineMutator.h"
 
-extern "C" {
-#include "afl-fuzz.h"
-}
-
 namespace caffeine {
 
 /**

@@ -5,6 +5,12 @@
 
 #include <iostream>
 
+// The AFL headers declare some single-letter macros that cause issues
+// within llvm headers. We need to include them after.
+extern "C" {
+#include "afl-fuzz.h"
+}
+
 namespace caffeine {
 
 Assertion create_size_assertion(const OpRef& data, size_t size) {
