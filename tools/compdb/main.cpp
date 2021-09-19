@@ -155,12 +155,12 @@ std::string execution_root() {
 
 int main(int argc, char** argv) {
   // To get useful stacktraces in case of error.
-  llvm::InitLLVM llvm(argc, argv);
+  int fake_argc = 1;
+  llvm::InitLLVM llvm(fake_argc, argv);
 
   auto cwd = execution_root();
 
-  std::vector<std::string_view> args{"aquery", "deps(//...)",
-                                     "--output=jsonproto"};
+  std::vector<std::string_view> args{"aquery", "--output=jsonproto"};
   for (int i = 1; i < argc; ++i)
     args.push_back(argv[i]);
 
