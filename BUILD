@@ -66,8 +66,14 @@ cc_library(
     ]),
     hdrs = glob([
         "include/caffeine/**/*.inl",
-        "include/caffeine/**/*.def",
         "include/caffeine/**/*.h",
+    ]) +
+    # TODO: This should be textual_hdrs but strip_include_prefix currently
+    #       doesn't work on them. Once the issue in bazel is fixed these
+    #       should be moved to textual_hdrs.
+    #       issue: https://github.com/bazelbuild/bazel/issues/12424
+    glob([
+        "include/caffeine/**/*.def",
     ]),
     strip_include_prefix = "include",
     deps = [
