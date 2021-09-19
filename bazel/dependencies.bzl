@@ -39,6 +39,7 @@ cc_library(
     name = "fmt",
     hdrs = glob(["include/**/*"]),
     deps = [":fmt-raw"],
+    copts = ["-Wno-unknown-pragmas"],
     strip_include_prefix = "include",
     visibility = ["//visibility:public"],
 )
@@ -132,7 +133,9 @@ def afl():
     new_git_repository(
         name = "afl",
         remote = "https://github.com/AFLplusplus/AFLplusplus",
-        tag = "3.12c",
+        # tag = "3.12c",
+        commit = "2dac4e785fa9f27e8c59bb504cfa8942eba938be",
+        shallow_since = "1616581381 +0100",
         build_file_content = """
 cc_library(
     name = "afl-hdrs",
