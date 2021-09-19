@@ -1,2 +1,3 @@
 
 build --action_env=BAZEL_CXXOPTS=-std=c++17
+build --disk_cache=~/.cache/bazel-disk-cache
