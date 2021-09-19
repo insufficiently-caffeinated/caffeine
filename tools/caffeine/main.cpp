@@ -122,8 +122,7 @@ int main(int argc, char** argv) {
 
   llvm::ModulePassManager mpm;
   llvm::ModuleAnalysisManager mam;
-  divine::AddCppLSDA lsdaPass;
-  mpm.addPass(lsdaPass);
+  mpm.addPass(divine::AddCppLSDA());
 
   llvm::PassBuilder passBuilder;
   passBuilder.registerModuleAnalyses(mam);

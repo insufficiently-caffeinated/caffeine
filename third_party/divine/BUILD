@@ -1,7 +1,9 @@
 cc_library(
     name = "divine",
-    srcs = glob(["include/**/*.cpp"]),
+    srcs = glob(["src/**/*.cpp"]),
     hdrs = glob(["include/**/*"]),
+    strip_include_prefix = "/third_party/divine/include",
+    visibility = ["//visibility:public"],
     deps = [
         "//third_party:fmt",
         "@llvm//llvm:BitWriter",
@@ -9,6 +11,4 @@ cc_library(
         "@llvm//llvm:IRReader",
         "@llvm//llvm:TransformUtils",
     ],
-    visibility = ["//visibility:public"],
-    strip_include_prefix = "//third_party/divine/include",
 )
