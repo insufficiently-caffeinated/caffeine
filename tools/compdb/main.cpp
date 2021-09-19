@@ -142,9 +142,9 @@ public:
   std::string_view data;
 };
 
-std::string output_base() {
+std::string execution_root() {
   bp::ipstream pipe_stream;
-  bp::child bzl(bp::search_path("bazel"), "info", "output_base",
+  bp::child bzl(bp::search_path("bazel"), "info", "execution_root",
                 bp::std_out > pipe_stream);
 
   std::string result;
@@ -154,9 +154,10 @@ std::string output_base() {
 }
 
 int main(int argc, char** argv) {
+  // To get useful stacktraces in case of error.
   llvm::InitLLVM llvm(argc, argv);
 
-  auto cwd = output_base();
+  auto cwd = execution_root();
 
   std::vector<std::string_view> args{"aquery", "deps(//...)",
                                      "--output=jsonproto"};
