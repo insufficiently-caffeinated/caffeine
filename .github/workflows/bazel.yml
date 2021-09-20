@@ -1,0 +1,32 @@
+name: bazel
+
+on:
+  # Don't build CI for stackbot internal branches, they are already built for PRs
+  push:
+    branches-ignore:
+      - stackbot/**
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        mode: [opt, dbg]
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache/bazel-disk-cache
+            ~/.cache/vscode
+          key: bazel-${{ matrix.mode }}-${{ env.GITHUB_SHA }}
+          restore-keys:
+            - bazel-${{ matrix.mode }}
+      - name: Configure bazel flags
+        run: |
+          echo build --compilation_mode=${{ matrix.mode }} >> .bazelrc
+      - name: Build all caffeine targets
+        run: bazel build //...
