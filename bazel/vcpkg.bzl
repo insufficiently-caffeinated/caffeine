@@ -65,6 +65,7 @@ def _vcpkg_import(ctx):
             "install",
             "--triplet=" + triplet,
         ] + ctx.attr.packages,
+        timeout = 3600,
     )
 
     if result.return_code != 0:
