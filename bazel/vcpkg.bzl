@@ -66,13 +66,11 @@ def _vcpkg_import(ctx):
             "--triplet=" + triplet,
         ] + ctx.attr.packages,
         timeout = 3600,
+        quiet = False,
     )
 
     if result.return_code != 0:
-        fail("Unable to install packages\nstdout:\n{}\nstderr:\n{}\n".format(
-            result.stdout,
-            result.stderr,
-        ))
+        fail("Unable to install packages")
 
     ctx.file(
         "WORKSPACE",
