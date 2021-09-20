@@ -23,8 +23,8 @@ jobs:
             ~/.cache/bazel-disk-cache
             ~/.cache/vscode
           key: bazel-${{ matrix.mode }}-${{ env.GITHUB_SHA }}
-          restore-keys:
-            - bazel-${{ matrix.mode }}
+          restore-keys: |
+            bazel-${{ matrix.mode }}
       - name: Configure bazel flags
         run: |
           echo build --compilation_mode=${{ matrix.mode }} >> .bazelrc
