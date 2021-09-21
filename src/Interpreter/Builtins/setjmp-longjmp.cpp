@@ -228,14 +228,9 @@ ExecutionResult Interpreter::visitLongjmp(llvm::CallBase& inst) {
 
     // Now we need to check if the caller is an invoke instruction and
     // go to the default return flow
-    llvm::InvokeInst* invoke =
-        llvm::dyn_cast<llvm::InvokeInst>(&*frame.current);
-    if (invoke) {
-      performInvokeReturn(state.ctx, *frame.current);
-    } else {
-      // Don't want to execute _setjmp again
-      ++frame.current;
-    }
+
+    ++frame.current;
+    frame.set_result(std::nullopt, std::nullopt);
 
     insert_fn(std::move(state));
   });

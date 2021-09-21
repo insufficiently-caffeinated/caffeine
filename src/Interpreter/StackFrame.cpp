@@ -5,6 +5,7 @@
 
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/Function.h>
+#include <llvm/IR/Instructions.h>
 
 namespace caffeine {
 
@@ -15,6 +16,8 @@ StackFrame::StackFrame(llvm::Function* function)
       current(current_block->begin()), frame_id(next_frame_id++) {}
 
 void StackFrame::jump_to(llvm::BasicBlock* block) {
+  CAFFEINE_ASSERT(block, "Cannot jump to null block");
+
   prev_block = current_block;
   current_block = block;
   current = block->begin();
@@ -25,6 +28,23 @@ void StackFrame::insert(llvm::Value* value, const OpRef& expr) {
 }
 void StackFrame::insert(llvm::Value* value, const LLVMValue& exprs) {
   variables.insert_or_assign(value, exprs);
+}
+
+void StackFrame::set_result(std::optional<LLVMValue> result,
+                            std::optional<LLVMValue> resume_value) {
+  auto& caller = *std::prev(current);
+
+  if (result.has_value())
+    insert(&caller, *result);
+
+  auto invoke = llvm::dyn_cast<llvm::InvokeInst>(&caller);
+  if (invoke) {
+    if (!resume_value.has_value()) {
+      jump_to(invoke->getNormalDest());
+    } else {
+      CAFFEINE_UNIMPLEMENTED("Resume instruction is not implemented");
+    }
+  }
 }
 
 } // namespace caffeine

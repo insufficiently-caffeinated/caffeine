@@ -58,6 +58,27 @@ public:
   void insert(llvm::Value* value, const OpRef& expr);
   void insert(llvm::Value* value, const LLVMValue& exprs);
 
+  /**
+   * Set the result of the current instruction in the stack frame.
+   * Used by functions in order to set their return value and whether
+   * the function resumed or not.
+   *
+   * If `resume_value` is std::nullopt, then the stack frame current pointer
+   * jumps to the normal execution path if the previous instruction was an
+   * Invoke.
+   *
+   * If `resume_value` has a value, then the stack frame current pointer jumps
+   * to the exceptional execution path that is determined by the resume value
+   * provided (currently unimplemented).
+   *
+   * This function can be called multiple times, and as a result, if `result` is
+   * std::nullopt, it will not override the previously set result.
+   */
+  virtual void set_result(std::optional<LLVMValue> result,
+                          std::optional<LLVMValue> resume_value);
+
+  virtual ~StackFrame() = default;
+
 private:
   static std::atomic<uint64_t> next_frame_id;
 };
