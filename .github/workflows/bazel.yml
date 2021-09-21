@@ -20,8 +20,14 @@ jobs:
       - uses: actions/cache@v2
         with:
           path: |
+            ~/.cache/vcpkg
+          key: bazel-vcpkg-${{ hashFile(WORKSPACE) }}
+          restore-keys: |
+            bazel-vcpkg-
+      - uses: actions/cache@v2
+        with:
+          path: |
             ~/.cache/bazel-disk-cache
-            ~/.cache/vscode
           key: bazel-${{ matrix.mode }}-${{ env.GITHUB_SHA }}
           restore-keys: |
             bazel-${{ matrix.mode }}
