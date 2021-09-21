@@ -361,13 +361,8 @@ ExecutionResult Interpreter::visitReturnInst(llvm::ReturnInst& inst) {
     return ExecutionResult::Stop;
 
   auto& parent = ctx->stack_top();
-  auto& caller = *std::prev(parent.current);
 
-  performInvokeReturn(*ctx, caller);
-
-  if (result.has_value()) {
-    parent.insert(&caller, std::move(*result));
-  }
+  parent.set_result(result, std::nullopt);
 
   return ExecutionResult::Continue;
 }
@@ -409,22 +404,26 @@ ExecutionResult Interpreter::visitCallBase(llvm::CallBase& callBase) {
                               "calls should be handled by visitIntrinsic",
                               func->getName().str()));
 
+  // In case of an extern function
   if (func->empty()) {
     auto* prev_inst = &*ctx->stack_top().current;
     auto invoke = llvm::dyn_cast<llvm::InvokeInst>(&callBase);
+
+    // TODO: Create extern stack frame
     auto res = visitExternFunc(callBase);
+    // TODO: Pop temp stack frame
 
     if (!invoke)
       return res;
 
     if (res.empty()) {
       if (&*ctx->stack_top().current == prev_inst) {
-        performInvokeReturn(*ctx, *invoke);
+        ctx->stack_top().set_result(std::nullopt, std::nullopt);
       }
     } else {
       for (auto& ctx_ : res.contexts()) {
         if (&*ctx_.stack_top().current == prev_inst) {
-          performInvokeReturn(ctx_, *invoke);
+          ctx->stack_top().set_result(std::nullopt, std::nullopt);
         }
       }
     }
@@ -432,6 +431,7 @@ ExecutionResult Interpreter::visitCallBase(llvm::CallBase& callBase) {
     return res;
   }
 
+  // In case of a normal function call
   StackFrame callee{func};
   for (auto [arg, val] : llvm::zip(func->args(), callBase.args())) {
     callee.insert(&arg, ctx->lookup(val.get()));
@@ -862,20 +862,6 @@ ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallBase& call) {
   }
 
   return forks;
-}
-
-void Interpreter::performInvokeReturn(Context& ctx_,
-                                      llvm::Instruction& caller) {
-  if (ctx_.stack.empty()) {
-    return;
-  }
-
-  auto invoke = llvm::dyn_cast<llvm::InvokeInst>(&caller);
-  if (invoke) {
-    // If the parent is an `Invoke` instruction, a call will always
-    // return to the normal branch
-    ctx_.stack_top().jump_to(invoke->getNormalDest());
-  }
 }
 
 } // namespace caffeine
