@@ -77,6 +77,24 @@ def _vcpkg_import(ctx):
         content = """workspace(name = '{}')""".format(ctx.attr.name),
     )
 
+    for package in ctx.attr.packages:
+        result = ctx.execute([
+            ctx.attr.vcpkg,
+            "export",
+            package,
+            "--output-dir=.",
+            "--output=" + package,
+            "--zip",
+            "--triplet=" + triplet,
+        ])
+
+        if result.return_code != 0:
+            fail(
+                ("Vcpkg export for package '{}' failed.\n" +
+                 "stdout:\n{}\nstderr:\n{}\n")
+                    .format(package, result.stdout, result.stderr),
+            )
+
     ctx.file("triplet", content = triplet)
     ctx.file("BUILD", content = "")
 

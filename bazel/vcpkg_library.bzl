@@ -20,25 +20,10 @@ def _vcpkg_library(ctx):
     else:
         triplet = ctx.read(ctx.attr.triplet_file)
 
-    result = ctx.execute([
-        ctx.attr.vcpkg,
-        "export",
-        package,
-        "--output-dir=..",
-        "--output=" + ctx.name,
-        "--raw",
-        "--triplet=" + triplet,
-    ])
-
-    if result.return_code != 0:
-        fail(
-            """Vcpkg export for package '{}' failed.
-stdout:
-{}
-stderr:
-{}
-""".format(package, result.stdout, result.stderr),
-        )
+    ctx.extract(
+        archive = Label("@vcpkg//:{}.zip".format(package)),
+        stripPrefix = package,
+    )
 
     result = ctx.execute(
         ["mv"] + _contained_files(ctx, "installed/{}".format(triplet)) + ["."],
