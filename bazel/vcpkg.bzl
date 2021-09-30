@@ -49,10 +49,17 @@ def _vcpkg_triplet(ctx):
         return ctx.attr.triplet
     elif ctx.os.name == "windows":
         return "x64-windows"
-    elif ctx.os.name == "darwin":
+    elif ctx.os.name == "darwin" or ctx.os.name == "mac os x":
         return "x64-osx"
     elif ctx.os.name == "linux":
         return "x64-linux"
+    else:
+        ctx.execute(
+            [ctx.attr.vcpkg, "help", "triplet"],
+            quiet = False
+        )
+
+        fail("Unknown os: {}".format(ctx.os.name))
 
     return None
 
