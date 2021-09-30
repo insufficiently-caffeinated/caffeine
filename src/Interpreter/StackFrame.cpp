@@ -47,4 +47,17 @@ void StackFrame::set_result(std::optional<LLVMValue> result,
   }
 }
 
+StackFrame::StackFrame() : frame_id(next_frame_id++) {}
+
+void ExternalStackFrame::set_result(std::optional<LLVMValue> result,
+                                    std::optional<LLVMValue> resume_value) {
+  // It would be pretty weird if both of these were set at the same
+  // time, but who am I to judge
+  if (result.has_value())
+    result_ = result;
+
+  if (resume_value.has_value())
+    resume_value_ = resume_value;
+};
+
 } // namespace caffeine
