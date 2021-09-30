@@ -141,7 +141,7 @@ Value Z3Model::lookup(const Symbol& symbol, std::optional<size_t> size) const {
 
     for (size_t i = 0; i < *size; ++i) {
       auto value = model.eval(
-          z3::select(it->second, model.ctx().bv_val(i, domain.bv_size())),
+          z3::select(it->second, model.ctx().bv_val((uint64_t)i, domain.bv_size())),
           true);
       data.push_back((char)(uint8_t)value.get_numeral_uint64());
     }
