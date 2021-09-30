@@ -409,9 +409,12 @@ ExecutionResult Interpreter::visitCallBase(llvm::CallBase& callBase) {
     auto* prev_inst = &*ctx->stack_top().current;
     auto invoke = llvm::dyn_cast<llvm::InvokeInst>(&callBase);
 
-    // TODO: Create extern stack frame
-    auto res = visitExternFunc(callBase);
-    // TODO: Pop temp stack frame
+    std::function<ExecutionResult(llvm::CallBase&)> func =
+        [&](llvm::CallBase& callBase_) {
+          return this->visitExternFunc(callBase_);
+        };
+
+    auto res = callExternFunc(ctx, func, callBase);
 
     if (!invoke)
       return res;
