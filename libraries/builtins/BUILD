@@ -1,9 +1,9 @@
-load("@//bazel:bitcode.bzl", "bitcode_library")
+load("@//bazel:bitcode.bzl", "bitcode_library_standalone")
 
-bitcode_library(
+bitcode_library_standalone(
     name = "builtins",
     srcs = glob(["*.c", "*.h"]),
-    copts = ["-Ilibraries/builtins", "-lpthread"],
+    copts = ["-Ilibraries/builtins"],
     deps = ["//interface:caffeine"],
     visibility = ["//visibility:public"],
 )
