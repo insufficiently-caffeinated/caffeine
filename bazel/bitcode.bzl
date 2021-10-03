@@ -7,7 +7,7 @@ BitcodeInfo = provider(
     fields = {
         "includes": "Include paths from dependencies",
         "headers": "Headers that dependencies have exported",
-    }
+    },
 )
 
 SRC_EXTS = [
@@ -44,10 +44,14 @@ BITCODE_LIB_ATTRS = {
         "/Library/Developer/CommandLineTools/usr/include",
         "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include",
     ]),
-    "_builtin_deps": attr.label_list(default = [
-        "@//interface:caffeine",
-        "@//libraries/builtins",
-    ], providers = [BitcodeInfo, DefaultInfo]),
+    "_builtin_deps": attr.label_list(
+        default = [
+            "@//interface:caffeine",
+            "@//libraries/builtins",
+        ],
+        providers = [BitcodeInfo, DefaultInfo],
+    ),
+    "_lib_ext": attr.string(default = ".bc"),
     "_clang": attr.label(executable = True, cfg = "host", default = "@llvm//clang"),
     "_llvm_link": attr.label(executable = True, cfg = "host", default = "@llvm//llvm:llvm-link"),
     "_llvm_opt": attr.label(executable = True, cfg = "host", default = "@llvm//llvm:opt"),
@@ -161,21 +165,25 @@ def _bitcode_library_common(ctx):
         ),
     ]
 
-    if not opt_bitcode:
-        result.append(DefaultInfo(files = deps))
+    if not opt_bitcode and len(ctx.attr.deps) + len(ctx.attr._builtin_deps) == 0:
+        result.append(DefaultInfo(files = depset([])))
         return result
 
-    linked_bitcode = actions.declare_file(ctx.label.name + ".bc")
+    linked_bitcode = actions.declare_file(ctx.label.name + ctx.attr._lib_ext)
 
     args = actions.args()
     args.add_all(ctx.attr.linkopts)
-    args.add(opt_bitcode)
+    if opt_bitcode:
+        args.add(opt_bitcode)
     args.add_all(deps)
     args.add_all(["-o", linked_bitcode])
 
     actions.run(
         outputs = [linked_bitcode],
-        inputs = depset([opt_bitcode], transitive = [deps]),
+        inputs = depset(
+            [] if not opt_bitcode else [opt_bitcode],
+            transitive = [deps],
+        ),
         executable = ctx.executable._llvm_link,
         arguments = [args],
         mnemonic = "BitcodeLink",
@@ -188,13 +196,71 @@ bitcode_library_standalone = rule(
     implementation = _bitcode_library_common,
     attrs = update(
         BITCODE_LIB_ATTRS,
-        {
-            "_builtin_deps": attr.label_list(providers = [BitcodeInfo, DefaultInfo]),
-        },
+        {"_builtin_deps": attr.label_list(providers = [BitcodeInfo, DefaultInfo])},
     ),
 )
 
 bitcode_library = rule(
     implementation = _bitcode_library_common,
     attrs = BITCODE_LIB_ATTRS,
+)
+
+def _bitcode_binary(ctx):
+    result = _bitcode_library_common(ctx)
+    bcinfo = result[0]
+    files = result[1].files.to_list()
+
+    output = ctx.actions.declare_file(ctx.label.name + ".bc")
+    args = ctx.actions.args()
+    args.add_all(ctx.attr.opts)
+    args.add_all(["--internalize", "--internalize-public-api-list", "main", "--globaldce"])
+    args.add_all(files)
+    args.add_all(["-o", output])
+
+    ctx.actions.run(
+        inputs = files,
+        outputs = [output],
+        executable = ctx.executable._llvm_opt,
+        arguments = [args],
+        mnemonic = "BitcodeBinaryOpt",
+    )
+
+    disassembled = ctx.actions.declare_file(ctx.label.name + ".ll")
+    args = ctx.actions.args()
+    args.add(output)
+    args.add_all(["-o", disassembled])
+
+    ctx.actions.run(
+        inputs = [output],
+        outputs = [disassembled],
+        executable = ctx.executable._llvm_dis,
+        arguments = [args],
+        mnemonic = "BitcodeDisassemble",
+    )
+
+    return [
+        DefaultInfo(files = depset([output, disassembled])),
+        OutputGroupInfo(
+            bitcode = depset([output]),
+            ir = depset([disassembled]),
+        ),
+    ]
+
+bitcode_binary = rule(
+    implementation = _bitcode_binary,
+    attrs = update(
+        BITCODE_LIB_ATTRS,
+        {
+            "opts": attr.string_list(
+                default = ["-O3"],
+                doc = "Options to pass to the final opt invocation",
+            ),
+            "_lib_ext": attr.string(default = ".lib.bc"),
+            "_llvm_dis": attr.label(
+                default = "@llvm//llvm:llvm-dis",
+                executable = True,
+                cfg = "host",
+            ),
+        },
+    ),
 )
