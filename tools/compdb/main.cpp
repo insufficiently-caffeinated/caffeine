@@ -177,7 +177,8 @@ int main(int argc, char** argv) {
   bool first = true;
 
   for (auto& action : actions) {
-    if (action.at("mnemonic") != "CppCompile")
+    const auto& mnemonic = action.at("mnemonic");
+    if (mnemonic != "CppCompile" && mnemonic != "BitcodeCompile")
       continue;
 
     std::vector<std::string> args;
@@ -193,6 +194,9 @@ int main(int argc, char** argv) {
     std::string cmd = "'" + boost::algorithm::join(args, "' '") + "'";
 
     auto it = std::find(args.begin(), args.end(), "-c");
+    if (it == args.end())
+      continue;
+
     ++it;
     std::string file = *it;
 
