@@ -1,18 +1,23 @@
-cc_library(
-    name = "opt-plugin-lib",
-    srcs = glob(["**/*.cpp"]),
-    hdrs = glob(["**/*.h"]),
-    strip_include_prefix = "/tools/opt-plugin",
+cc_binary(
+    name = "llvm-passes",
+    deps = [
+        "@llvm//llvm:Passes",
+    ],
+    linkshared = True
+)
+
+cc_binary(
+    name = "opt-plugin",
+    srcs = glob(["**/*.cpp", "**/*.h"]),
+    copts = [
+        "-Itools/opt-plugin", 
+    ],
+    linkshared = True,
     deps = [
         "//:caffeine-assert",
         "//third_party:fmt",
-        "@llvm//llvm:Passes",
+        "@llvm//llvm:headers"
     ],
-)
-
-filegroup(
-    name = "opt-plugin",
-    srcs = [":opt-plugin-lib"],
-    output_group = "dynamic_library",
-    visibility = ["//visibility:public"],
+    tags = ["local"],
+    visibility = ["//visibility:public"]
 )
