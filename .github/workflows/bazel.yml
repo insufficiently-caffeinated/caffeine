@@ -21,7 +21,7 @@ jobs:
         with:
           path: |
             ~/.cache/vcpkg
-          key: bazel-vcpkg-${{ hashFiles(WORKSPACE) }}
+          key: bazel-vcpkg-${{ hashFiles('WORKSPACE') }}
           restore-keys: |
             bazel-vcpkg-
       - uses: actions/cache@v2
