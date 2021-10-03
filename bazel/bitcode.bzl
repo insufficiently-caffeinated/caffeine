@@ -1,7 +1,14 @@
 """Macros for compiling libraries down to LLVM bitcode
 """
 
-BitcodeInfo = provider()
+BitcodeInfo = provider(
+    "Header and includes information for a bitcode target. " +
+    "Output dependency files are provided via DefaultInfo.",
+    fields = {
+        "includes": "Include paths from dependencies",
+        "headers": "Headers that dependencies have exported",
+    }
+)
 
 SRC_EXTS = [
     ".cc",
@@ -174,7 +181,7 @@ def _bitcode_library_common(ctx):
         mnemonic = "BitcodeLink",
     )
 
-    result.append(DefaultInfo(files = depset([linked_bitcode]),))
+    result.append(DefaultInfo(files = depset([linked_bitcode])))
     return result
 
 bitcode_library_standalone = rule(
