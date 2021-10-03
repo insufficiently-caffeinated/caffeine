@@ -15,6 +15,7 @@ http_archive(
     sha256 = "b440ecccc625915fd4c8dc69d1bed620ed996e60563dbbfa35279c31fd036d5d",
     strip_prefix = "llvm-project-" + LLVM_COMMIT,
     urls = ["https://github.com/llvm/llvm-project/archive/{commit}.tar.gz".format(commit = LLVM_COMMIT)],
+    patches = ["//third_party/llvm:clang.patch"]
 )
 
 git_repository(
