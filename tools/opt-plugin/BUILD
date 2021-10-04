@@ -1,23 +1,17 @@
-cc_binary(
-    name = "llvm-passes",
-    deps = [
-        "@llvm//llvm:Passes",
-    ],
-    linkshared = True
-)
+load("//bazel:warnings.bzl", "WARNING_FLAGS")
 
 cc_binary(
     name = "opt-plugin",
-    srcs = glob(["**/*.cpp", "**/*.h"]),
-    copts = [
-        "-Itools/opt-plugin", 
-    ],
+    srcs = glob([
+        "**/*.cpp",
+        "**/*.h",
+    ]),
+    copts = ["-Itools/opt-plugin"] + WARNING_FLAGS,
     linkshared = True,
+    visibility = ["//visibility:public"],
     deps = [
         "//:caffeine-assert",
         "//third_party:fmt",
-        "@llvm//llvm:headers"
+        "@llvm//llvm:headers",
     ],
-    tags = ["local"],
-    visibility = ["//visibility:public"]
 )
