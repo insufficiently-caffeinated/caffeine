@@ -92,7 +92,8 @@ def _bitcode_library_common(ctx):
     )
     deps = depset(
         [],
-        transitive = [dep[DefaultInfo].files for dep in ctx.attr.deps],
+        transitive = [dep[DefaultInfo].files for dep in ctx.attr.deps] +
+                     [dep[DefaultInfo].files for dep in ctx.attr._builtin_deps],
     )
 
     includes = []
@@ -287,7 +288,7 @@ def caffeine_bitcode_test(should_fail = False, skip = False, **kwargs):
         kwargs["opts"] = []
 
     if "visibility" in kwargs:
-        test_args.update({'visibility': kwargs['visibility']})
+        test_args.update({"visibility": kwargs["visibility"]})
         kwargs["size"] = None
 
     if "size" in kwargs:
@@ -301,9 +302,35 @@ def caffeine_bitcode_test(should_fail = False, skip = False, **kwargs):
 
     bitcode_binary(**kwargs)
 
+    native.filegroup(
+        name = name + "#bitcode",
+        srcs = [":{}#binary".format(name)],
+        output_group = "ir",
+    )
+
+    tags = ["no-sandbox"]
+    if skip:
+        tags.append("manual")
+
+    args = [
+        "$(location @//tools/caffeine)",
+        "$(location {}#bitcode)".format(name),
+    ]
+    if should_fail:
+        args.append("--invert-exitcode")
+
     native.sh_test(
         name = name,
-        srcs = ["@//tools/caffeine"],
-        tags = ["manual"] if skip else [],
-        **test_args,
+        srcs = ["@//bazel:run_command.sh"],
+        tags = tags,
+        args = args,
+        data = [
+            ":{}#bitcode".format(name),
+            "@llvm//llvm:llvm-symbolizer",
+            "@//tools/caffeine",
+        ],
+        env = {
+            "LLVM_SYMBOLIZER_PATH": "$(location @llvm//llvm:llvm-symbolizer)",
+        },
+        **test_args
     )

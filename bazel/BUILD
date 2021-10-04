@@ -1,2 +1,2 @@
 
-exports_files(["bitcode_test.tpl.sh"])
+exports_files(["run_command.sh"])
