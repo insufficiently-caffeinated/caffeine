@@ -1,6 +1,13 @@
 """Rules for importing vcpkg packages as external repositories.
 """
 
+VCPKG_BZLIGNORE = """
+buildtrees/
+packages/
+downloads/
+installed/
+"""
+
 def _setup_vcpkg_impl(ctx):
     ctx.report_progress("downloading and building vcpkg")
     output = ctx.download_and_extract(
@@ -8,6 +15,11 @@ def _setup_vcpkg_impl(ctx):
         type = "tar.gz",
         stripPrefix = "vcpkg-" + ctx.attr.tag,
         sha256 = ctx.attr.sha256,
+    )
+
+    ctx.file(
+        ".bazelignore",
+        content = VCPKG_BZLIGNORE
     )
 
     if ctx.os.name == "windows":
@@ -60,8 +72,6 @@ def _vcpkg_triplet(ctx):
         )
 
         fail("Unknown os: {}".format(ctx.os.name))
-
-    return None
 
 def _vcpkg_import(ctx):
     triplet = _vcpkg_triplet(ctx)
