@@ -11,6 +11,7 @@ file(
 
 add_executable(caffeine-unittest ${tests})
 
+target_compile_definitions('-DCAFFEINE_BINARY_PATH=""')
 target_link_libraries(caffeine-unittest PRIVATE caffeine)
 target_link_libraries(caffeine-unittest PRIVATE GTest::GTest)
 target_link_libraries(caffeine-unittest PRIVATE LLVMIRReader)
