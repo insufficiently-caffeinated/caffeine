@@ -1,6 +1,7 @@
 #ifndef CAFFEINE_INTERP_INTERPRETER_H
 #define CAFFEINE_INTERP_INTERPRETER_H
 
+#include <functional>
 #include <iostream>
 #include <memory>
 
@@ -135,6 +136,18 @@ private:
 
   ExecutionResult visitSetjmp(llvm::CallBase& inst);
   ExecutionResult visitLongjmp(llvm::CallBase& inst);
+
+  // `callExternFunc` will set up the context's stack frame before
+  // performing a function call and then tear it down if that's necessary after
+  // the function returns. It will also preserve the return value
+  template <typename F, typename... Ts>
+  ExecutionResult callExternFunc(Context*, F func, Ts&&... args) {
+    // TODO: Create extern stack frame
+    ExecutionResult res = func(std::forward<Ts>(args)...);
+    // TODO: Pop temp stack frame
+
+    return res;
+  }
 
   friend class TransformBuilder;
 

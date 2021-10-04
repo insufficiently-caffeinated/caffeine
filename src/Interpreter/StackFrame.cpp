@@ -32,6 +32,8 @@ void StackFrame::insert(llvm::Value* value, const LLVMValue& exprs) {
 
 void StackFrame::set_result(std::optional<LLVMValue> result,
                             std::optional<LLVMValue> resume_value) {
+  CAFFEINE_ASSERT(!result.has_value() || !resume_value.has_value());
+
   auto& caller = *std::prev(current);
 
   if (result.has_value())
@@ -46,5 +48,20 @@ void StackFrame::set_result(std::optional<LLVMValue> result,
     }
   }
 }
+
+StackFrame::StackFrame() : frame_id(next_frame_id++) {}
+
+void ExternalStackFrame::set_result(std::optional<LLVMValue> result,
+                                    std::optional<LLVMValue> resume_value) {
+  // It would be pretty weird if both of these were set at the same
+  // time
+  CAFFEINE_ASSERT(!result.has_value() || !resume_value.has_value());
+
+  if (result.has_value())
+    result_ = result;
+
+  if (resume_value.has_value())
+    resume_value_ = resume_value;
+};
 
 } // namespace caffeine

@@ -31,8 +31,8 @@ public:
   /**
    * Iterators used by Interpreter::execute
    */
-  llvm::BasicBlock* current_block;
-  llvm::BasicBlock* prev_block;
+  llvm::BasicBlock* current_block = nullptr;
+  llvm::BasicBlock* prev_block = nullptr;
   llvm::BasicBlock::iterator current;
 
   // Allocations within the current frame.
@@ -73,14 +73,37 @@ public:
    *
    * This function can be called multiple times, and as a result, if `result` is
    * std::nullopt, it will not override the previously set result.
+   *
+   * As a result we have the following semantics:
+   *  result | resume | meaning
+   *  -------+--------+----------------------------
+   *     set |    set | nonsense
+   *     set |  unset | non void return
+   *   unset |    set | perform exceptional outcome (*)
+   *   unset |  unset | void return
+   *
+   * (*) a natural question of what happens when we want to resume with a void
+   * value arises. In this case we can probably just stuff a dummy LLVMValue
+   * into the resume_value
    */
   virtual void set_result(std::optional<LLVMValue> result,
                           std::optional<LLVMValue> resume_value);
 
   virtual ~StackFrame() = default;
 
-private:
+protected:
   static std::atomic<uint64_t> next_frame_id;
+  StackFrame();
+};
+
+class ExternalStackFrame : StackFrame {
+  std::optional<LLVMValue> result_ = std::nullopt;
+  std::optional<LLVMValue> resume_value_ = std::nullopt;
+
+public:
+  ExternalStackFrame();
+  void set_result(std::optional<LLVMValue> result,
+                  std::optional<LLVMValue> resume_value) override;
 };
 
 } // namespace caffeine
