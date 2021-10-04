@@ -1,3 +1,5 @@
+"""
+"""
 
 def _copy_files(ctx):
     outputs = []

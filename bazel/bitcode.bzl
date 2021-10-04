@@ -24,10 +24,10 @@ SRC_EXTS = [
     ".bc",
 ]
 
-def update(src, upd):
+def update(*args):
     tgt = {}
-    tgt.update(src)
-    tgt.update(upd)
+    for arg in args:
+        tgt.update(arg)
     return tgt
 
 BITCODE_LIB_ATTRS = {
@@ -57,6 +57,23 @@ BITCODE_LIB_ATTRS = {
     "_llvm_opt": attr.label(executable = True, cfg = "host", default = "@llvm//llvm:opt"),
     "_opt_plugin": attr.label(executable = True, cfg = "host", default = "@//tools/opt-plugin"),
 }
+
+BITCODE_BIN_ATTRS = update(
+    BITCODE_LIB_ATTRS,
+    {
+        "opts": attr.string_list(
+            default = ["-O3"],
+            doc = "Options to pass to the final opt invocation",
+        ),
+        "_lib_ext": attr.string(default = ".lib.bc"),
+        "_bin_ext": attr.string(default = ".bc"),
+        "_llvm_dis": attr.label(
+            default = "@llvm//llvm:llvm-dis",
+            executable = True,
+            cfg = "host",
+        ),
+    },
+)
 
 def _bitcode_library_common(ctx):
     actions = ctx.actions
@@ -210,15 +227,16 @@ def _bitcode_binary(ctx):
     bcinfo = result[0]
     files = result[1].files.to_list()
 
-    output = ctx.actions.declare_file(ctx.label.name + ".bc")
+    output = ctx.actions.declare_file(ctx.label.name + ctx.attr._bin_ext)
     args = ctx.actions.args()
+    args.add_all(["--load", ctx.executable._opt_plugin.path])
     args.add_all(ctx.attr.opts)
     args.add_all(["--internalize", "--internalize-public-api-list", "main", "--globaldce"])
     args.add_all(files)
     args.add_all(["-o", output])
 
     ctx.actions.run(
-        inputs = files,
+        inputs = files + [ctx.executable._opt_plugin],
         outputs = [output],
         executable = ctx.executable._llvm_opt,
         arguments = [args],
@@ -248,19 +266,44 @@ def _bitcode_binary(ctx):
 
 bitcode_binary = rule(
     implementation = _bitcode_binary,
-    attrs = update(
-        BITCODE_LIB_ATTRS,
-        {
-            "opts": attr.string_list(
-                default = ["-O3"],
-                doc = "Options to pass to the final opt invocation",
-            ),
-            "_lib_ext": attr.string(default = ".lib.bc"),
-            "_llvm_dis": attr.label(
-                default = "@llvm//llvm:llvm-dis",
-                executable = True,
-                cfg = "host",
-            ),
-        },
-    ),
+    attrs = BITCODE_BIN_ATTRS,
 )
+
+def caffeine_bitcode_test(should_fail = False, skip = False, **kwargs):
+    """Run 
+
+    This variant will generate a main method that calls the existing test method with
+    symbolic arguments.
+
+    Args:
+      should_fail: Whether the test is expected to fail
+      skip: Whether or not to disable the test.
+      **kwargs: All arguments as passed to bitcode_test
+    """
+
+    test_args = {}
+
+    if not "opts" in kwargs:
+        kwargs["opts"] = []
+
+    if "visibility" in kwargs:
+        test_args.update({'visibility': kwargs['visibility']})
+        kwargs["size"] = None
+
+    if "size" in kwargs:
+        test_args.update({"size": kwargs["size"]})
+        kwargs["size"] = None
+
+    name = kwargs["name"]
+
+    kwargs["name"] += "#binary"
+    kwargs["opts"].append("--caffeine-gen-test-main")
+
+    bitcode_binary(**kwargs)
+
+    native.sh_test(
+        name = name,
+        srcs = ["@//tools/caffeine"],
+        tags = ["manual"] if skip else [],
+        **test_args,
+    )
