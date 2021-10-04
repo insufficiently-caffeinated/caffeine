@@ -1,5 +1,6 @@
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag")
 load("@//bazel:configure.bzl", "configure_file")
+load("@//bazel:warnings.bzl", "WARNING_FLAGS")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -24,7 +25,7 @@ bool_flag(
 
 bool_flag(
     name = "enable-implicit-constant-folding",
-    build_setting_default = False,
+    build_setting_default = True,
 )
 
 ####################################################################
@@ -54,6 +55,7 @@ cc_library(
         "include/caffeine/Support/Assert.h",
         "include/caffeine/Support/Macros.h",
     ],
+    copts = WARNING_FLAGS,
     strip_include_prefix = "include",
     deps = ["@boost//:core"],
 )
@@ -75,6 +77,7 @@ cc_library(
     glob([
         "include/caffeine/**/*.def",
     ]),
+    copts = WARNING_FLAGS,
     strip_include_prefix = "include",
     deps = [
         ":config",
