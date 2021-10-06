@@ -25,10 +25,13 @@ jobs:
         include:
           - os: ubuntu-latest
             triplet: x64-linux
+            mono: mono
           - os: macos-latest
             triplet: x64-osx
+            mono: mono
           - os: windows-latest
             triplet: x64-windows
+            mono: ''
     steps:
       - uses: actions/checkout@v2
         with:
@@ -50,19 +53,17 @@ jobs:
         shell: bash
         run: |
           ./vcpkg/bootstrap-vcpkg.sh
-          echo MONO= >> $GITHUB_ENV
       
       - name: Build vcpkg tool on windows
         if: ${{ matrix.os == 'windows-latest'}}
         shell: pwsh
         run: |
           ./vcpkg/bootstrap-vcpkg.bat
-          echo MONO=mono >> $GITHUB_ENV
 
       - name: Setup NuGet Credentials
         shell: bash
         run: >
-          $MONO `./vcpkg/vcpkg fetch nuget | tail -n 1` sources add
+          ${{ matrix.mono }} `./vcpkg/vcpkg fetch nuget | tail -n 1` sources add
               -source "https://nuget.pkg.github.com/insufficiently-caffeinated/index.json"
               -name "GitHub"
               -username "insufficiently-caffeinated"
