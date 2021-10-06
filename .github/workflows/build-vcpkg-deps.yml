@@ -41,7 +41,7 @@ jobs:
 
       - uses: actions/checkout@v2
         with:
-          repository: 'https://github.com/Microsoft/vcpkg'
+          repository: 'Microsoft/vcpkg'
           ref: ${{ env.VCPKG_COMMIT }}
           path: vcpkg
 
