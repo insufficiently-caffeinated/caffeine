@@ -1,0 +1,70 @@
+
+name: build-vcpkg-deps
+
+# This action builds and caches vcpkg packages so that they can be used in
+# other CI runs.
+
+on:
+  push:
+    branches:
+      - master
+
+env:
+  VCPKG_BINARY_SOURCES: 'clear;nuget;GitHub;readwrite'
+
+jobs:
+  job:
+    name: vcpkg-build-${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            triplet: x64-linux
+          - os: macos-latest
+            triplet: x64-osx
+          - os: windows-latest
+            triplet: x64-windows
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          path: caffeine
+      
+      - name: Extract vcpkg hash
+        shell: bash
+        run: |
+          echo VCPKG_COMMIT=$(cat vcpkg.json | jq -r .commit) >> $GITHUB_ENV
+
+      - uses: actions/checkout@v2
+        with:
+          repository: 'https://github.com/Microsoft/vcpkg'
+          ref: ${{ env.VCPKG_COMMIT }}
+          path: vcpkg
+
+      - name: Build vcpkg tool on unix
+        if: ${{ matrix.os != 'windows-latest' }}
+        shell: bash
+        run: |
+          ./vcpkg/bootstrap.sh
+      
+      - name: Build vcpkg tool on windows
+        if: ${{ matrix.os == 'windows-latest'}}
+        shell: pwsh
+        run: |
+          ./vcpkg/bootstrap.bat
+
+      - name: Setup NuGet Credentials
+        shell: bash
+        run: >
+          mono `./vcpkg/vcpkg fetch nuget | tail -n 1` sources add
+              -source "https://nuget.pkg.github.com/insufficiently-caffeinated/index.json"
+              -name "GitHub"
+              -username "insufficiently-caffeinated"
+              -password "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Install vcpkg packages
+        shell: bash
+        run: |
+          cd caffeine
+          ./../vcpkg/vcpkg install --triplet ${{ matrix.triplet }}
+
