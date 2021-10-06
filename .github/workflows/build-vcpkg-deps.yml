@@ -29,9 +29,9 @@ jobs:
           - os: macos-latest
             triplet: x64-osx
             mono: mono
-          - os: windows-latest
-            triplet: x64-windows
-            mono: ''
+          # - os: windows-latest
+          #   triplet: x64-windows
+          #   mono: ''
     steps:
       - uses: actions/checkout@v2
         with:
