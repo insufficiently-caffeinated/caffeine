@@ -1,13 +1,17 @@
 
 name: build-vcpkg-deps
 
-# This action builds and caches vcpkg packages so that they can be used in
+# This workflows builds and caches vcpkg packages so that they can be used in
 # other CI runs.
 
 on:
   push:
     branches:
       - master
+  pull_request:
+    paths:
+      - vcpkg.json
+      - .github/workflows/build-vcpkg-deps.yml
 
 env:
   VCPKG_BINARY_SOURCES: 'clear;nuget;GitHub;readwrite'
