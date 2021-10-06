@@ -49,13 +49,13 @@ jobs:
         if: ${{ matrix.os != 'windows-latest' }}
         shell: bash
         run: |
-          ./vcpkg/bootstrap.sh
+          ./vcpkg/bootstrap-vcpkg.sh
       
       - name: Build vcpkg tool on windows
         if: ${{ matrix.os == 'windows-latest'}}
         shell: pwsh
         run: |
-          ./vcpkg/bootstrap.bat
+          ./vcpkg/bootstrap-vcpkg.bat
 
       - name: Setup NuGet Credentials
         shell: bash
