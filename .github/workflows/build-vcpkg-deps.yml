@@ -50,17 +50,19 @@ jobs:
         shell: bash
         run: |
           ./vcpkg/bootstrap-vcpkg.sh
+          echo MONO= >> $GITHUB_ENV
       
       - name: Build vcpkg tool on windows
         if: ${{ matrix.os == 'windows-latest'}}
         shell: pwsh
         run: |
           ./vcpkg/bootstrap-vcpkg.bat
+          echo MONO=mono >> $GITHUB_ENV
 
       - name: Setup NuGet Credentials
         shell: bash
         run: >
-          mono `./vcpkg/vcpkg fetch nuget | tail -n 1` sources add
+          $MONO `./vcpkg/vcpkg fetch nuget | tail -n 1` sources add
               -source "https://nuget.pkg.github.com/insufficiently-caffeinated/index.json"
               -name "GitHub"
               -username "insufficiently-caffeinated"
