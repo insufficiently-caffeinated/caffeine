@@ -105,7 +105,7 @@ void Interpreter::execute() {
   (void)frameblock;
 
   while (true) {
-    StackFrame& frame = ctx->stack_top();
+    auto& frame = ctx->stack_top().get_regular();
 
     CAFFEINE_ASSERT(frame.current != frame.current_block->end(),
                     "Instruction pointer ran off end of block.");
@@ -125,7 +125,7 @@ void Interpreter::execute() {
       // Printing expressions can be potentially very expensive so we only do it
       // if expensive annotations are enabled.
       if (CAFFEINE_TRACING_EXPENSIVE_ANNOTATIONS) {
-        auto& frame = ctx->stack_top();
+        auto& frame = ctx->stack_top().get_regular();
         auto it = frame.variables.find(&inst);
         if (it != frame.variables.end()) {
           traceblock.annotate("value", fmt::format("{}", it->second));
@@ -182,7 +182,8 @@ ExecutionResult Interpreter::visitInstruction(llvm::Instruction& inst) {
 
 #define DEF_SIMPLE_OP(opname, optype)                                          \
   ExecutionResult Interpreter::visit##opname(llvm::optype& op) {               \
-    ctx->stack_top().insert(&op, ExprEvaluator(this->ctx).evaluate(op));       \
+    ctx->stack_top().get_regular().insert(                                     \
+        &op, ExprEvaluator(this->ctx).evaluate(op));                           \
     return ExecutionResult::Continue;                                          \
   }                                                                            \
   static_assert(true)
@@ -202,7 +203,7 @@ DEF_SIMPLE_OP(ExtractValueInst, ExtractValueInst);
 DEF_SIMPLE_OP(InsertValueInst, InsertValueInst);
 
 ExecutionResult Interpreter::visitUDiv(llvm::BinaryOperator& op) {
-  StackFrame& frame = ctx->stack_top();
+  auto& frame = ctx->stack_top().get_regular();
 
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
@@ -223,7 +224,7 @@ ExecutionResult Interpreter::visitUDiv(llvm::BinaryOperator& op) {
   return ExecutionResult::Continue;
 }
 ExecutionResult Interpreter::visitSDiv(llvm::BinaryOperator& op) {
-  StackFrame& frame = ctx->stack_top();
+  auto& frame = ctx->stack_top().get_regular();
 
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
@@ -252,7 +253,7 @@ ExecutionResult Interpreter::visitSDiv(llvm::BinaryOperator& op) {
   return ExecutionResult::Continue;
 }
 ExecutionResult Interpreter::visitSRem(llvm::BinaryOperator& op) {
-  StackFrame& frame = ctx->stack_top();
+  auto& frame = ctx->stack_top().get_regular();
 
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
@@ -281,7 +282,7 @@ ExecutionResult Interpreter::visitSRem(llvm::BinaryOperator& op) {
   return ExecutionResult::Continue;
 }
 ExecutionResult Interpreter::visitURem(llvm::BinaryOperator& op) {
-  StackFrame& frame = ctx->stack_top();
+  auto& frame = ctx->stack_top().get_regular();
 
   auto lhs = ctx->lookup(op.getOperand(0));
   auto rhs = ctx->lookup(op.getOperand(1));
@@ -303,7 +304,7 @@ ExecutionResult Interpreter::visitURem(llvm::BinaryOperator& op) {
 }
 
 ExecutionResult Interpreter::visitPHINode(llvm::PHINode& node) {
-  auto& frame = ctx->stack_top();
+  auto& frame = ctx->stack_top().get_regular();
 
   // PHI nodes in the entry block is invalid.
   CAFFEINE_ASSERT(frame.prev_block != nullptr);
@@ -315,7 +316,7 @@ ExecutionResult Interpreter::visitPHINode(llvm::PHINode& node) {
 }
 ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst& inst) {
   if (!inst.isConditional()) {
-    ctx->stack_top().jump_to(inst.getSuccessor(0));
+    ctx->stack_top().get_regular().jump_to(inst.getSuccessor(0));
     return ExecutionResult::Continue;
   }
 
@@ -338,14 +339,14 @@ ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst& inst) {
     auto& fork = forks[idx++];
 
     fork.add(assertion);
-    fork.stack_top().jump_to(inst.getSuccessor(0));
+    fork.stack_top().get_regular().jump_to(inst.getSuccessor(0));
   }
 
   if (is_f != SolverResult::UNSAT) {
     auto& fork = forks[idx++];
 
     fork.add(!assertion);
-    fork.stack_top().jump_to(inst.getSuccessor(1));
+    fork.stack_top().get_regular().jump_to(inst.getSuccessor(1));
   }
 
   return forks;
@@ -360,7 +361,7 @@ ExecutionResult Interpreter::visitReturnInst(llvm::ReturnInst& inst) {
   if (ctx->empty())
     return ExecutionResult::Stop;
 
-  auto& parent = ctx->stack_top();
+  auto& parent = ctx->stack_top().get_regular();
 
   parent.set_result(result, std::nullopt);
 
@@ -382,13 +383,13 @@ ExecutionResult Interpreter::visitSwitchInst(llvm::SwitchInst& inst) {
 
     Context fork = ctx->fork_once();
     fork.add(assertion);
-    fork.stack_top().jump_to(value.getCaseSuccessor());
+    fork.stack_top().get_regular().jump_to(value.getCaseSuccessor());
 
     forks.push_back(std::move(fork));
   }
 
   if (def.check(solver) != SolverResult::UNSAT) {
-    def.stack_top().jump_to(inst.getDefaultDest());
+    def.stack_top().get_regular().jump_to(inst.getDefaultDest());
     forks.push_back(std::move(def));
   }
 
@@ -406,7 +407,7 @@ ExecutionResult Interpreter::visitCallBase(llvm::CallBase& callBase) {
 
   // In case of an extern function
   if (func->empty()) {
-    auto* prev_inst = &*ctx->stack_top().current;
+    auto* prev_inst = &*ctx->stack_top().get_regular().current;
     auto invoke = llvm::dyn_cast<llvm::InvokeInst>(&callBase);
 
     std::function<ExecutionResult(llvm::CallBase&)> func =
@@ -420,13 +421,13 @@ ExecutionResult Interpreter::visitCallBase(llvm::CallBase& callBase) {
       return res;
 
     if (res.empty()) {
-      if (&*ctx->stack_top().current == prev_inst) {
-        ctx->stack_top().set_result(std::nullopt, std::nullopt);
+      if (&*ctx->stack_top().get_regular().current == prev_inst) {
+        ctx->stack_top().get_regular().set_result(std::nullopt, std::nullopt);
       }
     } else {
       for (auto& ctx_ : res.contexts()) {
-        if (&*ctx_.stack_top().current == prev_inst) {
-          ctx->stack_top().set_result(std::nullopt, std::nullopt);
+        if (&*ctx_.stack_top().get_regular().current == prev_inst) {
+          ctx->stack_top().get_regular().set_result(std::nullopt, std::nullopt);
         }
       }
     }
@@ -435,12 +436,13 @@ ExecutionResult Interpreter::visitCallBase(llvm::CallBase& callBase) {
   }
 
   // In case of a normal function call
-  StackFrame callee{func};
+  auto frame_wrapper = StackFrame::RegularFrame(func);
+  auto& callee = frame_wrapper.get_regular();
   for (auto [arg, val] : llvm::zip(func->args(), callBase.args())) {
     callee.insert(&arg, ctx->lookup(val.get()));
   }
 
-  ctx->push(std::move(callee));
+  ctx->push(std::move(frame_wrapper));
 
   return ExecutionResult::Continue;
 }
@@ -552,7 +554,7 @@ ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
   return ops.execute(this);
 }
 ExecutionResult Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {
-  auto& frame = ctx->stack_top();
+  auto& frame = ctx->stack_top().get_regular();
   const auto& layout = inst.getModule()->getDataLayout();
 
   uint64_t size =
@@ -729,7 +731,7 @@ ExecutionResult Interpreter::visitSymbolicAlloca(llvm::CallBase& call) {
       size, ConstantInt::Create(llvm::APInt(ptr_width, 1)), data,
       AllocationKind::Alloca, AllocationPermissions::ReadWrite, *ctx);
 
-  auto& frame = ctx->stack_top();
+  auto& frame = ctx->stack_top().get_regular();
   frame.insert(&call, LLVMValue(Pointer(
                           alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)),
                           address_space)));
@@ -755,7 +757,7 @@ ExecutionResult Interpreter::visitCalloc(llvm::CallBase& call) {
 
   if (options.malloc_can_return_null) {
     Context forked = ctx->fork_once();
-    forked.stack_top().insert(
+    forked.stack_top().get_regular().insert(
         &call, LLVMValue(Pointer(ConstantInt::Create(llvm::APInt(ptr_width, 0)),
                                  address_space)));
     queueContext(std::move(forked));
@@ -768,7 +770,7 @@ ExecutionResult Interpreter::visitCalloc(llvm::CallBase& call) {
       AllocOp::Create(size_op, ConstantInt::Create(llvm::APInt(8, 0x00))),
       AllocationKind::Malloc, AllocationPermissions::ReadWrite, *ctx);
 
-  ctx->stack_top().insert(
+  ctx->stack_top().get_regular().insert(
       &call,
       LLVMValue(Pointer(alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)),
                         address_space)));
@@ -846,7 +848,7 @@ ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallBase& call) {
   auto resolved = ctx->heaps.resolve(solver, mem, *ctx);
 
   if (resolved.size() == 1) {
-    ctx->stack_top().insert(&call, LLVMValue(resolved[0]));
+    ctx->stack_top().get_regular().insert(&call, LLVMValue(resolved[0]));
 
     if (!mem.is_resolved()) {
       ctx->backprop(mem, resolved[0]);
@@ -857,7 +859,7 @@ ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallBase& call) {
 
   auto forks = ctx->fork(resolved.size());
   for (auto [fork, ptr] : llvm::zip(forks, resolved)) {
-    fork.stack_top().insert(&call, LLVMValue(ptr));
+    fork.stack_top().get_regular().insert(&call, LLVMValue(ptr));
 
     if (!mem.is_resolved()) {
       fork.backprop(mem, ptr);

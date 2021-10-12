@@ -14,12 +14,12 @@ namespace caffeine {
 
 Context::Context(llvm::Function* function, llvm::ArrayRef<OpRef> args)
     : mod(function->front().getModule()) {
-  stack.emplace_back(function);
+  stack.push_back(StackFrame::RegularFrame(function));
   init_args(args);
 }
 Context::Context(llvm::Function* function)
     : mod(function->front().getModule()) {
-  stack.emplace_back(function);
+  stack.push_back(StackFrame::RegularFrame(function));
 
   const llvm::DataLayout& layout = mod->getDataLayout();
   if (function->getName() == "main" && function->arg_size() == 2) {
@@ -41,12 +41,13 @@ Context::Context(llvm::Function* function)
 }
 
 void Context::init_args(llvm::ArrayRef<OpRef> args) {
-  llvm::Function* function = stack.front().current_block->getParent();
+  llvm::Function* function =
+      stack.front().get_regular().current_block->getParent();
   CAFFEINE_ASSERT(function->arg_size() == args.size(),
                   "Attempted to pass an invalid number of arguments to an "
                   "entry-point function");
 
-  auto& frame = stack_top();
+  auto& frame = stack_top().get_regular();
   for (auto&& [arg_ptr, arg_val] : llvm::zip(function->args(), args)) {
     frame.insert(&arg_ptr, arg_val);
   }
@@ -88,7 +89,7 @@ void Context::push(StackFrame&& frame) {
 void Context::pop() {
   CAFFEINE_ASSERT(!stack.empty());
 
-  auto& frame = stack.back();
+  auto& frame = stack.back().get_regular();
   for (auto [allocid, heap] : frame.allocations) {
     CAFFEINE_ASSERT(heaps[heap][allocid].kind() == AllocationKind::Alloca,
                     "found non-stack allocation on the stack");
@@ -150,7 +151,8 @@ uint64_t Context::next_constant() {
 }
 
 void Context::backprop(const Pointer& unresolved, const Pointer& resolved) {
-  StackFrame& frame = stack_top();
+  auto& frame_wrapper = stack_top();
+  auto& frame = frame_wrapper.get_regular();
 
   for (auto& [key, value] : frame.variables) {
     if (!value.is_scalar())

@@ -76,12 +76,12 @@ namespace {
 
     for (size_t i = ctx.stack.size(); i != 0; --i) {
       size_t idx = i - 1;
-      const StackFrame& frame = ctx.stack[idx];
+      const auto& frame = ctx.stack[idx];
 
       if (frame.frame_id != frame_id)
         continue;
 
-      llvm::Function* func = frame.current_block->getParent();
+      llvm::Function* func = frame.get_regular().current_block->getParent();
       for (const llvm::BasicBlock& block : func->getBasicBlockList()) {
         for (const llvm::Instruction& inst : block.instructionsWithoutDebug()) {
           if (&inst != jmp_tgt)
@@ -108,7 +108,7 @@ ExecutionResult Interpreter::visitSetjmp(llvm::CallBase& inst) {
                   "Invalid signature for _setjmp");
 
   const auto& layout = inst.getModule()->getDataLayout();
-  auto& frame = ctx->stack_top();
+  auto& frame = ctx->stack_top().get_regular();
 
   auto jmpbuf = getJmpBuf(frame.frame_id, inst);
   auto jmpbuf_ty = getJmpBufType(inst.getContext());
@@ -217,7 +217,7 @@ ExecutionResult Interpreter::visitLongjmp(llvm::CallBase& inst) {
 
     state.ctx.stack.erase(state.ctx.stack.begin() + *target_frame,
                           state.ctx.stack.end());
-    auto& frame = state.ctx.stack_top();
+    auto& frame = state.ctx.stack_top().get_regular();
     frame.insert(jmp_tgt, state.lookup(inst.getArgOperand(1)));
     frame.jump_to(jmp_tgt->getParent());
 
