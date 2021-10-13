@@ -97,4 +97,23 @@ StackFrame::ExternalStackFrame_& StackFrame::get_external() {
   return std::get<External>(value_);
 }
 
+void StackFrame::set_result(std::optional<LLVMValue> result,
+                            std::optional<LLVMValue> resume_value) {
+  if (is_regular()) {
+    get_regular().set_result(result, resume_value);
+  } else if (is_external()) {
+    get_external().set_result(result, resume_value);
+  } else {
+    CAFFEINE_UNREACHABLE("Malformed StackFrame detected");
+  }
+};
+
+bool StackFrame::is_regular() const {
+  return value_.index() == Regular;
+}
+
+bool StackFrame::is_external() const {
+  return value_.index() == External;
+}
+
 } // namespace caffeine

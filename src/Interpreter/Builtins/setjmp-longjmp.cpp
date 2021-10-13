@@ -217,7 +217,8 @@ ExecutionResult Interpreter::visitLongjmp(llvm::CallBase& inst) {
 
     state.ctx.stack.erase(state.ctx.stack.begin() + *target_frame,
                           state.ctx.stack.end());
-    auto& frame = state.ctx.stack_top().get_regular();
+    auto& frame_wrapper = state.ctx.stack_top();
+    auto& frame = frame_wrapper.get_regular();
     frame.insert(jmp_tgt, state.lookup(inst.getArgOperand(1)));
     frame.jump_to(jmp_tgt->getParent());
 
@@ -230,7 +231,7 @@ ExecutionResult Interpreter::visitLongjmp(llvm::CallBase& inst) {
     // go to the default return flow
 
     ++frame.current;
-    frame.set_result(std::nullopt, std::nullopt);
+    frame_wrapper.set_result(std::nullopt, std::nullopt);
 
     insert_fn(std::move(state));
   });

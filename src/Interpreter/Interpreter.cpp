@@ -361,7 +361,7 @@ ExecutionResult Interpreter::visitReturnInst(llvm::ReturnInst& inst) {
   if (ctx->empty())
     return ExecutionResult::Stop;
 
-  auto& parent = ctx->stack_top().get_regular();
+  auto& parent = ctx->stack_top();
 
   parent.set_result(result, std::nullopt);
 
@@ -422,12 +422,12 @@ ExecutionResult Interpreter::visitCallBase(llvm::CallBase& callBase) {
 
     if (res.empty()) {
       if (&*ctx->stack_top().get_regular().current == prev_inst) {
-        ctx->stack_top().get_regular().set_result(std::nullopt, std::nullopt);
+        ctx->stack_top().set_result(std::nullopt, std::nullopt);
       }
     } else {
       for (auto& ctx_ : res.contexts()) {
         if (&*ctx_.stack_top().get_regular().current == prev_inst) {
-          ctx->stack_top().get_regular().set_result(std::nullopt, std::nullopt);
+          ctx->stack_top().set_result(std::nullopt, std::nullopt);
         }
       }
     }

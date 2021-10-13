@@ -49,9 +49,6 @@ private:
      */
     void jump_to(llvm::BasicBlock* block);
 
-    void set_result(std::optional<LLVMValue> result,
-                    std::optional<LLVMValue> resume_value);
-
     StackFrame_(llvm::Function* function, uint64_t frame_id);
 
     /**
@@ -60,6 +57,11 @@ private:
      */
     void insert(llvm::Value* value, const OpRef& expr);
     void insert(llvm::Value* value, const LLVMValue& exprs);
+
+  private:
+    void set_result(std::optional<LLVMValue> result,
+                    std::optional<LLVMValue> resume_value);
+    friend class StackFrame;
   };
 
   class ExternalStackFrame_ {
@@ -69,8 +71,11 @@ private:
   public:
     uint64_t frame_id;
     ExternalStackFrame_(uint64_t frame_id);
+
+  private:
     void set_result(std::optional<LLVMValue> result,
                     std::optional<LLVMValue> resume_value);
+    friend class StackFrame;
   };
 
   enum {
@@ -125,6 +130,9 @@ public:
 
   StackFrame_& get_regular();
   ExternalStackFrame_& get_external();
+
+  bool is_regular() const;
+  bool is_external() const;
 
 protected:
   static std::atomic<uint64_t> next_frame_id;
