@@ -4,7 +4,7 @@
 
 using namespace caffeine;
 
-class Basic{
+class Basic {
 public:
   int a = 0;
   Basic(int b) : a{b} {};

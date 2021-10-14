@@ -1,22 +1,6 @@
 #include <memory>
 
 namespace caffeine {
-namespace detail {
-
-  template <typename T>
-  class has_clone_method
-  {
-      typedef char one;
-      struct two { char x[2]; };
-
-      template <typename C> static one test( decltype(&C::clone) ) ;
-      template <typename C> static two test(...);
-
-  public:
-      enum { value = sizeof(test<T>(0)) == sizeof(char) };
-  };
-
-} // namespace detail
 
 template <class T>
 class CopyPointer {
@@ -45,7 +29,7 @@ public:
   }
 };
 
-template<typename T, typename... Params>
+template <typename T, typename... Params>
 CopyPointer<T> make_copy(Params&&... args) {
   return std::make_unique<T>(std::forward<Params>(args)...);
 }
