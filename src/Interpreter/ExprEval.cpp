@@ -1,8 +1,8 @@
 #include "caffeine/Interpreter/ExprEval.h"
 
 #include "caffeine/Interpreter/Context.h"
-#include "caffeine/Interpreter/Value.h"
 #include "caffeine/Memory/MemHeap.h"
+#include "caffeine/Model/Value.h"
 #include "caffeine/Support/LLVMFmt.h"
 #include "caffeine/Support/UnsupportedOperation.h"
 #include <fmt/format.h>

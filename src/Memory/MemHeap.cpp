@@ -1,7 +1,7 @@
 #include "caffeine/Memory/MemHeap.h"
 #include "caffeine/IR/Assertion.h"
 #include "caffeine/Interpreter/Context.h"
-#include "caffeine/Interpreter/Value.h"
+#include "caffeine/Model/Value.h"
 #include "caffeine/Solver/Solver.h"
 #include "caffeine/Support/Assert.h"
 #include "caffeine/Support/UnsupportedOperation.h"

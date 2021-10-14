@@ -1,4 +1,4 @@
-#include "caffeine/Interpreter/Value.h"
+#include "caffeine/Model/Value.h"
 #include "caffeine/IR/Operation.h"
 
 #include <type_traits>
