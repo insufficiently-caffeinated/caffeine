@@ -2,6 +2,17 @@
 
 namespace caffeine {
 
+// This class essentially wraps a unique pointer. However, instead of
+// copying the same pointer every time this wrapper is copied, the
+// actual object behind the pointer is copied as well.
+//
+// This is desirable because we are then able to have subclasses in a
+// vector when normally that would not be possible.
+//
+// In order to use this class, the template parameter T must implement
+// a clone() method which returns a std::unique_ptr<T>. This method is
+// called on copys and assignments in order to copy the underlying class
+// behind the unique pointer.
 template <class T>
 class clone_ptr {
   std::unique_ptr<T> pointer;
