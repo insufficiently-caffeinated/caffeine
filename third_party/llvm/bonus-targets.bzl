@@ -1,4 +1,7 @@
+"""
+"""
 
+# buildifier: disable=unnamed-macro
 def define_llvm_bonus_targets():
     native.cc_library(
         name = "headers",

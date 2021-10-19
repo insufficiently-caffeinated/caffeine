@@ -10,18 +10,20 @@ WARNING_FLAGS = selects.with_or({
         "-fcolor-diagnostics",
         "-Wall",
         "-Wextra",
+        "-Wno-unknown-pragmas",
     ],
     "@bazel_tools//tools/cpp:gcc": [
         "-fdiagnostics-color=always",
         "-Wall",
         "-Wextra",
+        "-Wno-unknown-pragmas",
     ],
     "@bazel_tools//tools/cpp:msvc": [
         "/experimental:external",
         "/external:anglebrackets",
         "/external:W0",
         "/W3",
-        "-D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS=1"
+        "-D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS=1",
     ],
     "//conditions:default": [],
 })

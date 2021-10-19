@@ -1,4 +1,4 @@
-load("@//third_party/capnp:capnproto.bzl", "capnp_gen", "capnp_library")
+load("@caffeine//third_party/capnp:capnproto.bzl", "capnp_gen", "capnp_library")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -88,6 +88,7 @@ WARNINGS = [
     "-Wno-sign-compare",
     "-Wno-strict-aliasing",
     "-Wno-maybe-uninitialized",
+    "-Wno-unknown-warning-option",
 ]
 
 cc_library(
