@@ -22,7 +22,6 @@ def vcpkg_dependencies():
             "fmt",
             "immer",
             "magic-enum",
-            "z3",
         ],
     )
 
@@ -51,24 +50,6 @@ cc_library(
 cc_library(
     name = "immer",
     hdrs = glob(["include/**/*"]),
-    strip_include_prefix = "include",
-    visibility = ["//visibility:public"],
-)
-""",
-    )
-
-    vcpkg_library(
-        name = "z3",
-        build_file_content = """
-cc_import(
-    name = "z3-raw",
-    static_library = "lib/libz3.a",
-)
-
-cc_library(
-    name = "z3",
-    hdrs = glob(["include/**/*"]),
-    deps = [":z3-raw"],
     strip_include_prefix = "include",
     visibility = ["//visibility:public"],
 )

@@ -12,7 +12,11 @@ alias(
 
 alias(
     name = "z3",
-    actual = "@z3//:z3",
+    actual = select({
+        "@bazel_tools//src/conditions:windows": "@z3-windows//:z3",
+        "@bazel_tools//src/conditions:darwin": "@z3-darwin//:z3",
+        "//conditions:default": "@z3-linux//:z3",
+    }),
 )
 
 alias(
@@ -36,6 +40,6 @@ alias(
 )
 
 alias(
-  name = "clang",
-  actual = "@llvm//clang"
+    name = "clang",
+    actual = "@llvm//clang",
 )

@@ -4,6 +4,8 @@ load("//bazel:dependencies.bzl", "caffeine_dependencies")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
+load("@caffeine//third_party/z3:setup.bzl", "setup_z3")
+
 caffeine_dependencies()
 
 # Replace with the LLVM commit you want to use.
@@ -35,6 +37,8 @@ git_repository(
     remote = "https://github.com/nelhage/rules_boost",
     shallow_since = "1630079166 -0700",
 )
+
+setup_z3(name = "z3", version = "4.8.12")
 
 load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
 load("@com_github_nelhage_rules_boost//:boost/boost.bzl", "boost_deps")
