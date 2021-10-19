@@ -21,7 +21,7 @@ alias(
 
 alias(
     name = "magic-enum",
-    actual = "@magic-enum//:magic-enum",
+    actual = "@magic-enum//:magic_enum",
 )
 
 alias(

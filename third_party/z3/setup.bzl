@@ -19,7 +19,8 @@ cc_library(
 )
 """
 
-def setup_z3(name, version):
+def setup_z3(name):
+    version = "4.8.12"
     matrix = [
         (
             "windows",

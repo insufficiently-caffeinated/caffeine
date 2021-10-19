@@ -5,6 +5,7 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 load("@caffeine//third_party/z3:setup.bzl", "setup_z3")
+load("@caffeine//third_party/magic_enum:setup.bzl", "setup_magic_enum")
 
 caffeine_dependencies()
 
@@ -38,7 +39,8 @@ git_repository(
     shallow_since = "1630079166 -0700",
 )
 
-setup_z3(name = "z3", version = "4.8.12")
+setup_z3(name = "z3")
+setup_magic_enum(name = "magic-enum")
 
 load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
 load("@com_github_nelhage_rules_boost//:boost/boost.bzl", "boost_deps")

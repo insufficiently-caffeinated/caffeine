@@ -21,7 +21,6 @@ def vcpkg_dependencies():
         packages = [
             "fmt",
             "immer",
-            "magic-enum",
         ],
     )
 
@@ -54,23 +53,6 @@ cc_library(
     visibility = ["//visibility:public"],
 )
 """,
-    )
-
-    vcpkg_library(
-        name = "magic-enum",
-        build_file_content = """
-cc_library(
-    name = "magic-enum",
-    hdrs = glob(["include/**/*"]),
-    strip_include_prefix = "include",
-    visibility = ["//visibility:public"],
-)
-""",
-    )
-
-    vcpkg_library(
-        name = "capnproto",
-        build_file = "//third_party/capnp:capnproto.BUILD",
     )
 
 def skylib():
