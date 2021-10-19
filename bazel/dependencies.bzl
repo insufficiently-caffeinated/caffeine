@@ -3,37 +3,6 @@
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
-load("@//bazel:vcpkg.bzl", "init_vcpkg", "vcpkg_import")
-load("@//bazel:vcpkg_library.bzl", "vcpkg_library")
-
-def vcpkg_dependencies():
-    """Load all dependencies that come from vcpkg
-    """
-
-    init_vcpkg(
-        name = "vcpkg-src",
-        sha256 = "907f26a5357c30e255fda9427f1388a39804f607a11fa4c083cc740cb268f5dc",
-        tag = "2021.05.12",
-    )
-
-    vcpkg_import(
-        name = "vcpkg",
-        packages = [
-            "immer",
-        ],
-    )
-
-    vcpkg_library(
-        name = "immer",
-        build_file_content = """
-cc_library(
-    name = "immer",
-    hdrs = glob(["include/**/*"]),
-    strip_include_prefix = "include",
-    visibility = ["//visibility:public"],
-)
-""",
-    )
 
 def skylib():
     SKYLIB_VERSION = "1.0.3"
@@ -101,7 +70,6 @@ def caffeine_dependencies():
     """
 
     skylib()
-    vcpkg_dependencies()
     rules_foreign_cc()
     googletest()
     hopscotch_map()
