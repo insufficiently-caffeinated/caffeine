@@ -1,143 +1,186 @@
+"""Rules for generating capnproto files.
 """
-"""
-
-load("@bazel_skylib//lib:sets.bzl", "sets")
 
 CapnpInfo = provider(
-    "Information needed by capnp rule dependencies",
-    fields = ["includes", "inputs"],
+    "Dependency info for generating capnp files",
+    fields = [
+        "includes",
+        "sources",
+    ],
 )
 
-def _label_to_string(ctx, label):
-    return ctx.expand_location(
-        "$(location @{}//{}:{})".format(
-            label.workspace_name,
-            label.package,
-            label.name,
-        ),
-    )
+def _path_concat(*args):
+    path = ""
 
-def _capnp_import_proto(ctx):
-    includes = sets.make(ctx.attr.includes)
-    inputs = depset(
-        ctx.files.srcs + ctx.files.data,
-        transitive = [tgt[CapnpInfo].inputs for tgt in ctx.attr.deps] +
-                     [ctx.attr.capnp_std[CapnpInfo].inputs] if ctx.attr.capnp_std else [],
-    )
+    for arg in args:
+        if path == "":
+            path = arg
+        elif arg == "":
+            pass
+        elif arg.startswith("/"):
+            path += arg
+        else:
+            path += "/" + arg
 
-    for dep_target in ctx.attr.deps:
-        includes = sets.union(includes, dep_target.capnp.includes)
-    if ctx.attr.capnp_std:
-        includes = sets.union(includes, ctx.attr.capnp_std[CapnpInfo].includes)
+        if path.endswith("/"):
+            path = path[:-1]
 
-    return [
-        CapnpInfo(
-            includes = includes,
-            inputs = inputs,
-        ),
+    return path
+
+def _capnp_path(file):
+    if not file.basename.startswith("capnpc-"):
+        fail("{} was not a valid capnp plugin".format(file))
+
+    return file.basename[len("capnpc-"):]
+
+def _strip_prefix(path, prefix):
+    if not path.startswith(prefix):
+        fail("{} was not a prefix of {}".format(prefix, path))
+
+    return path[len(prefix):]
+
+def _gen_capnp(ctx):
+    includes = [
+        inc
+        for dep in ctx.attr.deps
+        for inc in dep[CapnpInfo].includes
     ]
 
-capnp_import_proto = rule(
-    implementation = _capnp_import_proto,
-    attrs = {
-        "srcs": attr.label_list(allow_files = True),
-        "deps": attr.label_list(providers = ["capnp"]),
-        "data": attr.label_list(allow_files = True),
-        "includes": attr.string_list(),
-        "capnp_std": attr.label(),
-    },
-)
+    for inc in ctx.attr.includes:
+        if inc.startswith("/"):
+            includes.append(inc[1:])
+        else:
+            includes.append(_path_concat(
+                ctx.label.workspace_root,
+                ctx.label.package,
+                inc,
+            ))
 
-def _capnp_proto(ctx):
-    result = _capnp_import_proto(ctx)
-
-    includes = result[0].includes
     inputs = depset(
-        [ctx.executable.capnpc_cxx],
-        transitive = [
-            result[0].inputs,
-        ],
+        ctx.files.srcs + ctx.files.data,
+        transitive = [dep[CapnpInfo].sources for dep in ctx.attr.deps],
     )
 
     args = ctx.actions.args()
     args.add("--verbose")
     args.add("--no-standard-import")
     args.add("-o{}:{}".format(
-        ctx.executable.capnpc_cxx.path,
+        "./" + ctx.executable._capnpc_cpp.path,
         ctx.var["GENDIR"],
     ))
-    args.add_all(["-I" + inc for inc in sets.to_list(includes)])
+    args.add_all(includes, format_each = "-I%s", uniquify = True)
     args.add_all(ctx.files.srcs)
 
+    cwd = _path_concat(
+        ctx.label.workspace_root,
+        ctx.label.package,
+    ) + "/"
+
+    srcs = [
+        ctx.actions.declare_file(_strip_prefix(src.path + ".c++", cwd))
+        for src in ctx.files.srcs
+    ]
+
+    hdrs = [
+        ctx.actions.declare_file(_strip_prefix(src.path + ".h", cwd))
+        for src in ctx.files.srcs
+    ]
+
     ctx.actions.run(
+        outputs = srcs + hdrs,
         inputs = inputs,
-        outputs = ctx.outputs.outs,
-        executable = ctx.executable.capnpc,
+        executable = ctx.executable._capnpc,
         arguments = [args],
+        tools = [
+            ctx.executable._capnpc_cpp,
+        ],
+        env = {
+            "PATH": "./" + ctx.executable._capnpc_cpp.dirname,
+        },
         mnemonic = "GenCapnp",
     )
 
-    return result
+    return [
+        OutputGroupInfo(
+            srcs = srcs,
+            hdrs = hdrs,
+        ),
+        CapnpInfo(
+            includes = includes,
+            sources = inputs,
+        ),
+    ]
 
-capnp_proto = rule(
-    implementation = _capnp_proto,
-    output_to_genfiles = True,
+capnp_gen = rule(
+    implementation = _gen_capnp,
     attrs = {
-        "srcs": attr.label_list(allow_files = True),
+        "srcs": attr.label_list(allow_files = True, mandatory = True),
         "deps": attr.label_list(providers = [CapnpInfo]),
         "data": attr.label_list(allow_files = True),
         "includes": attr.string_list(),
-        "outs": attr.output_list(),
-        "capnp_std": attr.label(default = Label("@capnproto//:capnp-std")),
-        "capnpc": attr.label(
-            default = Label("@capnproto//:capnpc"),
+        "_capnpc": attr.label(
             executable = True,
-            cfg = "host",
+            cfg = "exec",
+            default = "@capnproto//:capnpc",
         ),
-        "capnpc_cxx": attr.label(
-            default = Label("@capnproto//:capnpc-c++"),
+        "_capnpc_cpp": attr.label(
             executable = True,
-            cfg = "host",
+            cfg = "exec",
+            default = "@capnproto//:capnpc-cpp",
         ),
     },
 )
 
-def cc_capnp_library(
+# buildifier: disable=function-docstring
+def capnp_library(
         name,
-        srcs = [],
+        srcs,
         deps = [],
         data = [],
         includes = [],
+        builtin_deps = ["@capnproto//:std"],
         **kwargs):
-    """Bazel rule to create a C++ capnproto library from capnp source files.
+    genargs = {}
+    if "visibility" in kwargs:
+        genargs.update({"visibility": kwargs["visibility"]})
 
-    Args:
-      name: Name of the generated library
-      srcs: CapnProto sources to compile
-      deps: todo
-      data: todo
-      includes: todo
-      **kwargs: extra arguments that are passed on to cc_library
-    """
+    _deps = deps + builtin_deps
 
-    out_hdrs = [s + ".h" for s in srcs]
-    out_srcs = [s + ".c++" for s in srcs]
+    if len(srcs) == 0:
+        fail("capnp_library requires at least one src")
 
-    capnp_proto(
-        name = name + "#gen-capnp",
-        outs = out_hdrs + out_srcs,
+    capnp_gen(
+        name = name + "#capnp",
         srcs = srcs,
-        deps = [s + "#gen-capnp" for s in deps],
+        deps = [dep + "#capnp" for dep in _deps],
         data = data,
         includes = includes,
-        visibility = ["//visibility:public"],
+        **genargs
+    )
+
+    native.filegroup(
+        name = name + "#hdrs",
+        srcs = [":{}#capnp".format(name)],
+        output_group = "hdrs",
+        visibility = ["//visibility:private"],
+    )
+
+    native.filegroup(
+        name = name + "#srcs",
+        srcs = [":{}#capnp".format(name)],
+        output_group = "srcs",
+        visibility = ["//visibility:private"],
     )
 
     native.cc_library(
         name = name,
-        hdrs = out_hdrs,
-        srcs = out_srcs,
-        deps = ["@capnproto//:capnp", name + "#gen-capnp"] + deps,
-        includes = includes,
+        hdrs = [":{}#hdrs".format(name)],
+        srcs = [":{}#srcs".format(name)],
+        deps = _deps + [
+            "@capnproto//:capnp",
+            "@capnproto//:kj",
+        ],
         **kwargs
     )
+
+    pass

@@ -19,7 +19,6 @@ def vcpkg_dependencies():
     vcpkg_import(
         name = "vcpkg",
         packages = [
-            "capnproto",
             "fmt",
             "immer",
             "magic-enum",

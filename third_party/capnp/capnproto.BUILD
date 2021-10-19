@@ -1,77 +1,217 @@
-load("@//third_party/capnp:capnproto.bzl", "capnp_import_proto")
-load("@bazel_skylib//rules:native_binary.bzl", "native_binary")
+load("@//third_party/capnp:capnproto.bzl", "capnp_gen", "capnp_library")
 
 package(default_visibility = ["//visibility:public"])
 
-capnp_import_proto(
-    name = "capnp-std",
-    srcs = ["include/capnp/c++.capnp"],
-    includes = ["external/capnproto/include"],
-)
+KJ_SRCS = [
+    "array.c++",
+    "list.c++",
+    "common.c++",
+    "debug.c++",
+    "exception.c++",
+    "io.c++",
+    "memory.c++",
+    "mutex.c++",
+    "string.c++",
+    "source-location.c++",
+    "hash.c++",
+    "table.c++",
+    "thread.c++",
+    "main.c++",
+    "arena.c++",
+    "test-helpers.c++",
+    "units.c++",
+    "encoding.c++",
+    "refcount.c++",
+    "string-tree.c++",
+    "time.c++",
+    "filesystem.c++",
+    "filesystem-disk-unix.c++",
+    "filesystem-disk-win32.c++",
+    "parse/char.c++",
+]
 
-# cc_import rules cannot have dependencies. In order to properly represent the
-# dependencies we have these two private imports for the static libraries and
-# then corresponding public cc_library rules that properly model the dependencies.
+CAPNP_SRCS = [
+    "c++.capnp.c++",
+    "blob.c++",
+    "arena.c++",
+    "layout.c++",
+    "list.c++",
+    "any.c++",
+    "message.c++",
+    "schema.capnp.c++",
+    "stream.capnp.c++",
+    "serialize.c++",
+    "serialize-packed.c++",
+    "schema.c++",
+    "schema-loader.c++",
+    "dynamic.c++",
+    "stringify.c++",
+]
 
-cc_import(
-    name = "raw-capnp",
-    static_library = "lib/libcapnp.a",
-    visibility = ["//visibility:private"],
-)
+CAPNPC_SRCS = [
+    "compiler/type-id.c++",
+    "compiler/error-reporter.c++",
+    "compiler/lexer.capnp.c++",
+    "compiler/lexer.c++",
+    "compiler/grammar.capnp.c++",
+    "compiler/parser.c++",
+    "compiler/generics.c++",
+    "compiler/node-translator.c++",
+    "compiler/compiler.c++",
+    "schema-parser.c++",
+    "serialize-text.c++",
+]
 
-cc_import(
-    name = "raw-capnpc",
-    visibility = ["//visibility:private"],
-)
+CAPNP_RPC_SRCS = [
+    "serialize-async.c++",
+    "capability.c++",
+    "membrane.c++",
+    "dynamic-capability.c++",
+    "rpc.c++",
+    "rpc.capnp.c++",
+    "rpc-twoparty.c++",
+    "rpc-twoparty.capnp.c++",
+    "persistent.capnp.c++",
+    "ez-rpc.c++",
+]
 
-cc_import(
-    name = "raw-kj",
-    static_library = "lib/libkj.a",
-    visibility = ["//visibility:private"],
-)
+CAPNP_JSON_SRCS = [
+    "compat/json.c++",
+    "compat/json.capnp.c++",
+]
+
+CAPNP_WEBSOCKET_SRCS = [
+    "compat/websocket-rpc.c++",
+]
+
+WARNINGS = [
+    "-Wno-sign-compare",
+    "-Wno-strict-aliasing",
+    "-Wno-maybe-uninitialized",
+]
 
 cc_library(
     name = "kj",
-    hdrs = glob(["include/kj/**/*"]),
-    strip_include_prefix = "include",
-    deps = [":raw-kj"],
+    srcs = ["c++/src/kj/" + src for src in KJ_SRCS],
+    hdrs = glob(["c++/src/kj/**/*.h"]),
+    copts = WARNINGS,
+    strip_include_prefix = "c++/src",
 )
 
 cc_library(
     name = "capnp",
-    hdrs = glob(["include/capnp/**/*"]),
-    strip_include_prefix = "include",
+    srcs = ["c++/src/capnp/" + src for src in CAPNP_SRCS],
+    hdrs = glob(["c++/src/capnp/**/*.h"]),
+    copts = WARNINGS,
+    strip_include_prefix = "c++/src",
+    deps = [":kj"],
+)
+
+cc_library(
+    name = "capnp-rpc",
+    srcs = ["c++/src/capnp/" + src for src in CAPNP_RPC_SRCS],
+    copts = WARNINGS,
+    strip_include_prefix = "c++/src",
     deps = [
+        ":capnp",
         ":kj",
-        ":raw-capnp",
+    ],
+)
+
+cc_library(
+    name = "capnp-json",
+    srcs = ["c++/src/capnp/" + src for src in CAPNP_JSON_SRCS],
+    copts = WARNINGS,
+    strip_include_prefix = "c++/src",
+    deps = [
+        ":capnp",
+        ":kj",
+    ],
+)
+
+cc_library(
+    name = "capnp-websocket",
+    srcs = ["c++/src/capnp/" + src for src in CAPNP_WEBSOCKET_SRCS],
+    copts = WARNINGS,
+    strip_include_prefix = "c++/src",
+    deps = [
+        ":capnp",
+        ":kj",
     ],
 )
 
 cc_library(
     name = "libcapnpc",
-    hdrs = glob(["include/capnp/**/*"]),
-    strip_include_prefix = "include",
+    srcs = ["c++/src/capnp/" + src for src in CAPNPC_SRCS],
+    copts = WARNINGS,
+    strip_include_prefix = "c++/src",
     deps = [
         ":capnp",
-        ":raw-capnpc",
+        ":kj",
     ],
 )
 
-native_binary(
+cc_binary(
     name = "capnpc",
-    src = "tools/capnproto/capnp",
-    out = "capnpc",
-    data = [":capnpc-c++", ":capnpc-capnp"]
+    srcs = [
+        "c++/src/capnp/compiler/capnp.c++",
+        "c++/src/capnp/compiler/module-loader.c++",
+    ],
+    copts = WARNINGS,
+    deps = [
+        ":capnp",
+        ":capnp-json",
+        ":kj",
+        ":libcapnpc",
+    ],
 )
 
-native_binary(
-    name = "capnpc-c++",
-    src = "tools/capnproto/capnpc-c++",
-    out = "capnpc-c++",
-)
-
-native_binary(
+cc_binary(
     name = "capnpc-capnp",
-    src = "tools/capnproto/capnpc-capnp",
-    out = "capnpc-capnp"
+    srcs = ["c++/src/capnp/compiler/capnpc-capnp.c++"],
+    copts = WARNINGS,
+    deps = [
+        ":capnp",
+        ":kj",
+    ],
+)
+
+cc_binary(
+    name = "capnpc-cpp",
+    srcs = ["c++/src/capnp/compiler/capnpc-c++.c++"],
+    copts = WARNINGS,
+    deps = [
+        ":capnp",
+        ":kj",
+    ],
+)
+
+capnp_gen(
+    name = "std#capnp",
+    srcs = glob(
+        ["c++/src/capnp/**/*.capnp"],
+        exclude = [
+            "c++/src/capnp/test.capnp",
+        ],
+    ),
+    includes = ["c++/src"],
+)
+
+cc_library(
+    name = "std",
+    deps = [
+        ":capnp",
+        ":kj",
+    ],
+)
+
+capnp_library(
+    name = "test",
+    srcs = ["c++/src/capnp/test.capnp"],
+    data = [
+        "c++/src/capnp/testdata/binary",
+        "c++/src/capnp/testdata/packed",
+        "c++/src/capnp/testdata/short.txt",
+    ],
+    includes = ["c++/src"],
 )
