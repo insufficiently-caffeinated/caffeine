@@ -19,28 +19,8 @@ def vcpkg_dependencies():
     vcpkg_import(
         name = "vcpkg",
         packages = [
-            "fmt",
             "immer",
         ],
-    )
-
-    vcpkg_library(
-        name = "fmt",
-        build_file_content = """
-cc_import(
-    name = "fmt-raw",
-    static_library = "lib/libfmt.a",
-)
-
-cc_library(
-    name = "fmt",
-    hdrs = glob(["include/**/*"]),
-    deps = [":fmt-raw"],
-    copts = ["-Wno-unknown-pragmas"],
-    strip_include_prefix = "include",
-    visibility = ["//visibility:public"],
-)
-""",
     )
 
     vcpkg_library(
