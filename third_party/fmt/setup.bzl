@@ -7,7 +7,7 @@ def setup_fmt(name):
     # TODO: Bazel support within fmt was added more recently than the latest release.
     #       Once the next release is made we should update to that.
     git_repository(
-        name = "fmt",
+        name = name,
         remote = "https://github.com/fmtlib/fmt",
         patch_cmds = [
             "mv support/bazel/BUILD.bazel BUILD.bazel",
