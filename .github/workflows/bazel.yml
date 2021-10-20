@@ -31,6 +31,7 @@ jobs:
       - name: Reset accessed time of files within the cache
         shell: bash
         run: |
+          mkdir -p ~/.cache/bazel-disk-cache
           find ~/.cache/bazel-disk-cache -type f -exec touch -a -d "10 years ago" {} \;
       - name: Build all caffeine targets
         run: bazel test //test/...
