@@ -25,7 +25,7 @@ def setup_z3(name):
         (
             "windows",
             "https://github.com/Z3Prover/z3/releases/download/z3-{0}/z3-{0}-x64-win.zip",
-            "",
+            "de12fb2160798a464244954236b28da597e79289f33955b170853b8bf0d1f078",
             "z3-{0}-x64-win",
         ),
         (
@@ -37,7 +37,7 @@ def setup_z3(name):
         (
             "darwin",
             "https://github.com/Z3Prover/z3/releases/download/z3-{0}/z3-{0}-x64-osx-10.15.7.zip",
-            "",
+            "a1f6ef3c99456147c4d3f2652dc6bc90951c4ab3fe7741a255eb794f0ab8938c",
             "z3-{0}-x64-osx-10.15.7",
         ),
     ]
