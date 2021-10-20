@@ -11,7 +11,7 @@ namespace serialize {
   std::string serialize_test_case(
       const std::unordered_map<std::string, std::string>& symbols);
   std::unordered_map<std::string, std::string>
-  deserialize_test_case(std::string_view & data);
+  deserialize_test_case(std::string_view& data);
 
 } // namespace serialize
 
