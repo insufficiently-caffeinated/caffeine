@@ -16,14 +16,6 @@ def skylib():
         ],
     )
 
-def googletest():
-    http_archive(
-        name = "googletest",
-        urls = ["https://github.com/google/googletest/archive/e2239ee6043f73722e7aa812a459f54a28552929.zip"],
-        strip_prefix = "googletest-e2239ee6043f73722e7aa812a459f54a28552929",
-        sha256 = "8daa1a71395892f7c1ec5f7cb5b099a02e606be720d62f1a6a98f8f8898ec826",
-    )
-
 def hopscotch_map():
     new_git_repository(
         name = "tsl",
@@ -71,6 +63,5 @@ def caffeine_dependencies():
 
     skylib()
     rules_foreign_cc()
-    googletest()
     hopscotch_map()
     afl()
