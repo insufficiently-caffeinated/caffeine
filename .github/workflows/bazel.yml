@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        mode: [opt, dbg]
+        mode: [opt]
       fail-fast: false
 
     steps:
