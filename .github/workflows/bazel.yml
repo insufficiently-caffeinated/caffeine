@@ -41,5 +41,7 @@ jobs:
       - name: Prune unused build cache files
         shell: bash
         run: |
-          export MINUTES=$(( (($TIME_END - $TIME_START) / 60) + 1 ))
+          MINUTES=$(( (($TIME_END - $TIME_START) / 60) + 1 ))
+          NFILES=$(find ~/.cache/bazel-disk-cache -type f -amin +$MINUTES | wc -l)
+          echo "Deleting $NFILES files"
           find ~/.cache/bazel-disk-cache -type f -amin +$MINUTES | xargs -r -- rm -f
