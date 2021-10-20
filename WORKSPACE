@@ -22,6 +22,8 @@ setup_llvm(name = "llvm-raw")
 setup_googletest(name = "googletest")
 setup_boost(name = "com_github_nelhage_rules_boost")
 
+# Some dependencies require multiple setup stages. These are added here.
+
 load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
 load("@com_github_nelhage_rules_boost//:boost/boost.bzl", "boost_deps")
 load("@llvm-raw//utils/bazel:configure.bzl", "llvm_configure", "llvm_disable_optional_support_deps")
