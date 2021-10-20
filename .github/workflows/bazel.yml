@@ -28,20 +28,15 @@ jobs:
         shell: bash
         run: |
           echo build --compilation_mode=${{ matrix.mode }} >> .bazelrc
-      - name: Logging build start time
+      - name: Reset accessed time of files within the cache
         shell: bash
         run: |
-          echo TIME_START=$(date +%s) >> $GITHUB_ENV
+          find ~/.cache/bazel-disk-cache -type f -exec touch -a -d "10 years ago" {}
       - name: Build all caffeine targets
         run: bazel test //test/...
-      - name: Logging build end time
-        shell: bash
-        run: |
-          echo TIME_END=$(date +%s) >> $GITHUB_ENV
       - name: Prune unused build cache files
         shell: bash
         run: |
-          MINUTES=$(( (($TIME_END - $TIME_START) / 60) + 1 ))
-          NFILES=$(find ~/.cache/bazel-disk-cache -type f -amin +$MINUTES | wc -l)
+          NFILES=$(find ~/.cache/bazel-disk-cache -type f -atime +100 | wc -l)
           echo "Deleting $NFILES files"
-          find ~/.cache/bazel-disk-cache -type f -amin +$MINUTES | xargs -r -- rm -f
+          find ~/.cache/bazel-disk-cache -type f -atime +100 | xargs -r -- rm -f
