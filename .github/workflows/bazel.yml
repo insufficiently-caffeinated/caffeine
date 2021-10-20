@@ -20,15 +20,8 @@ jobs:
       - uses: actions/cache@v2
         with:
           path: |
-            ~/.cache/vcpkg
-          key: bazel-vcpkg-${{ hashFiles('WORKSPACE') }}
-          restore-keys: |
-            bazel-vcpkg-
-      - uses: actions/cache@v2
-        with:
-          path: |
             ~/.cache/bazel-disk-cache
-          key: bazel-${{ matrix.mode }}-${{ env.GITHUB_SHA }}
+          key: bazel-${{ matrix.mode }}-${{ github.sha }}
           restore-keys: |
             bazel-${{ matrix.mode }}
       - name: Configure bazel flags
