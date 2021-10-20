@@ -33,7 +33,7 @@ jobs:
         run: |
           echo TIME_START=$(date +%s) >> $GITHUB_ENV
       - name: Build all caffeine targets
-        run: bazel test //...
+        run: bazel test //test/...
       - name: Logging build end time
         shell: bash
         run: |
