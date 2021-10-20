@@ -17,7 +17,7 @@ namespace serialize {
   using capnp::word;
   using kj::byte;
 
-  std::vector<char> serialize_test_case(
+  std::string serialize_test_case(
       const std::unordered_map<std::string, std::string>& symbols) {
     ::capnp::MallocMessageBuilder message;
     TestCase::Builder testcase = message.initRoot<TestCase>();
@@ -36,15 +36,14 @@ namespace serialize {
     kj::VectorOutputStream stream;
     ::capnp::writePackedMessage(stream, message);
     kj::ArrayPtr<byte> bytes = stream.getArray();
-    std::vector<char> result(bytes.size());
-    std::copy(bytes.begin(), bytes.end(), result.begin());
+    std::string result(bytes.begin(), bytes.end());
     return result;
   }
 
   std::unordered_map<std::string, std::string>
-  deserialize_test_case(std::vector<char>& data) {
-    byte* ptr = reinterpret_cast<byte*>(data.data());
-    kj::ArrayPtr<byte> bufferPtr = kj::arrayPtr(ptr, sizeof(data.size()));
+  deserialize_test_case(std::string_view& data) {
+    const byte* ptr = reinterpret_cast<const byte*>(data.data());
+    kj::ArrayPtr<const byte> bufferPtr = kj::arrayPtr(ptr, sizeof(data.size()));
 
     kj::ArrayInputStream stream(bufferPtr);
     kj::BufferedInputStreamWrapper input(stream);
