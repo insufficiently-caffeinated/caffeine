@@ -11,7 +11,7 @@ using namespace caffeine;
   TEST(ir_value, op) {                                                         \
     llvm::APInt lhs{BITWIDTH, lhs_};                                           \
     llvm::APInt rhs{BITWIDTH, rhs_};                                           \
-    ASSERT_TRUE(Value::op(lhs, rhs) == (lhs vop rhs));                           \
+    ASSERT_TRUE(Value::op(lhs, rhs) == (lhs vop rhs));                         \
   }                                                                            \
   static_assert(true)
 

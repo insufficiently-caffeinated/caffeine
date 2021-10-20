@@ -14,134 +14,7 @@
 
 namespace bp = boost::process;
 
-bool starts_with(std::string_view input, std::string_view test) {
-  return boost::algorithm::starts_with(input, test);
-}
-
-bool ends_with(std::string_view input, std::string_view test) {
-  return boost::algorithm::ends_with(input, test);
-}
-
-struct Record {
-  std::string_view leading;
-  std::unordered_map<std::string_view, std::string> data;
-};
-
-class RecordParser {
-public:
-  RecordParser(std::string_view data) : data(data) {}
-
-  std::optional<Record> parse_record() {
-    auto leading = parse_leading();
-    if (!leading)
-      return std::nullopt;
-
-    if (!parse_char('\n'))
-      return std::nullopt;
-
-    std::unordered_map<std::string_view, std::string> data;
-    while (!this->data.empty()) {
-      if (!parse_match("  "))
-        return std::nullopt;
-
-      auto key = parse_key();
-      if (!key)
-        return std::nullopt;
-
-      if (!parse_match(": "))
-        return std::nullopt;
-
-      auto value = parse_value();
-      if (!value)
-        return std::nullopt;
-
-      data.emplace(std::move(*key), std::move(*value));
-
-      parse_char('\n');
-    }
-
-    return Record{*leading, data};
-  }
-
-private:
-  std::optional<std::string_view> parse_leading() {
-    return parse_until('\n');
-  }
-
-  std::optional<std::string_view> parse_key() {
-    return parse_until(':');
-  }
-
-  std::optional<std::string> parse_value() {
-    std::string value;
-
-    while (true) {
-      auto line = parse_until('\n');
-      if (!line)
-        return std::nullopt;
-
-      value += *line;
-
-      if (line->empty())
-        break;
-
-      if (!parse_char('\n'))
-        return std::nullopt;
-
-      if (line->back() != '\\')
-        break;
-
-      value.pop_back();
-    }
-
-    return value;
-  }
-
-  // Parse until a given character is encountered. Does not
-  // consume the character.
-  std::optional<std::string_view> parse_until(char c) {
-    size_t offset = 0;
-
-    while (true) {
-      if (offset >= data.size())
-        return std::nullopt;
-
-      if (data[offset] == c)
-        break;
-
-      offset += 1;
-    }
-
-    std::string_view result = data.substr(0, offset);
-    data = data.substr(offset);
-    return result;
-  }
-
-  std::optional<char> parse_char(char c) {
-    if (data.empty())
-      return std::nullopt;
-    if (data[0] != c)
-      return std::nullopt;
-    data = data.substr(1);
-    return c;
-  }
-
-  std::optional<std::string_view> parse_match(std::string_view tag) {
-    if (data.size() < tag.size())
-      return std::nullopt;
-
-    auto matched = data.substr(0, tag.size());
-    if (matched != tag)
-      return std::nullopt;
-
-    data = data.substr(tag.size());
-    return matched;
-  }
-
-public:
-  std::string_view data;
-};
-
+namespace {
 std::string execution_root() {
   bp::ipstream pipe_stream;
   bp::child bzl(bp::search_path("bazel"), "info", "execution_root",
@@ -152,6 +25,7 @@ std::string execution_root() {
   bzl.wait();
   return result;
 }
+} // namespace
 
 int main(int argc, char** argv) {
   // To get useful stacktraces in case of error.
