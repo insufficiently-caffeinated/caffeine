@@ -25,7 +25,21 @@ jobs:
           restore-keys: |
             bazel-${{ matrix.mode }}
       - name: Configure bazel flags
+        shell: bash
         run: |
           echo build --compilation_mode=${{ matrix.mode }} >> .bazelrc
+      - name: Logging build start time
+        shell: bash
+        run: |
+          echo TIME_START=$(date +%s) >> $GITHUB_ENV
       - name: Build all caffeine targets
         run: bazel test //...
+      - name: Logging build end time
+        shell: bash
+        run: |
+          echo TIME_END=$(date +%s) >> $GITHUB_ENV
+      - name: Prune unused build cache files
+        shell: bash
+        run: |
+          export MINUTES=$(( (($TIME_END - $TIME_START) / 60) + 1 ))
+          find ~/.cache/bazel-disk-cache -type f -amin +$MINUTES | xargs -r -- rm -f
