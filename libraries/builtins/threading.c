@@ -4,6 +4,7 @@
 // TODO: Improve implementation if we ever support
 // analysis of multithreaded programs
 
+#ifdef __linux__
 // Allegedly this can return EINVAL "If either once_control or init_routine is invalid."
 // ( https://linux.die.net/man/3/pthread_once ) Not sure exactly what "invalid" means here
 // though because the function marks `once_control` and `init_routine` as non-null.
@@ -19,3 +20,16 @@ int pthread_once(pthread_once_t *once_control,
   init_routine();
   return 0;
 }
+#elif defined(__APPLE__)
+int pthread_once(pthread_once_t *once_control, void(*init_routine)(void)) {
+  if (once_control->__sig != _PTHREAD_ONCE_SIG_init) {
+    return 0;
+  }
+
+  once_control->__sig = !_PTHREAD_ONCE_SIG_init;
+  init_routine();
+  return 0;
+}
+#else
+#error "Unsupported target OS"
+#endif

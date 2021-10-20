@@ -10,9 +10,7 @@
 #include "caffeine/ADT/Span.h"
 #include "caffeine/Solver/Solver.h"
 
-extern "C" {
-#include "afl-fuzz.h"
-}
+typedef struct afl_state afl_state_t;
 
 namespace caffeine {
 

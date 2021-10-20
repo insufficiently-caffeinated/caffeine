@@ -4,7 +4,6 @@
 #include <gtest/gtest.h>
 
 using caffeine::z3_to_apfloat;
-using caffeine::z3_to_apint;
 
 class Z3ConversionTests : public ::testing::Test {
 public:

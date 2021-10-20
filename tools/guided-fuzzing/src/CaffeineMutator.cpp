@@ -1,4 +1,4 @@
-#include "include/CaffeineMutator.h"
+#include "CaffeineMutator.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -8,6 +8,7 @@
 #include <llvm/IR/Module.h>
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/Support/CommandLine.h>
+#include <llvm/Support/SourceMgr.h>
 
 #include "caffeine/ADT/Guard.h"
 #include "caffeine/ADT/Span.h"
@@ -18,6 +19,12 @@
 #include "caffeine/Support/Tracing.h"
 
 #include "GuidedExecutionPolicy.h"
+
+// The AFL headers declare some single-letter macros that cause issues
+// within llvm headers. We need to include them after.
+extern "C" {
+#include "afl-fuzz.h"
+}
 
 #define CAFFEINE_FUZZ_TARGET "LLVMFuzzerTestOneInput"
 #define CAFFEINE_FUZZ_START "caffeine.entry_point"

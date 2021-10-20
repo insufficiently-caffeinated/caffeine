@@ -1,0 +1,33 @@
+--- utils/bazel/llvm-project-overlay/clang/BUILD.bazel	2021-09-30 01:05:01.000000000 -0700
++++ utils/bazel/llvm-project-overlay/clang/BUILD.bazel	2021-09-30 01:04:50.000000000 -0700
+@@ -5,6 +5,7 @@
+ load("//llvm:tblgen.bzl", "gentbl")
+ load("//llvm:binary_alias.bzl", "binary_alias")
+ load("//llvm:cc_plugin_library.bzl", "cc_plugin_library")
++load("@//bazel:utils.bzl", "copy_files")
+ 
+ package(
+     default_visibility = ["//visibility:public"],
+@@ -1443,18 +1444,12 @@
+     "lib/Headers/riscv_vector.h",
+ ]
+ 
+-genrule(
++copy_files(
+     name = "builtin_headers_gen",
+     srcs = builtin_headers,
+-    outs = [hdr.replace("lib/Headers/", "staging/include/") for hdr in builtin_headers],
+-    cmd = """
+-       for src in $(SRCS); do
+-         relsrc=$${src/*external\\/llvm-project\\/clang\\/lib\\/Headers\\/}
+-         target=$(@D)/staging/include/$$relsrc
+-         mkdir -p $$(dirname $$target)
+-         cp $$src $$target
+-       done""",
+-    output_to_bindir = 1,
++    prefix = "staging/include",
++    strip_prefix = "lib/Headers",
++    output_to_bindir = True,
+ )
+ 
+ cc_library(

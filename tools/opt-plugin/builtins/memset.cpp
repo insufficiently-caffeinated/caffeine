@@ -1,5 +1,5 @@
 
-#include "builtins.h"
+#include "builtins/builtins.h"
 #include "caffeine/Support/Assert.h"
 #include <fmt/format.h>
 #include <llvm/IR/Constants.h>
@@ -83,6 +83,7 @@ llvm::Function* generateMemset(llvm::Module* m, llvm::Function* decl) {
   auto arg_dst = decl->getArg(0);
   auto arg_val = decl->getArg(1);
   auto arg_len = decl->getArg(2);
+  auto elem_ty = arg_dst->getType()->getPointerElementType();
 
   std::string func_name =
       fmt::format("caffeine.memset.p{}i{}.i{}",
@@ -118,9 +119,10 @@ llvm::Function* generateMemset(llvm::Module* m, llvm::Function* decl) {
 
   // And now the loop body
   body.CreateStore(arg_val, dst);
-  auto next_dst = body.CreateInBoundsGEP(
-      dst, ArrayRef<llvm::Value*>{
-               ConstantInt::get(llvm::Type::getInt32Ty(m->getContext()), 1)});
+  auto next_dst =
+      body.CreateInBoundsGEP(elem_ty, dst,
+                             ArrayRef<llvm::Value*>{ConstantInt::get(
+                                 llvm::Type::getInt32Ty(m->getContext()), 1)});
   auto next_len = body.CreateSub(len, ConstantInt::get(len->getType(), 1));
   body.CreateBr(head_);
 
@@ -153,8 +155,8 @@ llvm::Function* generateMemset(llvm::Module* m, llvm::Function* decl) {
 
   // These are what clang sets on the dst argument to memset. Copying them
   // here since they're probably useful.
-  decl->addAttribute(1, Attribute::WriteOnly);
-  decl->addAttribute(1, Attribute::NoCapture);
+  decl->addParamAttr(0, Attribute::WriteOnly);
+  decl->addParamAttr(0, Attribute::NoCapture);
 
   // Ensure that if we try to link multiple modules with a builtin definition
   // then the linker just picks one of them.

@@ -1,12 +1,14 @@
-extern "C" {
-#include "afl-fuzz.h"
-}
-
 #include <cstdlib>
 #include <string>
 
 #include "CaffeineMutator.h"
 #include "caffeine/ADT/Span.h"
+
+// The AFL headers declare some single-letter macros that cause issues
+// within llvm headers. We need to include them after.
+extern "C" {
+#include "afl-fuzz.h"
+}
 
 unsigned count = 0;
 

@@ -1,0 +1,19 @@
+--- utils/bazel/llvm-project-overlay/llvm/BUILD.bazel	2021-09-11 12:06:43.000000000 -0700
++++ utils/bazel/llvm-project-overlay/llvm/BUILD.bazel	2021-10-02 18:33:57.000000000 -0700
+@@ -8,6 +8,7 @@
+ load(":targets.bzl", "llvm_targets")
+ load(":enum_targets_gen.bzl", "enum_targets_gen")
+ load(":binary_alias.bzl", "binary_alias")
++load("@//third_party/llvm:bonus-targets.bzl", "define_llvm_bonus_targets")
+ 
+ package(
+     default_visibility = ["//visibility:public"],
+@@ -16,6 +17,8 @@
+ 
+ exports_files(["LICENSE.TXT"])
+ 
++define_llvm_bonus_targets()
++
+ # It may be tempting to add compiler flags here, but that should be avoided.
+ # The necessary warnings and other compile flags should be provided by the
+ # toolchain or the `.bazelrc` file. This is just a workaround until we have a

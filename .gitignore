@@ -1,6 +1,10 @@
 
 build/
 .vscode/
+.cache
+
+bazel-*
+compile_commands.json
 
 # Prerequisites
 *.d

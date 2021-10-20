@@ -1,5 +1,5 @@
 
-#include "builtins.h"
+#include "builtins/builtins.h"
 #include "caffeine/Support/Assert.h"
 #include <fmt/format.h>
 #include <fmt/ostream.h>
@@ -114,6 +114,7 @@ llvm::Function* generateMemcpy(llvm::Module* m, llvm::Function* decl) {
   auto arg_dst = decl->getArg(0);
   auto arg_src = decl->getArg(1);
   auto arg_len = decl->getArg(2);
+  auto elem_ty = arg_dst->getType()->getPointerElementType();
 
   std::string func_name = fmt::format(
       "caffeine.memcpy.p{}i{}.p{}i{}.i{}",
@@ -150,8 +151,8 @@ llvm::Function* generateMemcpy(llvm::Module* m, llvm::Function* decl) {
   if (arg_dst->getType()->getPointerAddressSpace() ==
       arg_src->getType()->getPointerAddressSpace()) {
     auto iptr = layout.getIntPtrType(arg_dst->getType());
-    auto off_dst = entry.CreateGEP(res_dst, ArrayRef<Value*>{arg_len});
-    auto off_src = entry.CreateGEP(res_src, ArrayRef<Value*>{arg_len});
+    auto off_dst = entry.CreateGEP(elem_ty, res_dst, ArrayRef<Value*>{arg_len});
+    auto off_src = entry.CreateGEP(elem_ty, res_src, ArrayRef<Value*>{arg_len});
 
     auto dst_int_lo = entry.CreatePtrToInt(res_dst, iptr);
     auto dst_int_hi = entry.CreatePtrToInt(off_dst, iptr);
@@ -175,13 +176,13 @@ llvm::Function* generateMemcpy(llvm::Module* m, llvm::Function* decl) {
   head.CreateCondBr(cond, body_, exit_);
 
   // Next the loop body
-  auto val = body.CreateLoad(src);
+  auto val = body.CreateLoad(elem_ty, src);
   body.CreateStore(val, dst);
 
   auto next_dst = body.CreateInBoundsGEP(
-      dst, ArrayRef<Value*>{ConstantInt::get(arg_len->getType(), 1)});
+      elem_ty, dst, ArrayRef<Value*>{ConstantInt::get(arg_len->getType(), 1)});
   auto next_src = body.CreateInBoundsGEP(
-      src, ArrayRef<Value*>{ConstantInt::get(arg_len->getType(), 1)});
+      elem_ty, src, ArrayRef<Value*>{ConstantInt::get(arg_len->getType(), 1)});
   auto next_len = body.CreateSub(len, ConstantInt::get(arg_len->getType(), 1));
   body.CreateBr(head_);
 
@@ -217,13 +218,13 @@ llvm::Function* generateMemcpy(llvm::Module* m, llvm::Function* decl) {
 
   // These are what clang sets on the dst argument to memcpy. Copying them
   // here since they're probably useful.
-  decl->addAttribute(1, Attribute::WriteOnly);
-  decl->addAttribute(1, Attribute::NoCapture);
+  decl->addParamAttr(0, Attribute::WriteOnly);
+  decl->addParamAttr(0, Attribute::NoCapture);
 
   // These are what clang sets on the src argument to memcpy. Copying them
   // here since they're probably useful.
-  decl->addAttribute(2, Attribute::ReadOnly);
-  decl->addAttribute(2, Attribute::NoCapture);
+  decl->addParamAttr(1, Attribute::ReadOnly);
+  decl->addParamAttr(1, Attribute::NoCapture);
 
   // Ensure that if we try to link multiple modules with a builtin definition
   // then the linker just picks one of them.

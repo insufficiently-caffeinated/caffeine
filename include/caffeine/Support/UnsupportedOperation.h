@@ -3,6 +3,7 @@
 #include "caffeine/Support/Assert.h"
 #include <atomic>
 #include <stdexcept>
+#include <string>
 
 namespace caffeine {
 

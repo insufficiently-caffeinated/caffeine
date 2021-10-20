@@ -689,7 +689,6 @@ namespace t_shmem {
 
 #ifdef __divine__
   static constexpr int size = 16;
-  static void timeout() {}
 #else
   static constexpr int size = 128 * 1024;
 #endif
@@ -698,6 +697,8 @@ namespace t_shmem {
   static void timeout() {
     alarm(5);
   }
+#else
+  static void timeout() {}
 #endif
 
   struct ThreadTest {
