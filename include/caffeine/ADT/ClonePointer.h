@@ -20,26 +20,49 @@ class clone_ptr {
 public:
   virtual ~clone_ptr() = default;
 
+  clone_ptr() = default;
+  clone_ptr(clone_ptr<T>&&) = default;
+  clone_ptr(const clone_ptr<T>& other) : pointer(other.pointer->clone()) {}
   clone_ptr(std::unique_ptr<T>&& p) : pointer(std::move(p)) {}
 
-  clone_ptr(const clone_ptr<T>& other) : pointer(other.pointer->clone()) {}
+  clone_ptr& operator=(clone_ptr<T>&&) = default;
 
-  clone_ptr& operator=(const clone_ptr<T> other) {
+  clone_ptr& operator=(const clone_ptr<T>& other) {
     pointer = other.pointer->clone();
     return *this;
   }
 
-  T* operator->() const {
-    return pointer.get();
+  T* operator->() const noexcept {
+    return get();
+  }
+
+  T& operator*() const noexcept {
+    return *get();
   }
 
   T* get() const {
     return pointer.get();
   }
 
+  bool operator!() const noexcept {
+    return !get();
+  }
+
+  operator bool() const noexcept {
+    return !!get();
+  }
+
+  bool operator==(const clone_ptr<T>& p) const noexcept {
+    return pointer == p.pointer;
+  }
+
+  bool operator!=(const clone_ptr<T>& p) const {
+    return !(*this == p);
+  }
+
   // So that we can cast between different templates
   template <typename U>
-  explicit operator clone_ptr<U>() {
+  explicit operator clone_ptr<U>() const {
     return clone_ptr<U>(
         std::move(static_cast<std::unique_ptr<U>>(this->pointer->clone())));
   }

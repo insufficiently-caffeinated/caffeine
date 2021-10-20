@@ -45,7 +45,7 @@ public:
   }
 
   std::unique_ptr<Basic> clone() override {
-    return std::make_unique<Basic5>();
+    return std::make_unique<Basic5>(*this);
   }
 };
 
@@ -57,7 +57,7 @@ public:
   }
 
   std::unique_ptr<Basic> clone() override {
-    return std::make_unique<Basic8>();
+    return std::make_unique<Basic8>(*this);
   }
 };
 
