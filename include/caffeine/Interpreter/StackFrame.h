@@ -8,8 +8,8 @@
 #include <vector>
 
 #include "caffeine/IR/Operation.h"
-#include "caffeine/Interpreter/Value.h"
 #include "caffeine/Memory/MemHeap.h"
+#include "caffeine/Model/Value.h"
 
 namespace caffeine {
 

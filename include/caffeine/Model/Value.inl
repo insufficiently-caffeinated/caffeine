@@ -1,7 +1,7 @@
 #ifndef CAFFEINE_INTERP_VALUE_INL
 #define CAFFEINE_INTERP_VALUE_INL
 
-#include "caffeine/Interpreter/Value.h"
+#include "caffeine/Model/Value.h"
 
 #include <tuple>
 
