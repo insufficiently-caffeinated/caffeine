@@ -1,2 +1,4 @@
-
-exports_files(["run_command.sh"])
+exports_files([
+    "run_command.sh",
+    "pwd.sh",
+])
