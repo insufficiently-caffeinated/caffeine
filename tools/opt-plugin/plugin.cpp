@@ -25,6 +25,15 @@ void RegisterPlugins(llvm::PassBuilder& PB) {
         FPM.addPass(GenTestMainPass());
         return true;
       });
+
+  PB.registerPipelineParsingCallback(
+      [](StringRef Name, ModulePassManager& FPM,
+         ArrayRef<PassBuilder::PipelineElement>) {
+        if (Name != StripFunctionsPass::Name)
+          return false;
+        FPM.addPass(StripFunctionsPass());
+        return true;
+      });
 }
 } // namespace
 

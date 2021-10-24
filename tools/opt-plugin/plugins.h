@@ -26,6 +26,14 @@ public:
   bool runOnModule(llvm::Module& m);
 };
 
+class StripFunctionsPass : public llvm::PassInfoMixin<StripFunctionsPass> {
+public:
+  static constexpr const char* Name = "caffeine-strip-functions";
+
+  llvm::PreservedAnalyses run(llvm::Module& M, llvm::ModuleAnalysisManager&);
+  bool runOnModule(llvm::Module& m);
+};
+
 template <typename T>
 class LegacyModulePassAdapter : public llvm::ModulePass {
 private:
