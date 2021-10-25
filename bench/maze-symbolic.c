@@ -54,4 +54,5 @@ int main(int argc, char* argv[]) {
   }
 
   caffeine_assume(false);
+  return 0;
 }
