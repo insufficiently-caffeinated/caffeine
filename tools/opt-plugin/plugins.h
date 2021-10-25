@@ -1,36 +1,51 @@
 #pragma once
 
+#include "llvm/IR/PassManager.h"
 #include <llvm/IR/PassManager.h>
 #include <llvm/Pass.h>
 #include <llvm/Passes/PassPlugin.h>
 
 namespace caffeine {
 
+template <typename Pass>
+class CaffeinePassMixin : public llvm::PassInfoMixin<Pass> {
+public:
+  llvm::PreservedAnalyses run(llvm::Module& M, llvm::ModuleAnalysisManager&) {
+    return static_cast<Pass*>(this)->runOnModule(M)
+               ? llvm::PreservedAnalyses::all()
+               : llvm::PreservedAnalyses::none();
+  }
+};
+
 /**
  * Pass to generate code for various LLVM builtins that we handle outside the
  * main caffeine binary.
  */
-class GenBuiltinsPass : public llvm::PassInfoMixin<GenBuiltinsPass> {
+class GenBuiltinsPass : public CaffeinePassMixin<GenBuiltinsPass> {
 public:
   static constexpr const char* Name = "caffeine-gen-builtins";
 
-  llvm::PreservedAnalyses run(llvm::Module& M, llvm::ModuleAnalysisManager&);
   bool runOnModule(llvm::Module& m);
 };
 
-class GenTestMainPass : public llvm::PassInfoMixin<GenTestMainPass> {
+class GenTestMainPass : public CaffeinePassMixin<GenTestMainPass> {
 public:
   static constexpr const char* Name = "caffeine-gen-test-main";
 
-  llvm::PreservedAnalyses run(llvm::Module& M, llvm::ModuleAnalysisManager&);
   bool runOnModule(llvm::Module& m);
 };
 
-class StripFunctionsPass : public llvm::PassInfoMixin<StripFunctionsPass> {
+class StripFunctionsPass : public CaffeinePassMixin<StripFunctionsPass> {
 public:
   static constexpr const char* Name = "caffeine-strip-functions";
 
-  llvm::PreservedAnalyses run(llvm::Module& M, llvm::ModuleAnalysisManager&);
+  bool runOnModule(llvm::Module& m);
+};
+
+class SetSourcePass : public CaffeinePassMixin<SetSourcePass> {
+public:
+  static constexpr const char* Name = "caffeine-override-source-filename";
+
   bool runOnModule(llvm::Module& m);
 };
 

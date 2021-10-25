@@ -25,10 +25,6 @@ bool StripFunctionsPass::runOnModule(llvm::Module& M) {
   return preserved;
 }
 
-PreservedAnalyses StripFunctionsPass::run(Module& M, ModuleAnalysisManager&) {
-  return runOnModule(M) ? PreservedAnalyses::all() : PreservedAnalyses::none();
-}
-
 template <>
 char LegacyModulePassAdapter<StripFunctionsPass>::ID = 0;
 
