@@ -13,7 +13,20 @@ filegroup(
 cc_toolchain_suite(
     name = "bitcode",
     toolchains = {
-        "k8": ":bitcode-toolchain",
+        # All CPUs supported by bazel (from the source code)
+        cpu: ":bitcode-toolchain"
+        for cpu in [
+            "darwin",
+            "freebsd",
+            "x64_windows",
+            "piii",
+            "k8",
+            "ppc",
+            "arm",
+            "aarch64",
+            "s390x",
+            "unknown",
+        ]
     },
     visibility = ["//visibility:public"],
 )
