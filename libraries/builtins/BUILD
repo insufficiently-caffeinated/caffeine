@@ -10,7 +10,7 @@ bitcode_library_standalone(
     strip_include_prefix = "/libraries/builtins",
     deps = [
         "//interface:caffeine",
-        "@musl//:libc",
+        "@musl//:libc-hdrs",
     ],
 )
 
