@@ -7,6 +7,9 @@ bitcode_library_standalone(
         exclude = ["threading.c"],
     ),
     hdrs = glob(["*.h"]),
+    defines = [
+        "CAFFEINE_BAZEL",
+    ],
     strip_include_prefix = "/libraries/builtins",
     deps = [
         "//interface:caffeine",
