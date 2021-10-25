@@ -8,7 +8,7 @@ namespace caffeine {
 cl::opt<std::string> newSourceFilename{
     "new-source-filename", cl::desc("Override the name of the module")};
 
-bool SetSourcePass::runOnModule(llvm::Module &M) {
+bool SetSourcePass::runOnModule(llvm::Module& M) {
   if (newSourceFilename != "")
     return true;
 
@@ -16,7 +16,7 @@ bool SetSourcePass::runOnModule(llvm::Module &M) {
   return true;
 }
 
-template<>
+template <>
 char LegacyModulePassAdapter<SetSourcePass>::ID = 0;
 
 namespace {
@@ -27,4 +27,4 @@ namespace {
         /* isAnalysis = */ false);
 }
 
-}
+} // namespace caffeine
