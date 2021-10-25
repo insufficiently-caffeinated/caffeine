@@ -46,6 +46,8 @@ def _bitcode_toolchain_config(ctx):
                                 "-g",
                                 "-nostdinc",
                                 "-ffreestanding",
+                                "-target",
+                                "x86_64-unknown-linux-gnu",
                             ],
                         ),
                     ],

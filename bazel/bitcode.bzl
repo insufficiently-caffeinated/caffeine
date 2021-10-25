@@ -56,11 +56,21 @@ BITCODE_LIB_ATTRS = {
         executable = True,
         cfg = "exec",
     ),
-    "_lib_ext": attr.string(default = ".bc"),
+    "_llvm_opt": attr.label(
+        executable = True,
+        cfg = "exec",
+        default = "@llvm//llvm:opt",
+    ),
+    "_opt_plugin": attr.label(
+        executable = True,
+        cfg = "exec",
+        default = "@caffeine//tools/opt-plugin",
+    ),
     "_cc_toolchain": attr.label(
         default = Label("@caffeine_toolchain//:bitcode"),
         providers = [cc_common.CcToolchainInfo],
     ),
+    "_rule": attr.string(default = "bitcode_library_standalone"),
 }
 
 BITCODE_BIN_ATTRS = update(
@@ -70,23 +80,13 @@ BITCODE_BIN_ATTRS = update(
             default = ["-O3"],
             doc = "Options to pass to the final opt invocation",
         ),
-        "_lib_ext": attr.string(default = ".lib.bc"),
         "_bin_ext": attr.string(default = ".bc"),
         "_llvm_dis": attr.label(
             default = "@llvm//llvm:llvm-dis",
             executable = True,
             cfg = "exec",
         ),
-        "_llvm_opt": attr.label(
-            executable = True,
-            cfg = "exec",
-            default = "@llvm//llvm:opt",
-        ),
-        "_opt_plugin": attr.label(
-            executable = True,
-            cfg = "exec",
-            default = "@caffeine//tools/opt-plugin",
-        ),
+        "_rule": attr.string(default = "bitcode_binary"),
     },
 )
 
@@ -142,21 +142,45 @@ def _bitcode_library_common(ctx):
         bcobjects.append(bc)
 
     if len(bcobjects) != 0:
-        bcfile = ctx.actions.declare_file(ctx.label.name + ctx.attr._lib_ext)
+        linked = ctx.actions.declare_file("_bitcode/{}/lib-linked.bc".format(ctx.label.name))
         inputs = depset(bcobjects)
 
         args = ctx.actions.args()
         args.add_all(inputs)
         args.add_all(ctx.attr.linkopts)
         args.add("-o")
-        args.add(bcfile)
+        args.add(linked)
 
         ctx.actions.run(
-            outputs = [bcfile],
+            outputs = [linked],
             inputs = inputs,
             executable = ctx.executable._llvm_link,
             arguments = [args],
             mnemonic = "BitcodeLink",
+        )
+
+        if ctx.attr._rule.startswith("bitcode_library"):
+            bcfile = ctx.actions.declare_file(ctx.label.name + ".bc")
+        else:
+            bcfile = ctx.actions.declare_file("_bitcode/{}/lib-opt.bc".format(ctx.label.name))
+
+        args = ctx.actions.args()
+        args.add_all(["--load", ctx.executable._opt_plugin.path])
+        args.add_all([
+            "--caffeine-override-source-filename",
+            "--new-source-filename",
+            "{}".format(ctx.label),
+        ])
+        args.add(linked)
+        args.add("-o")
+        args.add(bcfile)
+
+        ctx.actions.run(
+            outputs = [bcfile],
+            inputs = [ctx.executable._opt_plugin, linked],
+            executable = ctx.executable._llvm_opt,
+            arguments = [args],
+            mnemonic = "BitcodeLibraryOpt",
         )
 
         bitcode = depset(
@@ -185,7 +209,10 @@ bitcode_library_standalone = rule(
     implementation = _bitcode_library_common,
     attrs = update(
         BITCODE_LIB_ATTRS,
-        {"_builtin_deps": attr.label_list(providers = [BitcodeCcInfo])},
+        {
+            "_builtin_deps": attr.label_list(providers = [BitcodeCcInfo]),
+            "_rule": attr.string(default = "bitcode_library"),
+        },
     ),
     fragments = ["cpp"],
 )
@@ -194,7 +221,7 @@ def _bitcode_binary(ctx):
     result = _bitcode_library_common(ctx)
     files = result[0].bitcode
 
-    linked = ctx.actions.declare_file("{}.linked.bc".format(ctx.label.name))
+    linked = ctx.actions.declare_file("_bitcode/{}/bin-linked.bc".format(ctx.label.name))
     args = ctx.actions.args()
     args.add_all(files)
     args.add_all(ctx.attr.linkopts)
@@ -209,7 +236,7 @@ def _bitcode_binary(ctx):
         mnemonic = "BitcodeLink",
     )
 
-    output = ctx.actions.declare_file(ctx.label.name + ctx.attr._bin_ext)
+    output = ctx.actions.declare_file(ctx.label.name + ".bc")
     args = ctx.actions.args()
     args.add_all(["--load", ctx.executable._opt_plugin.path])
     args.add_all(ctx.attr.opts)
