@@ -33,13 +33,3 @@ alias(
     name = "gtest",
     actual = "@googletest//:gtest",
 )
-
-alias(
-    name = "gtest_main",
-    actual = "@googletest//:gtest_main",
-)
-
-alias(
-    name = "clang",
-    actual = "@llvm//clang",
-)
