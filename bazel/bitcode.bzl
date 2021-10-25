@@ -167,6 +167,7 @@ def _bitcode_library_common(ctx):
         args = ctx.actions.args()
         args.add_all(["--load", ctx.executable._opt_plugin.path])
         args.add_all([
+            "--mtriple=x86_64-unknown-linux-gnu",
             "--caffeine-override-source-filename",
             "--new-source-filename",
             "{}".format(ctx.label),

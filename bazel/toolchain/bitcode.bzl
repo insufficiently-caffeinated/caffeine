@@ -68,9 +68,9 @@ def _bitcode_toolchain_config(ctx):
         compiler = "clang",
         abi_version = "unknown",
         abi_libc_version = "unknown",
-        cxx_builtin_include_directories = [
-            "/usr/include",
-        ],
+        # cxx_builtin_include_directories = [
+        #     "/usr/include",
+        # ],
     )
 
 bitcode_toolchain_config = rule(
