@@ -24,17 +24,24 @@ jobs:
           key: bazel-${{ matrix.mode }}-${{ github.sha }}
           restore-keys: |
             bazel-${{ matrix.mode }}
+      
       - name: Configure bazel flags
         shell: bash
         run: |
           echo build --compilation_mode=${{ matrix.mode }} >> .bazelrc
+      
       - name: Reset accessed time of files within the cache
         shell: bash
         run: |
           mkdir -p ~/.cache/bazel-disk-cache
           find ~/.cache/bazel-disk-cache -type f -exec touch -a -d "10 years ago" {} \;
+      
       - name: Build all caffeine targets
-        run: bazel test //test/...
+        run: bazel build //... -//third_party/... //third_party/divine/...
+
+      - name: Run all tests
+        run: bazel test //test/unit
+
       - name: Prune unused build cache files
         shell: bash
         run: |
