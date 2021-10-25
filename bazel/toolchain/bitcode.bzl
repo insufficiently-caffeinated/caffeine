@@ -41,7 +41,12 @@ def _bitcode_toolchain_config(ctx):
                     ],
                     flag_groups = [
                         flag_group(
-                            flags = ["-emit-llvm", "-g", "-nostdinc"],
+                            flags = [
+                                "-emit-llvm",
+                                "-g",
+                                "-nostdinc",
+                                "-ffreestanding",
+                            ],
                         ),
                     ],
                 ),

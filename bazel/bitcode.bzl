@@ -141,46 +141,38 @@ def _bitcode_library_common(ctx):
 
         bcobjects.append(bc)
 
-    if len(bcobjects) == 0:
-        anydeps = False
-        for dep in deps:
-            if len(dep[BitcodeCcInfo].bitcode.to_list()) != 0:
-                anydeps = True
-                break
+    if len(bcobjects) != 0:
+        bcfile = ctx.actions.declare_file(ctx.label.name + ctx.attr._lib_ext)
+        inputs = depset(bcobjects)
 
-        if not anydeps:
-            return [BitcodeCcInfo(
-                cc_info = CcInfo(compilation_context = comp_ctx),
-                bitcode = depset([]),
-            )]
+        args = ctx.actions.args()
+        args.add_all(inputs)
+        args.add_all(ctx.attr.linkopts)
+        args.add("-o")
+        args.add(bcfile)
 
-    bitcode = ctx.actions.declare_file(ctx.label.name + ctx.attr._lib_ext)
+        ctx.actions.run(
+            outputs = [bcfile],
+            inputs = inputs,
+            executable = ctx.executable._llvm_link,
+            arguments = [args],
+            mnemonic = "BitcodeLink",
+        )
 
-    inputs = depset(
-        bcobjects,
-        transitive = [dep[BitcodeCcInfo].bitcode for dep in deps],
-    )
-
-    args = ctx.actions.args()
-    args.add_all(inputs)
-    args.add_all(ctx.attr.linkopts)
-    args.add("-o")
-    args.add(bitcode)
-
-    ctx.actions.run(
-        outputs = [bitcode],
-        inputs = inputs,
-        executable = ctx.executable._llvm_link,
-        arguments = [args],
-        mnemonic = "BitcodeLink",
-    )
+        bitcode = depset(
+            [bcfile],
+            transitive = [dep[BitcodeCcInfo].bitcode for dep in deps],
+        )
+    else:
+        bitcode = depset([], transitive = [dep[BitcodeCcInfo].bitcode for dep in deps])
+        bcfile = None
 
     return [
         BitcodeCcInfo(
             cc_info = CcInfo(compilation_context = comp_ctx),
-            bitcode = depset([bitcode]),
+            bitcode = bitcode,
         ),
-        DefaultInfo(files = depset([bitcode])),
+        DefaultInfo(files = depset([bcfile] if bitcode else [])),
     ]
 
 bitcode_library = rule(
@@ -200,7 +192,22 @@ bitcode_library_standalone = rule(
 
 def _bitcode_binary(ctx):
     result = _bitcode_library_common(ctx)
-    files = result[0].bitcode.to_list()
+    files = result[0].bitcode
+
+    linked = ctx.actions.declare_file("{}.linked.bc".format(ctx.label.name))
+    args = ctx.actions.args()
+    args.add_all(files)
+    args.add_all(ctx.attr.linkopts)
+    args.add("-o")
+    args.add(linked)
+
+    ctx.actions.run(
+        inputs = files,
+        outputs = [linked],
+        executable = ctx.executable._llvm_link,
+        arguments = [args],
+        mnemonic = "BitcodeLink",
+    )
 
     output = ctx.actions.declare_file(ctx.label.name + ctx.attr._bin_ext)
     args = ctx.actions.args()
@@ -213,11 +220,12 @@ def _bitcode_binary(ctx):
         "main",
         "--globaldce",
     ])
-    args.add_all(files)
-    args.add_all(["-o", output])
+    args.add(linked)
+    args.add("-o")
+    args.add(output)
 
     ctx.actions.run(
-        inputs = files + [ctx.executable._opt_plugin],
+        inputs = [ctx.executable._opt_plugin, linked],
         outputs = [output],
         executable = ctx.executable._llvm_opt,
         arguments = [args],
@@ -267,6 +275,45 @@ bitcode_import = rule(
             mandatory = True,
         ),
         "bitcode": attr.label(allow_files = [".bc", ".ll"]),
+    },
+)
+
+def _bitcode_optimize(ctx):
+    output = ctx.actions.declare_file(ctx.label.name + ".bc")
+
+    args = ctx.actions.args()
+    args.add_all(ctx.files.plugins, uniquify = True, before_each = "--load")
+    args.add_all(ctx.attr.args)
+    args.add(ctx.file.src)
+    args.add("-o")
+    args.add(output)
+
+    ctx.actions.run(
+        outputs = [output],
+        inputs = ctx.files.plugins + ctx.files.data + [ctx.file.src],
+        executable = ctx.executable._opt,
+        arguments = [args],
+        mnemonic = "BitcodeLink",
+        progress_message = "Optimizing %{input}",
+    )
+
+    return [DefaultInfo(files = depset([output]))]
+
+bitcode_optimize = rule(
+    implementation = _bitcode_optimize,
+    attrs = {
+        "src": attr.label(allow_single_file = [".bc", ".ll"]),
+        "plugins": attr.label_list(
+            default = ["@caffeine//tools/opt-plugin"],
+            cfg = "exec",
+        ),
+        "args": attr.string_list(),
+        "data": attr.label_list(allow_files = True),
+        "_opt": attr.label(
+            default = "@llvm//llvm:opt",
+            executable = True,
+            cfg = "exec",
+        ),
     },
 )
 
