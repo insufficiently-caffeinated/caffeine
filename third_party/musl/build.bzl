@@ -28,7 +28,7 @@ bitcode_optimize(
     args = [
         "--caffeine-strip-functions",
         "--globaldce",
-        "--mtriple=x86_64-pc-linux-gnu",
+        "--mtriple=x86_64-unknown-linux-gnu",
     ] + [
         arg
         for func in STRIP_FUNCTIONS
