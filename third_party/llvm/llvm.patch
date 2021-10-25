@@ -1,5 +1,5 @@
---- utils/bazel/llvm-project-overlay/llvm/BUILD.bazel	2021-09-11 12:06:43.000000000 -0700
-+++ utils/bazel/llvm-project-overlay/llvm/BUILD.bazel	2021-10-02 18:33:57.000000000 -0700
+--- llvm-project-overlay/llvm/BUILD.bazel	2021-09-11 12:06:43.000000000 -0700
++++ llvm-project-overlay/llvm/BUILD.bazel	2021-10-02 18:33:57.000000000 -0700
 @@ -8,6 +8,7 @@
  load(":targets.bzl", "llvm_targets")
  load(":enum_targets_gen.bzl", "enum_targets_gen")

@@ -17,3 +17,11 @@ def define_llvm_bonus_targets():
         ]
     )
 
+# buildifier: disable=unnamed-macro
+def define_clang_bonus_targets():
+    native.cc_library(
+        name = "builtin-headers",
+        hdrs = native.glob(["lib/Headers/**/*.h"]),
+        includes = ["lib/Headers"],
+    )
+

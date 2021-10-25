@@ -1,10 +1,10 @@
---- utils/bazel/llvm-project-overlay/clang/BUILD.bazel	2021-09-30 01:05:01.000000000 -0700
-+++ utils/bazel/llvm-project-overlay/clang/BUILD.bazel	2021-09-30 01:04:50.000000000 -0700
+--- llvm-project-overlay/clang/BUILD.bazel	2021-09-30 01:05:01.000000000 -0700
++++ llvm-project-overlay/clang/BUILD.bazel	2021-09-30 01:04:50.000000000 -0700
 @@ -5,6 +5,7 @@
  load("//llvm:tblgen.bzl", "gentbl")
  load("//llvm:binary_alias.bzl", "binary_alias")
  load("//llvm:cc_plugin_library.bzl", "cc_plugin_library")
-+load("@//bazel:utils.bzl", "copy_files")
++load("@//bazel:utils.bzl", "copy_files"); load("@//third_party/llvm:bonus-targets.bzl", "define_clang_bonus_targets"); define_clang_bonus_targets()
  
  package(
      default_visibility = ["//visibility:public"],
