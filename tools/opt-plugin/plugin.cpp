@@ -1,5 +1,5 @@
 #include "plugins.h"
-#include "llvm/_virtual_includes/headers/llvm/ADT/ArrayRef.h"
+#include <llvm/ADT/ArrayRef.h>
 #include <llvm/Passes/PassBuilder.h>
 
 using namespace llvm;
