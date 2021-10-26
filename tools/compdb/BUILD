@@ -4,6 +4,7 @@ cc_binary(
         "*.cpp",
         "*.h",
     ]),
+    visibility = ["//visibility:public"],
     deps = [
         "@boost//:algorithm",
         "@boost//:json",

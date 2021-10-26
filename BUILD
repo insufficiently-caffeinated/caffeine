@@ -1,8 +1,11 @@
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag")
-load("@//bazel:configure.bzl", "configure_file")
-load("@//bazel:warnings.bzl", "WARNING_FLAGS")
+load("//bazel:configure.bzl", "configure_file")
+load("//bazel:warnings.bzl", "WARNING_FLAGS")
+load("//bazel:clang-format.bzl", "check_format", "do_format")
 
 package(default_visibility = ["//visibility:public"])
+
+exports_files([".clang-format"])
 
 ####################################################################
 # Configure Flags
@@ -93,4 +96,29 @@ cc_library(
         "@llvm//llvm:Core",
         "@llvm//llvm:Passes",
     ],
+)
+
+# All relevant targets within caffeine. This is used to discover
+# source files that are used within these targets so that they
+# can be formatted.
+#
+# Note that new dependencies of these targets will be implicitly
+# added but other leaf targets will not.
+CAFFEINE_TARGETS = [
+    ":caffeine",
+    "//test/unit:unit-lib",
+    "//tools/caffeine",
+    "//tools/compdb",
+    "//tools/guided-fuzzing",
+    "//tools/opt-plugin",
+]
+
+check_format(
+    name = "check-format",
+    deps = CAFFEINE_TARGETS,
+)
+
+do_format(
+    name = "format",
+    deps = CAFFEINE_TARGETS,
 )

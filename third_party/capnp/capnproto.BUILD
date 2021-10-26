@@ -84,18 +84,10 @@ CAPNP_WEBSOCKET_SRCS = [
     "compat/websocket-rpc.c++",
 ]
 
-WARNINGS = [
-    "-Wno-sign-compare",
-    "-Wno-strict-aliasing",
-    "-Wno-maybe-uninitialized",
-    "-Wno-unknown-warning-option",
-]
-
 cc_library(
     name = "kj",
     srcs = ["c++/src/kj/" + src for src in KJ_SRCS],
     hdrs = glob(["c++/src/kj/**/*.h"]),
-    copts = WARNINGS,
     strip_include_prefix = "c++/src",
 )
 
@@ -103,7 +95,6 @@ cc_library(
     name = "capnp",
     srcs = ["c++/src/capnp/" + src for src in CAPNP_SRCS],
     hdrs = glob(["c++/src/capnp/**/*.h"]),
-    copts = WARNINGS,
     strip_include_prefix = "c++/src",
     deps = [":kj"],
 )
@@ -111,7 +102,6 @@ cc_library(
 cc_library(
     name = "capnp-rpc",
     srcs = ["c++/src/capnp/" + src for src in CAPNP_RPC_SRCS],
-    copts = WARNINGS,
     strip_include_prefix = "c++/src",
     deps = [
         ":capnp",
@@ -122,7 +112,6 @@ cc_library(
 cc_library(
     name = "capnp-json",
     srcs = ["c++/src/capnp/" + src for src in CAPNP_JSON_SRCS],
-    copts = WARNINGS,
     strip_include_prefix = "c++/src",
     deps = [
         ":capnp",
@@ -133,7 +122,6 @@ cc_library(
 cc_library(
     name = "capnp-websocket",
     srcs = ["c++/src/capnp/" + src for src in CAPNP_WEBSOCKET_SRCS],
-    copts = WARNINGS,
     strip_include_prefix = "c++/src",
     deps = [
         ":capnp",
@@ -144,7 +132,6 @@ cc_library(
 cc_library(
     name = "libcapnpc",
     srcs = ["c++/src/capnp/" + src for src in CAPNPC_SRCS],
-    copts = WARNINGS,
     strip_include_prefix = "c++/src",
     deps = [
         ":capnp",
@@ -158,7 +145,6 @@ cc_binary(
         "c++/src/capnp/compiler/capnp.c++",
         "c++/src/capnp/compiler/module-loader.c++",
     ],
-    copts = WARNINGS,
     deps = [
         ":capnp",
         ":capnp-json",
@@ -170,7 +156,6 @@ cc_binary(
 cc_binary(
     name = "capnpc-capnp",
     srcs = ["c++/src/capnp/compiler/capnpc-capnp.c++"],
-    copts = WARNINGS,
     deps = [
         ":capnp",
         ":kj",
@@ -180,7 +165,6 @@ cc_binary(
 cc_binary(
     name = "capnpc-cpp",
     srcs = ["c++/src/capnp/compiler/capnpc-c++.c++"],
-    copts = WARNINGS,
     deps = [
         ":capnp",
         ":kj",
