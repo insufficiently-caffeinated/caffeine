@@ -25,15 +25,3 @@ def setup_llvm(name):
         sha256 = "f09a0d1e4c2c0ec9622964c095105985229ba382e583703dd29cd98593009018",
         strip_prefix = "llvm-project-{}/utils/bazel".format(LLVM_COMMIT)
     )
-
-    # native.new_local_repository(
-    #     name = name,
-    #     build_file_content = "",
-    #     path = "/home/swlynch/projects/llvm-project",
-    #     workspace_file_content = "",
-    # )
-
-    # native.local_repository(
-    #     name = "llvm-bazel",
-    #     path = "/home/swlynch/projects/llvm-project/utils/bazel",
-    # )
