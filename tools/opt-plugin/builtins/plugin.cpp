@@ -38,10 +38,6 @@ bool GenBuiltinsPass::runOnModule(Module& module) {
   return updated;
 }
 
-PreservedAnalyses GenBuiltinsPass::run(Module& M, ModuleAnalysisManager&) {
-  return runOnModule(M) ? PreservedAnalyses::none() : PreservedAnalyses::all();
-}
-
 template <>
 char LegacyModulePassAdapter<GenBuiltinsPass>::ID = 0;
 

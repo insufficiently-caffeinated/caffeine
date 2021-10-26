@@ -99,10 +99,6 @@ bool GenTestMainPass::runOnModule(Module& module) {
   return true;
 }
 
-PreservedAnalyses GenTestMainPass::run(Module& M, ModuleAnalysisManager&) {
-  return runOnModule(M) ? PreservedAnalyses::none() : PreservedAnalyses::all();
-}
-
 template <>
 char LegacyModulePassAdapter<GenTestMainPass>::ID = 0;
 
