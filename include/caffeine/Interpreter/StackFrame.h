@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "caffeine/ADT/ClonePointer.h"
 #include "caffeine/IR/Operation.h"
 #include "caffeine/Memory/MemHeap.h"
 #include "caffeine/Model/Value.h"
@@ -24,67 +25,74 @@ public:
       : alloc(allocid), heap(heap) {}
 };
 
+class ExternalStackFrame {
+  uint64_t frame_id;
+  std::optional<LLVMValue> result_ = std::nullopt;
+  std::optional<LLVMValue> resume_value_ = std::nullopt;
+
+public:
+  virtual std::unique_ptr<ExternalStackFrame> clone() const;
+  virtual ~ExternalStackFrame() = default;
+  ExternalStackFrame(uint64_t frame_id,
+                     std::optional<LLVMValue> result_ = std::nullopt,
+                     std::optional<LLVMValue> resume_value_ = std::nullopt);
+
+protected:
+  void set_result(std::optional<LLVMValue> result,
+                  std::optional<LLVMValue> resume_value);
+  friend class StackFrame;
+};
+
+class IRStackFrame {
+public:
+  uint64_t frame_id;
+
+  // Allocations within the current frame.
+  std::vector<StackAllocation> allocations;
+
+  std::unordered_map<llvm::Value*, LLVMValue> variables;
+  /**
+   * Iterators used by Interpreter::execute
+   */
+  llvm::BasicBlock* current_block = nullptr;
+  llvm::BasicBlock* prev_block = nullptr;
+  llvm::BasicBlock::iterator current;
+
+  /**
+   * Change the instruction pointer to point at the start of the provided
+   * block and update the previous block accordingly.
+   *
+   * Use this when implementing a jump instruction.
+   */
+  void jump_to(llvm::BasicBlock* block);
+
+private:
+  IRStackFrame(llvm::Function* function, uint64_t frame_id);
+
+public:
+  /**
+   * Insert a new value into the current stack frame. If that value
+   * is already in the current stack frame then it overwrites it.
+   */
+  void insert(llvm::Value* value, const OpRef& expr);
+  void insert(llvm::Value* value, const LLVMValue& exprs);
+
+private:
+  void set_result(std::optional<LLVMValue> result,
+                  std::optional<LLVMValue> resume_value);
+  friend class StackFrame;
+};
+
 class StackFrame {
 private:
-  class StackFrame_ {
-  public:
-    uint64_t frame_id;
-
-    // Allocations within the current frame.
-    std::vector<StackAllocation> allocations;
-
-    std::unordered_map<llvm::Value*, LLVMValue> variables;
-    /**
-     * Iterators used by Interpreter::execute
-     */
-    llvm::BasicBlock* current_block = nullptr;
-    llvm::BasicBlock* prev_block = nullptr;
-    llvm::BasicBlock::iterator current;
-
-    /**
-     * Change the instruction pointer to point at the start of the provided
-     * block and update the previous block accordingly.
-     *
-     * Use this when implementing a jump instruction.
-     */
-    void jump_to(llvm::BasicBlock* block);
-
-    StackFrame_(llvm::Function* function, uint64_t frame_id);
-
-    /**
-     * Insert a new value into the current stack frame. If that value
-     * is already in the current stack frame then it overwrites it.
-     */
-    void insert(llvm::Value* value, const OpRef& expr);
-    void insert(llvm::Value* value, const LLVMValue& exprs);
-
-  private:
-    void set_result(std::optional<LLVMValue> result,
-                    std::optional<LLVMValue> resume_value);
-    friend class StackFrame;
-  };
-
-  class ExternalStackFrame_ {
-    std::optional<LLVMValue> result_ = std::nullopt;
-    std::optional<LLVMValue> resume_value_ = std::nullopt;
-
-  public:
-    uint64_t frame_id;
-    ExternalStackFrame_(uint64_t frame_id);
-
-  private:
-    void set_result(std::optional<LLVMValue> result,
-                    std::optional<LLVMValue> resume_value);
-    friend class StackFrame;
-  };
-
   enum {
     Uninitialized = 0,
     Regular = 1,
     External = 2,
   };
 
-  std::variant<std::monostate, StackFrame_, ExternalStackFrame_> value_;
+  std::variant<std::monostate, IRStackFrame, clone_ptr<ExternalStackFrame>>
+      value_;
 
 public:
   uint64_t frame_id;
@@ -92,7 +100,7 @@ public:
   StackFrame();
 
   static StackFrame RegularFrame(llvm::Function* function);
-  static StackFrame ExternalFrame();
+  static clone_ptr<ExternalStackFrame> ExternalFrame();
 
   /**
    * Set the result of the current instruction in the stack frame.
@@ -125,11 +133,11 @@ public:
   void set_result(std::optional<LLVMValue> result,
                   std::optional<LLVMValue> resume_value);
 
-  const StackFrame_& get_regular() const;
-  const ExternalStackFrame_& get_external() const;
+  const IRStackFrame& get_regular() const;
+  const clone_ptr<ExternalStackFrame>& get_external() const;
 
-  StackFrame_& get_regular();
-  ExternalStackFrame_& get_external();
+  IRStackFrame& get_regular();
+  clone_ptr<ExternalStackFrame>& get_external();
 
   bool is_regular() const;
   bool is_external() const;
