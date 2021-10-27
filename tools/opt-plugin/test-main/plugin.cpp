@@ -1,6 +1,5 @@
 #include "plugins.h"
 #include <fmt/format.h>
-#include <llvm/Bitcode/BitcodeWriter.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/IRBuilder.h>
@@ -75,7 +74,7 @@ namespace {
       auto alloca = builder.CreateAlloca(arg.getType());
       auto casted = builder.CreateBitCast(alloca, i8_p);
       builder.CreateCall(make_symbolic, ArrayRef<Value*>{casted, size, idptr});
-      auto loaded = builder.CreateLoad(alloca);
+      auto loaded = builder.CreateLoad(arg.getType(), alloca);
 
       args.push_back(loaded);
 
@@ -98,10 +97,6 @@ bool GenTestMainPass::runOnModule(Module& module) {
 
   generate(&module, test);
   return true;
-}
-
-PreservedAnalyses GenTestMainPass::run(Module& M, ModuleAnalysisManager&) {
-  return runOnModule(M) ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }
 
 template <>

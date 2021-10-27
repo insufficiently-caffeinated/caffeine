@@ -1,0 +1,50 @@
+name: bazel
+
+on:
+  # Don't build CI for stackbot internal branches, they are already built for PRs
+  push:
+    branches-ignore:
+      - stackbot/**
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        mode: [opt, fastbuild]
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache/bazel-disk-cache
+          key: bazel-${{ matrix.mode }}-${{ github.sha }}
+          restore-keys: |
+            bazel-${{ matrix.mode }}
+      
+      - name: Configure bazel flags
+        shell: bash
+        run: |
+          echo build --compilation_mode=${{ matrix.mode }} >> .bazelrc
+      
+      - name: Reset accessed time of files within the cache
+        shell: bash
+        run: |
+          mkdir -p ~/.cache/bazel-disk-cache
+          find ~/.cache/bazel-disk-cache -type f -exec touch -a -d "10 years ago" {} \;
+      
+      - name: Build all caffeine targets
+        run: bazel build -- //... -//third_party/... //third_party/divine/...
+
+      - name: Run all tests
+        run: bazel test -- //test/unit
+
+      - name: Prune unused build cache files
+        shell: bash
+        run: |
+          NFILES=$(find ~/.cache/bazel-disk-cache -type f -atime +100 | wc -l)
+          echo "Deleting $NFILES files"
+          find ~/.cache/bazel-disk-cache -type f -atime +100 | xargs -r -- rm -f

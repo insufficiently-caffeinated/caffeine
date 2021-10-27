@@ -1,7 +1,7 @@
 #include "caffeine/Memory/MemHeap.h"
 #include "caffeine/IR/Assertion.h"
 #include "caffeine/Interpreter/Context.h"
-#include "caffeine/Interpreter/Value.h"
+#include "caffeine/Model/Value.h"
 #include "caffeine/Solver/Solver.h"
 #include "caffeine/Support/Assert.h"
 #include "caffeine/Support/UnsupportedOperation.h"
@@ -129,8 +129,8 @@ LLVMValue Allocation::read(const OpRef& offset, llvm::Type* type,
     llvm::Type* elem_ty = type->getArrayElementType();
 
     for (size_t i = 0; i < type->getArrayNumElements(); ++i) {
-      OpRef newoffset =
-          BinaryOp::CreateAdd(offset, i * layout.getTypeAllocSize(elem_ty));
+      OpRef newoffset = BinaryOp::CreateAdd(
+          offset, i * layout.getTypeAllocSize(elem_ty).getFixedSize());
 
       members.push_back(read(newoffset, elem_ty, layout));
     }
@@ -162,8 +162,8 @@ LLVMValue Allocation::read(const OpRef& offset, llvm::Type* type,
     llvm::Type* elem_ty = fixedVectorTy->getElementType();
 
     for (size_t i = 0; i < fixedVectorTy->getNumElements(); ++i) {
-      OpRef newoffset =
-          BinaryOp::CreateAdd(offset, i * layout.getTypeAllocSize(elem_ty));
+      OpRef newoffset = BinaryOp::CreateAdd(
+          offset, i * layout.getTypeAllocSize(elem_ty).getFixedSize());
 
       members.push_back(read(newoffset, elem_ty, layout).scalar());
     }
@@ -234,7 +234,8 @@ void Allocation::write(const OpRef& offset, llvm::Type* type,
     }
 
     for (size_t i = 0; i < value.num_elements(); ++i) {
-      write(BinaryOp::CreateAdd(offset, i * layout.getTypeAllocSize(type)),
+      write(BinaryOp::CreateAdd(
+                offset, i * layout.getTypeAllocSize(type).getFixedSize()),
             value.element(i), heapmgr, layout);
     }
   } else if (type->isArrayTy()) {
@@ -242,7 +243,8 @@ void Allocation::write(const OpRef& offset, llvm::Type* type,
     llvm::Type* elem_ty = type->getArrayElementType();
 
     for (size_t i = 0; i < value.num_members(); ++i) {
-      write(BinaryOp::CreateAdd(offset, i * layout.getTypeAllocSize(elem_ty)),
+      write(BinaryOp::CreateAdd(
+                offset, i * layout.getTypeAllocSize(elem_ty).getFixedSize()),
             elem_ty, value.member(i), heapmgr, layout);
     }
   } else if (type->isStructTy()) {

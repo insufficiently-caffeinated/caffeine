@@ -123,6 +123,6 @@ std::ostream& operator<<(std::ostream& os, const LLVMValue& value);
 
 } // namespace caffeine
 
-#include "caffeine/Interpreter/Value.inl"
+#include "caffeine/Model/Value.inl"
 
 #endif

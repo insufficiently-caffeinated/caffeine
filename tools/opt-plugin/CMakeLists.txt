@@ -26,6 +26,14 @@ add_sources(test-main
   plugin.cpp
 )
 
+add_sources(strip
+  plugin.cpp
+)
+
+add_sources(set-source
+  plugin.cpp
+)
+
 add_library(caffeine-opt-plugin SHARED ${sources})
 
 target_include_directories(caffeine-opt-plugin SYSTEM

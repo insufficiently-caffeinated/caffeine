@@ -8,7 +8,8 @@
 #include "caffeine/Support/Signal.h"
 #include "caffeine/Support/Tracing.h"
 
-#include "divine/Passes/CppLsda.h"
+#include <cstdlib>
+#include <divine/Passes/CppLsda.h>
 
 #include <llvm/IR/Module.h>
 #include <llvm/IR/PassManager.h>
@@ -102,8 +103,6 @@ int main(int argc, char** argv) {
   InitLLVM X(argc, argv);
   caffeine::RegisterSignalHandlers();
 
-  exit_on_err.setBanner(std::string(argv[0]) + ":");
-
   LLVMContext ctx;
   ctx.setDiagnosticHandler(
       std::make_unique<caffeine::CaffeineDiagnosticHandler>(), true);
@@ -124,16 +123,14 @@ int main(int argc, char** argv) {
 
   auto module = loadFile(argv[0], input_filename.getValue(), ctx);
   if (!module) {
-    errs() << argv[0] << ": ";
-    WithColor::error() << " loading file '" << input_filename.getValue()
+    WithColor::error() << "loading file '" << input_filename.getValue()
                        << "'\n";
     return 2;
   }
 
   llvm::ModulePassManager mpm;
   llvm::ModuleAnalysisManager mam;
-  divine::AddCppLSDA lsdaPass;
-  mpm.addPass(lsdaPass);
+  mpm.addPass(divine::AddCppLSDA());
 
   llvm::PassBuilder passBuilder;
   passBuilder.registerModuleAnalyses(mam);
@@ -141,8 +138,7 @@ int main(int argc, char** argv) {
 
   auto function = module->getFunction(entry.getValue());
   if (!function) {
-    errs() << argv[0] << ": ";
-    WithColor::error() << " no method '" << entry.getValue() << "'\n";
+    WithColor::error() << "no method '" << entry.getValue() << "'\n";
     return 2;
   }
 

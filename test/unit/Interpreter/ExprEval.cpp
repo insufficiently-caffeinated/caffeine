@@ -20,7 +20,11 @@ public:
   void SetUp() override {
     solver = std::make_shared<Z3Solver>();
 
+#ifndef CAFFEINE_BAZEL
     module_with_global = loadFile("Interpreter/ir-with-global.ll");
+#else
+    module_with_global = loadFile("test/unit/Interpreter/ir-with-global.ll");
+#endif
 
     ASSERT_NE(module_with_global, nullptr);
   }

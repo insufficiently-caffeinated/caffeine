@@ -6,6 +6,7 @@
 #include "caffeine/Support/Tracing.h"
 
 #include "Z3Solver.h"
+#include "z3_fpa.h"
 
 #include <climits>
 #include <fmt/format.h>
@@ -37,18 +38,14 @@ llvm::APFloat z3_to_apfloat(const z3::expr& expr) {
 
   llvm::APInt mantissa;
   uint64_t s = 0;
-  if (Z3_fpa_get_numeral_significand_uint64(expr.ctx(), expr, &s)) {
+  if (Z3_fpa_is_numeral_nan(expr.ctx(), expr)) {
+    mantissa = llvm::APInt::getAllOnesValue(sbits);
+  } else if (Z3_fpa_get_numeral_significand_uint64(expr.ctx(), expr, &s)) {
     mantissa = llvm::APInt(sbits, s);
   } else {
-    auto str = Z3_fpa_get_numeral_significand_string(expr.ctx(), expr);
+    llvm::StringRef str =
+        Z3_fpa_get_numeral_significand_string(expr.ctx(), expr);
     mantissa = llvm::APInt(sbits, str, 10);
-  }
-
-  // Z3 doesn't exactly model NaNs well. Need to avoid the case where we get a
-  // NaN but Z3 tells us that the significand is 0 since that actually
-  // represents an infinity.
-  if (Z3_fpa_is_numeral_nan(expr.ctx(), expr) && mantissa == 0) {
-    mantissa = llvm::APInt(sbits, 1);
   }
 
   // Remove leading bit from mantissa to get it in IEEE-754 representation
@@ -141,7 +138,8 @@ Value Z3Model::lookup(const Symbol& symbol, std::optional<size_t> size) const {
 
     for (size_t i = 0; i < *size; ++i) {
       auto value = model.eval(
-          z3::select(it->second, model.ctx().bv_val(i, domain.bv_size())),
+          z3::select(it->second,
+                     model.ctx().bv_val((uint64_t)i, domain.bv_size())),
           true);
       data.push_back((char)(uint8_t)value.get_numeral_uint64());
     }

@@ -1,5 +1,5 @@
 
-#include "builtins.h"
+#include "builtins/builtins.h"
 #include "caffeine/Support/Assert.h"
 #include "plugins.h"
 #include <fmt/format.h>
@@ -36,10 +36,6 @@ bool GenBuiltinsPass::runOnModule(Module& module) {
   }
 
   return updated;
-}
-
-PreservedAnalyses GenBuiltinsPass::run(Module& M, ModuleAnalysisManager&) {
-  return runOnModule(M) ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }
 
 template <>

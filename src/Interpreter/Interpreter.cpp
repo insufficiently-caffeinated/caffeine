@@ -4,7 +4,7 @@
 #include "caffeine/Interpreter/StackFrame.h"
 #include "caffeine/Interpreter/Store.h"
 #include "caffeine/Interpreter/TransformBuilder.h"
-#include "caffeine/Interpreter/Value.h"
+#include "caffeine/Model/Value.h"
 #include "caffeine/Support/Assert.h"
 #include "caffeine/Support/LLVMFmt.h"
 #include "caffeine/Support/Tracing.h"
@@ -53,6 +53,7 @@ Interpreter::extern_functions() {
           funcs.insert({name, func});
         };
 
+        reg("setjmp", as_nonmember_v<&Interpreter::visitSetjmp>);
         reg("_setjmp", as_nonmember_v<&Interpreter::visitSetjmp>);
         reg("longjmp", as_nonmember_v<&Interpreter::visitLongjmp>);
 

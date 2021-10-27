@@ -1,4 +1,4 @@
-#include "builtins.h"
+#include "builtins/builtins.h"
 #include "caffeine/Support/Assert.h"
 #include <fmt/format.h>
 #include <llvm/IR/Constants.h>
@@ -39,6 +39,7 @@ static llvm::BasicBlock*
 buildForward(llvm::Module* m, llvm::Function* decl, llvm::BasicBlock* entry,
              llvm::BasicBlock* exit, llvm::Value* res_dst, llvm::Value* res_src,
              llvm::Value* arg_len) {
+  auto elem_ty = res_src->getType()->getPointerElementType();
 
   auto head = IRBuilder{BasicBlock::Create(m->getContext(), "fwd_head", decl)};
   auto body = IRBuilder{BasicBlock::Create(m->getContext(), "fwd_body", decl)};
@@ -51,13 +52,13 @@ buildForward(llvm::Module* m, llvm::Function* decl, llvm::BasicBlock* entry,
   head.CreateCondBr(cond, body.GetInsertBlock(), exit);
 
   // Next the loop body
-  auto val = body.CreateLoad(src);
+  auto val = body.CreateLoad(elem_ty, src);
   body.CreateStore(val, dst);
 
   auto next_dst = body.CreateInBoundsGEP(
-      dst, ArrayRef<Value*>{ConstantInt::get(arg_len->getType(), 1)});
+      elem_ty, dst, ArrayRef<Value*>{ConstantInt::get(arg_len->getType(), 1)});
   auto next_src = body.CreateInBoundsGEP(
-      src, ArrayRef<Value*>{ConstantInt::get(arg_len->getType(), 1)});
+      elem_ty, src, ArrayRef<Value*>{ConstantInt::get(arg_len->getType(), 1)});
   auto next_len = body.CreateSub(len, ConstantInt::get(arg_len->getType(), 1));
   body.CreateBr(head.GetInsertBlock());
 
@@ -76,6 +77,7 @@ static llvm::BasicBlock*
 buildBackwards(llvm::Module* m, llvm::Function* decl, llvm::BasicBlock* entry,
                llvm::BasicBlock* exit, llvm::Value* res_dst,
                llvm::Value* res_src, llvm::Value* arg_len) {
+  auto elem_ty = res_src->getType()->getPointerElementType();
 
   auto head = IRBuilder{BasicBlock::Create(m->getContext(), "bwd_head", decl)};
   auto body = IRBuilder{BasicBlock::Create(m->getContext(), "bwd_body", decl)};
@@ -87,9 +89,11 @@ buildBackwards(llvm::Module* m, llvm::Function* decl, llvm::BasicBlock* entry,
 
   // And now the loop body
   auto next_len = body.CreateSub(len, ConstantInt::get(arg_len->getType(), 1));
-  auto dst = body.CreateInBoundsGEP(res_dst, ArrayRef<Value*>{next_len});
-  auto src = body.CreateInBoundsGEP(res_src, ArrayRef<Value*>{next_len});
-  auto val = body.CreateLoad(src);
+  auto dst =
+      body.CreateInBoundsGEP(elem_ty, res_dst, ArrayRef<Value*>{next_len});
+  auto src =
+      body.CreateInBoundsGEP(elem_ty, res_src, ArrayRef<Value*>{next_len});
+  auto val = body.CreateLoad(elem_ty, src);
   body.CreateStore(val, dst);
   body.CreateBr(head.GetInsertBlock());
 
@@ -195,13 +199,13 @@ llvm::Function* generateMemmove(llvm::Module* m, llvm::Function* decl) {
 
   // These are what clang sets on the dst argument to memcpy. Copying them
   // here since they're probably useful.
-  decl->addAttribute(1, Attribute::WriteOnly);
-  decl->addAttribute(1, Attribute::NoCapture);
+  decl->addParamAttr(0, Attribute::WriteOnly);
+  decl->addParamAttr(0, Attribute::NoCapture);
 
   // These are what clang sets on the src argument to memcpy. Copying them
   // here since they're probably useful.
-  decl->addAttribute(2, Attribute::ReadOnly);
-  decl->addAttribute(2, Attribute::NoCapture);
+  decl->addParamAttr(1, Attribute::ReadOnly);
+  decl->addParamAttr(1, Attribute::NoCapture);
 
   // Ensure that if we try to link multiple modules with a builtin definition
   // then the linker just picks one of them.

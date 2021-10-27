@@ -11,7 +11,7 @@ using namespace caffeine;
   TEST(ir_value, op) {                                                         \
     llvm::APInt lhs{BITWIDTH, lhs_};                                           \
     llvm::APInt rhs{BITWIDTH, rhs_};                                           \
-    ASSERT_EQ(Value::op(lhs, rhs), lhs vop rhs);                               \
+    ASSERT_TRUE(Value::op(lhs, rhs) == (lhs vop rhs));                         \
   }                                                                            \
   static_assert(true)
 
@@ -32,7 +32,7 @@ TEST(ir_value, bitcast_roundtrip) {
   Value b =
       Value::bitcast(Value::bitcast(a, Type::type_of<double>()), a.type());
 
-  ASSERT_EQ(a, b);
+  ASSERT_TRUE(a == b);
 }
 
 TEST(ir_value, div_by_0_does_not_fault) {

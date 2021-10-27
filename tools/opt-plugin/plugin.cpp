@@ -1,30 +1,29 @@
 #include "plugins.h"
+#include <llvm/ADT/ArrayRef.h>
 #include <llvm/Passes/PassBuilder.h>
 
 using namespace llvm;
+using namespace caffeine;
 
 namespace {
 
+template <typename Pass>
+void registerPass(llvm::PassBuilder& PB) {
+  PB.registerPipelineParsingCallback(
+      [](StringRef Name, ModulePassManager& FPM,
+         ArrayRef<PassBuilder::PipelineElement>) {
+        if (Name != Pass::Name)
+          return false;
+        FPM.addPass(Pass());
+        return true;
+      });
+}
+
 void RegisterPlugins(llvm::PassBuilder& PB) {
-  using namespace caffeine;
-
-  PB.registerPipelineParsingCallback(
-      [](StringRef Name, ModulePassManager& FPM,
-         ArrayRef<PassBuilder::PipelineElement>) {
-        if (Name != GenBuiltinsPass::Name)
-          return false;
-        FPM.addPass(GenBuiltinsPass());
-        return true;
-      });
-
-  PB.registerPipelineParsingCallback(
-      [](StringRef Name, ModulePassManager& FPM,
-         ArrayRef<PassBuilder::PipelineElement>) {
-        if (Name != GenTestMainPass::Name)
-          return false;
-        FPM.addPass(GenTestMainPass());
-        return true;
-      });
+  registerPass<GenBuiltinsPass>(PB);
+  registerPass<GenTestMainPass>(PB);
+  registerPass<StripFunctionsPass>(PB);
+  registerPass<SetSourcePass>(PB);
 }
 } // namespace
 
