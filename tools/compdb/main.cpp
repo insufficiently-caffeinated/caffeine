@@ -7,7 +7,6 @@
 #include <boost/process.hpp>
 #include <filesystem>
 #include <iostream>
-#include <llvm/Support/InitLLVM.h>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -32,9 +31,6 @@ std::string execution_root() {
 
 int main(int argc, char** argv) {
   // To get useful stacktraces in case of error.
-  int fake_argc = 1;
-  llvm::InitLLVM llvm(fake_argc, argv);
-
   auto cwd = execution_root();
   auto exec_dir = std::filesystem::current_path();
 
