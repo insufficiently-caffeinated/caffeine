@@ -31,7 +31,7 @@ class ExternalStackFrame {
   std::optional<LLVMValue> resume_value_ = std::nullopt;
 
 public:
-  virtual std::unique_ptr<ExternalStackFrame> clone() const;
+  virtual std::unique_ptr<ExternalStackFrame> clone() const = 0;
   virtual ~ExternalStackFrame() = default;
   ExternalStackFrame(uint64_t frame_id,
                      std::optional<LLVMValue> result_ = std::nullopt,

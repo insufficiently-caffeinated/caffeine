@@ -67,10 +67,6 @@ ExternalStackFrame::ExternalStackFrame(uint64_t frame_id,
                                        std::optional<LLVMValue> resume_value_)
     : frame_id{frame_id}, result_{result_}, resume_value_{resume_value_} {}
 
-std::unique_ptr<ExternalStackFrame> ExternalStackFrame::clone() const {
-  return std::make_unique<ExternalStackFrame>(frame_id, result_, resume_value_);
-}
-
 StackFrame::StackFrame() : frame_id(next_frame_id++) {}
 
 StackFrame StackFrame::RegularFrame(llvm::Function* function) {
