@@ -2,6 +2,7 @@
 // Command to generate a compile_commands.json using bazel aquery
 
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/replace.hpp>
 #include <boost/json.hpp>
 #include <boost/process.hpp>
 #include <filesystem>
@@ -17,7 +18,9 @@ namespace bp = boost::process;
 namespace {
 std::string execution_root() {
   bp::ipstream pipe_stream;
-  bp::child bzl(bp::search_path("bazel"), "info", "execution_root",
+  // bp::child bzl(bp::search_path("bazel"), "info", "execution_root",
+  //               bp::std_out > pipe_stream);
+  bp::child bzl(bp::search_path("bazel"), "info", "output_base",
                 bp::std_out > pipe_stream);
 
   std::string result;
@@ -33,6 +36,7 @@ int main(int argc, char** argv) {
   llvm::InitLLVM llvm(fake_argc, argv);
 
   auto cwd = execution_root();
+  auto exec_dir = std::filesystem::current_path();
 
   std::vector<std::string_view> args{"aquery", "--output=jsonproto"};
   for (int i = 1; i < argc; ++i)
@@ -62,10 +66,10 @@ int main(int argc, char** argv) {
       boost::algorithm::replace_all(transformed, std::string_view("'"),
                                     std::string_view("\\'"));
 
+      boost::replace_all(transformed, "-iquote", "-I");
+
       args.push_back(std::move(transformed));
     }
-
-    std::string cmd = "'" + boost::algorithm::join(args, "' '") + "'";
 
     auto it = std::find(args.begin(), args.end(), "-c");
     if (it == args.end())
@@ -74,10 +78,21 @@ int main(int argc, char** argv) {
     ++it;
     std::string file = *it;
 
+    if (std::filesystem::exists(file)) {
+      std::string full_file = exec_dir / file;
+
+      for (auto& arg : args)
+        boost::replace_all(arg, file, full_file);
+
+      file = full_file;
+    }
+
+    std::string cmd = boost::algorithm::join(args, " ");
+
     boost::json::object object;
-    object.emplace("directory", boost::json::string_view(cwd));
     object.emplace("file", boost::json::string_view(file));
     object.emplace("command", boost::json::string_view(cmd));
+    object.emplace("directory", boost::json::string_view(cwd));
 
     if (first) {
       first = false;
