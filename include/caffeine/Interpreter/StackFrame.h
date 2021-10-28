@@ -26,11 +26,11 @@ public:
 };
 
 class ExternalStackFrame {
+public:
   uint64_t frame_id;
   std::optional<LLVMValue> result_ = std::nullopt;
   std::optional<LLVMValue> resume_value_ = std::nullopt;
 
-public:
   virtual std::unique_ptr<ExternalStackFrame> clone() const = 0;
   virtual ~ExternalStackFrame() = default;
   ExternalStackFrame(uint64_t frame_id,
@@ -100,7 +100,6 @@ public:
   StackFrame();
 
   static StackFrame RegularFrame(llvm::Function* function);
-  static clone_ptr<ExternalStackFrame> ExternalFrame();
 
   /**
    * Set the result of the current instruction in the stack frame.

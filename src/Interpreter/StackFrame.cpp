@@ -75,10 +75,6 @@ StackFrame StackFrame::RegularFrame(llvm::Function* function) {
   return frame;
 }
 
-clone_ptr<ExternalStackFrame> StackFrame::ExternalFrame() {
-  return make_clone<ExternalStackFrame>(next_frame_id++);
-}
-
 const IRStackFrame& StackFrame::get_regular() const {
   return std::get<Regular>(value_);
 }
