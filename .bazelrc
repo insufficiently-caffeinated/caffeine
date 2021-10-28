@@ -1,5 +1,15 @@
 
-build --action_env=BAZEL_CXXOPTS=-std=c++17
-build --disk_cache=~/.cache/bazel-disk-cache
+common --action_env=BAZEL_CXXOPTS=-std=c++17
+common --disk_cache=~/.cache/bazel-disk-cache
+build --cxxopt='-std=c++17'
+
+# Avoid warning messages in other workspaces since they are not helpful
 build --output_filter=^//
+
+# Don't show test output unless the test fails
 test --test_output=errors
+
+# Workspace status command for use within RBE
+# build --workspace_status_command=$(pwd)/workspace_status.sh
+
+try-import %workspace%/local.bazelrc

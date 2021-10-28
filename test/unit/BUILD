@@ -1,14 +1,26 @@
 load("//bazel:warnings.bzl", "WARNING_FLAGS")
 
-cc_test(
-    name = "unit",
-    srcs = glob(["**/*.cpp"]),
+cc_library(
+    name = "unit-lib",
+    srcs = glob(
+        ["**/*.cpp"],
+        exclude = ["main.cpp"],
+    ),
+    copts = WARNING_FLAGS,
     data = ["Interpreter/ir-with-global.ll"],
-    linkstatic = True,
+    local_defines = ["CAFFEINE_BAZEL"],
+    visibility = ["//:__pkg__"],
     deps = [
         "//:caffeine",
         "//third_party:gtest",
     ],
-    local_defines = ["CAFFEINE_BAZEL"],
-    copts = WARNING_FLAGS
+)
+
+cc_test(
+    name = "unit",
+    srcs = ["main.cpp"],
+    linkstatic = True,
+    deps = [
+        ":unit-lib",
+    ],
 )
