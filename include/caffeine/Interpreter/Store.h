@@ -8,6 +8,7 @@
 #include <mutex>
 #include <optional>
 #include <queue>
+#include <vector>
 
 namespace caffeine {
 
@@ -80,20 +81,27 @@ private:
   std::queue<Context> queue;
 };
 
-/**
- * @brief A context store which drops all added contexts.
- *
- * This is mainly meant to be used for testing and would not be useful for
- * actually running the interpreter.
- */
-class NullContextStore : public ExecutionContextStore {
+class RandomizedContextStore : public ExecutionContextStore {
 public:
-  NullContextStore() = default;
+  explicit RandomizedContextStore(size_t num_readers);
 
-  std::optional<Context> next_context() override final;
+  std::optional<Context> next_context() override;
 
-  void add_context(Context&& ctx) override final;
-  void add_context_multi(Span<Context> ctxs) override final;
+  void add_context(Context&& ctx) override;
+
+  void shutdown();
+
+  Context removeRandom();
+
+  std::mutex mutex;
+  std::mutex vecMutex;
+  std::condition_variable condvar;
+
+  size_t blocked = 0;
+  size_t num_readers;
+
+  bool done = false;
+  std::vector<Context> contexts;
 };
 
 } // namespace caffeine
