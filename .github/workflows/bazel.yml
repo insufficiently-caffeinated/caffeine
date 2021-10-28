@@ -57,6 +57,7 @@ jobs:
           echo build --bes_backend=grpcs://cloud.buildbuddy.io                >> local.bazelrc
           echo build --remote_cache=grpcs://cloud.buildbuddy.io               >> local.bazelrc
           echo build --remote_timeout=3600                                    >> local.bazelrc
+          echo ${{ github.event_name }}
 
       - name: Configure buildbuddy API token
         if: github.event_name != 'pull_request'
