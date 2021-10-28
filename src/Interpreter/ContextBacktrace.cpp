@@ -34,8 +34,7 @@ void Context::print_backtrace(std::ostream& OS) const {
   std::string output;
   size_t index = 0;
 
-  for (const auto& frame_ : boost::adaptors::reverse(stack)) {
-    const auto& frame = frame_.get_regular();
+  for (const StackFrame& frame : boost::adaptors::reverse(stack)) {
     llvm::Instruction* current = nullptr;
     if (!frame.current_block || frame.current == frame.current_block->end()) {
       // We don't have a valid iterator.

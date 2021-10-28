@@ -11,11 +11,11 @@ namespace caffeine {
 
 std::atomic<uint64_t> StackFrame::next_frame_id{0};
 
-IRStackFrame::IRStackFrame(llvm::Function* function, uint64_t frame_id)
-    : frame_id{frame_id}, current_block(&function->getEntryBlock()),
-      prev_block(nullptr), current(current_block->begin()) {}
+StackFrame::StackFrame(llvm::Function* function)
+    : current_block(&function->getEntryBlock()), prev_block(nullptr),
+      current(current_block->begin()), frame_id(next_frame_id++) {}
 
-void IRStackFrame::jump_to(llvm::BasicBlock* block) {
+void StackFrame::jump_to(llvm::BasicBlock* block) {
   CAFFEINE_ASSERT(block, "Cannot jump to null block");
 
   prev_block = current_block;
@@ -23,15 +23,15 @@ void IRStackFrame::jump_to(llvm::BasicBlock* block) {
   current = block->begin();
 }
 
-void IRStackFrame::insert(llvm::Value* value, const OpRef& expr) {
+void StackFrame::insert(llvm::Value* value, const OpRef& expr) {
   insert(value, LLVMValue{expr});
 }
-void IRStackFrame::insert(llvm::Value* value, const LLVMValue& exprs) {
+void StackFrame::insert(llvm::Value* value, const LLVMValue& exprs) {
   variables.insert_or_assign(value, exprs);
 }
 
-void IRStackFrame::set_result(std::optional<LLVMValue> result,
-                              std::optional<LLVMValue> resume_value) {
+void StackFrame::set_result(std::optional<LLVMValue> result,
+                            std::optional<LLVMValue> resume_value) {
   CAFFEINE_ASSERT(!result.has_value() || !resume_value.has_value());
 
   auto& caller = *std::prev(current);
@@ -49,6 +49,8 @@ void IRStackFrame::set_result(std::optional<LLVMValue> result,
   }
 }
 
+StackFrame::StackFrame() : frame_id(next_frame_id++) {}
+
 void ExternalStackFrame::set_result(std::optional<LLVMValue> result,
                                     std::optional<LLVMValue> resume_value) {
   // It would be pretty weird if both of these were set at the same
@@ -61,61 +63,5 @@ void ExternalStackFrame::set_result(std::optional<LLVMValue> result,
   if (resume_value.has_value())
     resume_value_ = resume_value;
 };
-
-ExternalStackFrame::ExternalStackFrame(uint64_t frame_id,
-                                       std::optional<LLVMValue> result_,
-                                       std::optional<LLVMValue> resume_value_)
-    : frame_id{frame_id}, result_{result_}, resume_value_{resume_value_} {}
-
-std::unique_ptr<ExternalStackFrame> ExternalStackFrame::clone() const {
-  return std::make_unique<ExternalStackFrame>(frame_id, result_, resume_value_);
-}
-
-StackFrame::StackFrame() : frame_id(next_frame_id++) {}
-
-StackFrame StackFrame::RegularFrame(llvm::Function* function) {
-  StackFrame frame;
-  frame.value_ = IRStackFrame(function, frame.frame_id);
-  return frame;
-}
-
-clone_ptr<ExternalStackFrame> StackFrame::ExternalFrame() {
-  return make_clone<ExternalStackFrame>(next_frame_id++);
-}
-
-const IRStackFrame& StackFrame::get_regular() const {
-  return std::get<Regular>(value_);
-}
-
-const clone_ptr<ExternalStackFrame>& StackFrame::get_external() const {
-  return std::get<External>(value_);
-}
-
-IRStackFrame& StackFrame::get_regular() {
-  return std::get<Regular>(value_);
-}
-
-clone_ptr<ExternalStackFrame>& StackFrame::get_external() {
-  return std::get<External>(value_);
-}
-
-void StackFrame::set_result(std::optional<LLVMValue> result,
-                            std::optional<LLVMValue> resume_value) {
-  if (is_regular()) {
-    get_regular().set_result(result, resume_value);
-  } else if (is_external()) {
-    get_external()->set_result(result, resume_value);
-  } else {
-    CAFFEINE_UNREACHABLE("Malformed StackFrame detected");
-  }
-};
-
-bool StackFrame::is_regular() const {
-  return value_.index() == Regular;
-}
-
-bool StackFrame::is_external() const {
-  return value_.index() == External;
-}
 
 } // namespace caffeine

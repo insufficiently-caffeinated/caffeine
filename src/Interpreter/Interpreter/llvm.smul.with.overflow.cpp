@@ -16,8 +16,8 @@ Interpreter::visitSMulWithOverflowIntrinsic(llvm::IntrinsicInst& inst) {
       },
       a, b);
 
-  ctx->stack_top().get_regular().insert(
-      &inst, LLVMValue(llvm::ArrayRef<LLVMValue>{vals, overflow}));
+  ctx->stack_top().insert(&inst,
+                          LLVMValue(llvm::ArrayRef<LLVMValue>{vals, overflow}));
 
   return ExecutionResult::Continue;
 }
