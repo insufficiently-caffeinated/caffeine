@@ -91,11 +91,13 @@ public:
 
   void shutdown();
 
+private:
   Context removeRandom();
 
   std::mutex mutex;
-  std::mutex vecMutex;
   std::condition_variable condvar;
+
+  std::random_device dev;
 
   size_t blocked = 0;
   size_t num_readers;
