@@ -9,6 +9,5 @@ cc_binary(
         "@boost//:algorithm",
         "@boost//:json",
         "@boost//:process",
-        "@llvm//llvm:Support",
     ],
 )
