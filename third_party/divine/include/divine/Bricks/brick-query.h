@@ -226,9 +226,11 @@ namespace query {
     Map() = default;
     Map(Range range, UnaryFn fn) : _range(range), _fn(fn) {}
 
-    using ValueType = decltype(
-        std::declval<UnaryFn&>()(*std::declval<typename Range::iterator&>()));
+    // clang-format off
+    using ValueType = decltype(std::declval<UnaryFn&>()(
+        *std::declval<typename Range::iterator&>()));
     using BaseIterator = typename Range::iterator;
+    // clang-format on
 
     struct Iterator : std::iterator<std::forward_iterator_tag, ValueType> {
       Iterator() : _map(nullptr) {}

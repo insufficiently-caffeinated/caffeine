@@ -5,6 +5,7 @@ build/
 
 bazel-*
 compile_commands.json
+local.bazelrc
 
 # Prerequisites
 *.d
