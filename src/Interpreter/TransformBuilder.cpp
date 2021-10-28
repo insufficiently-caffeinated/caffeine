@@ -121,12 +121,12 @@ TransformBuilder::Value TransformBuilder::transform_fork(TransformFn&& func) {
 
 void TransformBuilder::assign(llvm::Value* value, Argument arg) {
   transform([=](ContextState& state) {
-    state.ctx.stack_top().insert(value, state.lookup(arg));
+    state.ctx.stack_top().get_regular().insert(value, state.lookup(arg));
   });
 }
 void TransformBuilder::assign(llvm::Value* value, LLVMValue arg) {
   transform([value, marg = std::move(arg)](ContextState& state) {
-    state.ctx.stack_top().insert(value, marg);
+    state.ctx.stack_top().get_regular().insert(value, marg);
   });
 }
 void TransformBuilder::assign(llvm::Value* value, LLVMScalar arg) {

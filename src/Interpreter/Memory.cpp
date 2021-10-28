@@ -24,7 +24,7 @@ ExecutionResult Interpreter::visitMallocAlign(llvm::CallBase& call) {
 
   if (options.malloc_can_return_null) {
     Context forked = ctx->fork_once();
-    forked.stack_top().insert(
+    forked.stack_top().get_regular().insert(
         &call, LLVMValue(Pointer(ConstantInt::Create(llvm::APInt(ptr_width, 0)),
                                  address_space)));
     queueContext(std::move(forked));
@@ -36,7 +36,7 @@ ExecutionResult Interpreter::visitMallocAlign(llvm::CallBase& call) {
       AllocOp::Create(size_op, ConstantInt::Create(llvm::APInt(8, 0xDD))),
       AllocationKind::Malloc, AllocationPermissions::ReadWrite, *ctx);
 
-  ctx->stack_top().insert(
+  ctx->stack_top().get_regular().insert(
       &call,
       LLVMValue(Pointer(alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)),
                         address_space)));
