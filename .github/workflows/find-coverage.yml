@@ -59,5 +59,6 @@ jobs:
           llvm-profdata merge -sparse `find . -name "*.profraw"` -o default.profdata
           llvm-cov show -instr-profile default.profdata bin/caffeine-unittest caffeine \
             -format=text > coverage.txt
-          curl -s https://codecov.io/bash > codecov.sh
-          bash codecov.sh -t $CODECOV_TOKEN
+          curl -Os https://uploader.codecov.io/latest/linux/codecov
+          sudo chmod +x codecov
+          ./codecov -t $CODECOV_TOKEN
