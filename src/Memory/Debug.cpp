@@ -23,8 +23,9 @@ void Pointer::DebugPrint() const {
              FMT_STRING("Pointer {{\n"
                         "  alloc:  {}\n"
                         "  offset: {}\n"
+                        "  heap:   {}\n"
                         "}}\n"),
-             alloc_.first, *offset_);
+             alloc_.first, *offset_, heap_);
 }
 
 void MemHeap::DebugPrint() const {
