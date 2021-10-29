@@ -38,6 +38,10 @@ protected:
     return ConstantInt::Create(
         llvm::APInt(layout.getIndexSizeInBits(AS), value));
   }
+
+  OpRef MakeData(const OpRef& size) {
+    return AllocOp::Create(size, ConstantInt::Create(llvm::APInt(8, 0xDD)));
+  }
 };
 
 TEST_F(MemHeapTests, resolve_pointer_single) {
@@ -47,10 +51,9 @@ TEST_F(MemHeapTests, resolve_pointer_single) {
   unsigned index_size = layout.getIndexSizeInBits(0);
   auto align = MakeInt(16);
   auto size = Constant::Create(Type::int_ty(index_size), "size");
-  auto alloc = heaps[0].allocate(
-      size, align,
-      AllocOp::Create(size, ConstantInt::Create(llvm::APInt(8, 0xDD))),
-      AllocationKind::Alloca, AllocationPermissions::ReadWrite, context);
+  auto alloc =
+      heaps[0].allocate(size, align, MakeData(size), AllocationKind::Alloca,
+                        AllocationPermissions::ReadWrite, context);
   auto offset = Constant::Create(Type::int_ty(index_size), "offset");
 
   context.add(ICmpOp::CreateICmpULT(offset, size));
@@ -66,4 +69,28 @@ TEST_F(MemHeapTests, resolve_pointer_single) {
   ASSERT_EQ(res[0].alloc(), alloc);
   ASSERT_EQ(context.check(solver, res[0].check_null(heaps)),
             SolverResult::UNSAT);
+}
+
+TEST_F(MemHeapTests, resolve_pointer_mixed) {
+  MemHeapMgr heaps;
+  Context context{function.get()};
+
+  unsigned index_size = layout.getIndexSizeInBits(0);
+  auto align = MakeInt(16);
+  auto size1 = Constant::Create(Type::int_ty(index_size), "size");
+  auto size2 = ConstantInt::Create(llvm::APInt(index_size, 8));
+
+  auto alloc1_id =
+      heaps[0].allocate(size1, align, MakeData(size1), AllocationKind::Malloc,
+                        AllocationPermissions::ReadWrite, context);
+  auto alloc2_id =
+      heaps[0].allocate(size2, align, MakeData(size2), AllocationKind::Malloc,
+                        AllocationPermissions::ReadWrite, context);
+
+  auto ptr = Pointer(heaps[0][alloc1_id].address(), 0);
+
+  auto res = heaps.resolve(solver, ptr, context);
+
+  ASSERT_EQ(res.size(), 1);
+  ASSERT_EQ(res[0].alloc(), alloc1_id);
 }
