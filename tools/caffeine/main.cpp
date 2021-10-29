@@ -161,7 +161,6 @@ int main(int argc, char** argv) {
 
   auto policy = caffeine::AlwaysAllowExecutionPolicy();
   auto builder = caffeine::SolverBuilder::with_default();
-  builder.with<LoggingSolver>();
   
   auto exec =
       caffeine::Executor(&policy, store.get(), &logger, &builder, options);
