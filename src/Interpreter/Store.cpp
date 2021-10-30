@@ -7,6 +7,7 @@
 namespace caffeine {
 
 void ExecutionContextStore::add_context_multi(Span<Context> contexts) {
+  notify_context_added(contexts.size());
   for (Context& ctx : contexts) {
     add_context(std::move(ctx));
   }
@@ -41,6 +42,7 @@ std::optional<Context> QueueingContextStore::next_context() {
 void QueueingContextStore::add_context(Context&& ctx) {
   auto lock = std::unique_lock(mutex);
   queue.push(std::move(ctx));
+  notify_context_added();
   lock.unlock();
   condvar.notify_one();
 }
@@ -48,6 +50,7 @@ void QueueingContextStore::add_context_multi(Span<Context> ctxs) {
   auto lock = std::unique_lock(mutex);
   for (Context& ctx : ctxs)
     queue.push(std::move(ctx));
+  notify_context_added(ctxs.size());
   lock.unlock();
 
   if (ctxs.size() == 1)

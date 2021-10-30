@@ -3,6 +3,7 @@
 #include "caffeine/ADT/Span.h"
 #include "caffeine/ADT/ThreadMap.h"
 #include "caffeine/Interpreter/Context.h"
+#include "caffeine/Interpreter/ContextEvent.h"
 #include <condition_variable>
 #include <mutex>
 #include <optional>
@@ -16,7 +17,7 @@ namespace caffeine {
  * Note that when executing in a multithreaded fashion this may be accessed
  * concurrently from multiple threads.
  */
-class ExecutionContextStore {
+class ExecutionContextStore : public ContextEventNotifier {
 public:
   ExecutionContextStore() = default;
   virtual ~ExecutionContextStore() = default;
