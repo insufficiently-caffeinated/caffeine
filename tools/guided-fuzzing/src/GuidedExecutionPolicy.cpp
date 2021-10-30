@@ -55,6 +55,7 @@ void GuidedExecutionPolicy::on_path_complete(const Context& ctx, ExitStatus,
                                              const Assertion& assertion) {
   auto assertions = ctx.assertions;
   auto result = mutator->solver->resolve(assertions, assertion);
+  notify_context_finished();
 
   if (result != SolverResult::SAT)
     return;

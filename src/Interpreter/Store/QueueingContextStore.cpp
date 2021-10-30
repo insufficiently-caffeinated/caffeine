@@ -32,12 +32,14 @@ std::optional<Context> QueueingContextStore::next_context() {
 }
 
 void QueueingContextStore::add_context(Context&& ctx) {
+  notify_context_added();
   auto lock = std::unique_lock(mutex);
   queue.push(std::move(ctx));
   lock.unlock();
   condvar.notify_one();
 }
 void QueueingContextStore::add_context_multi(Span<Context> ctxs) {
+  notify_context_added(ctxs.size());
   auto lock = std::unique_lock(mutex);
   for (Context& ctx : ctxs)
     queue.push(std::move(ctx));

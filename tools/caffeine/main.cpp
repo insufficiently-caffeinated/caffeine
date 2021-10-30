@@ -147,6 +147,8 @@ int main(int argc, char** argv) {
     return 2;
   }
 
+  // auto logger = CountingFailureLogger{std::cout, function};
+
   caffeine::ExecutorOptions options;
   options.num_threads =
       threads != 0 ? threads : std::thread::hardware_concurrency();
@@ -172,6 +174,11 @@ int main(int argc, char** argv) {
                       .with_coverage(std::move(cov))
                       .build();
   auto exec = caffeine::Executor(&caffeine, options);
+
+  ContextEventLogger ctx_logger(std::cout);
+  ContextEventObserver * ctx_observer = &ctx_logger;
+  caffeine.policy()->add_observer(ctx_observer);
+  caffeine.store()->add_observer(ctx_observer);
 
   auto context = Context(function);
   context.heaps.set_concrete(!force_symbolic_allocator);
