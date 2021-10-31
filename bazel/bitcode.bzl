@@ -390,6 +390,8 @@ def caffeine_bitcode_test(should_fail = False, skip = False, **kwargs):
     args = [
         "$(location @//tools/caffeine)",
         "$(location {}#bitcode)".format(name),
+        "-t",
+        "1",
     ]
     if should_fail:
         args.append("--invert-exitcode")

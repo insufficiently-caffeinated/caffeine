@@ -4,6 +4,7 @@
 #include "caffeine/Interpreter/Policy.h"
 #include "caffeine/Interpreter/Store.h"
 #include "caffeine/Interpreter/ThreadQueueStore.h"
+#include "caffeine/Solver/LoggingSolver.h"
 #include "caffeine/Support/DiagnosticHandler.h"
 #include "caffeine/Support/Signal.h"
 #include "caffeine/Support/Tracing.h"
@@ -160,6 +161,7 @@ int main(int argc, char** argv) {
 
   auto policy = caffeine::AlwaysAllowExecutionPolicy();
   auto builder = caffeine::SolverBuilder::with_default();
+
   auto exec =
       caffeine::Executor(&policy, store.get(), &logger, &builder, options);
 

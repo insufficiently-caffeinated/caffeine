@@ -3,7 +3,7 @@ build/
 .vscode/
 .cache
 
-bazel-*
+bazel-*/**
 compile_commands.json
 local.bazelrc
 
