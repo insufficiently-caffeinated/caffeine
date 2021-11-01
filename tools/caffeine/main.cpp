@@ -143,9 +143,8 @@ int main(int argc, char** argv) {
   }
 
   auto logger = CountingFailureLogger{std::cout, function};
-  // TODO: REMOVE: // std::unique_ptr<ContextEventObserver> ctx_logger = std::make_unique<ContextEventLogger>(std::cout);
   ContextEventLogger ctx_logger(std::cout);
-  ContextEventObserver * ctx_observer = &ctx_logger;
+  ContextEventObserver* ctx_observer = &ctx_logger;
 
   caffeine::ExecutorOptions options;
   options.num_threads =
@@ -160,7 +159,6 @@ int main(int argc, char** argv) {
     WithColor::error() << " unknown store type '" << store_type << "'\n";
     return 2;
   }
-  std::cout << store_type << std::endl;
 
   auto policy = caffeine::AlwaysAllowExecutionPolicy();
   auto builder = caffeine::SolverBuilder::with_default();
