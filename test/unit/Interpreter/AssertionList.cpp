@@ -1,5 +1,5 @@
 
-#include "caffeine/Interpreter/AssertionList.h"
+#include "caffeine/Model/AssertionList.h"
 #include <gtest/gtest.h>
 
 using namespace caffeine;
