@@ -2,9 +2,9 @@
 #define CAFFEINE_INTERP_CONTEXT_H
 
 #include "caffeine/IR/Assertion.h"
-#include "caffeine/Interpreter/AssertionList.h"
 #include "caffeine/Interpreter/StackFrame.h"
 #include "caffeine/Memory/MemHeap.h"
+#include "caffeine/Model/AssertionList.h"
 #include "caffeine/Solver/Solver.h"
 #include <immer/map.hpp>
 #include <iosfwd>

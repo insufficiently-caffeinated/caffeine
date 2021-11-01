@@ -1,4 +1,4 @@
-#include "caffeine/Interpreter/AssertionList.h"
+#include "caffeine/Model/AssertionList.h"
 #include "caffeine/IR/Matching.h"
 #include "caffeine/Support/Assert.h"
 #include <algorithm>

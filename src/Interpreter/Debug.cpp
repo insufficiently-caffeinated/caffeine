@@ -1,4 +1,4 @@
-#include "caffeine/Interpreter/AssertionList.h"
+#include "caffeine/Model/AssertionList.h"
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 #include <iostream>

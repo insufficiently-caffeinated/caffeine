@@ -30,7 +30,7 @@
  */
 
 #include "caffeine/IR/Operation.h"
-#include "caffeine/Interpreter/AssertionList.h"
+#include "caffeine/Model/AssertionList.h"
 #include <vector>
 
 namespace caffeine {
