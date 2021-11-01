@@ -83,9 +83,8 @@ TEST_F(MemHeapTests, resolve_pointer_mixed) {
   auto alloc1_id =
       heaps[0].allocate(size1, align, MakeData(size1), AllocationKind::Malloc,
                         AllocationPermissions::ReadWrite, context);
-  auto alloc2_id =
-      heaps[0].allocate(size2, align, MakeData(size2), AllocationKind::Malloc,
-                        AllocationPermissions::ReadWrite, context);
+  heaps[0].allocate(size2, align, MakeData(size2), AllocationKind::Malloc,
+                    AllocationPermissions::ReadWrite, context);
 
   auto ptr = Pointer(heaps[0][alloc1_id].address(), 0);
 
