@@ -147,8 +147,6 @@ int main(int argc, char** argv) {
     return 2;
   }
 
-  // auto logger = CountingFailureLogger{std::cout, function};
-
   caffeine::ExecutorOptions options;
   options.num_threads =
       threads != 0 ? threads : std::thread::hardware_concurrency();
