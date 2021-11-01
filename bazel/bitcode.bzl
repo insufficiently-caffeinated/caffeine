@@ -384,9 +384,6 @@ def caffeine_bitcode_test(should_fail = False, skip = False, **kwargs):
     )
 
     tags = ["no-sandbox"]
-    if skip:
-        tags.append("manual")
-
     args = [
         "$(location @//tools/caffeine)",
         "$(location {}#bitcode)".format(name),
@@ -396,18 +393,26 @@ def caffeine_bitcode_test(should_fail = False, skip = False, **kwargs):
     if should_fail:
         args.append("--invert-exitcode")
 
-    native.sh_test(
-        name = name,
-        srcs = ["@//bazel:run_command.sh"],
-        tags = tags,
-        args = args,
-        data = [
-            ":{}#bitcode".format(name),
-            "@llvm//llvm:llvm-symbolizer",
-            "@//tools/caffeine",
-        ],
-        env = {
-            "LLVM_SYMBOLIZER_PATH": "$(location @llvm//llvm:llvm-symbolizer)",
-        },
-        **test_args
-    )
+    if skip:
+        native.sh_test(
+            name = name,
+            srcs = ["@caffeine//test:skip-test-bazel.sh"],
+            args = [native.package_name(), name],
+            data = [":{}#bitcode".format(name)],
+        )
+    else:
+        native.sh_test(
+            name = name,
+            srcs = ["@//bazel:run_command.sh"],
+            tags = tags,
+            args = args,
+            data = [
+                ":{}#bitcode".format(name),
+                "@llvm//llvm:llvm-symbolizer",
+                "@//tools/caffeine",
+            ],
+            env = {
+                "LLVM_SYMBOLIZER_PATH": "$(location @llvm//llvm:llvm-symbolizer)",
+            },
+            **test_args
+        )
