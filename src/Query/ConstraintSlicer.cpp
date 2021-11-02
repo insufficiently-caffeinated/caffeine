@@ -1,5 +1,5 @@
 #include "caffeine/Query/ConstraintSlicer.h"
-#include "caffeine/Interpreter/AssertionList.h"
+#include "caffeine/Model/AssertionList.h"
 
 namespace caffeine {
 

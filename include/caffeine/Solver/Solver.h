@@ -8,7 +8,7 @@
 
 #include "caffeine/ADT/Ref.h"
 #include "caffeine/IR/Value.h"
-#include "caffeine/Interpreter/AssertionList.h"
+#include "caffeine/Model/AssertionList.h"
 #include "caffeine/Model/Value.h"
 
 namespace caffeine {
