@@ -9,6 +9,7 @@
 #include <optional>
 #include <queue>
 #include <vector>
+#include <random>
 
 namespace caffeine {
 
