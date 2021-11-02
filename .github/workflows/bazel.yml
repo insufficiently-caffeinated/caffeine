@@ -19,7 +19,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - uses: actions/cache@v2
-        if: ${{ !github.ref.endsWith('merge') }}
+        if: ${{ !endsWith(github.ref, '/merge') }}
         with:
           path: |
             ~/.cache/bazel-disk-cache
@@ -31,7 +31,7 @@ jobs:
       
       # Use a fork of the cache action that doesn't save the cache if it got a cache hit
       - uses: Phantomical/cache@44a67f2178cb7151430282b0650055385d637880
-        if: ${{ github.ref.endsWith('merge') }}
+        if: ${{ endsWith(github.ref, '/merge') }}
         with:
           path: |
             ~/.cache/bazel-disk-cache
