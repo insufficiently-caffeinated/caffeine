@@ -39,7 +39,7 @@ void InterpreterContext::store(llvm::Value* ident, const LLVMValue& value) {
   }
 
   auto& regular = frame.get_regular();
-  regular.variables.emplace(ident, value);
+  regular.insert(ident, value);
 }
 void InterpreterContext::store(llvm::Value* ident, LLVMValue&& value) {
   auto& frame = context().stack_top();
@@ -50,7 +50,7 @@ void InterpreterContext::store(llvm::Value* ident, LLVMValue&& value) {
   }
 
   auto& regular = frame.get_regular();
-  regular.variables.emplace(ident, std::move(value));
+  regular.insert(ident, std::move(value));
 }
 
 const std::shared_ptr<Solver>& InterpreterContext::solver() const {
