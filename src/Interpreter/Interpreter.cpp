@@ -159,9 +159,8 @@ ExecutionResult Interpreter::visitInstruction(llvm::Instruction& inst) {
 
 #define DEF_SIMPLE_OP(opname, optype)                                          \
   ExecutionResult Interpreter::visit##opname(llvm::optype& op) {               \
-    ctx->stack_top().get_regular().insert(                                     \
-        &op, ExprEvaluator(this->ctx).evaluate(op));                           \
-    return ExecutionResult::Continue;                                          \
+    interp->store(&op, ExprEvaluator(&interp->context()).evaluate(op));         \
+    return ExecutionResult::Migrated;                                          \
   }                                                                            \
   static_assert(true)
 
