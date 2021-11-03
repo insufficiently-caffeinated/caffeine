@@ -159,7 +159,7 @@ ExecutionResult Interpreter::visitInstruction(llvm::Instruction& inst) {
 
 #define DEF_SIMPLE_OP(opname, optype)                                          \
   ExecutionResult Interpreter::visit##opname(llvm::optype& op) {               \
-    interp->store(&op, ExprEvaluator(&interp->context()).evaluate(op));         \
+    interp->store(&op, ExprEvaluator(&interp->context()).evaluate(op));        \
     return ExecutionResult::Migrated;                                          \
   }                                                                            \
   static_assert(true)
