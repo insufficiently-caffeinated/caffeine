@@ -6,6 +6,7 @@
 namespace caffeine {
 
 class FailureLogger;
+class ExecutionPolicy;
 
 /**
  * Wrapper around the current execution context.
@@ -145,6 +146,14 @@ public:
   InterpreterContext fork() const;
 
   /**
+   * Create a new fork with an existing context.
+   *
+   * This method is present for compatibility reasons and it should not be used
+   * by new code.
+   */
+  InterpreterContext fork_existing(Context&& ctx) const;
+
+  /**
    * Indicates whether the current context is dead. This happens when either
    * fail() or kill() has been called.
    */
@@ -195,11 +204,13 @@ public:
   class SharedData {
   public:
     FailureLogger* logger;
+    ExecutionPolicy* policy;
   };
 
-  InterpreterContext(std::vector<std::unique_ptr<ContextQueueEntry>>* queue,
-                     size_t entry_index, const std::shared_ptr<Solver>& solver,
-                     SharedData* shared);
+  using BackingList = std::vector<std::unique_ptr<ContextQueueEntry>>;
+
+  InterpreterContext(BackingList* queue, size_t entry_index,
+                     const std::shared_ptr<Solver>& solver, SharedData* shared);
 
 private:
   std::vector<std::unique_ptr<ContextQueueEntry>>* queue_;

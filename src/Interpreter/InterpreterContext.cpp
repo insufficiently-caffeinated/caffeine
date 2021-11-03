@@ -1,6 +1,7 @@
 
 #include "caffeine/Interpreter/InterpreterContext.h"
 #include "caffeine/Interpreter/FailureLogger.h"
+#include "caffeine/Interpreter/Policy.h"
 #include "caffeine/Support/UnsupportedOperation.h"
 
 namespace caffeine {
@@ -81,6 +82,8 @@ void InterpreterContext::assert_or_fail(const Assertion& assertion,
   auto result = resolve(checked);
   if (result == SolverResult::SAT) {
     emit_failure(message, result.model(), checked);
+    shared_->policy->on_path_complete(context(), ExecutionPolicy::Fail,
+                                      checked);
   }
 
   add_assertion(assertion);
@@ -94,12 +97,21 @@ InterpreterContext InterpreterContext::fork() const {
   return InterpreterContext(queue_, index, solver(), shared_);
 }
 
+InterpreterContext InterpreterContext::fork_existing(Context&& ctx) const {
+  auto entry = std::make_unique<ContextQueueEntry>(std::move(ctx));
+  auto index = queue_->size();
+  queue_->push_back(std::move(entry));
+
+  return InterpreterContext(queue_, index, solver(), shared_);
+}
+
 bool InterpreterContext::is_dead() const {
   return entry_->dead;
 }
 
 void InterpreterContext::kill() {
   entry_->dead = true;
+  shared_->policy->on_path_complete(context(), ExecutionPolicy::Dead);
 }
 
 void InterpreterContext::fail(std::string_view message) {
@@ -111,7 +123,8 @@ void InterpreterContext::fail(std::string_view message) {
     emit_failure(message, result.model(), Assertion::constant(true));
   }
 
-  kill();
+  entry_->dead = true;
+  shared_->policy->on_path_complete(context(), ExecutionPolicy::Fail);
 }
 
 void InterpreterContext::emit_failure(std::string_view message,
