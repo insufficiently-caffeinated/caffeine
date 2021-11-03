@@ -16,6 +16,38 @@ const Context& InterpreterContext::context() const {
   return entry_->context;
 }
 
+llvm::Module* InterpreterContext::getModule() const {
+  return context().mod;
+}
+
+llvm::Function* InterpreterContext::getCurrentFunction() const {
+  const auto& ctx = context();
+  if (ctx.stack.empty())
+    return nullptr;
+
+  const auto& frame = ctx.stack_top();
+  if (frame.is_regular())
+    return frame.get_regular().current_block->getParent();
+
+  CAFFEINE_UNIMPLEMENTED(
+      "External stack frames do not currently have associated functions");
+}
+
+llvm::Instruction* InterpreterContext::getCurrentInstruction() const {
+  const auto& ctx = context();
+  if (ctx.stack.empty())
+    return nullptr;
+
+  const auto& frame = ctx.stack_top();
+  if (frame.is_external())
+    return nullptr;
+
+  const auto& regular = frame.get_regular();
+  if (regular.current == regular.current_block->end())
+    return nullptr;
+  return &*regular.current;
+}
+
 // TODO: This is basically a place holder. We need to figure out how to deal
 //       with variables in external stack frames. Note that external stack
 //       frames will definitely have variables for argument values.
