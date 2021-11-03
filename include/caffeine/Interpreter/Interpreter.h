@@ -68,9 +68,9 @@ public:
    * The interpreter constructor needs an executor and context as well as a way
    * to log assertion failures.
    */
-  Interpreter(ExecutionPolicy* policy,
-              ExecutionContextStore* store, FailureLogger* logger,
-              InterpreterContext* interp, const std::shared_ptr<Solver>& solver,
+  Interpreter(ExecutionPolicy* policy, ExecutionContextStore* store,
+              FailureLogger* logger, InterpreterContext* interp,
+              const std::shared_ptr<Solver>& solver,
               const InterpreterOptions& options = InterpreterOptions());
 
   void execute();
