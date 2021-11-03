@@ -100,9 +100,9 @@ find_program(CLANG_TIDY clang-tidy)
 if (CLANG_TIDY STREQUAL "CLANG_TIDY-NOTFOUND")
   message(
     ${CAFFEINE_WARNING}
-    "Unable to find clang-format. "
-    "Formatting target will not be configured. "
-    "Specify CLANG_FORMAT to re-enable formatting."
+    "Unable to find clang-tidy. "
+    "Linting target will not be configured. "
+    "Specify CLANG_TIDY to re-enable formatting."
   )
 else()
   include(CaffeineLinting)
