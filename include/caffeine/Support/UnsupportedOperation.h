@@ -47,14 +47,22 @@ public:
   }
 
   class ContextGuard {
+    const Context* saved;
+
   public:
-    ContextGuard(Context* context) {
+    ContextGuard(const Context* context)
+        : saved(UnsupportedOperation::CurrentContext) {
       CAFFEINE_ASSERT(context != nullptr,
                       "Cannot set a null context as current");
       UnsupportedOperation::CurrentContext = context;
     }
     ~ContextGuard() {
-      CurrentContext = nullptr;
+      CurrentContext = saved;
+    }
+
+    void update(Context* next) {
+      CAFFEINE_ASSERT(next != nullptr, "Cannot set a null context as current");
+      UnsupportedOperation::CurrentContext = next;
     }
 
     ContextGuard(ContextGuard&&) = delete;

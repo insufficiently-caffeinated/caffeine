@@ -2,7 +2,7 @@
 #include "caffeine/Interpreter/Interpreter.h"
 #include "caffeine/Interpreter/Store.h"
 #include "caffeine/Support/UnsupportedOperation.h"
-
+#include <boost/range/algorithm/remove_if.hpp>
 #include <thread>
 #include <z3++.h>
 
@@ -10,21 +10,44 @@ namespace caffeine {
 
 void Executor::run_worker() {
   auto solver = builder->build();
+  InterpreterContext::BackingList queue;
+  InterpreterContext::SharedData shared{logger, policy};
 
   while (auto ctx = store->next_context()) {
-    auto guard_ = UnsupportedOperation::SetCurrentContext(&ctx.value());
+    queue.clear();
+    queue.push_back(std::make_unique<InterpreterContext::ContextQueueEntry>(
+        std::move(ctx.value())));
 
-    try {
-      Interpreter interp(&ctx.value(), policy, store, logger, solver);
-      interp.execute();
-    } catch (UnsupportedOperationException&) {
-      // The assert that threw this already printed an error message
-      // TODO: We should have a better way to indicate that this failed to the
-      //       parent program.
+    auto guard =
+        UnsupportedOperation::SetCurrentContext(&queue.front()->context);
 
-      logger->log_failure(
-          nullptr, ctx.value(),
-          Failure(Assertion(), "internal error: unsupported operation"));
+    while (!queue.empty()) {
+      guard.update(&queue.front()->context);
+
+      InterpreterContext ictx{&queue, 0, solver, &shared};
+
+      try {
+        Interpreter interp{policy, store, logger, &ictx, solver};
+        interp.execute();
+      } catch (UnsupportedOperationException&) {
+        // The assert that threw this already printed an error message
+        // TODO: We should have a better way to indicate that this failed to the
+        //       parent program.
+
+        logger->log_failure(
+            nullptr, ctx.value(),
+            Failure(Assertion(), "internal error: unsupported operation"));
+        break;
+      }
+
+      auto it = boost::remove_if(queue,
+                                 [](const auto& entry) { return entry->dead; });
+      queue.erase(it, queue.end());
+
+      while (queue.size() > 1) {
+        store->add_context(std::move(queue.back()->context));
+        queue.pop_back();
+      }
     }
   }
 }

@@ -8,6 +8,7 @@
 #include "caffeine/IR/Assertion.h"
 #include "caffeine/Interpreter/Executor.h"
 #include "caffeine/Interpreter/FailureLogger.h"
+#include "caffeine/Interpreter/InterpreterContext.h"
 #include "caffeine/Interpreter/Options.h"
 #include "caffeine/Support/Assert.h"
 #include "caffeine/Support/Macros.h"
@@ -22,7 +23,7 @@ class Interpreter;
 
 class ExecutionResult {
 public:
-  enum Status { Continue, Dead, Stop };
+  enum Status { Continue, Dead, Stop, Migrated };
   using ContextVec = llvm::SmallVector<Context, 2>;
 
   ExecutionResult(Status status);
@@ -60,13 +61,15 @@ private:
   InterpreterOptions options;
   std::shared_ptr<Solver> solver;
 
+  InterpreterContext* interp;
+
 public:
   /**
    * The interpreter constructor needs an executor and context as well as a way
    * to log assertion failures.
    */
-  Interpreter(Context* ctx, ExecutionPolicy* policy,
-              ExecutionContextStore* store, FailureLogger* logger,
+  Interpreter(ExecutionPolicy* policy, ExecutionContextStore* store,
+              FailureLogger* logger, InterpreterContext* interp,
               const std::shared_ptr<Solver>& solver,
               const InterpreterOptions& options = InterpreterOptions());
 

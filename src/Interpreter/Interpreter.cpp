@@ -68,12 +68,14 @@ ExecutionResult::ExecutionResult(llvm::SmallVector<Context, 2>&& contexts,
                                  Status status)
     : status_(status), contexts_(std::move(contexts)) {}
 
-Interpreter::Interpreter(Context* ctx, ExecutionPolicy* policy,
-                         ExecutionContextStore* store, FailureLogger* logger,
+Interpreter::Interpreter(ExecutionPolicy* policy, ExecutionContextStore* store,
+                         FailureLogger* logger, InterpreterContext* interp,
                          const std::shared_ptr<Solver>& solver,
                          const InterpreterOptions& options)
-    : policy(policy), store(store), ctx(ctx), logger(logger), options(options),
-      solver(solver) {}
+    : policy(policy), store(store), logger(logger), options(options),
+      solver(solver), interp(interp) {
+  ctx = &interp->context();
+}
 
 void Interpreter::logFailure(Context& ctx, const Assertion& assertion,
                              std::string_view message) {
@@ -102,76 +104,50 @@ Interpreter Interpreter::cloneWith(Context* ctx) {
 }
 
 void Interpreter::execute() {
-  auto frameblock = CAFFEINE_TRACE_SPAN("Interpreter::execute");
-  (void)frameblock;
+  auto& frame = ctx->stack_top().get_regular();
 
-  while (true) {
-    auto& frame = ctx->stack_top().get_regular();
+  CAFFEINE_ASSERT(frame.current != frame.current_block->end(),
+                  "Instruction pointer ran off end of block.");
 
-    CAFFEINE_ASSERT(frame.current != frame.current_block->end(),
-                    "Instruction pointer ran off end of block.");
+  llvm::Instruction& inst = *frame.current;
+  auto traceblock = CAFFEINE_TRACE_SPAN(fmt::format(FMT_STRING("{}"), inst));
+  traceblock.annotate("cat", "instruction");
 
-    llvm::Instruction& inst = *frame.current;
-    auto traceblock = CAFFEINE_TRACE_SPAN(fmt::format(FMT_STRING("{}"), inst));
-    traceblock.annotate("cat", "instruction");
+  // Note: Need to increment the iterator before actually doing
+  //       anything with the instruction since instructions can
+  //       modify the current position (e.g. branch, call, etc.)
+  ++frame.current;
 
-    // Note: Need to increment the iterator before actually doing
-    //       anything with the instruction since instructions can
-    //       modify the current position (e.g. branch, call, etc.)
-    ++frame.current;
+  ExecutionResult res = visit(inst);
 
-    ExecutionResult res = visit(inst);
-
-    if (traceblock.is_enabled() && !ctx->stack.empty()) {
-      // Printing expressions can be potentially very expensive so we only do it
-      // if expensive annotations are enabled.
-      if (CAFFEINE_TRACING_EXPENSIVE_ANNOTATIONS) {
-        auto& frame = ctx->stack_top().get_regular();
-        auto it = frame.variables.find(&inst);
-        if (it != frame.variables.end()) {
-          traceblock.annotate("value", fmt::format("{}", it->second));
-        }
+  if (traceblock.is_enabled() && !ctx->stack.empty()) {
+    // Printing expressions can be potentially very expensive so we only do it
+    // if expensive annotations are enabled.
+    if (CAFFEINE_TRACING_EXPENSIVE_ANNOTATIONS) {
+      auto& frame = ctx->stack_top().get_regular();
+      auto it = frame.variables.find(&inst);
+      if (it != frame.variables.end()) {
+        traceblock.annotate("value", fmt::format("{}", it->second));
       }
     }
+  }
 
-    traceblock.close();
+  traceblock.close();
 
-    if (!res.contexts().empty()) {
-      auto& ctxs = res.contexts();
-      if (ctxs.size() == 1) {
-        *ctx = std::move(ctxs[0]);
-        continue;
+  // All new contexts were created via InterpreterContext::fork
+  if (res.status() == ExecutionResult::Migrated) {
+    return;
+  }
+
+  if (res.status() != ExecutionResult::Continue) {
+    interp->kill();
+
+    for (Context& ctx : res.contexts()) {
+      if (policy->should_queue_path(ctx)) {
+        interp->fork_existing(std::move(ctx));
+      } else {
+        policy->on_path_complete(ctx, ExecutionPolicy::Removed);
       }
-
-      auto it =
-          std::remove_if(ctxs.begin(), ctxs.end(), [&](const Context& ctx) {
-            bool prune = !policy->should_queue_path(ctx);
-            if (prune)
-              policy->on_path_complete(ctx, ExecutionPolicy::Removed);
-            return prune;
-          });
-      ctxs.erase(it, ctxs.end());
-
-      store->add_context_multi(ctxs);
-      return;
-    }
-
-    if (res.status() != ExecutionResult::Continue) {
-      switch (res.status()) {
-      case ExecutionResult::Dead:
-        policy->on_path_complete(*ctx, ExecutionPolicy::Dead);
-        return;
-      case ExecutionResult::Stop:
-        policy->on_path_complete(*ctx, ExecutionPolicy::Success);
-        return;
-
-      case ExecutionResult::Continue:
-        CAFFEINE_UNREACHABLE();
-      }
-
-      CAFFEINE_UNREACHABLE(
-          fmt::format(FMT_STRING("Unexpected ExecutionResult value: {}"),
-                      magic_enum::enum_name(res.status())));
     }
   }
 }
