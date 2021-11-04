@@ -1,6 +1,8 @@
 #include "caffeine/Interpreter/StackFrame.h"
 #include "caffeine/IR/Operation.h"
 #include "caffeine/Interpreter/Context.h"
+#include "caffeine/Interpreter/Interpreter.h"
+#include "caffeine/Interpreter/InterpreterContext.h"
 #include "caffeine/Support/Assert.h"
 
 #include <llvm/IR/Constants.h>
@@ -73,6 +75,11 @@ StackFrame StackFrame::RegularFrame(llvm::Function* function) {
   StackFrame frame;
   frame.value_ = IRStackFrame(function, frame.frame_id);
   return frame;
+}
+
+ExecutionResult ExternalStackFrame::run(InterpreterContext & context) {
+  while (step(context) == CoroutineExecutionResult::Continue) {}
+  return ExecutionResult::Continue;
 }
 
 const IRStackFrame& StackFrame::get_regular() const {

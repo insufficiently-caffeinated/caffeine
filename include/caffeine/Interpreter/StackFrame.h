@@ -15,6 +15,8 @@
 namespace caffeine {
 
 class Context;
+class ExecutionResult;
+class InterpreterContext;
 
 class StackAllocation {
 public:
@@ -26,6 +28,10 @@ public:
 };
 
 class ExternalStackFrame {
+protected:
+  enum CoroutineExecutionResult {
+    Continue, Stop, Call
+  };
 public:
   uint64_t frame_id;
   std::optional<LLVMValue> result_ = std::nullopt;
@@ -37,10 +43,18 @@ public:
                      std::optional<LLVMValue> result_ = std::nullopt,
                      std::optional<LLVMValue> resume_value_ = std::nullopt);
 
+  // Wrapper around corouting logic implementation
+  ExecutionResult run(InterpreterContext & context);
+
 protected:
   void set_result(std::optional<LLVMValue> result,
                   std::optional<LLVMValue> resume_value);
+
+  // Coroutine logic implementation
+  virtual CoroutineExecutionResult step(InterpreterContext & context) = 0;
   friend class StackFrame;
+
+  uint64_t program_counter = 0;
 };
 
 class IRStackFrame {
