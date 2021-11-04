@@ -273,40 +273,33 @@ ExecutionResult Interpreter::visitPHINode(llvm::PHINode& node) {
 }
 ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst& inst) {
   if (!inst.isConditional()) {
-    ctx->stack_top().get_regular().jump_to(inst.getSuccessor(0));
-    return ExecutionResult::Continue;
+    interp->jump_to(inst.getSuccessor(0));
+    return ExecutionResult::Migrated;
   }
 
-  auto cond = ctx->lookup(inst.getCondition()).scalar().expr();
-  auto assertion = Assertion(cond);
-  auto is_t = ctx->check(solver, assertion);
-  auto is_f = ctx->check(solver, !assertion);
-
-  size_t count = 0;
-  count += is_t != SolverResult::UNSAT;
-  count += is_f != SolverResult::UNSAT;
-
-  auto forks = ctx->fork(count);
-  size_t idx = 0;
+  auto assertion = Assertion(interp->load(inst.getCondition()).scalar().expr());
+  auto is_t = interp->check(assertion);
+  auto is_f = interp->check(!assertion);
 
   // Note: For the purposes of branching we consider unknown to be
   //       equivalent to sat. Maybe future branches will bring the
   //       equation back to being solvable.
   if (is_t != SolverResult::UNSAT) {
-    auto& fork = forks[idx++];
-
-    fork.add(assertion);
-    fork.stack_top().get_regular().jump_to(inst.getSuccessor(0));
+    auto fork = interp->fork();
+    fork.add_assertion(assertion);
+    fork.jump_to(inst.getSuccessor(0));
   }
 
   if (is_f != SolverResult::UNSAT) {
-    auto& fork = forks[idx++];
+    auto fork = interp->fork();
 
-    fork.add(!assertion);
-    fork.stack_top().get_regular().jump_to(inst.getSuccessor(1));
+    fork.add_assertion(!assertion);
+    fork.jump_to(inst.getSuccessor(1));
   }
 
-  return forks;
+  interp->kill();
+
+  return ExecutionResult::Migrated;
 }
 ExecutionResult Interpreter::visitReturnInst(llvm::ReturnInst& inst) {
   std::optional<LLVMValue> result = std::nullopt;
