@@ -85,6 +85,16 @@ void InterpreterContext::store(llvm::Value* ident, LLVMValue&& value) {
   regular.insert(ident, std::move(value));
 }
 
+void InterpreterContext::jump_to(llvm::BasicBlock* block) {
+  CAFFEINE_ASSERT(!context().stack.empty());
+  CAFFEINE_ASSERT(
+      block->getParent() == getCurrentFunction(),
+      "attempted to jump to basic block not within the current function");
+  CAFFEINE_ASSERT(context().stack_top().is_regular());
+
+  context().stack_top().get_regular().jump_to(block);
+}
+
 const std::shared_ptr<Solver>& InterpreterContext::solver() const {
   return solver_;
 }

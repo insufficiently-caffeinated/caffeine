@@ -85,6 +85,15 @@ public:
   void store(llvm::Value* ident, const LLVMValue& value);
   void store(llvm::Value* ident, LLVMValue&& value);
 
+  /**
+   * Set the instruction pointer of the current stack frame to the first
+   * instruction within the provided basic block.
+   *
+   * The basic block must belong to the same function as that for the current
+   * stack frame and current stack frame must not be an external stack frame.
+   */
+  void jump_to(llvm::BasicBlock* block);
+
   // Assertion/Solver-related methods
 
   /**
