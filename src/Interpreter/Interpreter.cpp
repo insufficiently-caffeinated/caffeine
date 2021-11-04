@@ -194,10 +194,8 @@ ExecutionResult Interpreter::visitUDiv(llvm::BinaryOperator& op) {
   return ExecutionResult::Migrated;
 }
 ExecutionResult Interpreter::visitSDiv(llvm::BinaryOperator& op) {
-  auto& frame = ctx->stack_top().get_regular();
-
-  auto lhs = ctx->lookup(op.getOperand(0));
-  auto rhs = ctx->lookup(op.getOperand(1));
+  auto lhs = interp->load(op.getOperand(0));
+  auto rhs = interp->load(op.getOperand(1));
 
   auto result = transform_exprs(
       [&](const auto& lhs, const auto& rhs) {
@@ -207,20 +205,18 @@ ExecutionResult Interpreter::visitSDiv(llvm::BinaryOperator& op) {
                      llvm::APInt::getSignedMinValue(lhs->type().bitwidth())));
         auto cmp3 = ICmpOp::CreateICmpEQ(rhs, -1);
 
-        // lhs == 0 || (lhs == INT_MIN && rhs == -1)
-        Assertion assertion =
-            BinaryOp::CreateOr(cmp1, BinaryOp::CreateAnd(cmp2, cmp3));
-        if (ctx->check(solver, assertion) == SolverResult::SAT)
-          logFailure(*ctx, assertion, "sdiv fault (div by 0 or overflow)");
-        ctx->add(!assertion);
+        // assert lhs == 0 || (lhs == INT_MIN && rhs == -1)
+        interp->assert_or_fail(!Assertion(BinaryOp::CreateOr(
+                                   cmp1, BinaryOp::CreateAnd(cmp2, cmp3))),
+                               "sdiv fault (div by 0 or overflow)");
 
         return BinaryOp::CreateSDiv(lhs, rhs);
       },
       lhs, rhs);
 
-  frame.insert(&op, std::move(result));
+  interp->store(&op, std::move(result));
 
-  return ExecutionResult::Continue;
+  return ExecutionResult::Migrated;
 }
 ExecutionResult Interpreter::visitSRem(llvm::BinaryOperator& op) {
   auto& frame = ctx->stack_top().get_regular();
