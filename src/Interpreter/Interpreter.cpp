@@ -302,20 +302,13 @@ ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst& inst) {
   return ExecutionResult::Migrated;
 }
 ExecutionResult Interpreter::visitReturnInst(llvm::ReturnInst& inst) {
-  std::optional<LLVMValue> result = std::nullopt;
-  if (inst.getNumOperands() != 0)
-    result = ctx->lookup(inst.getOperand(0));
+  if (inst.getNumOperands() != 0) {
+    interp->function_return(interp->load(inst.getOperand(0)));
+  } else {
+    interp->function_return();
+  }
 
-  ctx->pop();
-
-  if (ctx->empty())
-    return ExecutionResult::Stop;
-
-  auto& parent = ctx->stack_top();
-
-  parent.set_result(result, std::nullopt);
-
-  return ExecutionResult::Continue;
+  return ExecutionResult::Migrated;
 }
 ExecutionResult Interpreter::visitSwitchInst(llvm::SwitchInst& inst) {
   auto cond = ctx->lookup(inst.getCondition()).scalar().expr();
