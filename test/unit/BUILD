@@ -14,6 +14,7 @@ cc_library(
         "//:caffeine",
         "//third_party:gtest",
     ],
+    alwayslink = 1,
 )
 
 cc_test(
