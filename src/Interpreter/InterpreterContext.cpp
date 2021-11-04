@@ -95,6 +95,24 @@ void InterpreterContext::jump_to(llvm::BasicBlock* block) {
   context().stack_top().get_regular().jump_to(block);
 }
 
+void InterpreterContext::function_return(std::optional<LLVMValue> retval) {
+  if (getCurrentFunction()->getReturnType()->isVoidTy()) {
+    CAFFEINE_ASSERT(!retval.has_value());
+  } else {
+    CAFFEINE_ASSERT(retval.has_value());
+  }
+
+  auto& ctx = context();
+  ctx.pop();
+
+  if (ctx.stack.empty()) {
+    kill();
+    return;
+  }
+
+  ctx.stack_top().set_result(retval, std::nullopt);
+}
+
 const std::shared_ptr<Solver>& InterpreterContext::solver() const {
   return solver_;
 }
