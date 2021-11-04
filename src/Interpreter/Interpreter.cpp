@@ -311,32 +311,35 @@ ExecutionResult Interpreter::visitReturnInst(llvm::ReturnInst& inst) {
   return ExecutionResult::Migrated;
 }
 ExecutionResult Interpreter::visitSwitchInst(llvm::SwitchInst& inst) {
-  auto cond = ctx->lookup(inst.getCondition()).scalar().expr();
+  auto cond = interp->load(inst.getCondition()).scalar().expr();
+  llvm::SmallVector<Assertion, 16> assertions;
 
-  ExecutionResult::ContextVec forks;
-  Context def = ctx->fork_once();
+  assertions.reserve(inst.getNumCases());
 
   for (auto value : inst.cases()) {
     auto assertion = Assertion(ICmpOp::CreateICmpEQ(
         cond, ConstantInt::Create(value.getCaseValue()->getValue())));
-    def.add(!assertion);
 
-    if (ctx->check(solver, assertion) == SolverResult::UNSAT)
+    if (interp->check(assertion) == SolverResult::UNSAT)
       continue;
+    assertions.push_back(!assertion);
 
-    Context fork = ctx->fork_once();
-    fork.add(assertion);
-    fork.stack_top().get_regular().jump_to(value.getCaseSuccessor());
-
-    forks.push_back(std::move(fork));
+    auto fork = interp->fork();
+    fork.add_assertion(assertion);
+    fork.jump_to(value.getCaseSuccessor());
   }
 
-  if (def.check(solver) != SolverResult::UNSAT) {
-    def.stack_top().get_regular().jump_to(inst.getDefaultDest());
-    forks.push_back(std::move(def));
+  for (auto& assertion : assertions) {
+    interp->add_assertion(std::move(assertion));
   }
 
-  return forks;
+  if (interp->check() != SolverResult::UNSAT) {
+    interp->jump_to(inst.getDefaultDest());
+  } else {
+    interp->kill();
+  }
+
+  return ExecutionResult::Migrated;
 }
 ExecutionResult Interpreter::visitCallBase(llvm::CallBase& callBase) {
   auto func = callBase.getCalledFunction();
