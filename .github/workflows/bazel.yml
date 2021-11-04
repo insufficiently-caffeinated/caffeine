@@ -54,10 +54,12 @@ jobs:
           find ~/.cache/bazel-disk-cache -type f -exec touch -a -d "10 years ago" {} \;
       
       - name: Build all caffeine targets
-        run: bazel build -- //... -//third_party/... //third_party/divine/...
+        run: bazel build -- //...
 
       - name: Run all tests
-        run: bazel test -- //test/unit
+        run: |
+          bazel test -- //... \
+            $(bazel query 'kind(".*_test", //...) intersect attr("tags", "manual", //...)')
 
       - name: Prune unused build cache files
         shell: bash

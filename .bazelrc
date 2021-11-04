@@ -1,6 +1,6 @@
 
-common --action_env=BAZEL_CXXOPTS=-std=c++17
-common --disk_cache=~/.cache/bazel-disk-cache
+build --disk_cache=~/.cache/bazel-disk-cache
+build --action_env=BAZEL_CXXOPTS=-std=c++17
 build --cxxopt='-std=c++17'
 
 # Avoid warning messages in other workspaces since they are not helpful
