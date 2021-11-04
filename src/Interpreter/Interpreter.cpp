@@ -261,13 +261,13 @@ ExecutionResult Interpreter::visitURem(llvm::BinaryOperator& op) {
 }
 
 ExecutionResult Interpreter::visitPHINode(llvm::PHINode& node) {
-  auto& frame = ctx->stack_top().get_regular();
+  auto& frame = interp->context().stack_top().get_regular();
 
   // PHI nodes in the entry block is invalid.
   CAFFEINE_ASSERT(frame.prev_block != nullptr);
 
-  auto value = ctx->lookup(node.getIncomingValueForBlock(frame.prev_block));
-  frame.insert(&node, value);
+  auto value = interp->load(node.getIncomingValueForBlock(frame.prev_block));
+  interp->store(&node, value);
 
   return ExecutionResult::Continue;
 }
