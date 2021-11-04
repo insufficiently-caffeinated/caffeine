@@ -16,7 +16,39 @@ const Context& InterpreterContext::context() const {
   return entry_->context;
 }
 
-// TODO: This is basically a place holder. We need to figure out how to deal
+llvm::Module* InterpreterContext::getModule() const {
+  return context().mod;
+}
+
+llvm::Function* InterpreterContext::getCurrentFunction() const {
+  const auto& ctx = context();
+  if (ctx.stack.empty())
+    return nullptr;
+
+  const auto& frame = ctx.stack_top();
+  if (frame.is_regular())
+    return frame.get_regular().current_block->getParent();
+
+  CAFFEINE_UNIMPLEMENTED(
+      "External stack frames do not currently have associated functions");
+}
+
+llvm::Instruction* InterpreterContext::getCurrentInstruction() const {
+  const auto& ctx = context();
+  if (ctx.stack.empty())
+    return nullptr;
+
+  const auto& frame = ctx.stack_top();
+  if (frame.is_external())
+    return nullptr;
+
+  const auto& regular = frame.get_regular();
+  if (regular.current == regular.current_block->end())
+    return nullptr;
+  return &*regular.current;
+}
+
+// TODO: This is basically a placeholder. We need to figure out how to deal
 //       with variables in external stack frames. Note that external stack
 //       frames will definitely have variables for argument values.
 LLVMValue InterpreterContext::load(llvm::Value* value) {
@@ -39,7 +71,7 @@ void InterpreterContext::store(llvm::Value* ident, const LLVMValue& value) {
   }
 
   auto& regular = frame.get_regular();
-  regular.variables.emplace(ident, value);
+  regular.insert(ident, value);
 }
 void InterpreterContext::store(llvm::Value* ident, LLVMValue&& value) {
   auto& frame = context().stack_top();
@@ -50,7 +82,7 @@ void InterpreterContext::store(llvm::Value* ident, LLVMValue&& value) {
   }
 
   auto& regular = frame.get_regular();
-  regular.variables.emplace(ident, std::move(value));
+  regular.insert(ident, std::move(value));
 }
 
 const std::shared_ptr<Solver>& InterpreterContext::solver() const {
