@@ -48,7 +48,7 @@ llvm::Instruction* InterpreterContext::getCurrentInstruction() const {
   return &*regular.current;
 }
 
-// TODO: This is basically a place holder. We need to figure out how to deal
+// TODO: This is basically a placeholder. We need to figure out how to deal
 //       with variables in external stack frames. Note that external stack
 //       frames will definitely have variables for argument values.
 LLVMValue InterpreterContext::load(llvm::Value* value) {
