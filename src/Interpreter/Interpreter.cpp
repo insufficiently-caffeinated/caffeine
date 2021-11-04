@@ -244,23 +244,18 @@ ExecutionResult Interpreter::visitSRem(llvm::BinaryOperator& op) {
   return ExecutionResult::Migrated;
 }
 ExecutionResult Interpreter::visitURem(llvm::BinaryOperator& op) {
-  auto& frame = ctx->stack_top().get_regular();
-
-  auto lhs = ctx->lookup(op.getOperand(0));
-  auto rhs = ctx->lookup(op.getOperand(1));
+  auto lhs = interp->load(op.getOperand(0));
+  auto rhs = interp->load(op.getOperand(1));
 
   auto result = transform_exprs(
       [&](const auto& lhs, const auto& rhs) {
-        Assertion assertion = ICmpOp::CreateICmpNE(rhs, 0);
-        if (ctx->check(solver, !assertion) == SolverResult::SAT)
-          logFailure(*ctx, !assertion, "urem fault (div by 0)");
-        ctx->add(assertion);
-
+        interp->assert_or_fail(ICmpOp::CreateICmpNE(rhs, 0),
+                               "urem fault (div by 0)");
         return BinaryOp::CreateURem(lhs, rhs);
       },
       lhs, rhs);
 
-  frame.insert(&op, std::move(result));
+  interp->store(&op, std::move(result));
 
   return ExecutionResult::Continue;
 }
