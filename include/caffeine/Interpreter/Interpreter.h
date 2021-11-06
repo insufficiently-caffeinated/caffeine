@@ -123,6 +123,7 @@ private:
                   std::string_view message = "");
   void queueContext(Context&& ctx);
   Interpreter cloneWith(Context* ctx);
+  Interpreter cloneWith(InterpreterContext* interp);
 
 private:
   ExecutionResult visitExternFunc(llvm::CallBase& inst);
