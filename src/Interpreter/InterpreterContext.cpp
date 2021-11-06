@@ -169,6 +169,25 @@ void InterpreterContext::assert_ptr_valid(const Pointer& ptr, uint32_t width,
       message);
 }
 
+llvm::SmallVector<Pointer, 1>
+InterpreterContext::resolve_ptr(const Pointer& ptr, uint32_t width,
+                                std::string_view message) {
+  return resolve_ptr(
+      ptr,
+      ConstantInt::Create(llvm::APInt(ptr.offset()->type().bitwidth(), width)),
+      message);
+}
+llvm::SmallVector<Pointer, 1>
+InterpreterContext::resolve_ptr(const Pointer& ptr, const OpRef& width,
+                                std::string_view message) {
+  assert_ptr_valid(ptr, width, message);
+
+  if (is_dead())
+    return {};
+
+  return context().heaps.resolve(solver(), ptr, context());
+}
+
 InterpreterContext InterpreterContext::fork() const {
   auto entry = std::make_unique<ContextQueueEntry>(context().fork_once());
   auto index = queue_->size();

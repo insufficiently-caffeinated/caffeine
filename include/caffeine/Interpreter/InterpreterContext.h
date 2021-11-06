@@ -163,6 +163,30 @@ public:
   void assert_ptr_valid(const Pointer& ptr, const OpRef& width,
                         std::string_view message);
 
+  /**
+   * Check whether a pointer is valid and, if so, resolve which concrete
+   * allocations it could point to.
+   *
+   * In more detail:
+   *
+   * - Check to see whether it is possible to point outside of any existing
+   *   allocation. If so, fail the current context and don't do any pointer
+   *   resolution.
+   *
+   *   This is done since if the pointer could be pointing outside of an
+   *   allocation then it's likely that it could possibly be pointing to any
+   *   other allocation and failures found from those branches would not be
+   *   useful.
+   *
+   * - Determine which allocations the pointer could point within and return all
+   *   of them. If the pointer is already known to point to a specific
+   *   allocation then this is efficient.
+   */
+  llvm::SmallVector<Pointer, 1> resolve_ptr(const Pointer& ptr, uint32_t width,
+                                            std::string_view message);
+  llvm::SmallVector<Pointer, 1>
+  resolve_ptr(const Pointer& ptr, const OpRef& width, std::string_view message);
+
   // Methods managing forks and context queuing
 
   /**
@@ -171,8 +195,8 @@ public:
    *
    * This will also set up the new context to be queued up transparently.
    *
-   * Note that if the current context is dead then the forked context will _not_
-   * be dead.
+   * Note that if the current context is dead then the forked context will
+   * _not_ be dead.
    */
   InterpreterContext fork() const;
 
