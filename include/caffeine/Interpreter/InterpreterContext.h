@@ -85,6 +85,24 @@ public:
   void store(llvm::Value* ident, const LLVMValue& value);
   void store(llvm::Value* ident, LLVMValue&& value);
 
+  /**
+   * Set the instruction pointer of the current stack frame to the first
+   * instruction within the provided basic block.
+   *
+   * The basic block must belong to the same function as that for the current
+   * stack frame and current stack frame must not be an external stack frame.
+   */
+  void jump_to(llvm::BasicBlock* block);
+
+  /**
+   * Return from the current stack frame with an optional return value. If this
+   * causes the stack to be empty then the context will also be killed.
+   *
+   * This will cause an assertion failure if the current function's return type
+   * is inconsistent with the presence (or lack thereof) of a return value.
+   */
+  void function_return(std::optional<LLVMValue> retval = std::nullopt);
+
   // Assertion/Solver-related methods
 
   /**

@@ -179,31 +179,23 @@ DEF_SIMPLE_OP(ExtractValueInst, ExtractValueInst);
 DEF_SIMPLE_OP(InsertValueInst, InsertValueInst);
 
 ExecutionResult Interpreter::visitUDiv(llvm::BinaryOperator& op) {
-  auto& frame = ctx->stack_top().get_regular();
-
-  auto lhs = ctx->lookup(op.getOperand(0));
-  auto rhs = ctx->lookup(op.getOperand(1));
+  auto lhs = interp->load(op.getOperand(0));
+  auto rhs = interp->load(op.getOperand(1));
 
   auto result = transform_exprs(
       [&](const auto& lhs, const auto& rhs) {
-        Assertion assertion = ICmpOp::CreateICmpNE(rhs, 0);
-        if (ctx->check(solver, !assertion) == SolverResult::SAT)
-          logFailure(*ctx, !assertion, "udiv by 0");
-        ctx->add(assertion);
-
+        interp->assert_or_fail(ICmpOp::CreateICmpNE(rhs, 0), "udiv by 0");
         return BinaryOp::CreateUDiv(lhs, rhs);
       },
       lhs, rhs);
 
-  frame.insert(&op, std::move(result));
+  interp->store(&op, std::move(result));
 
-  return ExecutionResult::Continue;
+  return ExecutionResult::Migrated;
 }
 ExecutionResult Interpreter::visitSDiv(llvm::BinaryOperator& op) {
-  auto& frame = ctx->stack_top().get_regular();
-
-  auto lhs = ctx->lookup(op.getOperand(0));
-  auto rhs = ctx->lookup(op.getOperand(1));
+  auto lhs = interp->load(op.getOperand(0));
+  auto rhs = interp->load(op.getOperand(1));
 
   auto result = transform_exprs(
       [&](const auto& lhs, const auto& rhs) {
@@ -214,25 +206,21 @@ ExecutionResult Interpreter::visitSDiv(llvm::BinaryOperator& op) {
         auto cmp3 = ICmpOp::CreateICmpEQ(rhs, -1);
 
         // lhs == 0 || (lhs == INT_MIN && rhs == -1)
-        Assertion assertion =
-            BinaryOp::CreateOr(cmp1, BinaryOp::CreateAnd(cmp2, cmp3));
-        if (ctx->check(solver, assertion) == SolverResult::SAT)
-          logFailure(*ctx, assertion, "sdiv fault (div by 0 or overflow)");
-        ctx->add(!assertion);
+        auto assertion = Assertion(
+            BinaryOp::CreateOr(cmp1, BinaryOp::CreateAnd(cmp2, cmp3)));
+        interp->assert_or_fail(!assertion, "sdiv fault (div by 0 or overflow)");
 
         return BinaryOp::CreateSDiv(lhs, rhs);
       },
       lhs, rhs);
 
-  frame.insert(&op, std::move(result));
+  interp->store(&op, std::move(result));
 
-  return ExecutionResult::Continue;
+  return ExecutionResult::Migrated;
 }
 ExecutionResult Interpreter::visitSRem(llvm::BinaryOperator& op) {
-  auto& frame = ctx->stack_top().get_regular();
-
-  auto lhs = ctx->lookup(op.getOperand(0));
-  auto rhs = ctx->lookup(op.getOperand(1));
+  auto lhs = interp->load(op.getOperand(0));
+  auto rhs = interp->load(op.getOperand(1));
 
   auto result = transform_exprs(
       [&](const auto& lhs, const auto& rhs) {
@@ -243,133 +231,115 @@ ExecutionResult Interpreter::visitSRem(llvm::BinaryOperator& op) {
         auto cmp3 = ICmpOp::CreateICmpEQ(rhs, -1);
 
         // lhs == 0 || (lhs == INT_MIN && rhs == -1)
-        Assertion assertion =
-            BinaryOp::CreateOr(cmp1, BinaryOp::CreateAnd(cmp2, cmp3));
-        if (ctx->check(solver, assertion) == SolverResult::SAT)
-          logFailure(*ctx, assertion, "srem fault (div by 0 or overflow)");
-        ctx->add(!assertion);
+        auto assertion = Assertion(
+            BinaryOp::CreateOr(cmp1, BinaryOp::CreateAnd(cmp2, cmp3)));
+        interp->assert_or_fail(!assertion, "srem fault (div by 0 or overflow)");
 
         return BinaryOp::CreateSRem(lhs, rhs);
       },
       lhs, rhs);
 
-  frame.insert(&op, std::move(result));
+  interp->store(&op, std::move(result));
 
-  return ExecutionResult::Continue;
+  return ExecutionResult::Migrated;
 }
 ExecutionResult Interpreter::visitURem(llvm::BinaryOperator& op) {
-  auto& frame = ctx->stack_top().get_regular();
-
-  auto lhs = ctx->lookup(op.getOperand(0));
-  auto rhs = ctx->lookup(op.getOperand(1));
+  auto lhs = interp->load(op.getOperand(0));
+  auto rhs = interp->load(op.getOperand(1));
 
   auto result = transform_exprs(
       [&](const auto& lhs, const auto& rhs) {
-        Assertion assertion = ICmpOp::CreateICmpNE(rhs, 0);
-        if (ctx->check(solver, !assertion) == SolverResult::SAT)
-          logFailure(*ctx, !assertion, "urem fault (div by 0)");
-        ctx->add(assertion);
-
+        interp->assert_or_fail(ICmpOp::CreateICmpNE(rhs, 0),
+                               "urem fault (div by 0)");
         return BinaryOp::CreateURem(lhs, rhs);
       },
       lhs, rhs);
 
-  frame.insert(&op, std::move(result));
+  interp->store(&op, std::move(result));
 
   return ExecutionResult::Continue;
 }
 
 ExecutionResult Interpreter::visitPHINode(llvm::PHINode& node) {
-  auto& frame = ctx->stack_top().get_regular();
+  auto& frame = interp->context().stack_top().get_regular();
 
   // PHI nodes in the entry block is invalid.
   CAFFEINE_ASSERT(frame.prev_block != nullptr);
 
-  auto value = ctx->lookup(node.getIncomingValueForBlock(frame.prev_block));
-  frame.insert(&node, value);
+  auto value = interp->load(node.getIncomingValueForBlock(frame.prev_block));
+  interp->store(&node, value);
 
   return ExecutionResult::Continue;
 }
 ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst& inst) {
   if (!inst.isConditional()) {
-    ctx->stack_top().get_regular().jump_to(inst.getSuccessor(0));
-    return ExecutionResult::Continue;
+    interp->jump_to(inst.getSuccessor(0));
+    return ExecutionResult::Migrated;
   }
 
-  auto cond = ctx->lookup(inst.getCondition()).scalar().expr();
-  auto assertion = Assertion(cond);
-  auto is_t = ctx->check(solver, assertion);
-  auto is_f = ctx->check(solver, !assertion);
-
-  size_t count = 0;
-  count += is_t != SolverResult::UNSAT;
-  count += is_f != SolverResult::UNSAT;
-
-  auto forks = ctx->fork(count);
-  size_t idx = 0;
+  auto assertion = Assertion(interp->load(inst.getCondition()).scalar().expr());
+  auto is_t = interp->check(assertion);
+  auto is_f = interp->check(!assertion);
 
   // Note: For the purposes of branching we consider unknown to be
   //       equivalent to sat. Maybe future branches will bring the
   //       equation back to being solvable.
   if (is_t != SolverResult::UNSAT) {
-    auto& fork = forks[idx++];
-
-    fork.add(assertion);
-    fork.stack_top().get_regular().jump_to(inst.getSuccessor(0));
+    auto fork = interp->fork();
+    fork.add_assertion(assertion);
+    fork.jump_to(inst.getSuccessor(0));
   }
 
   if (is_f != SolverResult::UNSAT) {
-    auto& fork = forks[idx++];
+    auto fork = interp->fork();
 
-    fork.add(!assertion);
-    fork.stack_top().get_regular().jump_to(inst.getSuccessor(1));
+    fork.add_assertion(!assertion);
+    fork.jump_to(inst.getSuccessor(1));
   }
 
-  return forks;
+  interp->kill();
+
+  return ExecutionResult::Migrated;
 }
 ExecutionResult Interpreter::visitReturnInst(llvm::ReturnInst& inst) {
-  std::optional<LLVMValue> result = std::nullopt;
-  if (inst.getNumOperands() != 0)
-    result = ctx->lookup(inst.getOperand(0));
+  if (inst.getNumOperands() != 0) {
+    interp->function_return(interp->load(inst.getOperand(0)));
+  } else {
+    interp->function_return();
+  }
 
-  ctx->pop();
-
-  if (ctx->empty())
-    return ExecutionResult::Stop;
-
-  auto& parent = ctx->stack_top();
-
-  parent.set_result(result, std::nullopt);
-
-  return ExecutionResult::Continue;
+  return ExecutionResult::Migrated;
 }
 ExecutionResult Interpreter::visitSwitchInst(llvm::SwitchInst& inst) {
-  auto cond = ctx->lookup(inst.getCondition()).scalar().expr();
+  auto cond = interp->load(inst.getCondition()).scalar().expr();
+  llvm::SmallVector<Assertion, 16> assertions;
 
-  ExecutionResult::ContextVec forks;
-  Context def = ctx->fork_once();
+  assertions.reserve(inst.getNumCases());
 
   for (auto value : inst.cases()) {
     auto assertion = Assertion(ICmpOp::CreateICmpEQ(
         cond, ConstantInt::Create(value.getCaseValue()->getValue())));
-    def.add(!assertion);
 
-    if (ctx->check(solver, assertion) == SolverResult::UNSAT)
+    if (interp->check(assertion) == SolverResult::UNSAT)
       continue;
+    assertions.push_back(!assertion);
 
-    Context fork = ctx->fork_once();
-    fork.add(assertion);
-    fork.stack_top().get_regular().jump_to(value.getCaseSuccessor());
-
-    forks.push_back(std::move(fork));
+    auto fork = interp->fork();
+    fork.add_assertion(assertion);
+    fork.jump_to(value.getCaseSuccessor());
   }
 
-  if (def.check(solver) != SolverResult::UNSAT) {
-    def.stack_top().get_regular().jump_to(inst.getDefaultDest());
-    forks.push_back(std::move(def));
+  for (auto& assertion : assertions) {
+    interp->add_assertion(std::move(assertion));
   }
 
-  return forks;
+  if (interp->check() != SolverResult::UNSAT) {
+    interp->jump_to(inst.getDefaultDest());
+  } else {
+    interp->kill();
+  }
+
+  return ExecutionResult::Migrated;
 }
 ExecutionResult Interpreter::visitCallBase(llvm::CallBase& callBase) {
   auto func = callBase.getCalledFunction();
