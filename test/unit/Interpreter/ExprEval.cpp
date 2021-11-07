@@ -1,4 +1,5 @@
 #include "caffeine/Interpreter/ExprEval.h"
+#include "Util/CaptureOutput.h"
 #include "caffeine/Interpreter/Context.h"
 #include "caffeine/Solver/Solver.h"
 #include "caffeine/Solver/Z3Solver.h"
@@ -29,6 +30,11 @@ public:
     ASSERT_NE(module_with_global, nullptr);
   }
 
+  void TearDown() override {
+    if (HasFailure())
+      capture.emit();
+  }
+
 private:
   std::unique_ptr<llvm::Module> loadFile(const char* filename) {
     llvm::SMDiagnostic error;
@@ -39,6 +45,9 @@ private:
 
     return module;
   }
+
+private:
+  CaptureStderr capture;
 };
 
 TEST_F(ExprEvaluatorTests, does_not_create_allocation) {
