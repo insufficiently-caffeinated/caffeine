@@ -16,7 +16,7 @@ CaptureStderr::CaptureStderr() : old_stderr(STDERR) {
 #ifndef __linux__
   int newfd = memfd_create("test-log-output", 0);
 #else
-  int newfd = open("test-log-output", O_CREAT | O_RDWR | O_EXCL);
+  int newfd = open("test-log-output", O_CREAT | O_RDWR | O_EXCL, S_IRWXU);
   unlink("test-log-output");
 #endif
 
