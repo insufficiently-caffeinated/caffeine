@@ -95,13 +95,6 @@ void Interpreter::queueContext(Context&& ctx) {
   }
 }
 
-Interpreter Interpreter::cloneWith(Context* ctx) {
-  CAFFEINE_ASSERT(ctx);
-
-  Interpreter cloned = *this;
-  cloned.ctx = ctx;
-  return cloned;
-}
 Interpreter Interpreter::cloneWith(InterpreterContext* interp) {
   CAFFEINE_ASSERT(interp);
 

@@ -122,7 +122,6 @@ private:
   void logFailure(Context& ctx, const Assertion& assertion,
                   std::string_view message = "");
   void queueContext(Context&& ctx);
-  Interpreter cloneWith(Context* ctx);
   Interpreter cloneWith(InterpreterContext* interp);
 
 private:
