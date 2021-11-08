@@ -95,11 +95,12 @@ void Interpreter::queueContext(Context&& ctx) {
   }
 }
 
-Interpreter Interpreter::cloneWith(Context* ctx) {
-  CAFFEINE_ASSERT(ctx);
+Interpreter Interpreter::cloneWith(InterpreterContext* interp) {
+  CAFFEINE_ASSERT(interp);
 
   Interpreter cloned = *this;
-  cloned.ctx = ctx;
+  cloned.interp = interp;
+  cloned.ctx = &interp->context();
   return cloned;
 }
 
@@ -422,49 +423,47 @@ ExecutionResult Interpreter::visitIndirectCall(llvm::CallBase& call) {
       call.isIndirectCall() || !call.getCalledFunction(),
       "visitIndirectCall called with a non-indirect call instruction");
 
-  auto pointer = ctx->lookup(call.getCalledOperand()).scalar().pointer();
+  auto pointer = interp->load(call.getCalledOperand()).scalar().pointer();
   CAFFEINE_ASSERT(
       pointer.heap() == MemHeapMgr::FUNCTION_INDEX,
       "Indirect call instruction called with pointer of wrong type");
 
-  auto assertion = ctx->heaps.check_valid(pointer, 1);
-  if (ctx->check(solver, !assertion) == SolverResult::SAT) {
-    logFailure(*ctx, !assertion, "invalid function pointer");
-
-    // If we get an invalid function pointer then there's a pretty good chance
-    // that we'll potentially be calling all the function pointers. This isn't
-    // likely to yield useful bugs so just kill the context.
-    return ExecutionResult::Dead;
-  }
-
-  auto resolved = ctx->heaps.resolve(solver, pointer, *ctx);
-  auto resolved_forks = ctx->fork(resolved.size());
+  auto resolved = interp->resolve_ptr(pointer, 1, "invalid function pointer");
+  interp->kill();
 
   auto newcall = llvm::cast<llvm::CallBase>(call.clone());
   auto _guard = llvm::unique_value(newcall);
 
-  llvm::SmallVector<Context, 2> forks;
+  for (auto& ptr : resolved) {
+    auto fork = interp->fork();
+    Allocation& alloc = fork.context().heaps.ptr_allocation(ptr);
+    fork.add_assertion(ICmpOp::CreateICmpEQ(
+        alloc.address(), pointer.value(fork.context().heaps)));
 
-  for (auto [fork, ptr] : llvm::zip(resolved_forks, resolved)) {
-    Allocation& alloc = fork.heaps[ptr.heap()][ptr.alloc()];
-    fork.add(ICmpOp::CreateICmp(ICmpOpcode::EQ, alloc.address(),
-                                pointer.value(fork.heaps)));
     newcall->setCalledFunction(
         llvm::cast<FunctionObject>(*alloc.data()).function());
 
     Interpreter interp = cloneWith(&fork);
     auto result = interp.visitCallBase(*newcall);
 
-    if (!result.empty()) {
-      auto& contexts = result.contexts();
-      forks.append(std::move_iterator(contexts.begin()),
-                   std::move_iterator(contexts.end()));
-    } else if (result.status() == ExecutionResult::Continue) {
-      forks.push_back(std::move(fork));
+    switch (result.status()) {
+    case ExecutionResult::Migrated:
+    case ExecutionResult::Continue:
+      break;
+    default:
+      fork.kill();
+
+      for (Context& ctx : result.contexts()) {
+        if (policy->should_queue_path(ctx)) {
+          fork.fork_existing(std::move(ctx));
+        } else {
+          policy->on_path_complete(ctx, ExecutionPolicy::Removed);
+        }
+      }
     }
   }
 
-  return forks;
+  return ExecutionResult::Migrated;
 }
 
 ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
