@@ -98,10 +98,10 @@ private:
   std::mutex mutex;
   std::condition_variable condvar;
 
+  size_t num_readers;
   std::random_device dev;
 
   size_t blocked = 0;
-  size_t num_readers;
 
   bool done = false;
   std::vector<Context> contexts;

@@ -71,14 +71,12 @@ Context QueueingContextStore::dequeue() {
   return ctx;
 }
 
-RandomizedContextStore::RandomizedContextStore(site_t num_readers):
-  num_readers{num_readers}, dev{std::random_device()()} {}
+RandomizedContextStore::RandomizedContextStore(size_t num_readers):
+  num_readers{num_readers}, dev{std::random_device()} {}
 
 void RandomizedContextStore::add_context(Context&& ctx) {
   auto lock = std::unique_lock(mutex);
-  auto vecLock = std::unique_lock(vecMutex);
-  context.push_back(std::move(ctx));
-  vecLock.unlock();
+  contexts.push_back(std::move(ctx));
   lock.unlock();
   condvar.notify_one();
 }
@@ -108,12 +106,12 @@ std::optional<Context> RandomizedContextStore::next_context() {
 Context RandomizedContextStore::removeRandom() {
   CAFFEINE_ASSERT(!contexts.empty());
   std::mt19937 rng(dev());
-  std::uniform_int_distribution<std::mt19937::result_type> dist(0, context.size() - 1);
+  std::uniform_int_distribution<std::mt19937::result_type> dist(0, contexts.size() - 1);
 
-  size_t selected = dist();
+  size_t selected = dist(rng);
   
   Context ctx = std::move(contexts[selected]);
-  if (selected != context.size() - 1)
+  if (selected != contexts.size() - 1)
     std::swap(contexts[selected], contexts.back());
   contexts.pop_back();
   return ctx;
