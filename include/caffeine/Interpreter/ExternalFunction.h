@@ -12,6 +12,13 @@ class LLVMValue;
  * To implement a new external function all that is needed is to derive from
  * this class and then register that instance with the interpreter at startup
  * time.
+ *
+ * Note that this is different from an ExternalStackFrame instance. An external
+ * stack frame allows for more easily dealing with forking and is necessary if
+ * an external function wants to call out to other functions. An external
+ * function _may_ create an external stack frame and put it on the stack but
+ * this is not necessary and most external functions will likely not need to do
+ * so.
  */
 class ExternalFunction {
 public:
