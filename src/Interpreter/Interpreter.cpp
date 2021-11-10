@@ -1,5 +1,6 @@
 #include "caffeine/Interpreter/Interpreter.h"
 #include "caffeine/Interpreter/ExprEval.h"
+#include "caffeine/Interpreter/ExternalFuncs/CaffeineAssert.h"
 #include "caffeine/Interpreter/Policy.h"
 #include "caffeine/Interpreter/StackFrame.h"
 #include "caffeine/Interpreter/Store.h"
@@ -61,6 +62,14 @@ Interpreter::extern_functions() {
       })();
 
   return kExternFunctions;
+}
+
+std::shared_ptr<ExternalStackFrame> Interpreter::extern_function_class_builder(const llvm::StringRef & name) {
+  if (name == "caffeine_assert") {
+    return std::make_shared<CaffeineAssertFunc>(StackFrame::get_next_frame_id());
+  }
+
+  return nullptr;
 }
 
 ExecutionResult::ExecutionResult(Status status) : status_(status) {}
@@ -386,13 +395,9 @@ ExecutionResult Interpreter::visitCallBase(llvm::CallBase& callBase) {
     auto* prev_inst = &*ctx->stack_top().get_regular().current;
     auto invoke = llvm::dyn_cast<llvm::InvokeInst>(&callBase);
 
-    std::function<ExecutionResult(llvm::CallBase&)> func =
-        [&](llvm::CallBase& callBase_) {
-          return this->visitExternFunc(callBase_);
-        };
+    auto res = visitExternFunc(callBase);
 
-    auto res = callExternFunc(ctx, func, callBase);
-
+    // TODO: Get rid of this logic and shove it into visitExternFunc
     if (!invoke)
       return res;
 
@@ -586,8 +591,18 @@ ExecutionResult Interpreter::visitExternFunc(llvm::CallBase& call) {
   CAFFEINE_ASSERT(func->empty(),
                   "visitExternFunc called with non-external function");
 
-  if (name == "caffeine_assert")
-    return visitAssert(call);
+  std::shared_ptr<ExternalStackFrame> frame = extern_function_class_builder(name);
+
+  if (frame) {
+    std::vector<LLVMValue> args;
+    for (unsigned int i = 0; i < call.getNumArgOperands(); i++) {
+      args.push_back(interp->load(call.getArgOperand(i)));
+    }
+
+    // TODO: Handle forks
+    return frame->run(*interp, args);
+  }
+
   if (name == "caffeine_assume")
     return visitAssume(call);
 
@@ -621,19 +636,6 @@ ExecutionResult Interpreter::visitAssume(llvm::CallBase& call) {
   // Don't check whether adding the assumption causes this path to become
   // dead since assumptions are rare, solver calls are expensive, and it'll
   // get caught at the next conditional branch anyway.
-  return ExecutionResult::Continue;
-}
-ExecutionResult Interpreter::visitAssert(llvm::CallBase& call) {
-  CAFFEINE_ASSERT(call.getNumArgOperands() == 1);
-
-  auto cond = ctx->lookup(call.getArgOperand(0));
-  auto assertion = Assertion(cond.scalar().expr());
-
-  if (ctx->check(solver, !assertion) == SolverResult::SAT)
-    logFailure(*ctx, !assertion, "assertion failure");
-
-  ctx->add(assertion);
-
   return ExecutionResult::Continue;
 }
 

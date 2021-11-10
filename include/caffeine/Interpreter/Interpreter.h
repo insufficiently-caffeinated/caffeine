@@ -13,6 +13,7 @@
 #include "caffeine/Support/Assert.h"
 #include "caffeine/Support/Macros.h"
 
+#include <llvm/ADT/StringRef.h>
 #include <llvm/IR/InstVisitor.h>
 
 namespace caffeine {
@@ -128,7 +129,6 @@ private:
   ExecutionResult visitExternFunc(llvm::CallBase& inst);
 
   ExecutionResult visitAssume(llvm::CallBase& inst);
-  ExecutionResult visitAssert(llvm::CallBase& inst);
   ExecutionResult visitSymbolicAlloca(llvm::CallBase& inst);
 
   ExecutionResult visitCalloc(llvm::CallBase& inst);
@@ -140,17 +140,7 @@ private:
   ExecutionResult visitSetjmp(llvm::CallBase& inst);
   ExecutionResult visitLongjmp(llvm::CallBase& inst);
 
-  // `callExternFunc` will set up the context's stack frame before
-  // performing a function call and then tear it down if that's necessary after
-  // the function returns. It will also preserve the return value
-  template <typename F, typename... Ts>
-  ExecutionResult callExternFunc(Context*, F func, Ts&&... args) {
-    // TODO: Create extern stack frame
-    ExecutionResult res = func(std::forward<Ts>(args)...);
-    // TODO: Pop temp stack frame
-
-    return res;
-  }
+  std::shared_ptr<ExternalStackFrame> extern_function_class_builder(const llvm::StringRef & name);
 
   friend class TransformBuilder;
 

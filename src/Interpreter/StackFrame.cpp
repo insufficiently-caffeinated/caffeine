@@ -69,7 +69,11 @@ ExternalStackFrame::ExternalStackFrame(uint64_t frame_id,
                                        std::optional<LLVMValue> resume_value_)
     : frame_id{frame_id}, result_{result_}, resume_value_{resume_value_} {}
 
-StackFrame::StackFrame() : frame_id(next_frame_id++) {}
+uint64_t StackFrame::get_next_frame_id() {
+  return next_frame_id++;
+}
+
+StackFrame::StackFrame() : frame_id(get_next_frame_id()) {}
 
 StackFrame StackFrame::RegularFrame(llvm::Function* function) {
   StackFrame frame;
@@ -77,8 +81,8 @@ StackFrame StackFrame::RegularFrame(llvm::Function* function) {
   return frame;
 }
 
-ExecutionResult ExternalStackFrame::run(InterpreterContext & context) {
-  while (step(context) == CoroutineExecutionResult::Continue) {}
+ExecutionResult ExternalStackFrame::run(InterpreterContext & context, const std::vector<LLVMValue> & args) {
+  while (step(context, args) == CoroutineExecutionResult::Continue) {}
   return ExecutionResult::Continue;
 }
 

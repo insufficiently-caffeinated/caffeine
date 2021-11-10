@@ -44,14 +44,14 @@ public:
                      std::optional<LLVMValue> resume_value_ = std::nullopt);
 
   // Wrapper around corouting logic implementation
-  ExecutionResult run(InterpreterContext & context);
+  ExecutionResult run(InterpreterContext & context, const std::vector<LLVMValue> & args);
 
 protected:
   void set_result(std::optional<LLVMValue> result,
                   std::optional<LLVMValue> resume_value);
 
   // Coroutine logic implementation
-  virtual CoroutineExecutionResult step(InterpreterContext & context) = 0;
+  virtual CoroutineExecutionResult step(InterpreterContext & context, const std::vector<LLVMValue> & args) = 0;
   friend class StackFrame;
 
   uint64_t program_counter = 0;
@@ -114,6 +114,7 @@ public:
   StackFrame();
 
   static StackFrame RegularFrame(llvm::Function* function);
+  static uint64_t get_next_frame_id();
 
   /**
    * Set the result of the current instruction in the stack frame.
