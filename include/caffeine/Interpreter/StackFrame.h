@@ -28,6 +28,20 @@ public:
       : alloc(allocid), heap(heap) {}
 };
 
+// `ExternalStackFrame`s are coroutines used to implement external
+// functions (such as `caffeine_assert` and friends). The logic of
+// the external function is implemented in the `step()` method.
+//
+// In order to properly implement an external function:
+//   1. all class state must be stored in member variables
+//   2. the class must perfectly copy itself by overriding
+//      the `clone()` method
+//   3. Any action that can fork must be the last action
+//      for a given switch case statement (examples of this
+//      will be available in the future).
+//   4. After the function is complete, you must pop yourself
+//      off the relevant stack, and provide return values through
+//      `set_result()` even if those return values are all null
 class ExternalStackFrame {
 public:
   uint64_t frame_id;
