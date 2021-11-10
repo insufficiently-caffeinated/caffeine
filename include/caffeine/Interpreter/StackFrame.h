@@ -4,6 +4,7 @@
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/IR/BasicBlock.h>
 
+#include <memory>
 #include <unordered_map>
 #include <vector>
 
@@ -28,31 +29,25 @@ public:
 };
 
 class ExternalStackFrame {
-protected:
-  enum CoroutineExecutionResult { Continue, Stop, Call };
-
 public:
   uint64_t frame_id;
   std::optional<LLVMValue> result_ = std::nullopt;
   std::optional<LLVMValue> resume_value_ = std::nullopt;
+  std::vector<LLVMValue> args;
+  llvm::Function* func;
 
   virtual std::unique_ptr<ExternalStackFrame> clone() const = 0;
   virtual ~ExternalStackFrame() = default;
-  ExternalStackFrame(uint64_t frame_id,
-                     std::optional<LLVMValue> result_ = std::nullopt,
-                     std::optional<LLVMValue> resume_value_ = std::nullopt);
+  ExternalStackFrame(std::vector<LLVMValue>&& args,
+                     llvm::Function* func = nullptr);
 
-  // Wrapper around corouting logic implementation
-  ExecutionResult run(InterpreterContext& context,
-                      const std::vector<LLVMValue>& args);
+  // Coroutine logic implementation
+  virtual void step(InterpreterContext& context) = 0;
 
 protected:
   void set_result(std::optional<LLVMValue> result,
                   std::optional<LLVMValue> resume_value);
 
-  // Coroutine logic implementation
-  virtual CoroutineExecutionResult step(InterpreterContext& context,
-                                        const std::vector<LLVMValue>& args) = 0;
   friend class StackFrame;
 
   uint64_t program_counter = 0;
@@ -113,6 +108,7 @@ public:
   uint64_t frame_id;
 
   StackFrame();
+  StackFrame(std::unique_ptr<ExternalStackFrame>&& frame);
 
   static StackFrame RegularFrame(llvm::Function* function);
   static uint64_t get_next_frame_id();

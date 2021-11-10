@@ -64,16 +64,6 @@ Interpreter::extern_functions() {
   return kExternFunctions;
 }
 
-std::shared_ptr<ExternalStackFrame>
-Interpreter::extern_function_class_builder(const llvm::StringRef& name) {
-  if (name == "caffeine_assert") {
-    return std::make_shared<CaffeineAssertFunc>(
-        StackFrame::get_next_frame_id());
-  }
-
-  return nullptr;
-}
-
 ExecutionResult::ExecutionResult(Status status) : status_(status) {}
 ExecutionResult::ExecutionResult(llvm::SmallVector<Context, 2>&& contexts,
                                  Status status)
@@ -116,7 +106,13 @@ Interpreter Interpreter::cloneWith(InterpreterContext* interp) {
 }
 
 void Interpreter::execute() {
-  auto& frame = ctx->stack_top().get_regular();
+  auto& frame_wrapper = ctx->stack_top();
+  if (frame_wrapper.is_external()) {
+    frame_wrapper.get_external()->step(*interp);
+    return;
+  }
+
+  auto& frame = frame_wrapper.get_regular();
 
   CAFFEINE_ASSERT(frame.current != frame.current_block->end(),
                   "Instruction pointer ran off end of block.");
@@ -374,6 +370,10 @@ ExecutionResult Interpreter::visitCallBase(llvm::CallBase& callBase) {
     if (!invoke)
       return res;
 
+    if (interp->context().stack_top().is_external()) {
+      return res;
+    }
+
     if (res.empty()) {
       if (&*ctx->stack_top().get_regular().current == prev_inst) {
         ctx->stack_top().set_result(std::nullopt, std::nullopt);
@@ -562,17 +562,17 @@ ExecutionResult Interpreter::visitExternFunc(llvm::CallBase& call) {
   CAFFEINE_ASSERT(func->empty(),
                   "visitExternFunc called with non-external function");
 
-  std::shared_ptr<ExternalStackFrame> frame =
-      extern_function_class_builder(name);
-
-  if (frame) {
+  if (name == "caffeine_assert") {
     std::vector<LLVMValue> args;
     for (unsigned int i = 0; i < call.getNumArgOperands(); i++) {
       args.push_back(interp->load(call.getArgOperand(i)));
     }
 
+    auto frame = std::make_unique<CaffeineAssertFunc>(std::move(args), func);
+
     // TODO: Handle forks
-    return frame->run(*interp, args);
+    interp->context().stack.push_back(StackFrame(std::move(frame)));
+    return ExecutionResult::Continue;
   }
 
   if (name == "caffeine_assume")

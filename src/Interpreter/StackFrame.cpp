@@ -64,10 +64,9 @@ void ExternalStackFrame::set_result(std::optional<LLVMValue> result,
     resume_value_ = resume_value;
 };
 
-ExternalStackFrame::ExternalStackFrame(uint64_t frame_id,
-                                       std::optional<LLVMValue> result_,
-                                       std::optional<LLVMValue> resume_value_)
-    : frame_id{frame_id}, result_{result_}, resume_value_{resume_value_} {}
+ExternalStackFrame::ExternalStackFrame(std::vector<LLVMValue>&& args,
+                                       llvm::Function* func)
+    : frame_id{StackFrame::get_next_frame_id()}, args{args}, func{func} {}
 
 uint64_t StackFrame::get_next_frame_id() {
   return next_frame_id++;
@@ -75,16 +74,13 @@ uint64_t StackFrame::get_next_frame_id() {
 
 StackFrame::StackFrame() : frame_id(get_next_frame_id()) {}
 
+StackFrame::StackFrame(std::unique_ptr<ExternalStackFrame>&& frame)
+    : value_(clone_ptr(std::move(frame))), frame_id(get_external()->frame_id) {}
+
 StackFrame StackFrame::RegularFrame(llvm::Function* function) {
   StackFrame frame;
   frame.value_ = IRStackFrame(function, frame.frame_id);
   return frame;
-}
-
-ExecutionResult ExternalStackFrame::run(InterpreterContext& context,
-                                        const std::vector<LLVMValue>& args) {
-  while (step(context, args) == CoroutineExecutionResult::Continue) {}
-  return ExecutionResult::Continue;
 }
 
 const IRStackFrame& StackFrame::get_regular() const {

@@ -7,9 +7,7 @@ std::unique_ptr<ExternalStackFrame> CaffeineAssertFunc::clone() const {
   return std::make_unique<CaffeineAssertFunc>(*this);
 }
 
-ExternalStackFrame::CoroutineExecutionResult
-CaffeineAssertFunc::step(InterpreterContext& ic,
-                         const std::vector<LLVMValue>& args) {
+void CaffeineAssertFunc::step(InterpreterContext& ic) {
   auto& ctx = ic.context();
   auto cond = args.at(0);
   auto assertion = Assertion(cond.scalar().expr());
@@ -18,7 +16,8 @@ CaffeineAssertFunc::step(InterpreterContext& ic,
 
   ctx.add(assertion);
 
-  return ExternalStackFrame::CoroutineExecutionResult::Stop;
+  ic.context().stack.pop_back();
+  ic.context().stack_top().set_result(std::nullopt, std::nullopt);
 }
 
 } // namespace caffeine

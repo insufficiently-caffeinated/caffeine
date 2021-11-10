@@ -4,11 +4,10 @@ namespace caffeine {
 
 class CaffeineAssertFunc : public ExternalStackFrame {
 public:
-  CaffeineAssertFunc(uint64_t id) : ExternalStackFrame(id){};
+  using ExternalStackFrame::ExternalStackFrame;
+
   std::unique_ptr<ExternalStackFrame> clone() const override;
-  ExternalStackFrame::CoroutineExecutionResult
-  step(InterpreterContext& context,
-       const std::vector<LLVMValue>& args) override;
+  void step(InterpreterContext& context) override;
 };
 
 } // namespace caffeine
