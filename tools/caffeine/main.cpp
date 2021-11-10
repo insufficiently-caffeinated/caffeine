@@ -8,7 +8,6 @@
 #include "caffeine/Support/DiagnosticHandler.h"
 #include "caffeine/Support/Signal.h"
 #include "caffeine/Support/Tracing.h"
-#include "caffeine/Solver/LoggingSolver.h"
 
 #include <cstdlib>
 #include <divine/Passes/CppLsda.h>

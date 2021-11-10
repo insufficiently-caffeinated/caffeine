@@ -81,7 +81,8 @@ StackFrame StackFrame::RegularFrame(llvm::Function* function) {
   return frame;
 }
 
-ExecutionResult ExternalStackFrame::run(InterpreterContext & context, const std::vector<LLVMValue> & args) {
+ExecutionResult ExternalStackFrame::run(InterpreterContext& context,
+                                        const std::vector<LLVMValue>& args) {
   while (step(context, args) == CoroutineExecutionResult::Continue) {}
   return ExecutionResult::Continue;
 }

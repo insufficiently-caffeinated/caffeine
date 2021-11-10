@@ -64,9 +64,11 @@ Interpreter::extern_functions() {
   return kExternFunctions;
 }
 
-std::shared_ptr<ExternalStackFrame> Interpreter::extern_function_class_builder(const llvm::StringRef & name) {
+std::shared_ptr<ExternalStackFrame>
+Interpreter::extern_function_class_builder(const llvm::StringRef& name) {
   if (name == "caffeine_assert") {
-    return std::make_shared<CaffeineAssertFunc>(StackFrame::get_next_frame_id());
+    return std::make_shared<CaffeineAssertFunc>(
+        StackFrame::get_next_frame_id());
   }
 
   return nullptr;
@@ -560,7 +562,8 @@ ExecutionResult Interpreter::visitExternFunc(llvm::CallBase& call) {
   CAFFEINE_ASSERT(func->empty(),
                   "visitExternFunc called with non-external function");
 
-  std::shared_ptr<ExternalStackFrame> frame = extern_function_class_builder(name);
+  std::shared_ptr<ExternalStackFrame> frame =
+      extern_function_class_builder(name);
 
   if (frame) {
     std::vector<LLVMValue> args;

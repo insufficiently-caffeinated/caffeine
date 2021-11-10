@@ -140,7 +140,8 @@ private:
   ExecutionResult visitSetjmp(llvm::CallBase& inst);
   ExecutionResult visitLongjmp(llvm::CallBase& inst);
 
-  std::shared_ptr<ExternalStackFrame> extern_function_class_builder(const llvm::StringRef & name);
+  std::shared_ptr<ExternalStackFrame>
+  extern_function_class_builder(const llvm::StringRef& name);
 
   friend class TransformBuilder;
 
