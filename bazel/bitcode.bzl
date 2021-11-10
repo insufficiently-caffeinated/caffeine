@@ -390,6 +390,10 @@ def caffeine_bitcode_test(should_fail = False, skip = False, **kwargs):
         "-t",
         "1",
     ]
+
+    if "tags" in kwargs:
+        tags += kwargs["tags"]
+
     if should_fail:
         args.append("--invert-exitcode")
 

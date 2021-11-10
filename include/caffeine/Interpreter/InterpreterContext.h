@@ -1,12 +1,12 @@
 #pragma once
 
 #include "caffeine/Interpreter/Context.h"
+#include "caffeine/Interpreter/Policy.h"
 #include "caffeine/Solver/Solver.h"
 
 namespace caffeine {
 
 class FailureLogger;
-class ExecutionPolicy;
 
 /**
  * Wrapper around the current execution context.
@@ -85,6 +85,24 @@ public:
   void store(llvm::Value* ident, const LLVMValue& value);
   void store(llvm::Value* ident, LLVMValue&& value);
 
+  /**
+   * Set the instruction pointer of the current stack frame to the first
+   * instruction within the provided basic block.
+   *
+   * The basic block must belong to the same function as that for the current
+   * stack frame and current stack frame must not be an external stack frame.
+   */
+  void jump_to(llvm::BasicBlock* block);
+
+  /**
+   * Return from the current stack frame with an optional return value. If this
+   * causes the stack to be empty then the context will also be killed.
+   *
+   * This will cause an assertion failure if the current function's return type
+   * is inconsistent with the presence (or lack thereof) of a return value.
+   */
+  void function_return(std::optional<LLVMValue> retval = std::nullopt);
+
   // Assertion/Solver-related methods
 
   /**
@@ -132,6 +150,43 @@ public:
    */
   void assert_or_fail(const Assertion& assertion, std::string_view message);
 
+  // Methods for working with pointers
+
+  /**
+   * Assert that it is valid to access the memory at [ptr, ptr+width).
+   *
+   * If this assertion fails then it will kill the current context and emit a
+   * test failure with the provided message as an explanatory string.
+   */
+  void assert_ptr_valid(const Pointer& ptr, uint32_t width,
+                        std::string_view message);
+  void assert_ptr_valid(const Pointer& ptr, const OpRef& width,
+                        std::string_view message);
+
+  /**
+   * Check whether a pointer is valid and, if so, resolve which concrete
+   * allocations it could point to.
+   *
+   * In more detail:
+   *
+   * - Check to see whether it is possible to point outside of any existing
+   *   allocation. If so, fail the current context and don't do any pointer
+   *   resolution.
+   *
+   *   This is done since if the pointer could be pointing outside of an
+   *   allocation then it's likely that it could possibly be pointing to any
+   *   other allocation and failures found from those branches would not be
+   *   useful.
+   *
+   * - Determine which allocations the pointer could point within and return all
+   *   of them. If the pointer is already known to point to a specific
+   *   allocation then this is efficient.
+   */
+  llvm::SmallVector<Pointer, 1> resolve_ptr(const Pointer& ptr, uint32_t width,
+                                            std::string_view message);
+  llvm::SmallVector<Pointer, 1>
+  resolve_ptr(const Pointer& ptr, const OpRef& width, std::string_view message);
+
   // Methods managing forks and context queuing
 
   /**
@@ -140,8 +195,8 @@ public:
    *
    * This will also set up the new context to be queued up transparently.
    *
-   * Note that if the current context is dead then the forked context will _not_
-   * be dead.
+   * Note that if the current context is dead then the forked context will
+   * _not_ be dead.
    */
   InterpreterContext fork() const;
 
@@ -188,6 +243,11 @@ public:
    */
   void emit_failure(std::string_view message, const Model* model,
                     const Assertion& assertion);
+
+private:
+  // Set the current context as dead and emit the appropriate notifications.
+  void set_dead(ExecutionPolicy::ExitStatus status,
+                const Assertion& assertion = Assertion::constant(true));
 
 public:
   // Interfaces used by the scheduler to interact with InterpreterContext
