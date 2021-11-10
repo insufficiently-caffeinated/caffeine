@@ -11,5 +11,5 @@ void test(uint32_t x) {
   func_t f = x == 0 ? caffeine_assert : caffeine_assume;
   call_func(f, x == 0);
 
-  // caffeine_assert(x == 0);
+  caffeine_assert(x == 0);
 }
