@@ -6,9 +6,11 @@ cc_library(
         ["**/*.cpp"],
         exclude = ["main.cpp"],
     ),
+    hdrs = glob(["**/*.h"]),
     copts = WARNING_FLAGS,
     data = ["Interpreter/ir-with-global.ll"],
     local_defines = ["CAFFEINE_BAZEL"],
+    strip_include_prefix = "/test/unit",
     visibility = ["//:__pkg__"],
     deps = [
         "//:caffeine",
