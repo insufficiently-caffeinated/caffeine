@@ -110,7 +110,7 @@ Context RandomizedContextStore::removeRandom() {
       0, contexts.size() - 1);
 
   size_t selected = dist(rng);
-  
+
   Context ctx = std::move(contexts[selected]);
   if (selected != contexts.size() - 1)
     std::swap(contexts[selected], contexts.back());
