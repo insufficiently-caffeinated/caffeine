@@ -8,8 +8,8 @@
 #include <mutex>
 #include <optional>
 #include <queue>
-#include <vector>
 #include <random>
+#include <vector>
 
 namespace caffeine {
 
