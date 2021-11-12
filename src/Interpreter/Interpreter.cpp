@@ -562,19 +562,8 @@ ExecutionResult Interpreter::visitExternFunc(llvm::CallBase& call) {
   CAFFEINE_ASSERT(func->empty(),
                   "visitExternFunc called with non-external function");
 
-  if (name == "caffeine_assert") {
-    std::vector<LLVMValue> args;
-    for (unsigned int i = 0; i < call.getNumArgOperands(); i++) {
-      args.push_back(interp->load(call.getArgOperand(i)));
-    }
-
-    auto frame = std::make_unique<CaffeineAssertFunc>(std::move(args), func);
-
-    // TODO: Handle forks
-    interp->context().stack.push_back(StackFrame(std::move(frame)));
-    return ExecutionResult::Continue;
-  }
-
+  if (name == "caffeine_assert")
+    return visitAssert(call);
   if (name == "caffeine_assume")
     return visitAssume(call);
 
@@ -609,6 +598,20 @@ ExecutionResult Interpreter::visitAssume(llvm::CallBase& call) {
   // dead since assumptions are rare, solver calls are expensive, and it'll
   // get caught at the next conditional branch anyway.
   return ExecutionResult::Continue;
+}
+ExecutionResult Interpreter::visitAssert(llvm::CallBase& call) {
+  CAFFEINE_ASSERT(call.getNumArgOperands() == 1);
+  auto func = call.getCalledFunction();
+
+  std::vector<LLVMValue> args;
+  for (unsigned int i = 0; i < call.getNumArgOperands(); i++) {
+    args.push_back(interp->load(call.getArgOperand(i)));
+  }
+
+  auto frame = std::make_unique<CaffeineAssertFunc>(std::move(args), func);
+
+  interp->call_external_function(std::move(frame));
+  return ExecutionResult::Migrated;
 }
 
 std::optional<std::string> readSymbolicName(std::shared_ptr<Solver> solver,

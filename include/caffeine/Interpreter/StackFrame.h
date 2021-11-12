@@ -52,8 +52,7 @@ public:
 
   virtual std::unique_ptr<ExternalStackFrame> clone() const = 0;
   virtual ~ExternalStackFrame() = default;
-  ExternalStackFrame(std::vector<LLVMValue>&& args,
-                     llvm::Function* func = nullptr);
+  ExternalStackFrame(std::vector<LLVMValue>&& args, llvm::Function* func);
 
   // Coroutine logic implementation
   virtual void step(InterpreterContext& context) = 0;
@@ -63,8 +62,6 @@ protected:
                   std::optional<LLVMValue> resume_value);
 
   friend class StackFrame;
-
-  uint64_t program_counter = 0;
 };
 
 class IRStackFrame {
