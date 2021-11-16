@@ -26,11 +26,11 @@ llvm::Function* InterpreterContext::getCurrentFunction() const {
     return nullptr;
 
   const auto& frame = ctx.stack_top();
-  if (frame.is_regular())
+  if (frame.is_regular()) {
     return frame.get_regular().current_block->getParent();
+  }
 
-  CAFFEINE_UNIMPLEMENTED(
-      "External stack frames do not currently have associated functions");
+  return frame.get_external()->func;
 }
 
 llvm::Instruction* InterpreterContext::getCurrentInstruction() const {
@@ -96,7 +96,8 @@ void InterpreterContext::jump_to(llvm::BasicBlock* block) {
 }
 
 void InterpreterContext::function_return(std::optional<LLVMValue> retval) {
-  if (getCurrentFunction()->getReturnType()->isVoidTy()) {
+  if (getCurrentFunction() &&
+      getCurrentFunction()->getReturnType()->isVoidTy()) {
     CAFFEINE_ASSERT(!retval.has_value());
   } else {
     CAFFEINE_ASSERT(retval.has_value());
@@ -234,6 +235,11 @@ void InterpreterContext::set_dead(ExecutionPolicy::ExitStatus status,
                                   const Assertion& assertion) {
   entry_->dead = true;
   shared_->policy->on_path_complete(context(), status, assertion);
+}
+
+void InterpreterContext::call_external_function(
+    std::unique_ptr<ExternalStackFrame>&& frame) {
+  context().stack.push_back(StackFrame(std::move(frame)));
 }
 
 InterpreterContext::InterpreterContext(BackingList* queue, size_t entry_index,

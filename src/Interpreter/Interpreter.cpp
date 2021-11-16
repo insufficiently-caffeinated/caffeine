@@ -1,5 +1,6 @@
 #include "caffeine/Interpreter/Interpreter.h"
 #include "caffeine/Interpreter/ExprEval.h"
+#include "caffeine/Interpreter/ExternalFuncs/CaffeineAssert.h"
 #include "caffeine/Interpreter/Policy.h"
 #include "caffeine/Interpreter/StackFrame.h"
 #include "caffeine/Interpreter/Store.h"
@@ -105,7 +106,13 @@ Interpreter Interpreter::cloneWith(InterpreterContext* interp) {
 }
 
 void Interpreter::execute() {
-  auto& frame = ctx->stack_top().get_regular();
+  auto& frame_wrapper = ctx->stack_top();
+  if (frame_wrapper.is_external()) {
+    frame_wrapper.get_external()->step(*interp);
+    return;
+  }
+
+  auto& frame = frame_wrapper.get_regular();
 
   CAFFEINE_ASSERT(frame.current != frame.current_block->end(),
                   "Instruction pointer ran off end of block.");
@@ -357,15 +364,15 @@ ExecutionResult Interpreter::visitCallBase(llvm::CallBase& callBase) {
     auto* prev_inst = &*ctx->stack_top().get_regular().current;
     auto invoke = llvm::dyn_cast<llvm::InvokeInst>(&callBase);
 
-    std::function<ExecutionResult(llvm::CallBase&)> func =
-        [&](llvm::CallBase& callBase_) {
-          return this->visitExternFunc(callBase_);
-        };
+    auto res = visitExternFunc(callBase);
 
-    auto res = callExternFunc(ctx, func, callBase);
-
+    // TODO: Get rid of this logic and shove it into visitExternFunc
     if (!invoke)
       return res;
+
+    if (interp->context().stack_top().is_external()) {
+      return res;
+    }
 
     if (res.empty()) {
       if (&*ctx->stack_top().get_regular().current == prev_inst) {
@@ -594,16 +601,17 @@ ExecutionResult Interpreter::visitAssume(llvm::CallBase& call) {
 }
 ExecutionResult Interpreter::visitAssert(llvm::CallBase& call) {
   CAFFEINE_ASSERT(call.getNumArgOperands() == 1);
+  auto func = call.getCalledFunction();
 
-  auto cond = ctx->lookup(call.getArgOperand(0));
-  auto assertion = Assertion(cond.scalar().expr());
+  std::vector<LLVMValue> args;
+  for (unsigned int i = 0; i < call.getNumArgOperands(); i++) {
+    args.push_back(interp->load(call.getArgOperand(i)));
+  }
 
-  if (ctx->check(solver, !assertion) == SolverResult::SAT)
-    logFailure(*ctx, !assertion, "assertion failure");
+  auto frame = std::make_unique<CaffeineAssertFunc>(std::move(args), func);
 
-  ctx->add(assertion);
-
-  return ExecutionResult::Continue;
+  interp->call_external_function(std::move(frame));
+  return ExecutionResult::Migrated;
 }
 
 std::optional<std::string> readSymbolicName(std::shared_ptr<Solver> solver,

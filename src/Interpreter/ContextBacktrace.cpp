@@ -35,47 +35,57 @@ void Context::print_backtrace(std::ostream& OS) const {
   size_t index = 0;
 
   for (const auto& frame_ : boost::adaptors::reverse(stack)) {
-    const auto& frame = frame_.get_regular();
     llvm::Instruction* current = nullptr;
-    if (!frame.current_block || frame.current == frame.current_block->end()) {
-      // We don't have a valid iterator.
-      current = nullptr;
-    } else if (frame.current == frame.current_block->begin()) {
-      // This case probably shouldn't happen but this method gets called when
-      // things are going wrong so we need to handle all possibilities.
-      if (frame.prev_block) {
-        current = &frame.prev_block->back();
-      } else {
-        current = &*frame.current;
-      }
-    } else {
-      current = &*std::prev(frame.current);
-    }
-
-    std::string prefix = fmt::format(FMT_STRING("#{}"), index);
-    llvm::StringRef name = "<unknown>";
     std::optional<size_t> offset;
     std::optional<std::string> source_loc;
+    std::string prefix = fmt::format(FMT_STRING("#{}"), index);
+    std::string name = "<unknown>";
 
-    if (frame.current_block) {
-      if (llvm::Function* func = frame.current_block->getParent()) {
-        MST.incorporateFunction(*func);
+    if (frame_.is_regular()) {
+      const auto& frame = frame_.get_regular();
+      if (!frame.current_block || frame.current == frame.current_block->end()) {
+        // We don't have a valid iterator.
+        current = nullptr;
+      } else if (frame.current == frame.current_block->begin()) {
+        // This case probably shouldn't happen but this method gets called when
+        // things are going wrong so we need to handle all possibilities.
+        if (frame.prev_block) {
+          current = &frame.prev_block->back();
+        } else {
+          current = &*frame.current;
+        }
+      } else {
+        current = &*std::prev(frame.current);
+      }
 
-        name = func->getName();
+      if (frame.current_block) {
+        if (llvm::Function* func = frame.current_block->getParent()) {
+          MST.incorporateFunction(*func);
 
-        if (current) {
-          int slot = MST.getLocalSlot(current);
-          if (slot != -1)
-            offset = (size_t)slot;
+          name = func->getName();
+
+          if (current) {
+            int slot = MST.getLocalSlot(current);
+            if (slot != -1)
+              offset = (size_t)slot;
+          }
         }
       }
-    }
 
-    if (current) {
-      if (const auto& debug_loc = current->getDebugLoc()) {
-        source_loc =
-            fmt::format(FMT_STRING("{}:{}:{}"), debug_loc->getFilename(),
-                        debug_loc->getLine(), debug_loc->getColumn());
+      if (current) {
+        if (const auto& debug_loc = current->getDebugLoc()) {
+          source_loc =
+              fmt::format(FMT_STRING("{}:{}:{}"), debug_loc->getFilename(),
+                          debug_loc->getLine(), debug_loc->getColumn());
+        }
+      }
+    } else {
+      const auto& frame = frame_.get_external();
+
+      if (frame->func) {
+        name = frame->func->getName();
+      } else {
+        name = "<unknown external>";
       }
     }
 

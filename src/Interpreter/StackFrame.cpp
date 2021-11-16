@@ -1,6 +1,8 @@
 #include "caffeine/Interpreter/StackFrame.h"
 #include "caffeine/IR/Operation.h"
 #include "caffeine/Interpreter/Context.h"
+#include "caffeine/Interpreter/Interpreter.h"
+#include "caffeine/Interpreter/InterpreterContext.h"
 #include "caffeine/Support/Assert.h"
 
 #include <llvm/IR/Constants.h>
@@ -62,12 +64,18 @@ void ExternalStackFrame::set_result(std::optional<LLVMValue> result,
     resume_value_ = resume_value;
 };
 
-ExternalStackFrame::ExternalStackFrame(uint64_t frame_id,
-                                       std::optional<LLVMValue> result_,
-                                       std::optional<LLVMValue> resume_value_)
-    : frame_id{frame_id}, result_{result_}, resume_value_{resume_value_} {}
+ExternalStackFrame::ExternalStackFrame(std::vector<LLVMValue>&& args,
+                                       llvm::Function* func)
+    : frame_id{StackFrame::get_next_frame_id()}, args{args}, func{func} {}
 
-StackFrame::StackFrame() : frame_id(next_frame_id++) {}
+uint64_t StackFrame::get_next_frame_id() {
+  return next_frame_id++;
+}
+
+StackFrame::StackFrame() : frame_id(get_next_frame_id()) {}
+
+StackFrame::StackFrame(std::unique_ptr<ExternalStackFrame>&& frame)
+    : value_(clone_ptr(std::move(frame))), frame_id(get_external()->frame_id) {}
 
 StackFrame StackFrame::RegularFrame(llvm::Function* function) {
   StackFrame frame;

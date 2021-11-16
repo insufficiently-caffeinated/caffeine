@@ -89,12 +89,14 @@ void Context::push(StackFrame&& frame) {
 void Context::pop() {
   CAFFEINE_ASSERT(!stack.empty());
 
-  auto& frame = stack.back().get_regular();
-  for (auto [allocid, heap] : frame.allocations) {
-    CAFFEINE_ASSERT(heaps[heap][allocid].kind() == AllocationKind::Alloca,
-                    "found non-stack allocation on the stack");
+  if (stack.back().is_regular()) {
+    auto& frame = stack.back().get_regular();
+    for (auto [allocid, heap] : frame.allocations) {
+      CAFFEINE_ASSERT(heaps[heap][allocid].kind() == AllocationKind::Alloca,
+                      "found non-stack allocation on the stack");
 
-    heaps[heap].deallocate(allocid);
+      heaps[heap].deallocate(allocid);
+    }
   }
 
   stack.pop_back();

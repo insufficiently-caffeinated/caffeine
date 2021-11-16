@@ -4,6 +4,7 @@
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/IR/BasicBlock.h>
 
+#include <memory>
 #include <unordered_map>
 #include <vector>
 
@@ -15,6 +16,8 @@
 namespace caffeine {
 
 class Context;
+class ExecutionResult;
+class InterpreterContext;
 
 class StackAllocation {
 public:
@@ -25,21 +28,39 @@ public:
       : alloc(allocid), heap(heap) {}
 };
 
+// `ExternalStackFrame`s are coroutines used to implement external
+// functions (such as `caffeine_assert` and friends). The logic of
+// the external function is implemented in the `step()` method.
+//
+// In order to properly implement an external function:
+//   1. all class state must be stored in member variables
+//   2. the class must perfectly copy itself by overriding
+//      the `clone()` method
+//   3. Any action that can fork must be the last action
+//      for a given switch case statement (examples of this
+//      will be available in the future).
+//   4. After the function is complete, you must pop yourself
+//      off the relevant stack, and provide return values through
+//      `set_result()` even if those return values are all null
 class ExternalStackFrame {
 public:
   uint64_t frame_id;
   std::optional<LLVMValue> result_ = std::nullopt;
   std::optional<LLVMValue> resume_value_ = std::nullopt;
+  std::vector<LLVMValue> args;
+  llvm::Function* func;
 
   virtual std::unique_ptr<ExternalStackFrame> clone() const = 0;
   virtual ~ExternalStackFrame() = default;
-  ExternalStackFrame(uint64_t frame_id,
-                     std::optional<LLVMValue> result_ = std::nullopt,
-                     std::optional<LLVMValue> resume_value_ = std::nullopt);
+  ExternalStackFrame(std::vector<LLVMValue>&& args, llvm::Function* func);
+
+  // Coroutine logic implementation
+  virtual void step(InterpreterContext& context) = 0;
 
 protected:
   void set_result(std::optional<LLVMValue> result,
                   std::optional<LLVMValue> resume_value);
+
   friend class StackFrame;
 };
 
@@ -98,8 +119,10 @@ public:
   uint64_t frame_id;
 
   StackFrame();
+  StackFrame(std::unique_ptr<ExternalStackFrame>&& frame);
 
   static StackFrame RegularFrame(llvm::Function* function);
+  static uint64_t get_next_frame_id();
 
   /**
    * Set the result of the current instruction in the stack frame.
