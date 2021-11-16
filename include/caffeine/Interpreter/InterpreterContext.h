@@ -244,6 +244,12 @@ public:
   void emit_failure(std::string_view message, const Model* model,
                     const Assertion& assertion);
 
+  /**
+   * Add a ExternalStackFrame to the Context in order to execute it.
+   *
+   * The ExternalStackFrame's `step` function will be called until the
+   * StackFrame pops itself off.
+   */
   void call_external_function(std::unique_ptr<ExternalStackFrame>&& frame);
 
 private:
