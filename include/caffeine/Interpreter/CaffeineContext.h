@@ -7,6 +7,8 @@
 namespace caffeine {
 
 class ExternalFunction;
+class ExecutionPolicy;
+class ExecutionContextStore;
 
 /**
  * @brief Global info/context shared by all interpreter and executor instances.
@@ -21,9 +23,15 @@ private:
   tsl::hopscotch_map<llvm::Intrinsic::ID, std::unique_ptr<ExternalFunction>>
       intrinsics_;
 
+  std::unique_ptr<ExecutionPolicy> policy_;
+  std::unique_ptr<ExecutionContextStore> store_;
+
 public:
   const ExternalFunction* function(std::string_view name) const;
   const ExternalFunction* intrinsic(llvm::Intrinsic::ID id) const;
+
+  ExecutionPolicy* policy() const;
+  ExecutionContextStore* store() const;
 
 public:
   // Builder class for CaffeineContext.
@@ -34,6 +42,9 @@ public:
     StringMap<std::unique_ptr<ExternalFunction>> functions_;
     tsl::hopscotch_map<llvm::Intrinsic::ID, std::unique_ptr<ExternalFunction>>
         intrinsics_;
+
+    std::unique_ptr<ExecutionPolicy> policy_;
+    std::unique_ptr<ExecutionContextStore> store_;
 
   public:
     Builder() = default;
@@ -46,6 +57,18 @@ public:
     Builder& operator=(Builder&&) = default;
 
     CaffeineContext build();
+
+    // Set the policy used to determine whether to continue executing a live
+    // context.
+    //
+    // If not specified then AlwaysAllowExecutionPolicy will be used.
+    Builder& with_policy(std::unique_ptr<ExecutionPolicy>&& policy);
+
+    // Set the store used to queue up contexts that are not currently being
+    // executed.
+    //
+    // A store must be specified otherwise build() will throw an exception.
+    Builder& with_store(std::unique_ptr<ExecutionContextStore>&& store);
 
     // Add a new external function with the provided name. If another external
     // function is already registered with the same name then this will

@@ -1,5 +1,7 @@
 #include "caffeine/Interpreter/CaffeineContext.h"
 #include "caffeine/Interpreter/ExternalFunction.h"
+#include "caffeine/Interpreter/Policy.h"
+#include "caffeine/Interpreter/Store.h"
 
 namespace caffeine {
 
@@ -30,10 +32,18 @@ const ExternalFunction* CaffeineContext::function(std::string_view name) const {
 
 const ExternalFunction*
 CaffeineContext::intrinsic(llvm::Intrinsic::ID id) const {
-  auto it = functions_.find(id);
-  if (it == functions_.end())
+  auto it = intrinsics_.find(id);
+  if (it == intrinsics_.end())
     return nullptr;
   return it->second.get();
+}
+
+ExecutionPolicy* CaffeineContext::policy() const {
+  return policy_.get();
+}
+
+ExecutionContextStore* CaffeineContext::store() const {
+  return store_.get();
 }
 
 // All builder functions
@@ -43,7 +53,27 @@ CaffeineContext Builder::build() {
   ctx.functions_ = std::move(functions_);
   ctx.intrinsics_ = std::move(intrinsics_);
 
+  if (policy_) {
+    ctx.policy_ = std::move(policy_);
+  } else {
+    ctx.policy_ = std::make_unique<AlwaysAllowExecutionPolicy>();
+  }
+
+  if (!store_)
+    throw std::logic_error("No store provided when building CaffeineContext");
+  ctx.store_ = std::move(store_);
+
   return ctx;
+}
+
+Builder& Builder::with_policy(std::unique_ptr<ExecutionPolicy>&& policy) {
+  policy_ = std::move(policy);
+  return *this;
+}
+
+Builder& Builder::with_store(std::unique_ptr<ExecutionContextStore>&& store) {
+  store_ = std::move(store);
+  return *this;
 }
 
 Builder& Builder::with_function(const std::string& name,
