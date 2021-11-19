@@ -9,6 +9,8 @@ namespace caffeine {
 class ExternalFunction;
 class ExecutionPolicy;
 class ExecutionContextStore;
+class Solver;
+class SolverBuilder;
 
 /**
  * @brief Global info/context shared by all interpreter and executor instances.
@@ -25,6 +27,7 @@ private:
 
   std::unique_ptr<ExecutionPolicy> policy_;
   std::unique_ptr<ExecutionContextStore> store_;
+  std::unique_ptr<SolverBuilder> builder_;
 
 public:
   const ExternalFunction* function(std::string_view name) const;
@@ -32,6 +35,8 @@ public:
 
   ExecutionPolicy* policy() const;
   ExecutionContextStore* store() const;
+
+  std::shared_ptr<Solver> build_solver() const;
 
 public:
   // Builder class for CaffeineContext.
@@ -45,6 +50,7 @@ public:
 
     std::unique_ptr<ExecutionPolicy> policy_;
     std::unique_ptr<ExecutionContextStore> store_;
+    std::unique_ptr<SolverBuilder> builder_;
 
   public:
     Builder() = default;
@@ -79,6 +85,9 @@ public:
     // Add a new intrinsic with the provided ID.
     Builder& with_intrinsic(llvm::Intrinsic::ID id,
                             std::unique_ptr<ExternalFunction>&& func);
+
+    // Add an already-initialized solver builder.
+    Builder& with_solver_builder(SolverBuilder&& builder);
 
     Builder& with_default_functions();
     Builder& with_default_intrinsics();
