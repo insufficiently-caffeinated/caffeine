@@ -11,6 +11,35 @@ class ExecutionPolicy;
 class ExecutionContextStore;
 class Solver;
 class SolverBuilder;
+class FailureLogger;
+
+/**
+ * @brief Options controlling various behaviours of the caffeine interpreter.
+ *
+ * Any new options used by the interpreter should be added here.
+ */
+struct CaffeineOptions {
+  /**
+   * @brief Determines whether malloc will return null in addition to returning
+   * an allocation.
+   *
+   * Most programs aren't written to handle allocation failures so we default
+   * this to false.
+   */
+  bool malloc_can_return_null = false;
+
+  /**
+   * @brief Alignment of all pointers returned by malloc (for symbolic
+   * pointers).
+   *
+   * This must be a power of two. Defaults to 16 since that is what most C and
+   * C++ standard libraries use for their allocators. Must be at least as large
+   * as the alignment required by the largest type (usually 8 bytes).
+   */
+  uint64_t malloc_alignment = 16;
+
+  CaffeineOptions() = default;
+};
 
 /**
  * @brief Global info/context shared by all interpreter and executor instances.
@@ -28,6 +57,8 @@ private:
   std::unique_ptr<ExecutionPolicy> policy_;
   std::unique_ptr<ExecutionContextStore> store_;
   std::unique_ptr<SolverBuilder> builder_;
+  std::unique_ptr<FailureLogger> logger_;
+  CaffeineOptions options_;
 
 public:
   const ExternalFunction* function(std::string_view name) const;
@@ -35,6 +66,8 @@ public:
 
   ExecutionPolicy* policy() const;
   ExecutionContextStore* store() const;
+  FailureLogger* logger() const;
+  const CaffeineOptions& options() const;
 
   std::shared_ptr<Solver> build_solver() const;
 
@@ -51,6 +84,8 @@ public:
     std::unique_ptr<ExecutionPolicy> policy_;
     std::unique_ptr<ExecutionContextStore> store_;
     std::unique_ptr<SolverBuilder> builder_;
+    std::unique_ptr<FailureLogger> logger_;
+    CaffeineOptions options_;
 
   public:
     Builder() = default;
@@ -76,6 +111,8 @@ public:
     // A store must be specified otherwise build() will throw an exception.
     Builder& with_store(std::unique_ptr<ExecutionContextStore>&& store);
 
+    Builder& with_logger(std::unique_ptr<FailureLogger>&& logger);
+
     // Add a new external function with the provided name. If another external
     // function is already registered with the same name then this will
     // overwrite the previous function.
@@ -88,6 +125,9 @@ public:
 
     // Add an already-initialized solver builder.
     Builder& with_solver_builder(SolverBuilder&& builder);
+
+    // Set the options used by this context.
+    Builder& with_options(const CaffeineOptions& options);
 
     Builder& with_default_functions();
     Builder& with_default_intrinsics();

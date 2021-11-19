@@ -1,5 +1,6 @@
 #include "caffeine/Interpreter/CaffeineContext.h"
 #include "caffeine/Interpreter/ExternalFunction.h"
+#include "caffeine/Interpreter/FailureLogger.h"
 #include "caffeine/Interpreter/Policy.h"
 #include "caffeine/Interpreter/Store.h"
 #include "caffeine/Solver/Solver.h"
@@ -9,7 +10,10 @@ namespace caffeine {
 using Builder = CaffeineContext::Builder;
 
 // Destructors must be declared in here since the header doesn't necessarily
-// have the definition for ExternalFunction.
+// have the definitions for a bunch of the classes stored as pointers.
+//
+// This means that downstream classes don't need to include all the relevant
+// headers in order to destroy a CaffeineContext.
 
 CaffeineContext::~CaffeineContext() {}
 
@@ -47,6 +51,14 @@ ExecutionContextStore* CaffeineContext::store() const {
   return store_.get();
 }
 
+FailureLogger* CaffeineContext::logger() const {
+  return logger_.get();
+}
+
+const CaffeineOptions& CaffeineContext::options() const {
+  return options_;
+}
+
 std::shared_ptr<Solver> CaffeineContext::build_solver() const {
   return builder_->build();
 }
@@ -57,6 +69,7 @@ CaffeineContext Builder::build() {
   CaffeineContext ctx;
   ctx.functions_ = std::move(functions_);
   ctx.intrinsics_ = std::move(intrinsics_);
+  ctx.options_ = std::move(options_);
 
   if (policy_) {
     ctx.policy_ = std::move(policy_);
@@ -67,6 +80,9 @@ CaffeineContext Builder::build() {
   if (!store_)
     throw std::logic_error("No store provided when building CaffeineContext");
   ctx.store_ = std::move(store_);
+  if (!logger_)
+    throw std::logic_error("No logger provided when building CaffeineContext");
+  ctx.logger_ = std::move(logger_);
 
   if (builder_) {
     ctx.builder_ = std::move(builder_);
@@ -85,6 +101,11 @@ Builder& Builder::with_policy(std::unique_ptr<ExecutionPolicy>&& policy) {
 
 Builder& Builder::with_store(std::unique_ptr<ExecutionContextStore>&& store) {
   store_ = std::move(store);
+  return *this;
+}
+
+Builder& Builder::with_logger(std::unique_ptr<FailureLogger>&& logger) {
+  logger_ = std::move(logger);
   return *this;
 }
 
