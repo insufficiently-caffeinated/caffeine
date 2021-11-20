@@ -75,4 +75,20 @@ private:
   std::queue<Context> queue;
 };
 
+/**
+ * @brief A context store which drops all added contexts.
+ *
+ * This is mainly meant to be used for testing and would not be useful for
+ * actually running the interpreter.
+ */
+class NullContextStore : public ExecutionContextStore {
+public:
+  NullContextStore() = default;
+
+  std::optional<Context> next_context() override final;
+
+  void add_context(Context&& ctx) override final;
+  void add_context_multi(Span<Context> ctxs) override final;
+};
+
 } // namespace caffeine
