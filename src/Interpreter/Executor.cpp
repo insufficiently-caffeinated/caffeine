@@ -1,4 +1,5 @@
 #include "caffeine/Interpreter/Executor.h"
+#include "caffeine/Interpreter/CaffeineContext.h"
 #include "caffeine/Interpreter/Interpreter.h"
 #include "caffeine/Interpreter/Store.h"
 #include "caffeine/Support/UnsupportedOperation.h"
@@ -9,7 +10,7 @@
 namespace caffeine {
 
 void Executor::run_worker() {
-  auto solver = builder->build();
+  auto solver = caffeine->build_solver();
   InterpreterContext::BackingList queue;
   InterpreterContext::SharedData shared{logger, policy};
 
@@ -52,11 +53,9 @@ void Executor::run_worker() {
   }
 }
 
-Executor::Executor(ExecutionPolicy* policy, ExecutionContextStore* store,
-                   FailureLogger* logger, const SolverBuilder* builder,
-                   const ExecutorOptions& options)
-    : policy(policy), store(store), logger(logger), builder(builder),
-      options(options) {}
+Executor::Executor(CaffeineContext* caffeine, const ExecutorOptions& options)
+    : caffeine(caffeine), policy(caffeine->policy()), store(caffeine->store()),
+      logger(caffeine->logger()), options(options) {}
 
 void Executor::run() {
   if (options.num_threads == 1) {

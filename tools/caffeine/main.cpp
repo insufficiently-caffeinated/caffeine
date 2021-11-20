@@ -1,4 +1,5 @@
 
+#include "caffeine/Interpreter/CaffeineContext.h"
 #include "caffeine/Interpreter/Context.h"
 #include "caffeine/Interpreter/Interpreter.h"
 #include "caffeine/Interpreter/Policy.h"
@@ -158,6 +159,9 @@ int main(int argc, char** argv) {
     WithColor::error() << " unknown store type '" << store_type << "'\n";
     return 2;
   }
+
+  auto caffeine =
+      CaffeineContext::builder().with_store(std::move(store)).build();
 
   auto policy = caffeine::AlwaysAllowExecutionPolicy();
   auto builder = caffeine::SolverBuilder::with_default();

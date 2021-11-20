@@ -11,6 +11,7 @@ namespace caffeine {
 
 class ExecutionPolicy;
 class ExecutionContextStore;
+class CaffeineContext;
 
 struct ExecutorOptions {
   uint32_t num_threads = 2;
@@ -20,16 +21,14 @@ struct ExecutorOptions {
 
 class Executor {
 private:
+  CaffeineContext* caffeine;
   ExecutionPolicy* policy;
   ExecutionContextStore* store;
   FailureLogger* logger;
-  const SolverBuilder* builder;
   ExecutorOptions options;
 
 public:
-  Executor(ExecutionPolicy* policy, ExecutionContextStore* store,
-           FailureLogger* logger, const SolverBuilder* builder,
-           const ExecutorOptions& options = {});
+  Executor(CaffeineContext* caffeine, const ExecutorOptions& options = {});
 
   /**
    * Runs the contexts in its possesion until there are none left
