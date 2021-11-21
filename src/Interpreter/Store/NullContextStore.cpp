@@ -9,4 +9,4 @@ std::optional<Context> NullContextStore::next_context() {
 void NullContextStore::add_context(Context&&) {}
 void NullContextStore::add_context_multi(Span<Context>) {}
 
-}
+} // namespace caffeine
