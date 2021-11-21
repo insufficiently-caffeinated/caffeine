@@ -1,6 +1,6 @@
-#include "caffeine/Interpreter/Store.h"
 #include "caffeine/ADT/Guard.h"
 #include "caffeine/Interpreter/Context.h"
+#include "caffeine/Interpreter/Store.h"
 #include "caffeine/Support/Assert.h"
 
 namespace caffeine {
