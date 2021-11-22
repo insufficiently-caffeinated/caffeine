@@ -49,7 +49,10 @@ boost_deps()
 llvm_configure(
     name = "llvm",
     src_path = ".",
-    src_workspace = "@llvm-raw//:WORKSPACE"
+    src_workspace = "@llvm-raw//:WORKSPACE",
+    targets = [
+        "X86",
+    ],
 )
 
 # Disables optional dependencies for Support like zlib and terminfo. You may
