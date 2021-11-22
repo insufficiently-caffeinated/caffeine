@@ -97,6 +97,8 @@ public:
     Builder(Builder&&) = default;
     Builder& operator=(Builder&&) = default;
 
+    // Build a new CaffeineContext from the components specified through this
+    // builder. This will leave the builder empty as if it was moved.
     CaffeineContext build();
 
     // Set the policy used to determine whether to continue executing a live
