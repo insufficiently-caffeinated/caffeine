@@ -12,6 +12,7 @@
 
 #include "caffeine/ADT/Guard.h"
 #include "caffeine/ADT/Span.h"
+#include "caffeine/Interpreter/CaffeineContext.h"
 #include "caffeine/Interpreter/Interpreter.h"
 #include "caffeine/Interpreter/Policy.h"
 #include "caffeine/Interpreter/Store.h"
@@ -127,14 +128,14 @@ size_t CaffeineMutator::mutate(caffeine::Span<char> data) {
       Context(this->fuzz_target,
               {ConstantInt::Create(llvm::APInt(bitwidth, data.size()))});
 
-  auto policy =
-      caffeine::GuidedExecutionPolicy(data, "__caffeine_mut", this, cases);
-  auto store = caffeine::QueueingContextStore(options.num_threads);
-  auto logger = caffeine::PrintingFailureLogger(std::cout);
-  auto builder = caffeine::SolverBuilder::with_default();
-  auto exec = caffeine::Executor(&policy, &store, &logger, &builder, options);
+  auto caffeine = CaffeineContext::builder()
+                      .with_policy(GuidedExecutionPolicy(data, "__caffeine_mut",
+                                                         this, cases))
+                      .with_logger(std::make_unique<PrintingFailureLogger>(std::cout))
+                      .build();
+  auto exec = caffeine::Executor(&caffeine, options);
 
-  store.add_context(std::move(context));
+  caffeine.store()->add_context(std::move(context));
 
   exec.run();
   return cases->size();

@@ -1,6 +1,8 @@
 #include "caffeine/Interpreter/InterpreterContext.h"
+#include "caffeine/Interpreter/CaffeineContext.h"
 #include "caffeine/Interpreter/FailureLogger.h"
 #include "caffeine/Interpreter/Policy.h"
+#include "caffeine/Interpreter/Store.h"
 #include "caffeine/Solver/Z3Solver.h"
 #include <gtest/gtest.h>
 #include <iostream>
@@ -14,15 +16,16 @@ using namespace caffeine;
 class InterpreterContextTests : public ::testing::Test {
 public:
   llvm::LLVMContext context;
-  std::shared_ptr<Solver> solver;
-
   std::unique_ptr<llvm::Module> M;
 
-  AlwaysAllowExecutionPolicy policy;
-  PrintingFailureLogger logger{std::cout};
-
   InterpreterContext::BackingList backing;
-  InterpreterContext::SharedData shared{&logger, &policy};
+  CaffeineContext caffeine =
+      CaffeineContext::builder()
+          .with_logger(std::make_unique<PrintingFailureLogger>(std::cout))
+          .with_store(NullContextStore())
+          .build();
+
+  std::shared_ptr<Solver> solver = caffeine.build_solver();
 
 public:
   void SetUp() override {
@@ -55,7 +58,7 @@ private:
 // This test verifies that repeated assignments to the same variable work
 // as expected.
 TEST_F(InterpreterContextTests, repeated_assign_to_variable) {
-  InterpreterContext interp{&backing, 0, solver, &shared};
+  InterpreterContext interp{&backing, 0, solver, &caffeine};
 
   OpRef a = ConstantInt::Create(llvm::APInt(16, 5));
   OpRef b = ConstantInt::Create(llvm::APInt(16, 8));

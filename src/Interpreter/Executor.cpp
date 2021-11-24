@@ -12,7 +12,6 @@ namespace caffeine {
 void Executor::run_worker() {
   auto solver = caffeine->build_solver();
   InterpreterContext::BackingList queue;
-  InterpreterContext::SharedData shared{logger, policy};
 
   while (auto ctx = store->next_context()) {
     queue.clear();
@@ -25,7 +24,7 @@ void Executor::run_worker() {
     while (!queue.empty()) {
       guard.update(&queue.front()->context);
 
-      InterpreterContext ictx{&queue, 0, solver, &shared};
+      InterpreterContext ictx{&queue, 0, solver, caffeine};
 
       try {
         Interpreter interp{policy, store, logger, &ictx, solver};
