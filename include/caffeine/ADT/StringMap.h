@@ -42,7 +42,7 @@ namespace detail::string_map {
   struct string_hash : std::hash<std::string_view> {
     template <typename T>
     std::size_t operator()(const T& x) const {
-      return (*this)(string_equal::to_sv(x));
+      return std::hash<std::string_view>::operator()(string_equal::to_sv(x));
     }
   };
 } // namespace detail::string_map
