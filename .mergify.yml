@@ -8,3 +8,6 @@ pull_request_rules:
     actions:
       merge:
         method: squash
+      label:
+        remove:
+          - ready-to-merge
