@@ -3,6 +3,10 @@ build --disk_cache=~/.cache/bazel-disk-cache
 build --action_env=BAZEL_CXXOPTS=-std=c++17
 build --cxxopt='-std=c++17'
 
+# Tell bazel to use a static value for PATH and not to inherit LD_LIBRARY_PATH or TMPDIR.
+# This is to prevent full recompiles whenever 
+build --incompatible_strict_action_env
+
 # Avoid warning messages in other workspaces since they are not helpful
 build --output_filter=^//
 
