@@ -22,7 +22,7 @@ public:
   CaffeineContext caffeine =
       CaffeineContext::builder()
           .with_logger(std::make_unique<PrintingFailureLogger>(std::cout))
-          .with_store(NullContextStore())
+          .with_store(std::make_unique<NullContextStore>())
           .build();
 
   std::shared_ptr<Solver> solver = caffeine.build_solver();

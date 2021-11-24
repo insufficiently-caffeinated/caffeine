@@ -128,11 +128,12 @@ size_t CaffeineMutator::mutate(caffeine::Span<char> data) {
       Context(this->fuzz_target,
               {ConstantInt::Create(llvm::APInt(bitwidth, data.size()))});
 
-  auto caffeine = CaffeineContext::builder()
-                      .with_policy(GuidedExecutionPolicy(data, "__caffeine_mut",
-                                                         this, cases))
-                      .with_logger(std::make_unique<PrintingFailureLogger>(std::cout))
-                      .build();
+  auto caffeine =
+      CaffeineContext::builder()
+          .with_policy(std::make_unique<GuidedExecutionPolicy>(
+              data, "__caffeine_mut", this, cases))
+          .with_logger(std::make_unique<PrintingFailureLogger>(std::cout))
+          .build();
   auto exec = caffeine::Executor(&caffeine, options);
 
   caffeine.store()->add_context(std::move(context));
