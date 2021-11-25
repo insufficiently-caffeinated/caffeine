@@ -1,4 +1,5 @@
 #include "caffeine/Interpreter/Interpreter.h"
+#include "caffeine/Interpreter/CaffeineContext.h"
 #include "caffeine/Interpreter/ExprEval.h"
 #include "caffeine/Interpreter/ExternalFuncs/CaffeineAssert.h"
 #include "caffeine/Interpreter/Policy.h"
@@ -561,6 +562,19 @@ ExecutionResult Interpreter::visitExternFunc(llvm::CallBase& call) {
 
   CAFFEINE_ASSERT(func->empty(),
                   "visitExternFunc called with non-external function");
+
+  auto extern_func =
+      interp->caffeine().function(std::string_view(name.data(), name.size()));
+  if (extern_func) {
+    llvm::SmallVector<LLVMValue, 4> args;
+    args.reserve(call.getNumArgOperands());
+    for (unsigned int i = 0; i < call.getNumArgOperands(); i++) {
+      args.push_back(interp->load(call.getArgOperand(i)));
+    }
+
+    extern_func->call(*interp, args);
+    return ExecutionResult::Migrated;
+  }
 
   if (name == "caffeine_assert")
     return visitAssert(call);
