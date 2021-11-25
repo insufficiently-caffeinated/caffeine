@@ -16,6 +16,8 @@
 #include <boost/range/iterator_range.hpp>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
+#include <llvm/ADT/StringRef.h>
+#include <llvm/IR/DebugInfoMetadata.h>
 #include <llvm/IR/GetElementPtrTypeIterator.h>
 #include <llvm/Support/raw_ostream.h>
 
@@ -64,7 +66,14 @@ void Interpreter::execute() {
   traceblock.close();
 }
 
-void Interpreter::visitInstruction(llvm::Instruction& inst) {
+void Interpreter::visit(llvm::Instruction& inst) {
+  if (options.run_line_coverage_debugger) {
+    getInstLine(inst);
+  }
+  llvm::InstVisitor<Interpreter, ExecutionResult>::visit(inst);
+}
+
+ExecutionResult Interpreter::visitInstruction(llvm::Instruction& inst) {
   CAFFEINE_ABORT(
       fmt::format("Instruction '{}' not implemented!", inst.getOpcodeName()));
 }
@@ -465,6 +474,14 @@ std::optional<std::string> readSymbolicName(std::shared_ptr<Solver> solver,
   }
 
   return std::string(start, end);
+}
+
+void Interpreter::getInstLine(llvm::Instruction& inst) {
+  if (llvm::MDNode* md = inst.getMetadata("dbg")) {
+    llvm::DILocation loc(md);
+    unsigned line = loc.Line;
+    llvm::StringRef file = loc.getFilename();
+  }
 }
 
 } // namespace caffeine

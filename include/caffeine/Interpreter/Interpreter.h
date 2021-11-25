@@ -31,6 +31,8 @@ public:
 
   void execute();
 
+  void visit(llvm::Instruction& inst);
+
   void visitInstruction(llvm::Instruction& inst);
 
   void visitBinaryOperator(llvm::BinaryOperator& op);
@@ -72,6 +74,7 @@ public:
   void visitDbgInfoIntrinsic(llvm::DbgInfoIntrinsic&);
 
 private:
+  void getInstLine(llvm::Instruction& inst);
   void visitExternFunc(llvm::CallBase& inst);
 };
 
