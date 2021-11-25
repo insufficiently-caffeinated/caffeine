@@ -1,4 +1,5 @@
 
+#include "caffeine/Interpreter/CaffeineContext.h"
 #include "caffeine/Interpreter/Context.h"
 #include "caffeine/Interpreter/Interpreter.h"
 #include "caffeine/Interpreter/Policy.h"
@@ -143,8 +144,6 @@ int main(int argc, char** argv) {
     return 2;
   }
 
-  auto logger = CountingFailureLogger{std::cout, function};
-
   caffeine::ExecutorOptions options;
   options.num_threads =
       threads != 0 ? threads : std::thread::hardware_concurrency();
@@ -159,19 +158,21 @@ int main(int argc, char** argv) {
     return 2;
   }
 
-  auto policy = caffeine::AlwaysAllowExecutionPolicy();
-  auto builder = caffeine::SolverBuilder::with_default();
-
-  auto exec =
-      caffeine::Executor(&policy, store.get(), &logger, &builder, options);
+  auto caffeine = CaffeineContext::builder()
+                      .with_store(std::move(store))
+                      .with_logger(std::make_unique<CountingFailureLogger>(
+                          std::cout, function))
+                      .build();
+  auto exec = caffeine::Executor(&caffeine, options);
 
   auto context = Context(function);
   context.heaps.set_concrete(!force_symbolic_allocator);
-  store->add_context(std::move(context));
+  caffeine.store()->add_context(std::move(context));
 
   exec.run();
 
-  int exitcode = logger.num_failures == 0 ? 0 : 1;
+  auto logger = static_cast<CountingFailureLogger*>(caffeine.logger());
+  int exitcode = logger->num_failures == 0 ? 0 : 1;
 
   if (invert_exitcode)
     exitcode = !exitcode;

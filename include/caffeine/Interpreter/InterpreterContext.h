@@ -7,6 +7,7 @@
 namespace caffeine {
 
 class FailureLogger;
+class CaffeineContext;
 
 /**
  * Wrapper around the current execution context.
@@ -269,21 +270,16 @@ public:
     ContextQueueEntry(Context&& ctx);
   };
 
-  class SharedData {
-  public:
-    FailureLogger* logger;
-    ExecutionPolicy* policy;
-  };
-
   using BackingList = std::vector<std::unique_ptr<ContextQueueEntry>>;
 
   InterpreterContext(BackingList* queue, size_t entry_index,
-                     const std::shared_ptr<Solver>& solver, SharedData* shared);
+                     const std::shared_ptr<Solver>& solver,
+                     CaffeineContext* shared);
 
 private:
   std::vector<std::unique_ptr<ContextQueueEntry>>* queue_;
   ContextQueueEntry* entry_;
-  SharedData* shared_;
+  CaffeineContext* shared_;
   std::shared_ptr<Solver> solver_;
 };
 

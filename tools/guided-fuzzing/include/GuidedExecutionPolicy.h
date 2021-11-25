@@ -28,7 +28,6 @@ public:
   void on_path_complete(const Context& ctx, ExitStatus status,
                         const Assertion& assertion = Assertion()) override;
 
-protected:
   GuidedExecutionPolicy(GuidedExecutionPolicy&&) = default;
   GuidedExecutionPolicy(const GuidedExecutionPolicy&) = default;
 

@@ -1,5 +1,6 @@
 
 #include "caffeine/Interpreter/InterpreterContext.h"
+#include "caffeine/Interpreter/CaffeineContext.h"
 #include "caffeine/Interpreter/FailureLogger.h"
 #include "caffeine/Interpreter/Policy.h"
 #include "caffeine/Support/UnsupportedOperation.h"
@@ -143,8 +144,8 @@ void InterpreterContext::assert_or_fail(const Assertion& assertion,
   auto result = resolve(checked);
   if (result == SolverResult::SAT) {
     emit_failure(message, result.model(), checked);
-    shared_->policy->on_path_complete(context(), ExecutionPolicy::Fail,
-                                      checked);
+    shared_->policy()->on_path_complete(context(), ExecutionPolicy::Fail,
+                                        checked);
   }
 
   add_assertion(assertion);
@@ -228,13 +229,13 @@ void InterpreterContext::fail(std::string_view message) {
 void InterpreterContext::emit_failure(std::string_view message,
                                       const Model* model,
                                       const Assertion& assertion) {
-  shared_->logger->log_failure(model, context(), Failure(assertion, message));
+  shared_->logger()->log_failure(model, context(), Failure(assertion, message));
 }
 
 void InterpreterContext::set_dead(ExecutionPolicy::ExitStatus status,
                                   const Assertion& assertion) {
   entry_->dead = true;
-  shared_->policy->on_path_complete(context(), status, assertion);
+  shared_->policy()->on_path_complete(context(), status, assertion);
 }
 
 void InterpreterContext::call_external_function(
@@ -244,7 +245,7 @@ void InterpreterContext::call_external_function(
 
 InterpreterContext::InterpreterContext(BackingList* queue, size_t entry_index,
                                        const std::shared_ptr<Solver>& solver,
-                                       SharedData* shared)
+                                       CaffeineContext* shared)
     : queue_(queue), entry_(queue->at(entry_index).get()), shared_(shared),
       solver_(solver) {
   CAFFEINE_ASSERT(queue_);
