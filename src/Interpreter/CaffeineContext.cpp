@@ -4,6 +4,7 @@
 #include "caffeine/Interpreter/Policy.h"
 #include "caffeine/Interpreter/Store.h"
 #include "caffeine/Solver/Solver.h"
+#include "caffeine/Support/Coverage.h"
 
 namespace caffeine {
 
@@ -158,6 +159,11 @@ Builder& Builder::with_default_intrinsics() {
   with_intrinsic(llvm::Intrinsic::smul_with_overflow,
                  Intrinsics::smul_with_overflow());
 
+  return *this;
+}
+
+Builder& Builder::with_coverage(CoverageTracker& tracker) {
+  cov_ = std::make_unique<CoverageTracker>(std::move(tracker));
   return *this;
 }
 

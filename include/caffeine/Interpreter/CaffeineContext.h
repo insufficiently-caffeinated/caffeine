@@ -58,6 +58,7 @@ private:
   std::unique_ptr<ExecutionContextStore> store_;
   std::unique_ptr<SolverBuilder> builder_;
   std::unique_ptr<FailureLogger> logger_;
+  std::unique_ptr<CoverageTracker> cov_;
   CaffeineOptions options_;
 
 public:
@@ -67,6 +68,7 @@ public:
   ExecutionPolicy* policy() const;
   ExecutionContextStore* store() const;
   FailureLogger* logger() const;
+  CoverageTracker* coverage() const;
   const CaffeineOptions& options() const;
 
   std::shared_ptr<Solver> build_solver() const;
@@ -85,6 +87,7 @@ public:
     std::unique_ptr<ExecutionContextStore> store_;
     std::unique_ptr<SolverBuilder> builder_;
     std::unique_ptr<FailureLogger> logger_;
+    std::unique_ptr<CoverageReporter> cov_;
     CaffeineOptions options_;
 
   public:
@@ -130,6 +133,9 @@ public:
 
     // Set the options used by this context.
     Builder& with_options(const CaffeineOptions& options);
+
+    // Set the coverage counter used by this context.
+    Builder& with_coverage(const CoverageTracker& tracker);
 
     Builder& with_default_functions();
     Builder& with_default_intrinsics();
