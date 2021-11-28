@@ -129,7 +129,6 @@ private:
   ExecutionResult visitExternFunc(llvm::CallBase& inst);
 
   ExecutionResult visitAssume(llvm::CallBase& inst);
-  ExecutionResult visitAssert(llvm::CallBase& call);
   ExecutionResult visitSymbolicAlloca(llvm::CallBase& inst);
 
   ExecutionResult visitCalloc(llvm::CallBase& inst);

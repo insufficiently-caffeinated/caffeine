@@ -1,13 +1,11 @@
+#include "caffeine/Interpreter/ExternalFunction.h"
 #include "caffeine/Interpreter/StackFrame.h"
 
 namespace caffeine {
 
-class CaffeineAssertFunc : public ExternalStackFrame {
+class CaffeineAssertFunction : public ExternalFunction {
 public:
-  using ExternalStackFrame::ExternalStackFrame;
-
-  std::unique_ptr<ExternalStackFrame> clone() const override;
-  void step(InterpreterContext& context) override;
+  void call(InterpreterContext& ctx, Span<LLVMValue> args) const override;
 };
 
 } // namespace caffeine
