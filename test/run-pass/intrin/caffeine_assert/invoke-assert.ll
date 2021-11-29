@@ -6,7 +6,7 @@ define dso_local void @test() local_unnamed_addr #0
   personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
 {
   %a = icmp eq i8 0, 0
-  invoke void @caffeine_assume(i1 zeroext %a)
+  invoke void @caffeine_assert(i1 zeroext %a)
     to label %normal
     unwind label %unwind
 
