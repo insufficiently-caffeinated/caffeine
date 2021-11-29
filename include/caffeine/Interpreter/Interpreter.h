@@ -132,7 +132,6 @@ private:
 
   ExecutionResult visitCalloc(llvm::CallBase& inst);
   ExecutionResult visitFree(llvm::CallBase& inst);
-  ExecutionResult visitMallocAlign(llvm::CallBase& inst);
 
   ExecutionResult visitBuiltinResolve(llvm::CallBase& inst);
 
