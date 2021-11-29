@@ -29,3 +29,30 @@ def generate_tests(
             skip = file in skip_files,
             should_fail = should_fail,
         )
+
+# buildifier: disable=function-docstring
+# buildifier: disable=unnamed-macro
+def generate_regression_tests():
+    sources = native.glob([
+        "issue-*.c",
+        "issue-*.cpp",
+        "issue-*.ll",
+        "issue-*.bc",
+    ])
+
+    for file in sources:
+        splits = file.split(".")
+        status = splits[1]
+
+        if status == "pass":
+            should_fail = False
+        elif status == "fail":
+            should_fail = True
+        else:
+            fail("regression test filename was not in the expected format")
+
+        caffeine_bitcode_test(
+            name = _strip_ext(file),
+            srcs = [file],
+            should_fail = should_fail,
+        )
