@@ -39,8 +39,11 @@ public:
 
     ASSERT_NE(M, nullptr);
 
+    Context ctx{M->getFunction("func")};
+    ++ctx.stack_top().get_regular().current;
+
     backing.push_back(std::make_unique<InterpreterContext::ContextQueueEntry>(
-        Context(M->getFunction("func"))));
+        std::move(ctx)));
   }
 
 private:

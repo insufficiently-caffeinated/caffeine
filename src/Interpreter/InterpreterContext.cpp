@@ -49,9 +49,14 @@ llvm::Instruction* InterpreterContext::getCurrentInstruction() const {
     return nullptr;
 
   const auto& regular = frame.get_regular();
-  if (regular.current == regular.current_block->end())
-    return nullptr;
-  return &*regular.current;
+  if (regular.current == regular.current_block->begin()) {
+    if (!regular.prev_block)
+      return nullptr;
+
+    return regular.prev_block->getTerminator();
+  }
+
+  return &*std::prev(regular.current);
 }
 
 // TODO: This is basically a placeholder. We need to figure out how to deal
