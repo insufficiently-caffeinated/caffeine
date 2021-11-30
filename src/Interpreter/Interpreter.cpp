@@ -507,28 +507,29 @@ ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
   return ops.execute(this);
 }
 ExecutionResult Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {
-  auto& frame = ctx->stack_top().get_regular();
-  const auto& layout = inst.getModule()->getDataLayout();
+  const llvm::DataLayout& layout = interp->getModule()->getDataLayout();
 
   uint64_t size =
       layout.getTypeAllocSize(inst.getAllocatedType()).getFixedSize();
   uint64_t align = std::max<uint64_t>(inst.getAlignment(), 1);
 
   unsigned address_space = inst.getType()->getPointerAddressSpace();
-  unsigned ptr_width = layout.getPointerSizeInBits(address_space);
+  unsigned ptr_width = layout.getPointerTypeSizeInBits(inst.getType());
 
   auto size_op = ConstantInt::Create(llvm::APInt(ptr_width, size));
-  auto alloc = ctx->heaps[address_space].allocate(
+  auto alloc = interp->context().heaps[address_space].allocate(
       size_op, ConstantInt::Create(llvm::APInt(ptr_width, align)),
       AllocOp::Create(size_op, ConstantInt::Create(llvm::APInt(8, 0xDD))),
       AllocationKind::Alloca, AllocationPermissions::ReadWrite, *ctx);
 
-  frame.insert(&inst, LLVMValue(Pointer(
-                          alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)),
-                          address_space)));
-  frame.allocations.emplace_back(alloc, address_space);
+  interp->store(
+      &inst,
+      LLVMValue(Pointer(alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)),
+                        address_space)));
+  interp->context().stack_top().get_regular().allocations.emplace_back(
+      alloc, address_space);
 
-  return ExecutionResult::Continue;
+  return ExecutionResult::Migrated;
 }
 
 ExecutionResult Interpreter::visitMemCpyInst(llvm::MemCpyInst&) {
