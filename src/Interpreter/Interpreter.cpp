@@ -477,10 +477,11 @@ std::optional<std::string> readSymbolicName(std::shared_ptr<Solver> solver,
 }
 
 void Interpreter::getInstLine(llvm::Instruction& inst) {
-  if (llvm::MDNode* md = inst.getMetadata("dbg")) {
-    llvm::DILocation loc(md);
-    unsigned line = loc.Line;
-    llvm::StringRef file = loc.getFilename();
+  if (const auto& loc = inst.getDebugLoc()) {
+    unsigned line = loc.getLine();
+    auto* dfile = static_cast<llvm::DIScope*>(loc.getScope());
+    std::string file = dfile->getFilename().str();
+    // llvm::StringRef file = loc.getFilename();
   }
 }
 

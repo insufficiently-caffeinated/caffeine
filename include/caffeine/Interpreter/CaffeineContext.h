@@ -12,6 +12,7 @@ class ExecutionContextStore;
 class Solver;
 class SolverBuilder;
 class FailureLogger;
+class CoverageTracker;
 
 /**
  * @brief Options controlling various behaviours of the caffeine interpreter.
@@ -87,7 +88,7 @@ public:
     std::unique_ptr<ExecutionContextStore> store_;
     std::unique_ptr<SolverBuilder> builder_;
     std::unique_ptr<FailureLogger> logger_;
-    std::unique_ptr<CoverageReporter> cov_;
+    std::unique_ptr<CoverageTracker> cov_;
     CaffeineOptions options_;
 
   public:
@@ -135,7 +136,7 @@ public:
     Builder& with_options(const CaffeineOptions& options);
 
     // Set the coverage counter used by this context.
-    Builder& with_coverage(const CoverageTracker& tracker);
+    Builder& with_coverage(CoverageTracker& tracker);
 
     Builder& with_default_functions();
     Builder& with_default_intrinsics();

@@ -6,23 +6,25 @@ namespace caffeine {
 // CoverageTracker
 
 void CoverageTracker::touch(std::string filename, size_t line) {
-    auto fileIterator = lines_.find(filename);
-    if (fileIterator == lines_.end()) {
-        lines_.emplace(filename, std::make_unique<Map<size_t, std::unique_ptr<Line>>());
-    }
-
-    auto lineIterator = lines_[filename]->find(line);
-    if (lineIterator == lines_[filename]->end()) {
-        lines_[filename].emplace(line, std::make_unique<Line>(line));
+    // Check if this file is already being tracked
+    auto it_file = file_to_vec.find(filename);
+    size_t vecPos = 0;
+    if (it_file == file_to_vec.end()) {
+        vecPos = file_lines.size();
+        std::map<size_t, Line> m;
+        file_lines.push_back(m);
     } else {
-        (*lineIterator)[line]->touch();
+        vecPos = (*it_file).second;
+    }
+    // Check if line has already been seen.
+    auto it_line = file_lines[vecPos].find(line);
+    if (it_line == file_lines[vecPos].end()) {
+        Line l{line};
+        file_lines[vecPos].emplace(line, l);
+    } else {
+        file_lines[vecPos][line].touch();
     }
 }
-
-CoverageReport CoverageTracker::report() const {
-    // TODO
-}
-
 
 // --- Line
 
@@ -33,11 +35,11 @@ void Line::touch(size_t hits) {
     hits_ += hits;
 }
 
-size_t Line::LineNumber() {
+size_t Line::LineNumber() const {
     return line_;
 }
 
-size_t Line::Hits() {
+size_t Line::Hits() const {
     return hits_;
 }
 
