@@ -4,6 +4,7 @@
 #include "caffeine/Interpreter/FailureLogger.h"
 #include "caffeine/Interpreter/Policy.h"
 #include "caffeine/Support/UnsupportedOperation.h"
+#include <llvm/IR/Instructions.h>
 
 namespace caffeine {
 
@@ -48,9 +49,14 @@ llvm::Instruction* InterpreterContext::getCurrentInstruction() const {
     return nullptr;
 
   const auto& regular = frame.get_regular();
-  if (regular.current == regular.current_block->end())
-    return nullptr;
-  return &*regular.current;
+  if (regular.current == regular.current_block->begin()) {
+    if (!regular.prev_block)
+      return nullptr;
+
+    return regular.prev_block->getTerminator();
+  }
+
+  return &*std::prev(regular.current);
 }
 
 // TODO: This is basically a placeholder. We need to figure out how to deal
@@ -98,6 +104,37 @@ void InterpreterContext::jump_to(llvm::BasicBlock* block) {
   CAFFEINE_ASSERT(context().stack_top().is_regular());
 
   context().stack_top().get_regular().jump_to(block);
+}
+
+void InterpreterContext::jump_return(std::optional<LLVMValue> retval) {
+  CAFFEINE_ASSERT(!context().stack.empty());
+
+  if (auto inst = getCurrentInstruction()) {
+    CAFFEINE_ASSERT(
+        llvm::isa<llvm::CallInst>(inst) || llvm::isa<llvm::InvokeInst>(inst),
+        "called jump_return when the previous instruction was not a "
+        "call/invoke instruction");
+  }
+
+  context().stack_top().set_result(std::move(retval), std::nullopt);
+}
+
+void InterpreterContext::jump_resume(const LLVMValue& resume) {
+  CAFFEINE_ASSERT(!context().stack.empty());
+
+  if (auto inst = getCurrentInstruction()) {
+    if (llvm::isa<llvm::CallInst>(inst)) {
+      fail("attempted to unwind from a function call made using the 'call' "
+           "instruction.");
+      return;
+    }
+
+    CAFFEINE_ASSERT(llvm::isa<llvm::InvokeInst>(inst),
+                    "called jump_ret when the previous instruction was not a "
+                    "call/invoke instruction");
+  }
+
+  context().stack_top().set_result(std::nullopt, resume);
 }
 
 void InterpreterContext::function_return(std::optional<LLVMValue> retval) {

@@ -101,6 +101,22 @@ public:
   void jump_to(llvm::BasicBlock* block);
 
   /**
+   * Jump as if the current function is returning normally. For regular call
+   * instructions this is a no-op, however for invoke instructions this will
+   * make the appropriate jump to reach the block for the normal execution
+   * flow.
+   */
+  void jump_return(std::optional<LLVMValue> retval = std::nullopt);
+
+  /**
+   * Jump as if the current function call returned by throwing an exception.
+   * This will jump to the unwind label for invoke instructions. It will
+   * cause the current context to fail if the function call instruction was not
+   * an invoke instruction.
+   */
+  void jump_resume(const LLVMValue& resume);
+
+  /**
    * Return from the current stack frame with an optional return value. If this
    * causes the stack to be empty then the context will also be killed.
    *
