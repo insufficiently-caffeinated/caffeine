@@ -91,12 +91,34 @@ public:
   void store(llvm::Value* ident, const LLVMValue& value);
   void store(llvm::Value* ident, LLVMValue&& value);
 
+  // Utilities for working with memory
+
+  /**
+   * Create an allocation and return a pointer pointing to the start of the
+   * newly created allocation.
+   */
+  Pointer allocate(const OpRef& size, const OpRef& align, const OpRef& data,
+                   unsigned address_space, AllocationKind kind,
+                   AllocationPermissions perms);
+
+  /**
+   * Create an allocation that consists of repeating instances of the passed-in
+   * byte and return a pointer pointing to the start of the newly created
+   * allocation.
+   */
+  Pointer allocate_repeated(const OpRef& size, const OpRef& align,
+                            const OpRef& byte, unsigned address_space,
+                            AllocationKind kind, AllocationPermissions perms);
+
+  // Utilities for performing common control flow operations
+
   /**
    * Set the instruction pointer of the current stack frame to the first
    * instruction within the provided basic block.
    *
-   * The basic block must belong to the same function as that for the current
-   * stack frame and current stack frame must not be an external stack frame.
+   * The basic block must belong to the same function as that for the
+   * current stack frame and current stack frame must not be an external
+   * stack frame.
    */
   void jump_to(llvm::BasicBlock* block);
 
