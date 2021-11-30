@@ -516,18 +516,12 @@ ExecutionResult Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {
   unsigned address_space = inst.getType()->getPointerAddressSpace();
   unsigned ptr_width = layout.getPointerTypeSizeInBits(inst.getType());
 
-  auto size_op = ConstantInt::Create(llvm::APInt(ptr_width, size));
-  auto alloc = interp->context().heaps[address_space].allocate(
-      size_op, ConstantInt::Create(llvm::APInt(ptr_width, align)),
-      AllocOp::Create(size_op, ConstantInt::Create(llvm::APInt(8, 0xDD))),
-      AllocationKind::Alloca, AllocationPermissions::ReadWrite, *ctx);
-
-  interp->store(
-      &inst,
-      LLVMValue(Pointer(alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)),
-                        address_space)));
-  interp->context().stack_top().get_regular().allocations.emplace_back(
-      alloc, address_space);
+  auto pointer = interp->allocate_repeated(
+      ConstantInt::Create(llvm::APInt(ptr_width, size)),
+      ConstantInt::Create(llvm::APInt(ptr_width, align)),
+      ConstantInt::Create(llvm::APInt(8, 0xDD)), address_space,
+      AllocationKind::Alloca, AllocationPermissions::ReadWrite);
+  interp->store(&inst, LLVMValue(pointer));
 
   return ExecutionResult::Migrated;
 }
