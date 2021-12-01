@@ -64,6 +64,10 @@ std::shared_ptr<Solver> CaffeineContext::build_solver() const {
   return builder_->build();
 }
 
+CoverageTracker* CaffeineContext::coverage() const {
+  return cov_.get();
+}
+
 // All builder functions
 
 CaffeineContext Builder::build() {

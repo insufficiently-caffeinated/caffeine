@@ -10,6 +10,7 @@
 #include "caffeine/Support/LLVMFmt.h"
 #include "caffeine/Support/Tracing.h"
 #include "caffeine/Support/UnsupportedOperation.h"
+#include "caffeine/Support/Coverage.h"
 
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/combine.hpp>
@@ -481,7 +482,10 @@ void Interpreter::getInstLine(llvm::Instruction& inst) {
     unsigned line = loc.getLine();
     auto* dfile = static_cast<llvm::DIScope*>(loc.getScope());
     std::string file = dfile->getFilename().str();
-    // llvm::StringRef file = loc.getFilename();
+
+    if (auto* cov = interp->caffeine().coverage()) {
+      cov->touch(file, line);
+    }
   }
 }
 
