@@ -579,8 +579,6 @@ ExecutionResult Interpreter::visitExternFunc(llvm::CallBase& call) {
 
   if (name == "caffeine_calloc")
     return visitCalloc(call);
-  if (name == "caffeine_malloc_aligned")
-    return visitMallocAlign(call);
   if (name == "caffeine_free")
     return visitFree(call);
 
