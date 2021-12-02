@@ -5,6 +5,7 @@
 #include "caffeine/Interpreter/Policy.h"
 #include "caffeine/Support/UnsupportedOperation.h"
 #include <llvm/IR/Instructions.h>
+#include <llvm/IR/Module.h>
 
 namespace caffeine {
 
@@ -94,6 +95,35 @@ void InterpreterContext::store(llvm::Value* ident, LLVMValue&& value) {
 
   auto& regular = frame.get_regular();
   regular.insert(ident, std::move(value));
+}
+
+Pointer InterpreterContext::allocate(const OpRef& size, const OpRef& align,
+                                     const OpRef& data, unsigned address_space,
+                                     AllocationKind kind,
+                                     AllocationPermissions perms) {
+  const llvm::DataLayout& layout = getModule()->getDataLayout();
+  unsigned ptr_width = layout.getPointerSizeInBits(address_space);
+
+  AllocId alloc = context().heaps[address_space].allocate(
+      size, align, data, kind, perms, context());
+
+  // Alloca allocations are meant to be automatically cleaned up at the end of
+  // the frame. For this to happen we need to add it to the clean-up list within
+  // the current stack frame.
+  if (kind == AllocationKind::Alloca) {
+    // TODO: Make this work with external functions
+    context().stack_top().get_regular().allocations.emplace_back(alloc,
+                                                                 address_space);
+  }
+
+  return Pointer(alloc, ConstantInt::CreateZero(ptr_width), address_space);
+}
+
+Pointer InterpreterContext::allocate_repeated(
+    const OpRef& size, const OpRef& align, const OpRef& byte,
+    unsigned address_space, AllocationKind kind, AllocationPermissions perms) {
+  return allocate(size, align, AllocOp::Create(size, byte), address_space, kind,
+                  perms);
 }
 
 void InterpreterContext::jump_to(llvm::BasicBlock* block) {
