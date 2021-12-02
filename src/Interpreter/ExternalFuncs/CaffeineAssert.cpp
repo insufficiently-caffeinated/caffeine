@@ -12,6 +12,7 @@ void CaffeineAssertFunction::call(InterpreterContext& ctx,
   }
 
   ctx.assert_or_fail(args[0].scalar().expr(), "assertion failure");
+  ctx.jump_return();
 }
 
 } // namespace caffeine

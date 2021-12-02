@@ -576,9 +576,6 @@ ExecutionResult Interpreter::visitExternFunc(llvm::CallBase& call) {
     return ExecutionResult::Migrated;
   }
 
-  if (name == "caffeine_assume")
-    return visitAssume(call);
-
   if (name == "caffeine_calloc")
     return visitCalloc(call);
   if (name == "caffeine_malloc_aligned")
@@ -598,18 +595,6 @@ ExecutionResult Interpreter::visitExternFunc(llvm::CallBase& call) {
 
   CAFFEINE_ABORT(
       fmt::format("external function '{}' not implemented", name.str()));
-}
-
-ExecutionResult Interpreter::visitAssume(llvm::CallBase& call) {
-  CAFFEINE_ASSERT(call.getNumArgOperands() == 1);
-
-  auto cond = ctx->lookup(call.getArgOperand(0));
-  ctx->add(cond.scalar().expr());
-
-  // Don't check whether adding the assumption causes this path to become
-  // dead since assumptions are rare, solver calls are expensive, and it'll
-  // get caught at the next conditional branch anyway.
-  return ExecutionResult::Continue;
 }
 
 std::optional<std::string> readSymbolicName(std::shared_ptr<Solver> solver,
