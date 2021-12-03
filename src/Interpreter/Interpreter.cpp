@@ -25,12 +25,6 @@
 
 namespace caffeine {
 
-namespace {
-  // The maximum size for which a fixed-size symbolic constant will be optimized
-  // to a fixed array of smaller constants.
-  static uint64_t MAX_FIXED_CONSTANT_SIZE = 10 * 1024 * 1024;
-} // namespace
-
 template <ExecutionResult (Interpreter::*kFunc)(llvm::CallBase&)>
 struct as_nonmember {
 private:
@@ -587,8 +581,6 @@ ExecutionResult Interpreter::visitExternFunc(llvm::CallBase& call) {
   if (name == "caffeine_builtin_resolve" ||
       name.startswith("caffeine.resolve."))
     return visitBuiltinResolve(call);
-  if (name == "caffeine_builtin_symbolic_alloca")
-    return visitSymbolicAlloca(call);
 
   auto it = extern_functions().find(name);
   if (it != extern_functions().end())
@@ -624,57 +616,6 @@ std::optional<std::string> readSymbolicName(std::shared_ptr<Solver> solver,
   }
 
   return std::string(start, end);
-}
-
-ExecutionResult Interpreter::visitSymbolicAlloca(llvm::CallBase& call) {
-  auto size = ctx->lookup(call.getArgOperand(0)).scalar().expr();
-  auto name = ctx->lookup(call.getArgOperand(1)).scalar().pointer();
-
-  auto resolved = ctx->heaps.resolve(solver, name, *ctx);
-
-  CAFFEINE_ASSERT(!resolved.empty(),
-                  "caffeine_make_symbolic called with invalid name pointer");
-  CAFFEINE_ASSERT(resolved.size() == 1,
-                  "caffeine_make_symbolic called with symbolic name");
-
-  auto alloc_name = readSymbolicName(solver, ctx, resolved.front());
-  CAFFEINE_UASSERT(alloc_name.has_value(),
-                   "Unable to read name argument of caffeine_make_symbolic");
-
-  unsigned address_space = call.getType()->getPointerAddressSpace();
-  unsigned ptr_width = size->type().bitwidth();
-
-  OpRef data;
-
-  auto csize = llvm::dyn_cast<ConstantInt>(size.get());
-  if (csize && csize->value().getLimitedValue() < MAX_FIXED_CONSTANT_SIZE) {
-    size_t data_size = csize->value().getLimitedValue();
-    std::vector<OpRef> constants;
-    constants.reserve(data_size);
-
-    for (size_t i = 0; i < data_size; ++i) {
-      constants.push_back(
-          Constant::Create(Type::int_ty(8), Symbol(ctx->next_constant())));
-    }
-
-    data = FixedArray::Create(size->type(), PersistentArray<OpRef>(constants));
-  } else {
-    data = ConstantArray::Create(Symbol(*alloc_name), size);
-  }
-
-  ctx->constants =
-      std::move(ctx->constants).insert({std::move(*alloc_name), data});
-  auto alloc = ctx->heaps[address_space].allocate(
-      size, ConstantInt::Create(llvm::APInt(ptr_width, 1)), data,
-      AllocationKind::Alloca, AllocationPermissions::ReadWrite, *ctx);
-
-  auto& frame = ctx->stack_top().get_regular();
-  frame.insert(&call, LLVMValue(Pointer(
-                          alloc, ConstantInt::Create(llvm::APInt(ptr_width, 0)),
-                          address_space)));
-  frame.allocations.emplace_back(alloc, address_space);
-
-  return ExecutionResult::Continue;
 }
 
 ExecutionResult Interpreter::visitCalloc(llvm::CallBase& call) {

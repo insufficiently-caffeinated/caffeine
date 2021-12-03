@@ -139,6 +139,8 @@ Builder& Builder::with_default_functions() {
   with_function("caffeine_assume", ExternalFunctions::caffeine_assume());
   with_function("caffeine_malloc_aligned",
                 ExternalFunctions::caffeine_malloc_aligned());
+  with_function("caffeine_builtin_symbolic_alloca",
+                ExternalFunctions::caffeine_builtin_symbolic_alloca());
 
   return *this;
 }
