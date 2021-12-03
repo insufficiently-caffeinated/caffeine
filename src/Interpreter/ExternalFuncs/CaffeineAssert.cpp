@@ -15,4 +15,8 @@ void CaffeineAssertFunction::call(InterpreterContext& ctx,
   ctx.jump_return();
 }
 
+std::unique_ptr<ExternalFunction> ExternalFunctions::caffeine_assert() {
+  return std::make_unique<CaffeineAssertFunction>();
+}
+
 } // namespace caffeine

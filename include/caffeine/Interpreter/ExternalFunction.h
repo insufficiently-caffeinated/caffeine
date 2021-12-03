@@ -52,4 +52,24 @@ protected:
   ExternalFunction& operator=(ExternalFunction&&) = default;
 };
 
+/**
+ * @brief Builder methods for all external function instances.
+ *
+ * This class is basically just a namespace for static builder functions so that
+ * downstream users (i.e. pretty much just CaffeineContext) don't need to
+ * include all the respective headers.
+ *
+ * The naming convention I've chosen to take here is that the function name in
+ * this class is exactly the same as whatever external function is modelling.
+ */
+class ExternalFunctions {
+public:
+  static std::unique_ptr<ExternalFunction> caffeine_assert();
+  static std::unique_ptr<ExternalFunction> caffeine_assume();
+  static std::unique_ptr<ExternalFunction> caffeine_malloc_aligned();
+
+private:
+  ExternalFunctions() = delete;
+};
+
 } // namespace caffeine

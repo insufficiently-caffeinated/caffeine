@@ -61,4 +61,8 @@ void MallocAlignFunction::call(InterpreterContext& ctx,
       Pointer(alloc, ConstantInt::CreateZero(ptr_width), address_space)));
 }
 
+std::unique_ptr<ExternalFunction> ExternalFunctions::caffeine_malloc_aligned() {
+  return std::make_unique<MallocAlignFunction>();
+}
+
 } // namespace caffeine
