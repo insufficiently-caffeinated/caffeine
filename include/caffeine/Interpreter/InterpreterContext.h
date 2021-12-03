@@ -231,6 +231,14 @@ public:
   llvm::SmallVector<Pointer, 1>
   resolve_ptr(const Pointer& ptr, const OpRef& width, std::string_view message);
 
+  /**
+   * @brief Get the allocation that this pointer points to.
+   *
+   * @return const Allocation* The allocation, or null if this pointer does not
+   *                           point to any allocation.
+   */
+  Allocation* ptr_allocation(const Pointer& ptr);
+
   // Methods managing forks and context queuing
 
   /**

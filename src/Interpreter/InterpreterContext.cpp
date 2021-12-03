@@ -261,6 +261,13 @@ InterpreterContext::resolve_ptr(const Pointer& ptr, const OpRef& width,
   return context().heaps.resolve(solver(), ptr, context());
 }
 
+Allocation* InterpreterContext::ptr_allocation(const Pointer& ptr) {
+  if (!ptr.is_resolved())
+    return nullptr;
+
+  return &context().heaps.ptr_allocation(ptr);
+}
+
 InterpreterContext InterpreterContext::fork() const {
   auto entry = std::make_unique<ContextQueueEntry>(context().fork_once());
   auto index = queue_->size();
