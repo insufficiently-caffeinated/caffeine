@@ -490,21 +490,29 @@ ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
   return ops.execute(this);
 }
 ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
-  auto dest = inst.getPointerOperand();
-  auto value = ctx->lookup(inst.getValueOperand());
-
   const llvm::DataLayout& layout = inst.getModule()->getDataLayout();
 
-  auto ops = TransformBuilder();
-  auto resolved = ops.resolve(dest, inst.getValueOperand()->getType());
-  ops.transform([&](TransformBuilder::ContextState& state) {
-    auto ptr = state.lookup(resolved).scalar().pointer();
-    Allocation& alloc = state.ctx.heaps.ptr_allocation(ptr);
-    alloc.write(ptr.offset(), inst.getValueOperand()->getType(), value,
-                state.ctx.heaps, layout);
-  });
+  auto unresolved = interp->load(inst.getPointerOperand()).scalar().pointer();
+  auto value = interp->load(inst.getValueOperand());
 
-  return ops.execute(this);
+  auto resolved = interp->resolve_ptr(
+      unresolved, layout.getTypeStoreSize(inst.getValueOperand()->getType()),
+      "invalid pointer store");
+
+  interp->kill();
+  for (const Pointer& ptr : resolved) {
+    auto fork = interp->fork();
+    fork.add_assertion(
+        ICmpOp::CreateICmpEQ(ptr.value(interp->context().heaps),
+                             unresolved.value(interp->context().heaps)));
+
+    Allocation* alloc = fork.ptr_allocation(ptr);
+    CAFFEINE_ASSERT(alloc);
+    alloc->write(ptr.offset(), inst.getValueOperand()->getType(), value,
+                 fork.context().heaps, layout);
+  }
+
+  return ExecutionResult::Migrated;
 }
 ExecutionResult Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {
   const llvm::DataLayout& layout = interp->getModule()->getDataLayout();
