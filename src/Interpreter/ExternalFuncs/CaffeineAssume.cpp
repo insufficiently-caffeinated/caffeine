@@ -15,4 +15,8 @@ void CaffeineAssumeFunction::call(InterpreterContext& ctx,
   ctx.jump_return();
 }
 
+std::unique_ptr<ExternalFunction> ExternalFunctions::caffeine_assume() {
+  return std::make_unique<CaffeineAssumeFunction>();
+}
+
 } // namespace caffeine

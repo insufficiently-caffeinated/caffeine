@@ -1,7 +1,4 @@
 #include "caffeine/Interpreter/CaffeineContext.h"
-#include "caffeine/Interpreter/ExternalFuncs/CaffeineAssert.h"
-#include "caffeine/Interpreter/ExternalFuncs/CaffeineAssume.h"
-#include "caffeine/Interpreter/ExternalFuncs/MallocAlign.h"
 #include "caffeine/Interpreter/ExternalFunction.h"
 #include "caffeine/Interpreter/FailureLogger.h"
 #include "caffeine/Interpreter/Policy.h"
@@ -138,10 +135,10 @@ Builder& Builder::with_solver_builder(SolverBuilder&& builder) {
 }
 
 Builder& Builder::with_default_functions() {
-  with_function("caffeine_assert", std::make_unique<CaffeineAssertFunction>());
-  with_function("caffeine_assume", std::make_unique<CaffeineAssumeFunction>());
+  with_function("caffeine_assert", ExternalFunctions::caffeine_assert());
+  with_function("caffeine_assume", ExternalFunctions::caffeine_assume());
   with_function("caffeine_malloc_aligned",
-                std::make_unique<MallocAlignFunction>());
+                ExternalFunctions::caffeine_malloc_aligned());
 
   return *this;
 }
