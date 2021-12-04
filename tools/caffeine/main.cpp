@@ -6,9 +6,9 @@
 #include "caffeine/Interpreter/Store.h"
 #include "caffeine/Interpreter/ThreadQueueStore.h"
 #include "caffeine/Solver/LoggingSolver.h"
+#include "caffeine/Support/Coverage.h"
 #include "caffeine/Support/DiagnosticHandler.h"
 #include "caffeine/Support/Signal.h"
-#include "caffeine/Support/Coverage.h"
 #include "caffeine/Support/Tracing.h"
 
 #include <cstdlib>
@@ -159,12 +159,11 @@ int main(int argc, char** argv) {
     return 2;
   }
 
-  CoverageTracker cov;
   auto caffeine = CaffeineContext::builder()
                       .with_store(std::move(store))
                       .with_logger(std::make_unique<CountingFailureLogger>(
                           std::cout, function))
-                      .with_coverage(cov)
+                      .with_coverage(CoverageTracker())
                       .build();
   auto exec = caffeine::Executor(&caffeine, options);
 

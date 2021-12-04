@@ -19,7 +19,7 @@ struct InterpreterOptions {
   bool run_line_coverage_debugger = true;
 
   /**
-   * This wont be implemented for a while but is nice to have it so for now 
+   * This wont be implemented for a while but is nice to have it so for now
    * its false.
    */
   bool run_branch_coverage_debugger = false;

@@ -7,10 +7,10 @@
 #include "caffeine/Interpreter/Store.h"
 #include "caffeine/Model/Value.h"
 #include "caffeine/Support/Assert.h"
+#include "caffeine/Support/Coverage.h"
 #include "caffeine/Support/LLVMFmt.h"
 #include "caffeine/Support/Tracing.h"
 #include "caffeine/Support/UnsupportedOperation.h"
-#include "caffeine/Support/Coverage.h"
 
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/combine.hpp>
