@@ -146,6 +146,11 @@ Builder& Builder::with_default_functions() {
 }
 
 Builder& Builder::with_default_intrinsics() {
+  with_intrinsic(llvm::Intrinsic::umul_with_overflow,
+                 Intrinsics::umul_with_overflow());
+  with_intrinsic(llvm::Intrinsic::smul_with_overflow,
+                 Intrinsics::smul_with_overflow());
+
   return *this;
 }
 

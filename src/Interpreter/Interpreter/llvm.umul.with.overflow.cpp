@@ -1,25 +1,33 @@
+#include "caffeine/IR/Value.h"
+#include "caffeine/Interpreter/ExternalFunction.h"
 #include "caffeine/Interpreter/Interpreter.h"
 
 namespace caffeine {
 
-ExecutionResult
-Interpreter::visitUMulWithOverflowIntrinsic(llvm::IntrinsicInst& inst) {
-  auto a = ctx->lookup(inst.getArgOperand(0));
-  auto b = ctx->lookup(inst.getArgOperand(1));
+namespace {
+  class UMulWithOverflowIntrinsic : public ExternalFunction {
+  public:
+    void call(InterpreterContext& ctx, Span<LLVMValue> args) const {
+      CAFFEINE_ASSERT(args.size() == 2);
 
-  auto vals = transform_exprs(
-      [&](const auto& a, const auto& b) { return BinaryOp::CreateMul(a, b); },
-      a, b);
-  auto overflow = transform_exprs(
-      [&](const auto& a, const auto& b) {
-        return BinaryOp::CreateUMulOverflow(a, b);
-      },
-      a, b);
+      auto values = transform_exprs(
+          [](const auto& a, const auto& b) {
+            return BinaryOp::CreateMul(a, b);
+          },
+          args[0], args[1]);
+      auto overflow = transform_exprs(
+          [&](const auto& a, const auto& b) {
+            return BinaryOp::CreateUMulOverflow(a, b);
+          },
+          args[0], args[1]);
 
-  ctx->stack_top().get_regular().insert(
-      &inst, LLVMValue(llvm::ArrayRef<LLVMValue>{vals, overflow}));
+      ctx.jump_return(LLVMValue(llvm::ArrayRef<LLVMValue>{values, overflow}));
+    }
+  };
+} // namespace
 
-  return ExecutionResult::Continue;
+std::unique_ptr<ExternalFunction> Intrinsics::umul_with_overflow() {
+  return std::make_unique<UMulWithOverflowIntrinsic>();
 }
 
 } // namespace caffeine

@@ -404,21 +404,38 @@ ExecutionResult Interpreter::visitInvokeInst(llvm::InvokeInst& invoke) {
 ExecutionResult Interpreter::visitIntrinsicInst(llvm::IntrinsicInst& intrin) {
   namespace Intrinsic = llvm::Intrinsic;
 
+  // Note that some intrinsics are quickly filtered out here since they
+  // have no effect on program behaviour and this way we don't need to
+  // write a bunch of boilerplate to handle them.
   switch (intrin.getIntrinsicID()) {
   // These are just markers for when lifetimes are supposed to end.
   case Intrinsic::lifetime_start:
   case Intrinsic::lifetime_end:
-    return ExecutionResult::Continue;
-  case Intrinsic::umul_with_overflow:
-    return visitUMulWithOverflowIntrinsic(intrin);
-  case Intrinsic::smul_with_overflow:
-    return visitSMulWithOverflowIntrinsic(intrin);
+  // These are for debug info, they have no run time behaviour.
+  case Intrinsic::dbg_addr:
+  case Intrinsic::dbg_declare:
+  case Intrinsic::dbg_label:
+  case Intrinsic::dbg_value:
+    return ExecutionResult::Migrated;
   default:
     break;
   }
 
-  CAFFEINE_ABORT(fmt::format("Intrinsic function '{}' is not supported",
+  auto func = interp->caffeine().intrinsic(intrin.getIntrinsicID());
+  if (!func) {
+    interp->fail(fmt::format("Intrinsic function '{}' is not supported",
                              intrin.getCalledFunction()->getName().str()));
+    return ExecutionResult::Migrated;
+  }
+
+  llvm::SmallVector<LLVMValue, 4> args;
+  args.reserve(intrin.getNumArgOperands());
+  for (auto& arg : intrin.args())
+    args.push_back(interp->load(arg.get()));
+
+  func->call(*interp, args);
+
+  return ExecutionResult::Migrated;
 }
 ExecutionResult Interpreter::visitIndirectCall(llvm::CallBase& call) {
   CAFFEINE_ASSERT(
