@@ -72,4 +72,22 @@ private:
   ExternalFunctions() = delete;
 };
 
+/**
+ * @brief Builder metrhods for all external function instances.
+ *
+ * This class is basically just a namespace for static builder functions so that
+ * downstream users don't need to include all the relevant headers.
+ *
+ * The naming convention here is that functions in this class should match their
+ * LLVM intrinsic ID enum name.
+ */
+class Intrinsics {
+public:
+  static std::unique_ptr<ExternalFunction> smul_with_overflow();
+  static std::unique_ptr<ExternalFunction> umul_with_overflow();
+
+private:
+  Intrinsics() = delete;
+};
+
 } // namespace caffeine
