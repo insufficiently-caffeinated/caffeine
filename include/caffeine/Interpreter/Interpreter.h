@@ -128,8 +128,6 @@ private:
 private:
   ExecutionResult visitExternFunc(llvm::CallBase& inst);
 
-  ExecutionResult visitSymbolicAlloca(llvm::CallBase& inst);
-
   ExecutionResult visitCalloc(llvm::CallBase& inst);
   ExecutionResult visitFree(llvm::CallBase& inst);
 
