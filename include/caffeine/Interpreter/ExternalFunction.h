@@ -68,6 +68,7 @@ public:
   static std::unique_ptr<ExternalFunction> caffeine_assume();
   static std::unique_ptr<ExternalFunction> caffeine_malloc_aligned();
   static std::unique_ptr<ExternalFunction> caffeine_builtin_symbolic_alloca();
+  static std::unique_ptr<ExternalFunction> caffeine_calloc();
 
 private:
   ExternalFunctions() = delete;
