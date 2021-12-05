@@ -142,6 +142,7 @@ Builder& Builder::with_default_functions() {
   with_function("caffeine_builtin_symbolic_alloca",
                 ExternalFunctions::caffeine_builtin_symbolic_alloca());
   with_function("caffeine_calloc", ExternalFunctions::caffeine_calloc());
+  with_function("caffeine_free", ExternalFunctions::caffeine_free());
 
   return *this;
 }

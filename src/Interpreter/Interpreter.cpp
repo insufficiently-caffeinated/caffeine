@@ -590,9 +590,6 @@ ExecutionResult Interpreter::visitExternFunc(llvm::CallBase& call) {
     return ExecutionResult::Migrated;
   }
 
-  if (name == "caffeine_free")
-    return visitFree(call);
-
   if (name == "caffeine_builtin_resolve" ||
       name.startswith("caffeine.resolve."))
     return visitBuiltinResolve(call);
@@ -631,55 +628,6 @@ std::optional<std::string> readSymbolicName(std::shared_ptr<Solver> solver,
   }
 
   return std::string(start, end);
-}
-
-/**
- * caffeine_free is a more limited version of free that doesn't expect the input
- * to be a null pointer.
- */
-ExecutionResult Interpreter::visitFree(llvm::CallBase& call) {
-  CAFFEINE_ASSERT(call.getNumArgOperands() == 1, "Invalid free signature");
-  CAFFEINE_ASSERT(call.getType()->isVoidTy(), "Invalid free signature");
-  CAFFEINE_ASSERT(call.getArgOperand(0)->getType()->isPointerTy(),
-                  "Invalid free signature");
-
-  auto memptr = ctx->lookup(call.getArgOperand(0)).scalar().pointer();
-
-  auto is_valid_ptr = ctx->heaps.check_starts_allocation(memptr);
-  if (ctx->check(solver, !is_valid_ptr) == SolverResult::SAT) {
-    logFailure(*ctx, !is_valid_ptr, "free called with an invalid pointer");
-
-    return ExecutionResult::Dead;
-  }
-
-  auto resolved = ctx->heaps.resolve(solver, memptr, *ctx);
-
-  auto err_start =
-      std::remove_if(resolved.begin(), resolved.end(), [&](const Pointer& ptr) {
-        const Allocation& alloc = ctx->heaps[ptr.heap()][ptr.alloc()];
-
-        auto assertion = Assertion(
-            ICmpOp::CreateICmpEQ(ptr.value(ctx->heaps), alloc.address()));
-        if (ctx->check(solver, !assertion) == SolverResult::SAT) {
-          logFailure(*ctx, Assertion::constant(true),
-                     "free called with a pointer not allocated by malloc");
-
-          return true;
-        }
-
-        return false;
-      });
-  resolved.erase(err_start, resolved.end());
-
-  auto forks = ctx->fork(resolved.size());
-
-  for (auto [fork, ptr] : llvm::zip(forks, resolved)) {
-    Allocation& alloc = fork.heaps[ptr.heap()][ptr.alloc()];
-    fork.add(ICmpOp::CreateICmpEQ(ptr.value(fork.heaps), alloc.address()));
-    fork.heaps[ptr.heap()].deallocate(ptr.alloc());
-  }
-
-  return forks;
 }
 
 ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallBase& call) {
