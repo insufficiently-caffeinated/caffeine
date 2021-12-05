@@ -6,6 +6,7 @@
 #include "caffeine/Support/UnsupportedOperation.h"
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Module.h>
+#include <llvm/IR/Type.h>
 
 namespace caffeine {
 
@@ -124,6 +125,22 @@ Pointer InterpreterContext::allocate_repeated(
     unsigned address_space, AllocationKind kind, AllocationPermissions perms) {
   return allocate(size, align, AllocOp::Create(size, byte), address_space, kind,
                   perms);
+}
+
+void InterpreterContext::mem_write(const Pointer& ptr, llvm::Type* type,
+                                   const LLVMValue& value) {
+  CAFFEINE_ASSERT(ptr.is_resolved());
+
+  Allocation& alloc = context().heaps.ptr_allocation(ptr);
+  alloc.write(ptr.offset(), type, value, context().heaps,
+              getModule()->getDataLayout());
+}
+
+LLVMValue InterpreterContext::mem_read(const Pointer& ptr, llvm::Type* type) {
+  CAFFEINE_ASSERT(ptr.is_resolved());
+
+  Allocation& alloc = context().heaps.ptr_allocation(ptr);
+  return alloc.read(ptr.offset(), type, getModule()->getDataLayout());
 }
 
 void InterpreterContext::jump_to(llvm::BasicBlock* block) {
