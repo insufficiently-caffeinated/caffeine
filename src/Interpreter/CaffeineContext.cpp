@@ -141,6 +141,8 @@ Builder& Builder::with_default_functions() {
                 ExternalFunctions::caffeine_malloc_aligned());
   with_function("caffeine_builtin_symbolic_alloca",
                 ExternalFunctions::caffeine_builtin_symbolic_alloca());
+  with_function("caffeine_builtin_resolve",
+                ExternalFunctions::caffeine_builtin_resolve());
   with_function("caffeine_calloc", ExternalFunctions::caffeine_calloc());
   with_function("caffeine_free", ExternalFunctions::caffeine_free());
 
