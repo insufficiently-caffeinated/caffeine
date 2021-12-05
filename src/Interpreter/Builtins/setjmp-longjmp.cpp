@@ -1,5 +1,8 @@
+#include "caffeine/Interpreter/ExternalFunction.h"
 #include "caffeine/Interpreter/Interpreter.h"
 #include "caffeine/Interpreter/TransformBuilder.h"
+#include "caffeine/Support/UnsupportedOperation.h"
+#include <boost/range/algorithm.hpp>
 #include <fmt/format.h>
 
 namespace caffeine {
@@ -40,14 +43,181 @@ namespace caffeine {
  */
 
 namespace {
-  using ContextState = TransformBuilder::ContextState;
-  using InsertFn = TransformBuilder::InsertFn;
+  struct InstructionId {
+    uint32_t block;
+    uint32_t inst;
+  };
 
   llvm::StructType* getJmpBufType(llvm::LLVMContext& ctx) {
-    return llvm::StructType::get(
-        llvm::Type::getInt64Ty(ctx),
-        llvm::Type::getIntNTy(ctx, sizeof(void*) * CHAR_BIT));
+    return llvm::StructType::get(llvm::Type::getInt64Ty(ctx),
+                                 llvm::Type::getInt64Ty(ctx));
   }
+
+  class SetJmpFunction : public ExternalFunction {
+  public:
+    void call(InterpreterContext& interp, Span<LLVMValue> args) const override {
+      if (args.size() != 1) {
+        interp.fail("invalid number of arguments for setjmp");
+        return;
+      }
+
+      if (!args[0].is_scalar() && !args[0].scalar().is_pointer()) {
+        interp.fail("invalid setjmp signature (invalid argument types)");
+        return;
+      }
+
+      const llvm::DataLayout& layout = interp.getModule()->getDataLayout();
+      llvm::CallBase* inst =
+          llvm::cast<llvm::CallBase>(interp.getCurrentInstruction());
+      auto& frame = interp.context().stack_top().get_regular();
+
+      if (!inst->getType()->isIntegerTy()) {
+        interp.fail("invalid setjmp signature (invalid return type)");
+        return;
+      }
+
+      LLVMValue jmpbuf = getJmpBuf(frame.frame_id, inst);
+      llvm::Type* jmpbuf_ty = getJmpBufType(interp.getModule()->getContext());
+      unsigned jmpbuf_size = layout.getTypeStoreSize(jmpbuf_ty);
+      unsigned real_size = layout.getTypeStoreSize(
+          inst->getArgOperand(0)->getType()->getPointerElementType());
+
+      if (real_size < jmpbuf_size) {
+        CAFFEINE_UNSUPPORTED(fmt::format(
+            "Platform jmp_buf is too small for caffeine to use: {} > {}",
+            real_size, jmpbuf_size));
+      }
+
+      auto unresolved = args[0].scalar().pointer();
+      auto resolved =
+          interp.resolve_ptr(unresolved, jmpbuf_size, "invalid pointer write");
+      interp.store(inst, LLVMValue(ConstantInt::CreateZero(
+                             inst->getType()->getIntegerBitWidth())));
+      interp.kill();
+
+      for (Pointer& ptr : resolved) {
+        auto fork = interp.fork();
+        fork.add_resolved(ptr, unresolved);
+        fork.mem_write(ptr, jmpbuf_ty, jmpbuf);
+      }
+    }
+
+  private:
+    static LLVMValue getJmpBuf(uint64_t stack_id, llvm::Instruction* inst) {
+      llvm::BasicBlock* block = inst->getParent();
+      llvm::Function* func = block->getParent();
+
+      auto block_it = boost::find_if(func->getBasicBlockList(),
+                                     [&](auto& x) { return &x == block; });
+      auto inst_it =
+          boost::find_if(*block, [&](auto& x) { return &x == inst; });
+      CAFFEINE_ASSERT(!(block_it == func->getBasicBlockList().end()));
+      CAFFEINE_ASSERT(!(inst_it == block->end()));
+
+      uint32_t block_idx =
+          std::distance(func->getBasicBlockList().begin(), block_it);
+      uint32_t inst_idx = std::distance(block->begin(), inst_it);
+
+      uint64_t inst_id = ((uint64_t)block_idx << 32) | (uint64_t)inst_idx;
+
+      auto array = llvm::ArrayRef<LLVMValue>{
+          LLVMValue(ConstantInt::Create(llvm::APInt(64, stack_id))),
+          LLVMValue(ConstantInt::Create(llvm::APInt(64, inst_id)))};
+
+      return LLVMValue(std::move(array));
+    }
+    static bool validateArgs(InterpreterContext& interp, Span<LLVMValue> args) {
+      const auto& inst =
+          llvm::cast<llvm::CallBase>(*interp.getCurrentInstruction());
+
+      if (args.size() != 1) {
+        interp.fail(
+            "invalid signature for setjmp (invalid number of arguments)");
+        return false;
+      }
+
+      if (!inst.getArgOperand(0)->getType()->isIntegerTy()) {
+        interp.fail("invalid signature for setjmp (invalid argument type)");
+        return false;
+      }
+
+      return true;
+    }
+  };
+
+  class LongJmpFunction : public ExternalFunction {
+  public:
+    void call(InterpreterContext& interp, Span<LLVMValue> args) const override {
+      if (!validateArgs(interp, args))
+        return;
+
+      llvm::CallBase* inst =
+          llvm::cast<llvm::CallBase>(interp.getCurrentInstruction());
+      const auto& layout = interp.getModule()->getDataLayout();
+      llvm::Type* jmpbuf_ty = getJmpBufType(interp.getModule()->getContext());
+      unsigned jmpbuf_size = layout.getTypeStoreSize(jmpbuf_ty);
+      unsigned real_size = layout.getTypeStoreSize(
+          inst->getArgOperand(0)->getType()->getPointerElementType());
+
+      if (real_size < jmpbuf_size) {
+        CAFFEINE_UNSUPPORTED(fmt::format(
+            "Platform jmp_buf is too small for caffeine to use: {} > {}",
+            real_size, jmpbuf_size));
+      }
+
+      auto unresolved = args[0].scalar().pointer();
+      auto resolved =
+          interp.resolve_ptr(unresolved, jmpbuf_size, "invalid pointer read");
+      interp.kill();
+
+      for (const Pointer& ptr : resolved) {
+        auto fork = interp.fork();
+        fork.add_resolved(ptr, unresolved);
+
+        auto jmpbuf = fork.mem_read(ptr, jmpbuf_ty);
+
+        auto frame_id_ex = jmpbuf.member(0).scalar().expr();
+        auto inst_id_ex = jmpbuf.member(1).scalar().expr();
+
+        if (!llvm::isa<ConstantInt>(frame_id_ex.get())) {
+          interp.fail("symbolic longjmp targets are not currently supported");
+          continue;
+        }
+
+        if (!llvm::isa<ConstantInt>(inst_id_ex.get())) {}
+      }
+    }
+
+  private:
+    static bool validateArgs(InterpreterContext& interp, Span<LLVMValue> args) {
+      const auto& inst =
+          llvm::cast<llvm::CallBase>(*interp.getCurrentInstruction());
+
+      if (args.size() != 2) {
+        interp.fail(
+            "invalid signature for longjmp (invalid number of arguments)");
+        return false;
+      }
+
+      if (!inst.getArgOperand(0)->getType()->isPointerTy()) {
+        interp.fail("invalid signature for longjmp (invalid argument type)");
+        return false;
+      }
+
+      if (!inst.getArgOperand(1)->getType()->isIntegerTy()) {
+        interp.fail("invalid signature for longjmp (invalid argument type)");
+        return false;
+      }
+
+      return true;
+    }
+  };
+
+}; // namespace
+
+namespace {
+  using ContextState = TransformBuilder::ContextState;
+  using InsertFn = TransformBuilder::InsertFn;
 
   // TODO: This stores a interpreter pointer in the memory of the interpreted
   //       program. This will not work when we want to make caffeine
@@ -104,35 +274,10 @@ namespace {
 } // namespace
 
 ExecutionResult Interpreter::visitSetjmp(llvm::CallBase& inst) {
-  CAFFEINE_ASSERT(inst.getNumArgOperands() == 1,
-                  "Invalid signature for _setjmp");
-
-  const auto& layout = inst.getModule()->getDataLayout();
-  auto& frame = ctx->stack_top().get_regular();
-
-  auto jmpbuf = getJmpBuf(frame.frame_id, inst);
-  auto jmpbuf_ty = getJmpBufType(inst.getContext());
-
-  CAFFEINE_ASSERT(
-      layout.getTypeStoreSize(inst.getArgOperand(0)->getType()) <=
-          layout.getTypeStoreSize(jmpbuf_ty),
-      fmt::format("Platform jmp_buf is too small for caffeine to use: {} > {}",
-                  layout.getTypeStoreSize(inst.getArgOperand(0)->getType()),
-                  layout.getTypeStoreSize(jmpbuf_ty)));
-
-  auto ops = TransformBuilder();
-
-  auto resolved = ops.resolve(inst.getArgOperand(0), jmpbuf_ty);
-  ops.transform([&](TransformBuilder::ContextState& state) {
-    auto ptr = state.lookup(resolved).scalar().pointer();
-
-    Allocation& alloc = state.ctx.heaps[ptr.heap()][ptr.alloc()];
-    alloc.write(ptr.offset(), jmpbuf_ty, jmpbuf, state.ctx.heaps, layout);
-  });
-  ops.assign(&inst,
-             ConstantInt::CreateZero(inst.getType()->getIntegerBitWidth()));
-
-  return ops.execute(this);
+  SetJmpFunction func;
+  LLVMValue arg = interp->load(inst.getArgOperand(0));
+  func.call(*interp, Span(&arg, 1));
+  return ExecutionResult::Migrated;
 }
 
 ExecutionResult Interpreter::visitLongjmp(llvm::CallBase& inst) {
