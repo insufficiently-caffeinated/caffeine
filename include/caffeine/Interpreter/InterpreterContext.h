@@ -3,6 +3,7 @@
 #include "caffeine/Interpreter/Context.h"
 #include "caffeine/Interpreter/Policy.h"
 #include "caffeine/Solver/Solver.h"
+#include <functional>
 
 namespace llvm {
 class Type;
@@ -292,6 +293,18 @@ public:
   InterpreterContext fork_existing(Context&& ctx) const;
 
   /**
+   * Fork the context for each value within the container. Then invoke the
+   * provided function with the forked context, the downcasted top stack frame,
+   * and the container element, in that order. It will also kill the current
+   * context.
+   *
+   * This is only meant to be used for the implementation of external functions
+   * that involve external stack frames.
+   */
+  template <typename Frame, typename C, typename Func>
+  void fork_external(C& container, Func&& func);
+
+  /**
    * Indicates whether the current context is dead. This happens when either
    * fail() or kill() has been called.
    */
@@ -364,5 +377,23 @@ private:
   CaffeineContext* shared_;
   std::shared_ptr<Solver> solver_;
 };
+
+template <typename Frame, typename C, typename Func>
+void InterpreterContext::fork_external(C& container, Func&& func) {
+  const Frame* derived =
+      dynamic_cast<const Frame*>(context().stack_top().get_external().get());
+  CAFFEINE_ASSERT(derived, "fork_external called with a type that didn't match "
+                           "the type of the frame currently on the stack");
+
+  kill();
+
+  for (auto& elem : container) {
+    auto fork = this->fork();
+    Frame* frame =
+        dynamic_cast<Frame*>(fork.context().stack_top().get_external().get());
+
+    func(fork, frame, elem);
+  }
+}
 
 } // namespace caffeine
