@@ -7,8 +7,6 @@
 #include <llvm/IR/InstrTypes.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Module.h>
-#include <fmt/ostream.h>
-#include <iostream>
 
 namespace caffeine {
 using namespace setjmp;
