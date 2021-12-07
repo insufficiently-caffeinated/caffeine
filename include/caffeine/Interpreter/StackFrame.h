@@ -13,6 +13,7 @@
 #include "caffeine/IR/Operation.h"
 #include "caffeine/Memory/MemHeap.h"
 #include "caffeine/Model/Value.h"
+#include "caffeine/Support/Casting.h"
 
 namespace caffeine {
 
@@ -178,7 +179,7 @@ public:
   using ExternalStackFrame::ExternalStackFrame;
 
   std::unique_ptr<ExternalStackFrame> clone() const {
-    return std::make_unique<T>(*dynamic_cast<const T*>(this));
+    return std::make_unique<T>(*dynamic_cast_if_supported<const T*>(this));
   }
 };
 

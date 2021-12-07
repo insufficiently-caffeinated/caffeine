@@ -3,6 +3,7 @@
 #include "caffeine/Interpreter/Context.h"
 #include "caffeine/Interpreter/Policy.h"
 #include "caffeine/Solver/Solver.h"
+#include "caffeine/Support/Casting.h"
 #include <functional>
 
 namespace llvm {
@@ -380,8 +381,8 @@ private:
 
 template <typename Frame, typename C, typename Func>
 void InterpreterContext::fork_external(C& container, Func&& func) {
-  const Frame* derived =
-      dynamic_cast<const Frame*>(context().stack_top().get_external().get());
+  const Frame* derived = dynamic_cast_if_supported<const Frame*>(
+      context().stack_top().get_external().get());
   CAFFEINE_ASSERT(derived, "fork_external called with a type that didn't match "
                            "the type of the frame currently on the stack");
 
@@ -389,8 +390,8 @@ void InterpreterContext::fork_external(C& container, Func&& func) {
 
   for (auto& elem : container) {
     auto fork = this->fork();
-    Frame* frame =
-        dynamic_cast<Frame*>(fork.context().stack_top().get_external().get());
+    Frame* frame = dynamic_cast_if_supported<Frame*>(
+        fork.context().stack_top().get_external().get());
 
     func(fork, frame, elem);
   }
