@@ -5,6 +5,5 @@ generate_tests(
     should_fail = True,
     skip_files = [
         "call-longjmp.ll",
-        "invoke-longjmp.ll",
     ],
 )
