@@ -29,44 +29,11 @@ ExecutionResult::ExecutionResult(llvm::SmallVector<Context, 2>&& contexts,
                                  Status status)
     : status_(status), contexts_(std::move(contexts)) {}
 
-Interpreter::Interpreter(ExecutionPolicy* policy, ExecutionContextStore* store,
-                         FailureLogger* logger, InterpreterContext* interp,
-                         const std::shared_ptr<Solver>& solver,
-                         const InterpreterOptions& options)
-    : policy(policy), store(store), logger(logger), options(options),
-      solver(solver), interp(interp) {
-  ctx = &interp->context();
-}
-
-void Interpreter::logFailure(Context& ctx, const Assertion& assertion,
-                             std::string_view message) {
-  auto result = ctx.resolve(solver, assertion);
-  if (result != SolverResult::SAT)
-    return;
-
-  logger->log_failure(result.model(), ctx, Failure(assertion, message));
-  policy->on_path_complete(ctx, ExecutionPolicy::Fail, assertion);
-}
-void Interpreter::queueContext(Context&& ctx) {
-  policy->on_path_forked(ctx);
-  if (policy->should_queue_path(ctx)) {
-    store->add_context(std::move(ctx));
-  } else {
-    policy->on_path_complete(ctx, ExecutionPolicy::Removed);
-  }
-}
-
-Interpreter Interpreter::cloneWith(InterpreterContext* interp) {
-  CAFFEINE_ASSERT(interp);
-
-  Interpreter cloned = *this;
-  cloned.interp = interp;
-  cloned.ctx = &interp->context();
-  return cloned;
-}
+Interpreter::Interpreter(InterpreterContext* interp)
+    : interp(interp) {}
 
 void Interpreter::execute() {
-  auto& frame_wrapper = ctx->stack_top();
+  auto& frame_wrapper = interp->context().stack_top();
   if (frame_wrapper.is_external()) {
     frame_wrapper.get_external()->step(*interp);
     return;
@@ -88,11 +55,11 @@ void Interpreter::execute() {
 
   ExecutionResult res = visit(inst);
 
-  if (traceblock.is_enabled() && !ctx->stack.empty()) {
+  if (traceblock.is_enabled() && !interp->context().stack.empty()) {
     // Printing expressions can be potentially very expensive so we only do it
     // if expensive annotations are enabled.
     if (CAFFEINE_TRACING_EXPENSIVE_ANNOTATIONS) {
-      auto& frame = ctx->stack_top().get_regular();
+      auto& frame = interp->context().stack_top().get_regular();
       auto it = frame.variables.find(&inst);
       if (it != frame.variables.end()) {
         traceblock.annotate("value", fmt::format("{}", it->second));
@@ -103,21 +70,9 @@ void Interpreter::execute() {
   traceblock.close();
 
   // All new contexts were created via InterpreterContext::fork
-  if (res.status() == ExecutionResult::Migrated) {
-    return;
-  }
-
-  if (res.status() != ExecutionResult::Continue) {
-    interp->kill();
-
-    for (Context& ctx : res.contexts()) {
-      if (policy->should_queue_path(ctx)) {
-        interp->fork_existing(std::move(ctx));
-      } else {
-        policy->on_path_complete(ctx, ExecutionPolicy::Removed);
-      }
-    }
-  }
+  CAFFEINE_ASSERT(
+      res.status() == ExecutionResult::Migrated,
+      fmt::format("res.status() == {}", magic_enum::enum_name(res.status())));
 }
 
 ExecutionResult Interpreter::visitInstruction(llvm::Instruction& inst) {
@@ -321,44 +276,19 @@ ExecutionResult Interpreter::visitCallBase(llvm::CallBase& callBase) {
 
   // In case of an extern function
   if (func->empty()) {
-    auto* prev_inst = &*ctx->stack_top().get_regular().current;
-    auto invoke = llvm::dyn_cast<llvm::InvokeInst>(&callBase);
-
-    auto res = visitExternFunc(callBase);
-
-    // TODO: Get rid of this logic and shove it into visitExternFunc
-    if (!invoke)
-      return res;
-
-    if (interp->context().stack_top().is_external()) {
-      return res;
-    }
-
-    if (res.empty()) {
-      if (&*ctx->stack_top().get_regular().current == prev_inst) {
-        ctx->stack_top().set_result(std::nullopt, std::nullopt);
-      }
-    } else {
-      for (auto& ctx_ : res.contexts()) {
-        if (&*ctx_.stack_top().get_regular().current == prev_inst) {
-          ctx->stack_top().set_result(std::nullopt, std::nullopt);
-        }
-      }
-    }
-
-    return res;
+    return visitExternFunc(callBase);
   }
 
   // In case of a normal function call
   auto frame_wrapper = StackFrame::RegularFrame(func);
   auto& callee = frame_wrapper.get_regular();
   for (auto [arg, val] : llvm::zip(func->args(), callBase.args())) {
-    callee.insert(&arg, ctx->lookup(val.get()));
+    callee.insert(&arg, interp->load(val.get()));
   }
 
-  ctx->push(std::move(frame_wrapper));
+  interp->context().stack.push_back(std::move(frame_wrapper));
 
-  return ExecutionResult::Continue;
+  return ExecutionResult::Migrated;
 }
 ExecutionResult Interpreter::visitCallInst(llvm::CallInst& call) {
   return visitCallBase(call);
@@ -427,24 +357,8 @@ ExecutionResult Interpreter::visitIndirectCall(llvm::CallBase& call) {
     newcall->setCalledFunction(
         llvm::cast<FunctionObject>(*alloc.data()).function());
 
-    Interpreter interp = cloneWith(&fork);
-    auto result = interp.visitCallBase(*newcall);
-
-    switch (result.status()) {
-    case ExecutionResult::Migrated:
-    case ExecutionResult::Continue:
-      break;
-    default:
-      fork.kill();
-
-      for (Context& ctx : result.contexts()) {
-        if (policy->should_queue_path(ctx)) {
-          fork.fork_existing(std::move(ctx));
-        } else {
-          policy->on_path_complete(ctx, ExecutionPolicy::Removed);
-        }
-      }
-    }
+    Interpreter interp{&fork};
+    interp.visitCallBase(*newcall);
   }
 
   return ExecutionResult::Migrated;

@@ -24,7 +24,7 @@ class Interpreter;
 
 class ExecutionResult {
 public:
-  enum Status { Continue, Dead, Stop, Migrated };
+  enum Status { /*Continue,*/ Dead, Stop, Migrated };
   using ContextVec = llvm::SmallVector<Context, 2>;
 
   ExecutionResult(Status status);
@@ -34,14 +34,14 @@ public:
     return status_;
   }
 
-  llvm::SmallVectorImpl<Context>& contexts() {
+  [[deprecated]] llvm::SmallVectorImpl<Context>& contexts() {
     return contexts_;
   }
-  const llvm::SmallVectorImpl<Context>& contexts() const {
+  [[deprecated]] const llvm::SmallVectorImpl<Context>& contexts() const {
     return contexts_;
   }
 
-  bool empty() const {
+  [[deprecated]] bool empty() const {
     return contexts_.empty();
   }
 
@@ -54,14 +54,6 @@ typedef ExecutionResult (*InterpreterFunction)(Interpreter&, llvm::CallBase&);
 
 class Interpreter : public llvm::InstVisitor<Interpreter, ExecutionResult> {
 private:
-  ExecutionPolicy* policy;
-  ExecutionContextStore* store;
-
-  Context* ctx;
-  FailureLogger* logger;
-  InterpreterOptions options;
-  std::shared_ptr<Solver> solver;
-
   InterpreterContext* interp;
 
 public:
@@ -69,10 +61,7 @@ public:
    * The interpreter constructor needs an executor and context as well as a way
    * to log assertion failures.
    */
-  Interpreter(ExecutionPolicy* policy, ExecutionContextStore* store,
-              FailureLogger* logger, InterpreterContext* interp,
-              const std::shared_ptr<Solver>& solver,
-              const InterpreterOptions& options = InterpreterOptions());
+  explicit Interpreter(InterpreterContext* interp);
 
   void execute();
 
@@ -115,12 +104,6 @@ public:
   ExecutionResult visitMemSetInst(llvm::MemSetInst& memset);
 
   ExecutionResult visitDbgInfoIntrinsic(llvm::DbgInfoIntrinsic&);
-
-private:
-  void logFailure(Context& ctx, const Assertion& assertion,
-                  std::string_view message = "");
-  void queueContext(Context&& ctx);
-  Interpreter cloneWith(InterpreterContext* interp);
 
 private:
   ExecutionResult visitExternFunc(llvm::CallBase& inst);
