@@ -225,7 +225,7 @@ ExecutionResult Interpreter::visitURem(llvm::BinaryOperator& op) {
 
   interp->store(&op, std::move(result));
 
-  return ExecutionResult::Continue;
+  return ExecutionResult::Migrated;
 }
 
 ExecutionResult Interpreter::visitPHINode(llvm::PHINode& node) {
@@ -237,7 +237,7 @@ ExecutionResult Interpreter::visitPHINode(llvm::PHINode& node) {
   auto value = interp->load(node.getIncomingValueForBlock(frame.prev_block));
   interp->store(&node, value);
 
-  return ExecutionResult::Continue;
+  return ExecutionResult::Migrated;
 }
 ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst& inst) {
   if (!inst.isConditional()) {
@@ -532,7 +532,7 @@ ExecutionResult Interpreter::visitMemSetInst(llvm::MemSetInst&) {
 
 ExecutionResult Interpreter::visitDbgInfoIntrinsic(llvm::DbgInfoIntrinsic&) {
   // Ignore debug info since it doesn't affect semantics.
-  return ExecutionResult::Continue;
+  return ExecutionResult::Migrated;
 }
 
 /***************************************************
