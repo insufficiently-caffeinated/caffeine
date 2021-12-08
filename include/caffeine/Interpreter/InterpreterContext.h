@@ -4,6 +4,10 @@
 #include "caffeine/Interpreter/Policy.h"
 #include "caffeine/Solver/Solver.h"
 
+namespace llvm {
+class Type;
+}
+
 namespace caffeine {
 
 class FailureLogger;
@@ -111,6 +115,24 @@ public:
                             AllocationKind kind, AllocationPermissions perms);
 
   // Utilities for performing common control flow operations
+
+  /**
+   * Write a value to the memory pointed to by ptr.
+   *
+   * The pointer be resolved and it must be valid to write to ptr for at least
+   * the number of bytes it takes to write out value. That is, this pointer
+   * should be one returned by a call to resolve with the correct parameters.
+   */
+  void mem_write(const Pointer& ptr, llvm::Type* type, const LLVMValue& value);
+
+  /**
+   * Read a LLVM value of the provided type from the memory pointed to by ptr.
+   *
+   * The pointer must be resolved and it must be valid to read from ptr for at
+   * least the number of bytes it takes to represent the provided type. That is,
+   * the pointer should be one returned from a call to resolve.
+   */
+  LLVMValue mem_read(const Pointer& ptr, llvm::Type* type);
 
   /**
    * Set the instruction pointer of the current stack frame to the first
