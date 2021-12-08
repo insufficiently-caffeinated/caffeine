@@ -259,17 +259,22 @@ public:
    * - Determine which allocations the pointer could point within and return all
    *   of them. If the pointer is already known to point to a specific
    *   allocation then this is efficient.
+   *
+   * The overload that takes a llvm::Type will resolve according to the provided
+   * type's store size.
    */
   llvm::SmallVector<Pointer, 1> resolve_ptr(const Pointer& ptr, uint32_t width,
                                             std::string_view message);
   llvm::SmallVector<Pointer, 1>
   resolve_ptr(const Pointer& ptr, const OpRef& width, std::string_view message);
+  llvm::SmallVector<Pointer, 1>
+  resolve_ptr(const Pointer& ptr, llvm::Type* type, std::string_view message);
 
   /**
    * @brief Get the allocation that this pointer points to.
    *
-   * @return const Allocation* The allocation, or null if this pointer does not
-   *                           point to any allocation.
+   * @return const Allocation* The allocation, or null if this pointer does
+   * not point to any allocation.
    */
   Allocation* ptr_allocation(const Pointer& ptr);
 
