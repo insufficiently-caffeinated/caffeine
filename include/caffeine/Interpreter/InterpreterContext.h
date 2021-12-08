@@ -230,6 +230,15 @@ public:
                         std::string_view message);
 
   /**
+   * Assert that the pointer points to the start of an allocation.
+   *
+   * If this assertion fails then it will kill the current context and emit a
+   * test failure with the provided message as an explanatory string.
+   */
+  void assert_ptr_starts_allocation(const Pointer& ptr,
+                                    std::string_view message);
+
+  /**
    * Check whether a pointer is valid and, if so, resolve which concrete
    * allocations it could point to.
    *

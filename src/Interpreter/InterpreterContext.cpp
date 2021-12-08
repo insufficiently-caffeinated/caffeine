@@ -242,6 +242,9 @@ void InterpreterContext::assert_or_fail(const Assertion& assertion,
 void InterpreterContext::assert_ptr_valid(const Pointer& ptr,
                                           const OpRef& width,
                                           std::string_view message) {
+  if (is_dead())
+    return;
+
   auto& ctx = context();
   auto assertion = !ctx.heaps.check_valid(ptr, width);
   auto result = resolve(assertion);
@@ -257,6 +260,11 @@ void InterpreterContext::assert_ptr_valid(const Pointer& ptr, uint32_t width,
       ptr,
       ConstantInt::Create(llvm::APInt(ptr.offset()->type().bitwidth(), width)),
       message);
+}
+
+void InterpreterContext::assert_ptr_starts_allocation(
+    const Pointer& ptr, std::string_view message) {
+  assert_or_fail(context().heaps.check_starts_allocation(ptr), message);
 }
 
 llvm::SmallVector<Pointer, 1>

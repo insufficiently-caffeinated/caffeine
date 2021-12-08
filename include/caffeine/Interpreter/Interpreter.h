@@ -125,8 +125,6 @@ private:
 private:
   ExecutionResult visitExternFunc(llvm::CallBase& inst);
 
-  ExecutionResult visitFree(llvm::CallBase& inst);
-
   ExecutionResult visitBuiltinResolve(llvm::CallBase& inst);
 
   ExecutionResult visitSetjmp(llvm::CallBase& inst);
