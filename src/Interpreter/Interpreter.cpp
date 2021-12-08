@@ -64,13 +64,13 @@ void Interpreter::execute() {
   traceblock.close();
 }
 
-ExecutionResult Interpreter::visitInstruction(llvm::Instruction& inst) {
+void Interpreter::visitInstruction(llvm::Instruction& inst) {
   CAFFEINE_ABORT(
       fmt::format("Instruction '{}' not implemented!", inst.getOpcodeName()));
 }
 
 #define DEF_SIMPLE_OP(opname, optype)                                          \
-  ExecutionResult Interpreter::visit##opname(llvm::optype& op) {               \
+  void Interpreter::visit##opname(llvm::optype& op) {                          \
     interp->store(&op, ExprEvaluator(&interp->context()).evaluate(op));        \
   }                                                                            \
   static_assert(true)
@@ -89,7 +89,7 @@ DEF_SIMPLE_OP(ShuffleVectorInst, ShuffleVectorInst);
 DEF_SIMPLE_OP(ExtractValueInst, ExtractValueInst);
 DEF_SIMPLE_OP(InsertValueInst, InsertValueInst);
 
-ExecutionResult Interpreter::visitUDiv(llvm::BinaryOperator& op) {
+void Interpreter::visitUDiv(llvm::BinaryOperator& op) {
   auto lhs = interp->load(op.getOperand(0));
   auto rhs = interp->load(op.getOperand(1));
 
@@ -102,7 +102,7 @@ ExecutionResult Interpreter::visitUDiv(llvm::BinaryOperator& op) {
 
   interp->store(&op, std::move(result));
 }
-ExecutionResult Interpreter::visitSDiv(llvm::BinaryOperator& op) {
+void Interpreter::visitSDiv(llvm::BinaryOperator& op) {
   auto lhs = interp->load(op.getOperand(0));
   auto rhs = interp->load(op.getOperand(1));
 
@@ -125,7 +125,7 @@ ExecutionResult Interpreter::visitSDiv(llvm::BinaryOperator& op) {
 
   interp->store(&op, std::move(result));
 }
-ExecutionResult Interpreter::visitSRem(llvm::BinaryOperator& op) {
+void Interpreter::visitSRem(llvm::BinaryOperator& op) {
   auto lhs = interp->load(op.getOperand(0));
   auto rhs = interp->load(op.getOperand(1));
 
@@ -148,7 +148,7 @@ ExecutionResult Interpreter::visitSRem(llvm::BinaryOperator& op) {
 
   interp->store(&op, std::move(result));
 }
-ExecutionResult Interpreter::visitURem(llvm::BinaryOperator& op) {
+void Interpreter::visitURem(llvm::BinaryOperator& op) {
   auto lhs = interp->load(op.getOperand(0));
   auto rhs = interp->load(op.getOperand(1));
 
@@ -163,7 +163,7 @@ ExecutionResult Interpreter::visitURem(llvm::BinaryOperator& op) {
   interp->store(&op, std::move(result));
 }
 
-ExecutionResult Interpreter::visitPHINode(llvm::PHINode& node) {
+void Interpreter::visitPHINode(llvm::PHINode& node) {
   auto& frame = interp->context().stack_top().get_regular();
 
   // PHI nodes in the entry block is invalid.
@@ -172,7 +172,7 @@ ExecutionResult Interpreter::visitPHINode(llvm::PHINode& node) {
   auto value = interp->load(node.getIncomingValueForBlock(frame.prev_block));
   interp->store(&node, value);
 }
-ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst& inst) {
+void Interpreter::visitBranchInst(llvm::BranchInst& inst) {
   if (!inst.isConditional()) {
     interp->jump_to(inst.getSuccessor(0));
     return;
@@ -200,14 +200,14 @@ ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst& inst) {
 
   interp->kill();
 }
-ExecutionResult Interpreter::visitReturnInst(llvm::ReturnInst& inst) {
+void Interpreter::visitReturnInst(llvm::ReturnInst& inst) {
   if (inst.getNumOperands() != 0) {
     interp->function_return(interp->load(inst.getOperand(0)));
   } else {
     interp->function_return();
   }
 }
-ExecutionResult Interpreter::visitSwitchInst(llvm::SwitchInst& inst) {
+void Interpreter::visitSwitchInst(llvm::SwitchInst& inst) {
   auto cond = interp->load(inst.getCondition()).scalar().expr();
   llvm::SmallVector<Assertion, 16> assertions;
 
@@ -236,7 +236,7 @@ ExecutionResult Interpreter::visitSwitchInst(llvm::SwitchInst& inst) {
     interp->kill();
   }
 }
-ExecutionResult Interpreter::visitCallBase(llvm::CallBase& callBase) {
+void Interpreter::visitCallBase(llvm::CallBase& callBase) {
   auto func = callBase.getCalledFunction();
   if (!func)
     return visitIndirectCall(callBase);
@@ -260,13 +260,13 @@ ExecutionResult Interpreter::visitCallBase(llvm::CallBase& callBase) {
 
   interp->context().stack.push_back(std::move(frame_wrapper));
 }
-ExecutionResult Interpreter::visitCallInst(llvm::CallInst& call) {
+void Interpreter::visitCallInst(llvm::CallInst& call) {
   return visitCallBase(call);
 }
-ExecutionResult Interpreter::visitInvokeInst(llvm::InvokeInst& invoke) {
+void Interpreter::visitInvokeInst(llvm::InvokeInst& invoke) {
   return visitCallBase(invoke);
 }
-ExecutionResult Interpreter::visitIntrinsicInst(llvm::IntrinsicInst& intrin) {
+void Interpreter::visitIntrinsicInst(llvm::IntrinsicInst& intrin) {
   namespace Intrinsic = llvm::Intrinsic;
 
   // Note that some intrinsics are quickly filtered out here since they
@@ -300,7 +300,7 @@ ExecutionResult Interpreter::visitIntrinsicInst(llvm::IntrinsicInst& intrin) {
 
   func->call(*interp, args);
 }
-ExecutionResult Interpreter::visitIndirectCall(llvm::CallBase& call) {
+void Interpreter::visitIndirectCall(llvm::CallBase& call) {
   CAFFEINE_ASSERT(
       call.isIndirectCall() || !call.getCalledFunction(),
       "visitIndirectCall called with a non-indirect call instruction");
@@ -330,7 +330,7 @@ ExecutionResult Interpreter::visitIndirectCall(llvm::CallBase& call) {
   }
 }
 
-ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
+void Interpreter::visitLoadInst(llvm::LoadInst& inst) {
   // Note: This treats atomic loads as regular ones since we only model
   //       single-threaded code. If that ever changes then this will need to be
   //       revisited.
@@ -347,7 +347,7 @@ ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
     fork.store(&inst, fork.mem_read(ptr, inst.getType()));
   }
 }
-ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
+void Interpreter::visitStoreInst(llvm::StoreInst& inst) {
   const llvm::DataLayout& layout = inst.getModule()->getDataLayout();
 
   auto unresolved = interp->load(inst.getPointerOperand()).scalar().pointer();
@@ -370,7 +370,7 @@ ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
                  fork.context().heaps, layout);
   }
 }
-ExecutionResult Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {
+void Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {
   const llvm::DataLayout& layout = interp->getModule()->getDataLayout();
 
   uint64_t size =
@@ -388,23 +388,23 @@ ExecutionResult Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {
   interp->store(&inst, LLVMValue(pointer));
 }
 
-ExecutionResult Interpreter::visitMemCpyInst(llvm::MemCpyInst&) {
+void Interpreter::visitMemCpyInst(llvm::MemCpyInst&) {
   CAFFEINE_ABORT("llvm.memcpy is not implemented natively within the caffeine "
                  "interpreter. Run gen-builtins over the input bitcode file "
                  "first to generate definitions that caffeine can execute.");
 }
-ExecutionResult Interpreter::visitMemMoveInst(llvm::MemMoveInst&) {
+void Interpreter::visitMemMoveInst(llvm::MemMoveInst&) {
   CAFFEINE_ABORT("llvm.memmove is not implemented natively within the caffeine "
                  "interpreter. Run gen-builtins over the input bitcode file "
                  "first to generate definitions that caffeine can execute.");
 }
-ExecutionResult Interpreter::visitMemSetInst(llvm::MemSetInst&) {
+void Interpreter::visitMemSetInst(llvm::MemSetInst&) {
   CAFFEINE_ABORT("llvm.memset is not implemented natively within the caffeine "
                  "interpreter. Run gen-builtins over the input bitcode file "
                  "first to generate definitions that caffeine can execute.");
 }
 
-ExecutionResult Interpreter::visitDbgInfoIntrinsic(llvm::DbgInfoIntrinsic&) {
+void Interpreter::visitDbgInfoIntrinsic(llvm::DbgInfoIntrinsic&) {
   // Ignore debug info since it doesn't affect semantics.
 }
 
@@ -412,7 +412,7 @@ ExecutionResult Interpreter::visitDbgInfoIntrinsic(llvm::DbgInfoIntrinsic&) {
  * External function                               *
  ***************************************************/
 
-ExecutionResult Interpreter::visitExternFunc(llvm::CallBase& call) {
+void Interpreter::visitExternFunc(llvm::CallBase& call) {
   auto func = call.getCalledFunction();
   auto name = func->getName();
 

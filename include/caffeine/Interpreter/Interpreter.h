@@ -18,15 +18,7 @@
 
 namespace caffeine {
 
-class ExecutionPolicy;
-class ExecutionContextStore;
-class Interpreter;
-
-typedef void ExecutionResult;
-
-typedef ExecutionResult (*InterpreterFunction)(Interpreter&, llvm::CallBase&);
-
-class Interpreter : public llvm::InstVisitor<Interpreter, ExecutionResult> {
+class Interpreter : public llvm::InstVisitor<Interpreter, void> {
 private:
   InterpreterContext* interp;
 
@@ -39,52 +31,48 @@ public:
 
   void execute();
 
-  ExecutionResult visitInstruction(llvm::Instruction& inst);
+  void visitInstruction(llvm::Instruction& inst);
 
-  ExecutionResult visitBinaryOperator(llvm::BinaryOperator& op);
-  ExecutionResult visitUnaryOperator(llvm::UnaryOperator& op);
-  ExecutionResult visitCastInst(llvm::CastInst& op);
-  ExecutionResult visitCmpInst(llvm::CmpInst& op);
+  void visitBinaryOperator(llvm::BinaryOperator& op);
+  void visitUnaryOperator(llvm::UnaryOperator& op);
+  void visitCastInst(llvm::CastInst& op);
+  void visitCmpInst(llvm::CmpInst& op);
 
-  ExecutionResult visitUDiv(llvm::BinaryOperator& op);
-  ExecutionResult visitSDiv(llvm::BinaryOperator& op);
-  ExecutionResult visitURem(llvm::BinaryOperator& op);
-  ExecutionResult visitSRem(llvm::BinaryOperator& op);
+  void visitUDiv(llvm::BinaryOperator& op);
+  void visitSDiv(llvm::BinaryOperator& op);
+  void visitURem(llvm::BinaryOperator& op);
+  void visitSRem(llvm::BinaryOperator& op);
 
-  ExecutionResult visitPHINode(llvm::PHINode& node);
-  ExecutionResult visitBranchInst(llvm::BranchInst& inst);
-  ExecutionResult visitReturnInst(llvm::ReturnInst& inst);
-  ExecutionResult visitSwitchInst(llvm::SwitchInst& inst);
-  ExecutionResult visitCallBase(llvm::CallBase& inst);
-  ExecutionResult visitCallInst(llvm::CallInst& inst);
-  ExecutionResult visitSelectInst(llvm::SelectInst& inst);
-  ExecutionResult visitIntrinsicInst(llvm::IntrinsicInst& inst);
-  ExecutionResult visitIndirectCall(llvm::CallBase& inst);
-  ExecutionResult visitInvokeInst(llvm::InvokeInst& invoke);
+  void visitPHINode(llvm::PHINode& node);
+  void visitBranchInst(llvm::BranchInst& inst);
+  void visitReturnInst(llvm::ReturnInst& inst);
+  void visitSwitchInst(llvm::SwitchInst& inst);
+  void visitCallBase(llvm::CallBase& inst);
+  void visitCallInst(llvm::CallInst& inst);
+  void visitSelectInst(llvm::SelectInst& inst);
+  void visitIntrinsicInst(llvm::IntrinsicInst& inst);
+  void visitIndirectCall(llvm::CallBase& inst);
+  void visitInvokeInst(llvm::InvokeInst& invoke);
 
-  ExecutionResult visitGetElementPtrInst(llvm::GetElementPtrInst& inst);
-  ExecutionResult visitLoadInst(llvm::LoadInst& inst);
-  ExecutionResult visitStoreInst(llvm::StoreInst& inst);
+  void visitGetElementPtrInst(llvm::GetElementPtrInst& inst);
+  void visitLoadInst(llvm::LoadInst& inst);
+  void visitStoreInst(llvm::StoreInst& inst);
 
-  ExecutionResult visitInsertElementInst(llvm::InsertElementInst& inst);
-  ExecutionResult visitExtractElementInst(llvm::ExtractElementInst& inst);
-  ExecutionResult visitShuffleVectorInst(llvm::ShuffleVectorInst& inst);
-  ExecutionResult visitAllocaInst(llvm::AllocaInst& inst);
-  ExecutionResult visitExtractValueInst(llvm::ExtractValueInst& inst);
-  ExecutionResult visitInsertValueInst(llvm::InsertValueInst& inst);
+  void visitInsertElementInst(llvm::InsertElementInst& inst);
+  void visitExtractElementInst(llvm::ExtractElementInst& inst);
+  void visitShuffleVectorInst(llvm::ShuffleVectorInst& inst);
+  void visitAllocaInst(llvm::AllocaInst& inst);
+  void visitExtractValueInst(llvm::ExtractValueInst& inst);
+  void visitInsertValueInst(llvm::InsertValueInst& inst);
 
-  ExecutionResult visitMemCpyInst(llvm::MemCpyInst& memcpy);
-  ExecutionResult visitMemMoveInst(llvm::MemMoveInst& memmove);
-  ExecutionResult visitMemSetInst(llvm::MemSetInst& memset);
+  void visitMemCpyInst(llvm::MemCpyInst& memcpy);
+  void visitMemMoveInst(llvm::MemMoveInst& memmove);
+  void visitMemSetInst(llvm::MemSetInst& memset);
 
-  ExecutionResult visitDbgInfoIntrinsic(llvm::DbgInfoIntrinsic&);
+  void visitDbgInfoIntrinsic(llvm::DbgInfoIntrinsic&);
 
 private:
-  ExecutionResult visitExternFunc(llvm::CallBase& inst);
-
-public:
-  static std::unordered_map<std::string_view, InterpreterFunction>&
-  extern_functions();
+  void visitExternFunc(llvm::CallBase& inst);
 };
 
 } // namespace caffeine
