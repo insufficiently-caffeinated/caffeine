@@ -24,13 +24,9 @@
 
 namespace caffeine {
 
-ExecutionResult::ExecutionResult(Status status) : status_(status) {}
-ExecutionResult::ExecutionResult(llvm::SmallVector<Context, 2>&& contexts,
-                                 Status status)
-    : status_(status), contexts_(std::move(contexts)) {}
+const ExecutionResult ExecutionResult::Migrated{};
 
-Interpreter::Interpreter(InterpreterContext* interp)
-    : interp(interp) {}
+Interpreter::Interpreter(InterpreterContext* interp) : interp(interp) {}
 
 void Interpreter::execute() {
   auto& frame_wrapper = interp->context().stack_top();
@@ -53,7 +49,7 @@ void Interpreter::execute() {
   //       modify the current position (e.g. branch, call, etc.)
   ++frame.current;
 
-  ExecutionResult res = visit(inst);
+  visit(inst);
 
   if (traceblock.is_enabled() && !interp->context().stack.empty()) {
     // Printing expressions can be potentially very expensive so we only do it
@@ -68,11 +64,6 @@ void Interpreter::execute() {
   }
 
   traceblock.close();
-
-  // All new contexts were created via InterpreterContext::fork
-  CAFFEINE_ASSERT(
-      res.status() == ExecutionResult::Migrated,
-      fmt::format("res.status() == {}", magic_enum::enum_name(res.status())));
 }
 
 ExecutionResult Interpreter::visitInstruction(llvm::Instruction& inst) {

@@ -24,30 +24,7 @@ class Interpreter;
 
 class ExecutionResult {
 public:
-  enum Status { /*Continue,*/ Dead, Stop, Migrated };
-  using ContextVec = llvm::SmallVector<Context, 2>;
-
-  ExecutionResult(Status status);
-  [[deprecated]] ExecutionResult(ContextVec&& contexts, Status status = Dead);
-
-  Status status() const {
-    return status_;
-  }
-
-  [[deprecated]] llvm::SmallVectorImpl<Context>& contexts() {
-    return contexts_;
-  }
-  [[deprecated]] const llvm::SmallVectorImpl<Context>& contexts() const {
-    return contexts_;
-  }
-
-  [[deprecated]] bool empty() const {
-    return contexts_.empty();
-  }
-
-private:
-  Status status_;
-  ContextVec contexts_;
+  static const ExecutionResult Migrated;
 };
 
 typedef ExecutionResult (*InterpreterFunction)(Interpreter&, llvm::CallBase&);
