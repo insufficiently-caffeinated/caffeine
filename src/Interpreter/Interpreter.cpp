@@ -577,6 +577,9 @@ ExecutionResult Interpreter::visitExternFunc(llvm::CallBase& call) {
   CAFFEINE_ASSERT(func->empty(),
                   "visitExternFunc called with non-external function");
 
+  if (name.startswith("caffeine.resolve."))
+    name = "caffeine_builtin_resolve";
+
   auto extern_func =
       interp->caffeine().function(std::string_view(name.data(), name.size()));
   if (extern_func) {
@@ -589,10 +592,6 @@ ExecutionResult Interpreter::visitExternFunc(llvm::CallBase& call) {
     extern_func->call(*interp, args);
     return ExecutionResult::Migrated;
   }
-
-  if (name == "caffeine_builtin_resolve" ||
-      name.startswith("caffeine.resolve."))
-    return visitBuiltinResolve(call);
 
   auto it = extern_functions().find(name);
   if (it != extern_functions().end())
@@ -628,49 +627,6 @@ std::optional<std::string> readSymbolicName(std::shared_ptr<Solver> solver,
   }
 
   return std::string(start, end);
-}
-
-ExecutionResult Interpreter::visitBuiltinResolve(llvm::CallBase& call) {
-  const llvm::DataLayout& layout = call.getModule()->getDataLayout();
-
-  auto mem = ctx->lookup(call.getArgOperand(0)).scalar().pointer();
-  auto size = UnaryOp::CreateTruncOrZExt(
-      Type::int_ty(layout.getPointerSizeInBits()),
-      ctx->lookup(call.getArgOperand(1)).scalar().expr());
-
-  auto assertion = ctx->heaps.check_valid(mem, size);
-  if (ctx->check(solver, !assertion) == SolverResult::SAT) {
-    logFailure(*ctx, !assertion, "invalid pointer");
-
-    // If we're getting an out-of-bounds access then there's a pretty good
-    // chance that we'll find that we can overlap with just about any other
-    // allocation. This isn't likely to produce useful bugs so we'll kill the
-    // context here.
-    return ExecutionResult::Dead;
-  }
-
-  auto resolved = ctx->heaps.resolve(solver, mem, *ctx);
-
-  if (resolved.size() == 1) {
-    ctx->stack_top().get_regular().insert(&call, LLVMValue(resolved[0]));
-
-    if (!mem.is_resolved()) {
-      ctx->backprop(mem, resolved[0]);
-    }
-
-    return ExecutionResult::Continue;
-  }
-
-  auto forks = ctx->fork(resolved.size());
-  for (auto [fork, ptr] : llvm::zip(forks, resolved)) {
-    fork.stack_top().get_regular().insert(&call, LLVMValue(ptr));
-
-    if (!mem.is_resolved()) {
-      fork.backprop(mem, ptr);
-    }
-  }
-
-  return forks;
 }
 
 } // namespace caffeine
