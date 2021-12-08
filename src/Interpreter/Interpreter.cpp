@@ -24,8 +24,6 @@
 
 namespace caffeine {
 
-const ExecutionResult ExecutionResult::Migrated{};
-
 Interpreter::Interpreter(InterpreterContext* interp) : interp(interp) {}
 
 void Interpreter::execute() {
@@ -74,7 +72,6 @@ ExecutionResult Interpreter::visitInstruction(llvm::Instruction& inst) {
 #define DEF_SIMPLE_OP(opname, optype)                                          \
   ExecutionResult Interpreter::visit##opname(llvm::optype& op) {               \
     interp->store(&op, ExprEvaluator(&interp->context()).evaluate(op));        \
-    return ExecutionResult::Migrated;                                          \
   }                                                                            \
   static_assert(true)
 
@@ -104,8 +101,6 @@ ExecutionResult Interpreter::visitUDiv(llvm::BinaryOperator& op) {
       lhs, rhs);
 
   interp->store(&op, std::move(result));
-
-  return ExecutionResult::Migrated;
 }
 ExecutionResult Interpreter::visitSDiv(llvm::BinaryOperator& op) {
   auto lhs = interp->load(op.getOperand(0));
@@ -129,8 +124,6 @@ ExecutionResult Interpreter::visitSDiv(llvm::BinaryOperator& op) {
       lhs, rhs);
 
   interp->store(&op, std::move(result));
-
-  return ExecutionResult::Migrated;
 }
 ExecutionResult Interpreter::visitSRem(llvm::BinaryOperator& op) {
   auto lhs = interp->load(op.getOperand(0));
@@ -154,8 +147,6 @@ ExecutionResult Interpreter::visitSRem(llvm::BinaryOperator& op) {
       lhs, rhs);
 
   interp->store(&op, std::move(result));
-
-  return ExecutionResult::Migrated;
 }
 ExecutionResult Interpreter::visitURem(llvm::BinaryOperator& op) {
   auto lhs = interp->load(op.getOperand(0));
@@ -170,8 +161,6 @@ ExecutionResult Interpreter::visitURem(llvm::BinaryOperator& op) {
       lhs, rhs);
 
   interp->store(&op, std::move(result));
-
-  return ExecutionResult::Migrated;
 }
 
 ExecutionResult Interpreter::visitPHINode(llvm::PHINode& node) {
@@ -182,13 +171,11 @@ ExecutionResult Interpreter::visitPHINode(llvm::PHINode& node) {
 
   auto value = interp->load(node.getIncomingValueForBlock(frame.prev_block));
   interp->store(&node, value);
-
-  return ExecutionResult::Migrated;
 }
 ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst& inst) {
   if (!inst.isConditional()) {
     interp->jump_to(inst.getSuccessor(0));
-    return ExecutionResult::Migrated;
+    return;
   }
 
   auto assertion = Assertion(interp->load(inst.getCondition()).scalar().expr());
@@ -212,8 +199,6 @@ ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst& inst) {
   }
 
   interp->kill();
-
-  return ExecutionResult::Migrated;
 }
 ExecutionResult Interpreter::visitReturnInst(llvm::ReturnInst& inst) {
   if (inst.getNumOperands() != 0) {
@@ -221,8 +206,6 @@ ExecutionResult Interpreter::visitReturnInst(llvm::ReturnInst& inst) {
   } else {
     interp->function_return();
   }
-
-  return ExecutionResult::Migrated;
 }
 ExecutionResult Interpreter::visitSwitchInst(llvm::SwitchInst& inst) {
   auto cond = interp->load(inst.getCondition()).scalar().expr();
@@ -252,8 +235,6 @@ ExecutionResult Interpreter::visitSwitchInst(llvm::SwitchInst& inst) {
   } else {
     interp->kill();
   }
-
-  return ExecutionResult::Migrated;
 }
 ExecutionResult Interpreter::visitCallBase(llvm::CallBase& callBase) {
   auto func = callBase.getCalledFunction();
@@ -278,8 +259,6 @@ ExecutionResult Interpreter::visitCallBase(llvm::CallBase& callBase) {
   }
 
   interp->context().stack.push_back(std::move(frame_wrapper));
-
-  return ExecutionResult::Migrated;
 }
 ExecutionResult Interpreter::visitCallInst(llvm::CallInst& call) {
   return visitCallBase(call);
@@ -302,7 +281,7 @@ ExecutionResult Interpreter::visitIntrinsicInst(llvm::IntrinsicInst& intrin) {
   case Intrinsic::dbg_declare:
   case Intrinsic::dbg_label:
   case Intrinsic::dbg_value:
-    return ExecutionResult::Migrated;
+    return;
   default:
     break;
   }
@@ -311,7 +290,7 @@ ExecutionResult Interpreter::visitIntrinsicInst(llvm::IntrinsicInst& intrin) {
   if (!func) {
     interp->fail(fmt::format("Intrinsic function '{}' is not supported",
                              intrin.getCalledFunction()->getName().str()));
-    return ExecutionResult::Migrated;
+    return;
   }
 
   llvm::SmallVector<LLVMValue, 4> args;
@@ -320,8 +299,6 @@ ExecutionResult Interpreter::visitIntrinsicInst(llvm::IntrinsicInst& intrin) {
     args.push_back(interp->load(arg.get()));
 
   func->call(*interp, args);
-
-  return ExecutionResult::Migrated;
 }
 ExecutionResult Interpreter::visitIndirectCall(llvm::CallBase& call) {
   CAFFEINE_ASSERT(
@@ -351,8 +328,6 @@ ExecutionResult Interpreter::visitIndirectCall(llvm::CallBase& call) {
     Interpreter interp{&fork};
     interp.visitCallBase(*newcall);
   }
-
-  return ExecutionResult::Migrated;
 }
 
 ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
@@ -371,8 +346,6 @@ ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
 
     fork.store(&inst, fork.mem_read(ptr, inst.getType()));
   }
-
-  return ExecutionResult::Migrated;
 }
 ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
   const llvm::DataLayout& layout = inst.getModule()->getDataLayout();
@@ -396,8 +369,6 @@ ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
     alloc->write(ptr.offset(), inst.getValueOperand()->getType(), value,
                  fork.context().heaps, layout);
   }
-
-  return ExecutionResult::Migrated;
 }
 ExecutionResult Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {
   const llvm::DataLayout& layout = interp->getModule()->getDataLayout();
@@ -415,8 +386,6 @@ ExecutionResult Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {
       ConstantInt::Create(llvm::APInt(8, 0xDD)), address_space,
       AllocationKind::Alloca, AllocationPermissions::ReadWrite);
   interp->store(&inst, LLVMValue(pointer));
-
-  return ExecutionResult::Migrated;
 }
 
 ExecutionResult Interpreter::visitMemCpyInst(llvm::MemCpyInst&) {
@@ -437,7 +406,6 @@ ExecutionResult Interpreter::visitMemSetInst(llvm::MemSetInst&) {
 
 ExecutionResult Interpreter::visitDbgInfoIntrinsic(llvm::DbgInfoIntrinsic&) {
   // Ignore debug info since it doesn't affect semantics.
-  return ExecutionResult::Migrated;
 }
 
 /***************************************************
@@ -464,7 +432,7 @@ ExecutionResult Interpreter::visitExternFunc(llvm::CallBase& call) {
     }
 
     extern_func->call(*interp, args);
-    return ExecutionResult::Migrated;
+    return;
   }
 
   CAFFEINE_ABORT(

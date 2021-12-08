@@ -22,10 +22,7 @@ class ExecutionPolicy;
 class ExecutionContextStore;
 class Interpreter;
 
-class ExecutionResult {
-public:
-  static const ExecutionResult Migrated;
-};
+typedef void ExecutionResult;
 
 typedef ExecutionResult (*InterpreterFunction)(Interpreter&, llvm::CallBase&);
 

@@ -18,7 +18,6 @@
 namespace caffeine {
 
 class Context;
-class ExecutionResult;
 class InterpreterContext;
 
 class StackAllocation {
