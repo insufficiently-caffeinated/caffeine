@@ -28,7 +28,7 @@ public:
   using ContextVec = llvm::SmallVector<Context, 2>;
 
   ExecutionResult(Status status);
-  ExecutionResult(ContextVec&& contexts, Status status = Dead);
+  [[deprecated]] ExecutionResult(ContextVec&& contexts, Status status = Dead);
 
   Status status() const {
     return status_;
@@ -124,8 +124,6 @@ private:
 
 private:
   ExecutionResult visitExternFunc(llvm::CallBase& inst);
-
-  friend class TransformBuilder;
 
 public:
   static std::unordered_map<std::string_view, InterpreterFunction>&
