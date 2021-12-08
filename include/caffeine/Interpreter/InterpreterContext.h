@@ -1,5 +1,6 @@
 #pragma once
 
+#include "caffeine/IR/OperationBuilder.h"
 #include "caffeine/Interpreter/Context.h"
 #include "caffeine/Interpreter/Policy.h"
 #include "caffeine/Solver/Solver.h"
@@ -23,7 +24,7 @@ class CaffeineContext;
  * and if you find yourself repeating the same set of actions across a bunch of
  * different places then this class would probably be a good place to put it.
  */
-class InterpreterContext {
+class InterpreterContext : public OperationBuilder {
 public:
   // Various accessors
 
