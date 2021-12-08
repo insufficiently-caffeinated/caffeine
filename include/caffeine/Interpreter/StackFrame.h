@@ -5,6 +5,7 @@
 #include <llvm/IR/BasicBlock.h>
 
 #include <memory>
+#include <typeinfo>
 #include <unordered_map>
 #include <vector>
 
@@ -12,6 +13,7 @@
 #include "caffeine/IR/Operation.h"
 #include "caffeine/Memory/MemHeap.h"
 #include "caffeine/Model/Value.h"
+#include "caffeine/Support/Casting.h"
 
 namespace caffeine {
 
@@ -166,6 +168,19 @@ public:
 
 protected:
   static std::atomic<uint64_t> next_frame_id;
+};
+
+/**
+ * A mixin type which implements the clone method for its derived type.
+ */
+template <typename T>
+class ExternalStackFrameMixin : public ExternalStackFrame {
+public:
+  using ExternalStackFrame::ExternalStackFrame;
+
+  std::unique_ptr<ExternalStackFrame> clone() const {
+    return std::make_unique<T>(*dynamic_cast_if_supported<const T*>(this));
+  }
 };
 
 } // namespace caffeine
