@@ -45,7 +45,7 @@ protected:
   void update() override;
 
 public:
-  ContextEventLogger(std::ostream& o) : ContextEventObserver(), os(&o){};
+  ContextEventLogger(std::ostream& o);
 };
 
 } // namespace caffeine
