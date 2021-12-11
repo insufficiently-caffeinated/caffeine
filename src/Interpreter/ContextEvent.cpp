@@ -1,6 +1,7 @@
 #include "caffeine/Interpreter/ContextEvent.h"
 
 #include <sstream>
+#include <sys/ioctl.h>
 
 namespace caffeine {
 
@@ -32,10 +33,27 @@ void ContextEventObserver::update_finished_contexts(size_t finished) {
   update();
 }
 
+ContextEventLogger::ContextEventLogger(std::ostream& o)
+    : ContextEventObserver(), os(&o) {
+  struct winsize w;
+  ioctl(0, TIOCGWINSZ, &w);
+
+  size_t lines = w.ws_row;
+  *os << "\n"
+      << "\0337"
+      << "\033[0;" << lines << "r\0338\033[1A";
+};
+
 void ContextEventLogger::update() {
   std::stringstream ss;
-  ss << "Currently processed " << completed_contexts << " / " << total_contexts
-     << " total contexts.\n";
+  struct winsize w;
+  ioctl(0, TIOCGWINSZ, &w);
+  size_t lines = w.ws_row;
+
+  ss << "\0337"
+     << "\033[" << lines << ";0f";
+  ss << "Currently processed " << completed_contexts << " contexts."
+     << "\0338";
 
   *os << ss.str() << std::flush;
 }
