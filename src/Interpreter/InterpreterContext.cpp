@@ -285,6 +285,12 @@ InterpreterContext::resolve_ptr(const Pointer& ptr, const OpRef& width,
 
   return context().heaps.resolve(solver(), ptr, context());
 }
+llvm::SmallVector<Pointer, 1>
+InterpreterContext::resolve_ptr(const Pointer& ptr, llvm::Type* type,
+                                std::string_view message) {
+  const llvm::DataLayout& layout = getModule()->getDataLayout();
+  return resolve_ptr(ptr, layout.getTypeStoreSize(type), message);
+}
 
 Allocation* InterpreterContext::ptr_allocation(const Pointer& ptr) {
   if (!ptr.is_resolved())

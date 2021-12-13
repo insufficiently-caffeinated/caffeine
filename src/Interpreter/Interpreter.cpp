@@ -5,7 +5,6 @@
 #include "caffeine/Interpreter/Policy.h"
 #include "caffeine/Interpreter/StackFrame.h"
 #include "caffeine/Interpreter/Store.h"
-#include "caffeine/Interpreter/TransformBuilder.h"
 #include "caffeine/Model/Value.h"
 #include "caffeine/Support/Assert.h"
 #include "caffeine/Support/LLVMFmt.h"
@@ -456,15 +455,19 @@ ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
   //       single-threaded code. If that ever changes then this will need to be
   //       revisited.
 
-  auto operand = inst.getOperand(0);
+  auto unresolved = interp->load(inst.getOperand(0)).scalar().pointer();
+  auto resolved =
+      interp->resolve_ptr(unresolved, inst.getType(), "invalid pointer read");
+  interp->kill();
 
-  auto ops = TransformBuilder();
-  auto resolved = ops.resolve(operand, inst.getType());
-  auto loaded = ops.read(resolved, inst.getType());
+  for (const Pointer& ptr : resolved) {
+    auto fork = interp->fork();
+    fork.add_assertion(fork.createICmpEQ(unresolved, ptr));
 
-  ops.assign(&inst, loaded);
+    fork.store(&inst, fork.mem_read(ptr, inst.getType()));
+  }
 
-  return ops.execute(this);
+  return ExecutionResult::Migrated;
 }
 ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
   const llvm::DataLayout& layout = inst.getModule()->getDataLayout();
