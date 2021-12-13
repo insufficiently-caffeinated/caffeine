@@ -1,6 +1,7 @@
 
 #include "caffeine/Interpreter/InterpreterContext.h"
 #include "caffeine/Interpreter/CaffeineContext.h"
+#include "caffeine/Interpreter/ExprEval.h"
 #include "caffeine/Interpreter/FailureLogger.h"
 #include "caffeine/Interpreter/Policy.h"
 #include "caffeine/Support/UnsupportedOperation.h"
@@ -72,7 +73,13 @@ LLVMValue InterpreterContext::load(llvm::Value* value) {
                            "still being implemented");
   }
 
-  return context().lookup(value);
+  auto& regular = frame.get_regular();
+  auto it = regular.variables.find(value);
+  if (it != regular.variables.end()) {
+    return it->second;
+  }
+
+  return ExprEvaluator{this}.visit(value);
 }
 
 void InterpreterContext::store(llvm::Value* ident, const LLVMValue& value) {

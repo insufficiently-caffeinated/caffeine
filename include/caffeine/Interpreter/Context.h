@@ -95,26 +95,6 @@ public:
   void add(Assertion&& assertion);
 
   /**
-   * Lookup a value within the top stack frame.
-   *
-   * There are two main cases here:
-   * 1. `value` is an existing variable, or
-   * 2. `value` is a constant.
-   *
-   * In the first place we look up the variable within the context at the top of
-   * the stack. In the second case we build an expression that represents the
-   * constant and return that.
-   *
-   * This method should be preferred over directly looking up variables in the
-   * stack frame as it properly handles global constants.
-   *
-   * The constant variant of the method will not create allocations and
-   * modify the registered globals table. The non const variant may do so.
-   */
-  std::optional<LLVMValue> lookup_const(llvm::Value* value) const;
-  LLVMValue lookup(llvm::Value* value);
-
-  /**
    * Validate whether the set of assertions combined with the extra assertion is
    * satisfiable.
    *
