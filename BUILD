@@ -1,7 +1,7 @@
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag")
 load("//bazel:configure.bzl", "configure_file")
 load("//bazel:warnings.bzl", "WARNING_FLAGS")
-load("//bazel:clang-format.bzl", "check_format", "do_format")
+load("//bazel:clang-format.bzl", "format_test", "do_format")
 load("//bazel:compile-commands.bzl", "compile_commands")
 
 package(default_visibility = ["//visibility:public"])
@@ -114,7 +114,7 @@ CAFFEINE_TARGETS = [
     "//tools/opt-plugin",
 ]
 
-check_format(
+format_test(
     name = "check-format",
     deps = CAFFEINE_TARGETS,
 )

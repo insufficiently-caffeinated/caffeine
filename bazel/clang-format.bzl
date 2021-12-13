@@ -97,7 +97,7 @@ process()
 def _check_format(ctx):
     return _format_rule(
         ctx,
-        """diff --color -u "$1" <("$CLANG_FORMAT" "$1")"""
+        """diff --color -u "$1" <("$CLANG_FORMAT" "$1")""",
     )
 
 def _do_format(ctx):
@@ -110,10 +110,10 @@ if [ -s temp.diff ]; then
     echo "Formatting $1"
     cat temp.cpp > "$1"
 fi
-"""
+""",
     )
 
-check_format = rule(
+format_test = rule(
     implementation = _check_format,
     attrs = {
         "deps": attr.label_list(
@@ -131,6 +131,7 @@ check_format = rule(
         ),
     },
     executable = True,
+    test = True,
 )
 
 do_format = rule(
