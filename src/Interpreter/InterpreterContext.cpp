@@ -349,8 +349,8 @@ void InterpreterContext::call_external_function(
 InterpreterContext::InterpreterContext(BackingList* queue, size_t entry_index,
                                        const std::shared_ptr<Solver>& solver,
                                        CaffeineContext* shared)
-    : queue_(queue), entry_(queue->at(entry_index).get()), shared_(shared),
-      solver_(solver) {
+    : OperationBuilder(&queue->at(entry_index)->context), queue_(queue),
+      entry_(queue->at(entry_index).get()), shared_(shared), solver_(solver) {
   CAFFEINE_ASSERT(queue_);
   CAFFEINE_ASSERT(shared_);
   CAFFEINE_ASSERT(solver_);
