@@ -27,7 +27,7 @@ void Executor::run_worker() {
       InterpreterContext ictx{&queue, 0, solver, caffeine};
 
       try {
-        Interpreter interp{policy, store, logger, &ictx, solver};
+        Interpreter interp{&ictx};
         interp.execute();
       } catch (UnsupportedOperationException&) {
         // The assert that threw this already printed an error message

@@ -24,49 +24,10 @@
 
 namespace caffeine {
 
-ExecutionResult::ExecutionResult(Status status) : status_(status) {}
-ExecutionResult::ExecutionResult(llvm::SmallVector<Context, 2>&& contexts,
-                                 Status status)
-    : status_(status), contexts_(std::move(contexts)) {}
-
-Interpreter::Interpreter(ExecutionPolicy* policy, ExecutionContextStore* store,
-                         FailureLogger* logger, InterpreterContext* interp,
-                         const std::shared_ptr<Solver>& solver,
-                         const InterpreterOptions& options)
-    : policy(policy), store(store), logger(logger), options(options),
-      solver(solver), interp(interp) {
-  ctx = &interp->context();
-}
-
-void Interpreter::logFailure(Context& ctx, const Assertion& assertion,
-                             std::string_view message) {
-  auto result = ctx.resolve(solver, assertion);
-  if (result != SolverResult::SAT)
-    return;
-
-  logger->log_failure(result.model(), ctx, Failure(assertion, message));
-  policy->on_path_complete(ctx, ExecutionPolicy::Fail, assertion);
-}
-void Interpreter::queueContext(Context&& ctx) {
-  policy->on_path_forked(ctx);
-  if (policy->should_queue_path(ctx)) {
-    store->add_context(std::move(ctx));
-  } else {
-    policy->on_path_complete(ctx, ExecutionPolicy::Removed);
-  }
-}
-
-Interpreter Interpreter::cloneWith(InterpreterContext* interp) {
-  CAFFEINE_ASSERT(interp);
-
-  Interpreter cloned = *this;
-  cloned.interp = interp;
-  cloned.ctx = &interp->context();
-  return cloned;
-}
+Interpreter::Interpreter(InterpreterContext* interp) : interp(interp) {}
 
 void Interpreter::execute() {
-  auto& frame_wrapper = ctx->stack_top();
+  auto& frame_wrapper = interp->context().stack_top();
   if (frame_wrapper.is_external()) {
     frame_wrapper.get_external()->step(*interp);
     return;
@@ -86,13 +47,13 @@ void Interpreter::execute() {
   //       modify the current position (e.g. branch, call, etc.)
   ++frame.current;
 
-  ExecutionResult res = visit(inst);
+  visit(inst);
 
-  if (traceblock.is_enabled() && !ctx->stack.empty()) {
+  if (traceblock.is_enabled() && !interp->context().stack.empty()) {
     // Printing expressions can be potentially very expensive so we only do it
     // if expensive annotations are enabled.
     if (CAFFEINE_TRACING_EXPENSIVE_ANNOTATIONS) {
-      auto& frame = ctx->stack_top().get_regular();
+      auto& frame = interp->context().stack_top().get_regular();
       auto it = frame.variables.find(&inst);
       if (it != frame.variables.end()) {
         traceblock.annotate("value", fmt::format("{}", it->second));
@@ -101,34 +62,16 @@ void Interpreter::execute() {
   }
 
   traceblock.close();
-
-  // All new contexts were created via InterpreterContext::fork
-  if (res.status() == ExecutionResult::Migrated) {
-    return;
-  }
-
-  if (res.status() != ExecutionResult::Continue) {
-    interp->kill();
-
-    for (Context& ctx : res.contexts()) {
-      if (policy->should_queue_path(ctx)) {
-        interp->fork_existing(std::move(ctx));
-      } else {
-        policy->on_path_complete(ctx, ExecutionPolicy::Removed);
-      }
-    }
-  }
 }
 
-ExecutionResult Interpreter::visitInstruction(llvm::Instruction& inst) {
+void Interpreter::visitInstruction(llvm::Instruction& inst) {
   CAFFEINE_ABORT(
       fmt::format("Instruction '{}' not implemented!", inst.getOpcodeName()));
 }
 
 #define DEF_SIMPLE_OP(opname, optype)                                          \
-  ExecutionResult Interpreter::visit##opname(llvm::optype& op) {               \
+  void Interpreter::visit##opname(llvm::optype& op) {                          \
     interp->store(&op, ExprEvaluator(&interp->context()).evaluate(op));        \
-    return ExecutionResult::Migrated;                                          \
   }                                                                            \
   static_assert(true)
 
@@ -146,7 +89,7 @@ DEF_SIMPLE_OP(ShuffleVectorInst, ShuffleVectorInst);
 DEF_SIMPLE_OP(ExtractValueInst, ExtractValueInst);
 DEF_SIMPLE_OP(InsertValueInst, InsertValueInst);
 
-ExecutionResult Interpreter::visitUDiv(llvm::BinaryOperator& op) {
+void Interpreter::visitUDiv(llvm::BinaryOperator& op) {
   auto lhs = interp->load(op.getOperand(0));
   auto rhs = interp->load(op.getOperand(1));
 
@@ -158,10 +101,8 @@ ExecutionResult Interpreter::visitUDiv(llvm::BinaryOperator& op) {
       lhs, rhs);
 
   interp->store(&op, std::move(result));
-
-  return ExecutionResult::Migrated;
 }
-ExecutionResult Interpreter::visitSDiv(llvm::BinaryOperator& op) {
+void Interpreter::visitSDiv(llvm::BinaryOperator& op) {
   auto lhs = interp->load(op.getOperand(0));
   auto rhs = interp->load(op.getOperand(1));
 
@@ -183,10 +124,8 @@ ExecutionResult Interpreter::visitSDiv(llvm::BinaryOperator& op) {
       lhs, rhs);
 
   interp->store(&op, std::move(result));
-
-  return ExecutionResult::Migrated;
 }
-ExecutionResult Interpreter::visitSRem(llvm::BinaryOperator& op) {
+void Interpreter::visitSRem(llvm::BinaryOperator& op) {
   auto lhs = interp->load(op.getOperand(0));
   auto rhs = interp->load(op.getOperand(1));
 
@@ -208,10 +147,8 @@ ExecutionResult Interpreter::visitSRem(llvm::BinaryOperator& op) {
       lhs, rhs);
 
   interp->store(&op, std::move(result));
-
-  return ExecutionResult::Migrated;
 }
-ExecutionResult Interpreter::visitURem(llvm::BinaryOperator& op) {
+void Interpreter::visitURem(llvm::BinaryOperator& op) {
   auto lhs = interp->load(op.getOperand(0));
   auto rhs = interp->load(op.getOperand(1));
 
@@ -224,11 +161,9 @@ ExecutionResult Interpreter::visitURem(llvm::BinaryOperator& op) {
       lhs, rhs);
 
   interp->store(&op, std::move(result));
-
-  return ExecutionResult::Continue;
 }
 
-ExecutionResult Interpreter::visitPHINode(llvm::PHINode& node) {
+void Interpreter::visitPHINode(llvm::PHINode& node) {
   auto& frame = interp->context().stack_top().get_regular();
 
   // PHI nodes in the entry block is invalid.
@@ -236,13 +171,11 @@ ExecutionResult Interpreter::visitPHINode(llvm::PHINode& node) {
 
   auto value = interp->load(node.getIncomingValueForBlock(frame.prev_block));
   interp->store(&node, value);
-
-  return ExecutionResult::Continue;
 }
-ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst& inst) {
+void Interpreter::visitBranchInst(llvm::BranchInst& inst) {
   if (!inst.isConditional()) {
     interp->jump_to(inst.getSuccessor(0));
-    return ExecutionResult::Migrated;
+    return;
   }
 
   auto assertion = Assertion(interp->load(inst.getCondition()).scalar().expr());
@@ -266,19 +199,15 @@ ExecutionResult Interpreter::visitBranchInst(llvm::BranchInst& inst) {
   }
 
   interp->kill();
-
-  return ExecutionResult::Migrated;
 }
-ExecutionResult Interpreter::visitReturnInst(llvm::ReturnInst& inst) {
+void Interpreter::visitReturnInst(llvm::ReturnInst& inst) {
   if (inst.getNumOperands() != 0) {
     interp->function_return(interp->load(inst.getOperand(0)));
   } else {
     interp->function_return();
   }
-
-  return ExecutionResult::Migrated;
 }
-ExecutionResult Interpreter::visitSwitchInst(llvm::SwitchInst& inst) {
+void Interpreter::visitSwitchInst(llvm::SwitchInst& inst) {
   auto cond = interp->load(inst.getCondition()).scalar().expr();
   llvm::SmallVector<Assertion, 16> assertions;
 
@@ -306,10 +235,8 @@ ExecutionResult Interpreter::visitSwitchInst(llvm::SwitchInst& inst) {
   } else {
     interp->kill();
   }
-
-  return ExecutionResult::Migrated;
 }
-ExecutionResult Interpreter::visitCallBase(llvm::CallBase& callBase) {
+void Interpreter::visitCallBase(llvm::CallBase& callBase) {
   auto func = callBase.getCalledFunction();
   if (!func)
     return visitIndirectCall(callBase);
@@ -321,52 +248,25 @@ ExecutionResult Interpreter::visitCallBase(llvm::CallBase& callBase) {
 
   // In case of an extern function
   if (func->empty()) {
-    auto* prev_inst = &*ctx->stack_top().get_regular().current;
-    auto invoke = llvm::dyn_cast<llvm::InvokeInst>(&callBase);
-
-    auto res = visitExternFunc(callBase);
-
-    // TODO: Get rid of this logic and shove it into visitExternFunc
-    if (!invoke)
-      return res;
-
-    if (interp->context().stack_top().is_external()) {
-      return res;
-    }
-
-    if (res.empty()) {
-      if (&*ctx->stack_top().get_regular().current == prev_inst) {
-        ctx->stack_top().set_result(std::nullopt, std::nullopt);
-      }
-    } else {
-      for (auto& ctx_ : res.contexts()) {
-        if (&*ctx_.stack_top().get_regular().current == prev_inst) {
-          ctx->stack_top().set_result(std::nullopt, std::nullopt);
-        }
-      }
-    }
-
-    return res;
+    return visitExternFunc(callBase);
   }
 
   // In case of a normal function call
   auto frame_wrapper = StackFrame::RegularFrame(func);
   auto& callee = frame_wrapper.get_regular();
   for (auto [arg, val] : llvm::zip(func->args(), callBase.args())) {
-    callee.insert(&arg, ctx->lookup(val.get()));
+    callee.insert(&arg, interp->load(val.get()));
   }
 
-  ctx->push(std::move(frame_wrapper));
-
-  return ExecutionResult::Continue;
+  interp->context().stack.push_back(std::move(frame_wrapper));
 }
-ExecutionResult Interpreter::visitCallInst(llvm::CallInst& call) {
+void Interpreter::visitCallInst(llvm::CallInst& call) {
   return visitCallBase(call);
 }
-ExecutionResult Interpreter::visitInvokeInst(llvm::InvokeInst& invoke) {
+void Interpreter::visitInvokeInst(llvm::InvokeInst& invoke) {
   return visitCallBase(invoke);
 }
-ExecutionResult Interpreter::visitIntrinsicInst(llvm::IntrinsicInst& intrin) {
+void Interpreter::visitIntrinsicInst(llvm::IntrinsicInst& intrin) {
   namespace Intrinsic = llvm::Intrinsic;
 
   // Note that some intrinsics are quickly filtered out here since they
@@ -381,7 +281,7 @@ ExecutionResult Interpreter::visitIntrinsicInst(llvm::IntrinsicInst& intrin) {
   case Intrinsic::dbg_declare:
   case Intrinsic::dbg_label:
   case Intrinsic::dbg_value:
-    return ExecutionResult::Migrated;
+    return;
   default:
     break;
   }
@@ -390,7 +290,7 @@ ExecutionResult Interpreter::visitIntrinsicInst(llvm::IntrinsicInst& intrin) {
   if (!func) {
     interp->fail(fmt::format("Intrinsic function '{}' is not supported",
                              intrin.getCalledFunction()->getName().str()));
-    return ExecutionResult::Migrated;
+    return;
   }
 
   llvm::SmallVector<LLVMValue, 4> args;
@@ -399,10 +299,8 @@ ExecutionResult Interpreter::visitIntrinsicInst(llvm::IntrinsicInst& intrin) {
     args.push_back(interp->load(arg.get()));
 
   func->call(*interp, args);
-
-  return ExecutionResult::Migrated;
 }
-ExecutionResult Interpreter::visitIndirectCall(llvm::CallBase& call) {
+void Interpreter::visitIndirectCall(llvm::CallBase& call) {
   CAFFEINE_ASSERT(
       call.isIndirectCall() || !call.getCalledFunction(),
       "visitIndirectCall called with a non-indirect call instruction");
@@ -427,30 +325,12 @@ ExecutionResult Interpreter::visitIndirectCall(llvm::CallBase& call) {
     newcall->setCalledFunction(
         llvm::cast<FunctionObject>(*alloc.data()).function());
 
-    Interpreter interp = cloneWith(&fork);
-    auto result = interp.visitCallBase(*newcall);
-
-    switch (result.status()) {
-    case ExecutionResult::Migrated:
-    case ExecutionResult::Continue:
-      break;
-    default:
-      fork.kill();
-
-      for (Context& ctx : result.contexts()) {
-        if (policy->should_queue_path(ctx)) {
-          fork.fork_existing(std::move(ctx));
-        } else {
-          policy->on_path_complete(ctx, ExecutionPolicy::Removed);
-        }
-      }
-    }
+    Interpreter interp{&fork};
+    interp.visitCallBase(*newcall);
   }
-
-  return ExecutionResult::Migrated;
 }
 
-ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
+void Interpreter::visitLoadInst(llvm::LoadInst& inst) {
   // Note: This treats atomic loads as regular ones since we only model
   //       single-threaded code. If that ever changes then this will need to be
   //       revisited.
@@ -466,10 +346,8 @@ ExecutionResult Interpreter::visitLoadInst(llvm::LoadInst& inst) {
 
     fork.store(&inst, fork.mem_read(ptr, inst.getType()));
   }
-
-  return ExecutionResult::Migrated;
 }
-ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
+void Interpreter::visitStoreInst(llvm::StoreInst& inst) {
   const llvm::DataLayout& layout = inst.getModule()->getDataLayout();
 
   auto unresolved = interp->load(inst.getPointerOperand()).scalar().pointer();
@@ -491,10 +369,8 @@ ExecutionResult Interpreter::visitStoreInst(llvm::StoreInst& inst) {
     alloc->write(ptr.offset(), inst.getValueOperand()->getType(), value,
                  fork.context().heaps, layout);
   }
-
-  return ExecutionResult::Migrated;
 }
-ExecutionResult Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {
+void Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {
   const llvm::DataLayout& layout = interp->getModule()->getDataLayout();
 
   uint64_t size =
@@ -510,36 +386,33 @@ ExecutionResult Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {
       ConstantInt::Create(llvm::APInt(8, 0xDD)), address_space,
       AllocationKind::Alloca, AllocationPermissions::ReadWrite);
   interp->store(&inst, LLVMValue(pointer));
-
-  return ExecutionResult::Migrated;
 }
 
-ExecutionResult Interpreter::visitMemCpyInst(llvm::MemCpyInst&) {
+void Interpreter::visitMemCpyInst(llvm::MemCpyInst&) {
   CAFFEINE_ABORT("llvm.memcpy is not implemented natively within the caffeine "
                  "interpreter. Run gen-builtins over the input bitcode file "
                  "first to generate definitions that caffeine can execute.");
 }
-ExecutionResult Interpreter::visitMemMoveInst(llvm::MemMoveInst&) {
+void Interpreter::visitMemMoveInst(llvm::MemMoveInst&) {
   CAFFEINE_ABORT("llvm.memmove is not implemented natively within the caffeine "
                  "interpreter. Run gen-builtins over the input bitcode file "
                  "first to generate definitions that caffeine can execute.");
 }
-ExecutionResult Interpreter::visitMemSetInst(llvm::MemSetInst&) {
+void Interpreter::visitMemSetInst(llvm::MemSetInst&) {
   CAFFEINE_ABORT("llvm.memset is not implemented natively within the caffeine "
                  "interpreter. Run gen-builtins over the input bitcode file "
                  "first to generate definitions that caffeine can execute.");
 }
 
-ExecutionResult Interpreter::visitDbgInfoIntrinsic(llvm::DbgInfoIntrinsic&) {
+void Interpreter::visitDbgInfoIntrinsic(llvm::DbgInfoIntrinsic&) {
   // Ignore debug info since it doesn't affect semantics.
-  return ExecutionResult::Continue;
 }
 
 /***************************************************
  * External function                               *
  ***************************************************/
 
-ExecutionResult Interpreter::visitExternFunc(llvm::CallBase& call) {
+void Interpreter::visitExternFunc(llvm::CallBase& call) {
   auto func = call.getCalledFunction();
   auto name = func->getName();
 
@@ -559,7 +432,7 @@ ExecutionResult Interpreter::visitExternFunc(llvm::CallBase& call) {
     }
 
     extern_func->call(*interp, args);
-    return ExecutionResult::Migrated;
+    return;
   }
 
   CAFFEINE_ABORT(
