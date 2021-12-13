@@ -1,6 +1,7 @@
 #include "caffeine/Interpreter/ExprEval.h"
 
 #include "caffeine/Interpreter/Context.h"
+#include "caffeine/Interpreter/InterpreterContext.h"
 #include "caffeine/Memory/MemHeap.h"
 #include "caffeine/Model/Value.h"
 #include "caffeine/Support/LLVMFmt.h"
@@ -37,6 +38,9 @@ const char* ExprEvaluator::Unevaluatable::what() const throw() {
 llvm::Value* ExprEvaluator::Unevaluatable::expr() const {
   return expr_;
 }
+
+ExprEvaluator::ExprEvaluator(InterpreterContext* interp, Options options)
+    : ctx(&interp->context()), options(options) {}
 
 ExprEvaluator::ExprEvaluator(Context* ctx, Options options)
     : ctx(ctx), options(options) {}

@@ -12,6 +12,7 @@ namespace caffeine {
 class Context;
 class LLVMValue;
 class LLVMScalar;
+class InterpreterContext;
 
 /**
  * LLVM IR expression evaluator.
@@ -48,6 +49,7 @@ public:
     llvm::Value* expr() const;
   };
 
+  explicit ExprEvaluator(InterpreterContext* ctx, Options options = Options());
   explicit ExprEvaluator(Context* ctx, Options options = Options());
 
 public:
