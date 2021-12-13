@@ -71,7 +71,7 @@ void Interpreter::visitInstruction(llvm::Instruction& inst) {
 
 #define DEF_SIMPLE_OP(opname, optype)                                          \
   void Interpreter::visit##opname(llvm::optype& op) {                          \
-    interp->store(&op, ExprEvaluator(&interp->context()).evaluate(op));        \
+    interp->store(&op, ExprEvaluator(interp).evaluate(op));                    \
   }                                                                            \
   static_assert(true)
 
