@@ -50,7 +50,6 @@ public:
   };
 
   explicit ExprEvaluator(InterpreterContext* ctx, Options options = Options());
-  [[deprecated]] explicit ExprEvaluator(Context* ctx, Options options = Options());
 
 public:
   LLVMValue visit(llvm::Value* val);
@@ -150,7 +149,7 @@ private:
                     const LLVMScalar& f_val) const;
 
 private:
-  Context* ctx;
+  InterpreterContext* interp;
   Options options;
 };
 

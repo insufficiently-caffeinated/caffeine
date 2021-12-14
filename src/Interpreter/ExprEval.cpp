@@ -1,5 +1,4 @@
 #include "caffeine/Interpreter/ExprEval.h"
-
 #include "caffeine/Interpreter/Context.h"
 #include "caffeine/Interpreter/InterpreterContext.h"
 #include "caffeine/Memory/MemHeap.h"
@@ -40,19 +39,16 @@ llvm::Value* ExprEvaluator::Unevaluatable::expr() const {
 }
 
 ExprEvaluator::ExprEvaluator(InterpreterContext* interp, Options options)
-    : ctx(&interp->context()), options(options) {}
-
-ExprEvaluator::ExprEvaluator(Context* ctx, Options options)
-    : ctx(ctx), options(options) {}
+    : interp(interp), options(options) {}
 
 OpRef ExprEvaluator::scalarize(const LLVMScalar& scalar) const {
   if (scalar.is_expr())
     return scalar.expr();
-  return scalar.pointer().value(ctx->heaps);
+  return scalar.pointer().value(interp->context().heaps);
 }
 
 LLVMValue ExprEvaluator::visit(llvm::Value* val) {
-  const auto& frame = ctx->stack_top().get_regular();
+  const auto& frame = interp->context().stack_top().get_regular();
   auto it = frame.variables.find(val);
   if (it != frame.variables.end())
     return it->second;
@@ -200,7 +196,7 @@ LLVMValue ExprEvaluator::visitConstantFP(llvm::ConstantFP& cnst) {
 
 LLVMValue
 ExprEvaluator::visitConstantPointerNull(llvm::ConstantPointerNull& null) {
-  const auto& layout = ctx->mod->getDataLayout();
+  const auto& layout = interp->getModule()->getDataLayout();
   unsigned address_space = null.getType()->getPointerAddressSpace();
   unsigned bitwidth = layout.getPointerSizeInBits(address_space);
 
@@ -262,7 +258,7 @@ LLVMValue ExprEvaluator::visitUndefValue(llvm::UndefValue& undef) {
   }
 
   if (type->isPointerTy()) {
-    const auto& layout = ctx->mod->getDataLayout();
+    const auto& layout = interp->getModule()->getDataLayout();
     unsigned bitwidth =
         layout.getPointerSizeInBits(type->getPointerAddressSpace());
 
@@ -319,8 +315,8 @@ LLVMValue ExprEvaluator::visitConstantVector(llvm::ConstantVector& vec) {
 }
 
 LLVMValue ExprEvaluator::visitGlobalVariable(llvm::GlobalVariable& global) {
-  auto it = ctx->globals.find(&global);
-  if (it != ctx->globals.end())
+  auto it = interp->context().globals.find(&global);
+  if (it != interp->context().globals.end())
     return (LLVMValue)it->second;
 
   if (!options.create_allocations) {
@@ -332,7 +328,7 @@ LLVMValue ExprEvaluator::visitGlobalVariable(llvm::GlobalVariable& global) {
     throw Unevaluatable(&global, "global had no initializer");
   }
 
-  const llvm::DataLayout& layout = ctx->mod->getDataLayout();
+  const llvm::DataLayout& layout = interp->getModule()->getDataLayout();
   unsigned bitwidth = layout.getPointerSizeInBits();
   llvm::Type* type = global.getInitializer()->getType();
   OpRef size = ConstantInt::Create(
@@ -344,48 +340,42 @@ LLVMValue ExprEvaluator::visitGlobalVariable(llvm::GlobalVariable& global) {
 
   unsigned alignment = global.getAlignment();
 
-  auto alloc = ctx->heaps[global.getAddressSpace()].allocate(
-      size, ConstantInt::Create(llvm::APInt(bitwidth, alignment)), alloc_data,
-      AllocationKind::Global, perms, *ctx);
-
-  auto ptr = Pointer(alloc, ConstantInt::CreateZero(bitwidth),
-                     global.getAddressSpace());
+  auto ptr = interp->allocate(
+      size, interp->createConstantInt(bitwidth, alignment), alloc_data,
+      global.getAddressSpace(), AllocationKind::Global, perms);
   auto res = LLVMValue(ptr);
 
-  ctx->globals.emplace(&global, res);
+  interp->context().globals.emplace(&global, res);
 
-  visitGlobalData(*global.getInitializer(), ctx->heaps.ptr_allocation(ptr),
+  visitGlobalData(*global.getInitializer(), *interp->ptr_allocation(ptr),
                   global.getAddressSpace());
 
   return res;
 }
 
 LLVMValue ExprEvaluator::visitFunction(llvm::Function& func) {
-  auto it = ctx->globals.find(&func);
-  if (it != ctx->globals.end())
+  auto it = interp->context().globals.find(&func);
+  if (it != interp->context().globals.end())
     return (LLVMValue)it->second;
 
-  const llvm::DataLayout& layout = ctx->mod->getDataLayout();
+  const llvm::DataLayout& layout = interp->getModule()->getDataLayout();
   unsigned bitwidth = layout.getPointerSizeInBits();
 
-  auto& heap = ctx->heaps.function_heap();
-  auto alloc = heap.allocate(
-      ConstantInt::Create(llvm::APInt(
-          bitwidth, std::max<uint64_t>(func.getInstructionCount(), 1))),
-      ConstantInt::CreateZero(bitwidth), FunctionObject::Create(&func),
-      AllocationKind::Global, AllocationPermissions::Execute, *ctx);
+  auto pointer = LLVMValue(interp->allocate(
+      interp->createConstantInt(
+          bitwidth, std::max<uint64_t>(func.getInstructionCount(), 1)),
+      interp->createConstantZero(bitwidth), interp->createFunctionObject(&func),
+      MemHeapMgr::FUNCTION_INDEX, AllocationKind::Global,
+      AllocationPermissions::Execute));
 
-  auto pointer = LLVMValue(Pointer(alloc, ConstantInt::CreateZero(bitwidth),
-                                   MemHeapMgr::FUNCTION_INDEX));
-
-  ctx->globals.emplace(&func, pointer);
+  interp->context().globals.emplace(&func, pointer);
   return pointer;
 }
 
 void ExprEvaluator::visitGlobalData(llvm::Constant& constant, Allocation& alloc,
                                     unsigned AS) {
   llvm::Type* type = constant.getType();
-  const llvm::DataLayout& layout = ctx->mod->getDataLayout();
+  const llvm::DataLayout& layout = interp->getModule()->getDataLayout();
   unsigned bitwidth = layout.getPointerSizeInBits(AS);
 
   // Don't bother to evaluate the rest of the initializer if we already know
@@ -395,8 +385,8 @@ void ExprEvaluator::visitGlobalData(llvm::Constant& constant, Allocation& alloc,
 
   LLVMValue value = visit(&constant);
 
-  alloc.write(ConstantInt::CreateZero(bitwidth), type, value, ctx->heaps,
-              layout);
+  alloc.write(ConstantInt::CreateZero(bitwidth), type, value,
+              interp->context().heaps, layout);
 }
 LLVMValue ExprEvaluator::visitConstantExpr(llvm::ConstantExpr& expr) {
   auto inst = llvm::unique_value(expr.getAsInstruction());
@@ -504,24 +494,17 @@ LLVMValue ExprEvaluator::visitICmp(llvm::ICmpInst& icmp) {
   }
 #undef ICMP_CASE
 
-  auto as_expr = [&](const LLVMScalar& value) {
-    if (value.is_expr())
-      return value.expr();
-    return value.pointer().value(ctx->heaps);
-  };
-
-  return transform_elements(
-      [&](const LLVMScalar& lhs, const LLVMScalar& rhs) -> LLVMScalar {
-        return LLVMScalar(
-            ICmpOp::CreateICmp(opcode, as_expr(lhs), as_expr(rhs)));
-      },
-      visit(icmp.getOperand(0)), visit(icmp.getOperand(1)));
+  return interp->createICmp(opcode, visit(icmp.getOperand(0)),
+                            visit(icmp.getOperand(1)));
 }
 LLVMValue ExprEvaluator::visitFCmp(llvm::FCmpInst& fcmp) {
   using llvm::FCmpInst;
 
   FCmpOpcode opcode;
   bool ordered = llvm::FCmpInst::isOrdered(fcmp.getPredicate());
+
+  auto lhs = visit(fcmp.getOperand(0));
+  auto rhs = visit(fcmp.getOperand(1));
 
 #define FCMP_CASE(source, op)                                                  \
   case llvm::FCmpInst::FCMP_##source:                                          \
@@ -543,22 +526,12 @@ LLVMValue ExprEvaluator::visitFCmp(llvm::FCmpInst& fcmp) {
     FCMP_CASE(UNE, NE);
 
   case FCmpInst::FCMP_UNO:
-    return transform_elements(
-        [&](const LLVMScalar& lhs, const LLVMScalar& rhs) -> LLVMScalar {
-          // isnan(lhs) || isnan(rhs)
-          return BinaryOp::CreateOr(UnaryOp::CreateFIsNaN(lhs.expr()),
-                                    UnaryOp::CreateFIsNaN(rhs.expr()));
-        },
-        visit(fcmp.getOperand(0)), visit(fcmp.getOperand(1)));
+    return interp->createOr(interp->createFIsNaN(lhs),
+                            interp->createFIsNaN(rhs));
+
   case FCmpInst::FCMP_ORD:
-    return transform_elements(
-        [&](const LLVMScalar& lhs, const LLVMScalar& rhs) -> LLVMScalar {
-          // ! ( isnan(lhs) || isnan(rhs) )
-          return UnaryOp::CreateNot(
-              BinaryOp::CreateOr(UnaryOp::CreateFIsNaN(lhs.expr()),
-                                 UnaryOp::CreateFIsNaN(rhs.expr())));
-        },
-        visit(fcmp.getOperand(0)), visit(fcmp.getOperand(1)));
+    return interp->createNot(
+        interp->createOr(interp->createFIsNaN(lhs), interp->createFIsNaN(rhs)));
 
   case FCmpInst::FCMP_TRUE:
     return transform_elements(
@@ -574,32 +547,23 @@ LLVMValue ExprEvaluator::visitFCmp(llvm::FCmpInst& fcmp) {
   }
 #undef FCMP_CASE
 
-  return transform_elements(
-      [&](const LLVMScalar& lhs, const LLVMScalar& rhs) -> LLVMScalar {
-        OpRef checkord = BinaryOp::CreateOr(UnaryOp::CreateFIsNaN(lhs.expr()),
-                                            UnaryOp::CreateFIsNaN(rhs.expr()));
-        OpRef cmp = FCmpOp::CreateFCmp(opcode, lhs.expr(), rhs.expr());
+  auto checkord =
+      interp->createOr(interp->createFIsNaN(lhs), interp->createFIsNaN(rhs));
+  auto cmp = interp->createFCmp(opcode, lhs, rhs);
 
-        if (ordered) {
-          return BinaryOp::CreateAnd(UnaryOp::CreateNot(checkord), cmp);
-        } else {
-          return BinaryOp::CreateOr(checkord, cmp);
-        }
-      },
-      visit(fcmp.getOperand(0)), visit(fcmp.getOperand(1)));
+  if (ordered) {
+    return interp->createAnd(interp->createNot(checkord), cmp);
+  } else {
+    return interp->createOr(checkord, cmp);
+  }
 }
 
 LLVMValue ExprEvaluator::visitPtrToInt(llvm::PtrToIntInst& inst) {
-  return transform_elements(
-      [&](const LLVMScalar& value) {
-        return LLVMScalar(
-            UnaryOp::CreateTruncOrZExt(Type::from_llvm(inst.getType()),
-                                       value.pointer().value(ctx->heaps)));
-      },
-      visit(inst.getOperand(0)));
+  return interp->createTruncOrZExt(Type::from_llvm(inst.getType()),
+                                   visit(inst.getOperand(0)));
 }
 LLVMValue ExprEvaluator::visitIntToPtr(llvm::IntToPtrInst& inst) {
-  const auto& layout = ctx->mod->getDataLayout();
+  const auto& layout = interp->getModule()->getDataLayout();
   unsigned pointer_size =
       layout.getPointerSizeInBits(inst.getType()->getPointerAddressSpace());
 
@@ -620,7 +584,7 @@ LLVMValue ExprEvaluator::visitBitCast(llvm::BitCastInst& inst) {
 }
 
 LLVMValue ExprEvaluator::visitGetElementPtr(llvm::GetElementPtrInst& inst) {
-  const llvm::DataLayout& layout = ctx->mod->getDataLayout();
+  const llvm::DataLayout& layout = interp->getModule()->getDataLayout();
   auto type = inst.getType();
 
   size_t offset_elements = 1;
@@ -645,8 +609,8 @@ LLVMValue ExprEvaluator::visitGetElementPtr(llvm::GetElementPtrInst& inst) {
 
       unsigned member_index =
           llvm::cast<llvm::ConstantInt>(it.getOperand())->getZExtValue();
-      OpRef member_offset = ConstantInt::Create(
-          llvm::APInt(ptr_width, slo->getElementOffset(member_index)));
+      OpRef member_offset = interp->createConstantInt(
+          ptr_width, slo->getElementOffset(member_index));
 
       newoffset = LLVMScalar(member_offset).broadcast(offset_elements);
     } else {
@@ -691,9 +655,7 @@ LLVMValue ExprEvaluator::visitGetElementPtr(llvm::GetElementPtrInst& inst) {
                          BinaryOp::CreateAdd(ptr.offset(), offset.expr()),
                          ptr.heap());
         } else {
-          return Pointer(
-              BinaryOp::CreateAdd(ptr.value(ctx->heaps), offset.expr()),
-              ptr.heap());
+          return Pointer(interp->createAdd(ptr, offset.expr()), ptr.heap());
         }
       },
       base, offsets);
@@ -716,8 +678,9 @@ LLVMScalar ExprEvaluator::select(const LLVMScalar& cond,
         t_ptr.heap());
   }
 
-  return Pointer(SelectOp::Create(cond.expr(), t_ptr.value(ctx->heaps),
-                                  f_ptr.value(ctx->heaps)),
+  return Pointer(SelectOp::Create(cond.expr(),
+                                  t_ptr.value(interp->context().heaps),
+                                  f_ptr.value(interp->context().heaps)),
                  t_ptr.heap());
 }
 LLVMValue ExprEvaluator::visitSelectInst(llvm::SelectInst& op) {
