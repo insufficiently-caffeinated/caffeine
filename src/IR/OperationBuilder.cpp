@@ -43,17 +43,6 @@ OpRef OperationBuilder::createConstantArray(Symbol&& symbol,
   return ConstantArray::Create(std::move(symbol), size);
 }
 
-#define DEF_BINOP_REST(op)                                                     \
-  LLVMValue OperationBuilder::create##op(const LLVMValue& lhs,                 \
-                                         const LLVMValue& rhs) {               \
-    return transform_elements(                                                 \
-        [&](const LLVMScalar& a, const LLVMScalar& b) {                        \
-          return this->create##op(this->to_expr(a), this->to_expr(b));         \
-        },                                                                     \
-        lhs, rhs);                                                             \
-  }                                                                            \
-  static_assert(true)
-
 #define DEF_INT_BINOP_OVERLOADS(op)                                            \
   OpRef OperationBuilder::create##op(const OpRef& lhs, int64_t rhs) {          \
     CAFFEINE_ASSERT(lhs, "lhs was null");                                      \
@@ -89,8 +78,7 @@ OpRef OperationBuilder::createConstantArray(Symbol&& symbol,
 
 #define DEF_CMP_BINOP_OVERLOADS(op)                                            \
   DEF_PTR_BINOP_OVERLOADS(op);                                                 \
-  DEF_INT_BINOP_OVERLOADS(op);                                                 \
-  DEF_BINOP_REST(op)
+  DEF_INT_BINOP_OVERLOADS(op)
 
 #define DEF_ICMP_BINOP_FWD(op)                                                 \
   OpRef OperationBuilder::createICmp##op(const OpRef& lhs, const OpRef& rhs) { \
@@ -102,21 +90,42 @@ OpRef OperationBuilder::createConstantArray(Symbol&& symbol,
   OpRef OperationBuilder::create##op(const OpRef& lhs, const OpRef& rhs) {     \
     return BinaryOp::Create##op(lhs, rhs);                                     \
   }                                                                            \
+  LLVMValue OperationBuilder::create##op(const LLVMValue& lhs,                 \
+                                         const LLVMValue& rhs) {               \
+    return transform_elements(                                                 \
+        [&](const LLVMScalar& a, const LLVMScalar& b) {                        \
+          return this->create##op(this->to_expr(a), this->to_expr(b));         \
+        },                                                                     \
+        lhs, rhs);                                                             \
+  }                                                                            \
   static_assert(true)
 #define DEF_UNOP(op)                                                           \
   OpRef OperationBuilder::create##op(const OpRef& operand) {                   \
     return UnaryOp::Create##op(operand);                                       \
+  }                                                                            \
+  LLVMValue OperationBuilder::create##op(const LLVMValue& arg) {               \
+    return transform_elements(                                                 \
+        [&](const LLVMScalar& x) {                                             \
+          return this->create##op(this->to_expr(x));                           \
+        },                                                                     \
+        arg);                                                                  \
   }                                                                            \
   static_assert(true)
 #define DEF_CONVERT(op)                                                        \
   OpRef OperationBuilder::create##op(Type tgt, const OpRef& operand) {         \
     return UnaryOp::Create##op(tgt, operand);                                  \
   }                                                                            \
+  LLVMValue OperationBuilder::create##op(Type tgt, const LLVMValue& x) {       \
+    return transform_elements(                                                 \
+        [&](const LLVMScalar& x) {                                             \
+          return this->create##op(tgt, this->to_expr(x));                      \
+        },                                                                     \
+        x);                                                                    \
+  }                                                                            \
   static_assert(true)
 
 #define DEF_INT_BINOP(op)                                                      \
   DEF_BINOP(op);                                                               \
-  DEF_BINOP_REST(op);                                                          \
   DEF_INT_BINOP_OVERLOADS(op)
 
 #define DEF_PTR_BINOP(op)                                                      \
@@ -169,7 +178,7 @@ LLVMValue OperationBuilder::createICmp(ICmpOpcode opcode, const LLVMValue& lhs,
                                        const LLVMValue& rhs) {
   return transform_elements(
       [&](const LLVMScalar& a, const LLVMScalar& b) -> LLVMScalar {
-        return this->createICmp(opcode, a.expr(), b.expr());
+        return this->createICmp(opcode, to_expr(a), to_expr(b));
       },
       lhs, rhs);
 }

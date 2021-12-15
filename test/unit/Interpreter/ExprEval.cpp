@@ -1,10 +1,15 @@
 #include "caffeine/Interpreter/ExprEval.h"
 #include "Util/CaptureOutput.h"
+#include "caffeine/Interpreter/CaffeineContext.h"
 #include "caffeine/Interpreter/Context.h"
+#include "caffeine/Interpreter/FailureLogger.h"
+#include "caffeine/Interpreter/InterpreterContext.h"
+#include "caffeine/Interpreter/Store.h"
 #include "caffeine/Solver/Solver.h"
 #include "caffeine/Solver/Z3Solver.h"
 #include "caffeine/Support/UnsupportedOperation.h"
 #include <gtest/gtest.h>
+#include <iostream>
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/Support/SourceMgr.h>
 
@@ -13,21 +18,38 @@ using namespace caffeine;
 class ExprEvaluatorTests : public ::testing::Test {
 public:
   llvm::LLVMContext context;
+
+  std::unique_ptr<llvm::Module> M;
+
+  CaffeineContext caffeine;
+  std::unique_ptr<InterpreterContext> interp;
+  InterpreterContext::BackingList backing;
   std::shared_ptr<Solver> solver;
 
-  std::unique_ptr<llvm::Module> module_with_global;
-
 public:
+  ExprEvaluatorTests()
+      : caffeine(
+            CaffeineContext::builder()
+                .with_store(std::make_unique<NullContextStore>())
+                .with_logger(std::make_unique<PrintingFailureLogger>(std::cout))
+                .build()),
+        solver(caffeine.build_solver()) {}
+
   void SetUp() override {
     solver = std::make_shared<Z3Solver>();
 
 #ifndef CAFFEINE_BAZEL
-    module_with_global = loadFile("Interpreter/ir-with-global.ll");
+    M = loadFile("Interpreter/ir-with-global.ll");
 #else
-    module_with_global = loadFile("test/unit/Interpreter/ir-with-global.ll");
+    M = loadFile("test/unit/Interpreter/ir-with-global.ll");
 #endif
 
-    ASSERT_NE(module_with_global, nullptr);
+    ASSERT_NE(M, nullptr);
+
+    backing.push_back(std::make_unique<InterpreterContext::ContextQueueEntry>(
+        Context{M->getFunction("func")}));
+    interp =
+        std::make_unique<InterpreterContext>(&backing, 0, solver, &caffeine);
   }
 
   void TearDown() override {
@@ -51,38 +73,29 @@ private:
 };
 
 TEST_F(ExprEvaluatorTests, does_not_create_allocation) {
-  llvm::Module* m = module_with_global.get();
-
-  Context ctx{m->getFunction("func")};
   ExprEvaluator::Options options;
   options.create_allocations = false;
-  ExprEvaluator eval{&ctx, options};
+  ExprEvaluator eval{interp.get(), options};
 
-  auto value = eval.try_visit(m->getNamedGlobal("data"));
+  auto value = eval.try_visit(M->getNamedGlobal("data"));
   ASSERT_FALSE(value.has_value());
 }
 
 TEST_F(ExprEvaluatorTests, undef_global_fails) {
-  llvm::Module* m = module_with_global.get();
-
-  Context ctx{m->getFunction("func")};
   ExprEvaluator::Options options;
   options.create_allocations = true;
-  ExprEvaluator eval{&ctx, options};
+  ExprEvaluator eval{interp.get(), options};
 
-  auto value = eval.try_visit(m->getNamedGlobal("no_init"));
+  auto value = eval.try_visit(M->getNamedGlobal("no_init"));
   ASSERT_FALSE(value.has_value());
 }
 
 TEST_F(ExprEvaluatorTests, visit_throws_when_on_nonexistant_allocation) {
-  llvm::Module* m = module_with_global.get();
-
-  Context ctx{m->getFunction("func")};
   ExprEvaluator::Options options;
   options.create_allocations = false;
-  ExprEvaluator eval{&ctx, options};
+  ExprEvaluator eval{interp.get(), options};
 
-  auto global = m->getNamedGlobal("data");
+  auto global = M->getNamedGlobal("data");
 
   try {
     eval.visit(*global);
@@ -95,13 +108,10 @@ TEST_F(ExprEvaluatorTests, visit_throws_when_on_nonexistant_allocation) {
 }
 
 TEST_F(ExprEvaluatorTests, throw_on_unsupported_value_type) {
-  llvm::Module* m = module_with_global.get();
-
-  auto func = m->getFunction("func");
+  auto func = M->getFunction("func");
   auto block = &func->getBasicBlockList().front();
 
-  Context ctx{func};
-  ExprEvaluator eval{&ctx};
+  ExprEvaluator eval{interp.get()};
 
   ASSERT_THROW(eval.visit(block), UnsupportedOperationException);
 }
