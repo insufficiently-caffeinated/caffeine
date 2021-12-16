@@ -40,8 +40,8 @@ struct CaffeineOptions {
   uint64_t malloc_alignment = 16;
 
   /**
-  * @brief Determines whether to track line coverage
-  */
+   * @brief Determines whether to track line coverage
+   */
   bool run_line_coverage = true;
 
   CaffeineOptions() = default;

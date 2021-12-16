@@ -89,7 +89,8 @@ CaffeineContext Builder::build() {
     throw std::logic_error("No logger provided when building CaffeineContext");
   ctx.logger_ = std::move(logger_);
   if (!cov_)
-    throw std::logic_error("No coverage tacker provided when building CaffeineContext");
+    throw std::logic_error(
+        "No coverage tacker provided when building CaffeineContext");
   ctx.cov_ = std::move(cov_);
 
   if (builder_) {

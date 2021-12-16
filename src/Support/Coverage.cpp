@@ -2,8 +2,8 @@
 
 #include <algorithm>
 #include <iostream>
-#include <sstream>
 #include <iterator>
+#include <sstream>
 
 namespace caffeine {
 
@@ -23,11 +23,11 @@ void CoverageReport::print(std::ostream& out) const {
   for (const auto& [file, lines] : file_lines) {
     std::ostringstream oss;
     if (!lines.empty()) {
-      std::copy(lines.begin(), lines.end()-1,
-        std::ostream_iterator<size_t>(oss, ","));
+      std::copy(lines.begin(), lines.end() - 1,
+                std::ostream_iterator<size_t>(oss, ","));
       oss << lines.back();
     }
-    out << "-> " << file << ": [" << oss.str() <<  "]" << std::endl;
+    out << "-> " << file << ": [" << oss.str() << "]" << std::endl;
   }
   out << "=========================================" << std::endl;
 }
