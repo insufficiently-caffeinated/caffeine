@@ -1,6 +1,7 @@
 #include "caffeine/Support/Coverage.h"
 
 #include <algorithm>
+#include <iostream>
 
 namespace caffeine {
 
@@ -17,10 +18,11 @@ void CoverageReport::add_file(std::string filename,
 void CoverageReport::print(std::ostream& out) const {
   // out << "Report" << std::endl;
 
-  // for (const auto& [file, lines] : file_lines) {
-  //     std::string s(lines.begin(), lines.end())
-  //     out << "\t" << file << " [" << s << "]" << std::endl;
-  // }
+  for (const auto& [file, lines] : file_lines) {
+      // std::string s(lines.begin(), lines.end())
+      // std::cout << "\t" << file << " [" << s << "]" << std::endl;
+  }
+
 }
 
 // CoverageTracker

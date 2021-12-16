@@ -159,11 +159,12 @@ int main(int argc, char** argv) {
     return 2;
   }
 
+  CoverageTracker cov;
   auto caffeine = CaffeineContext::builder()
                       .with_store(std::move(store))
                       .with_logger(std::make_unique<CountingFailureLogger>(
                           std::cout, function))
-                      .with_coverage(CoverageTracker())
+                      .with_coverage(cov)
                       .build();
   auto exec = caffeine::Executor(&caffeine, options);
 

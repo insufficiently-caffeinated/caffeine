@@ -482,8 +482,8 @@ void Interpreter::getInstLine(llvm::Instruction& inst) {
     unsigned line = loc.getLine();
     auto* dfile = static_cast<llvm::DIScope*>(loc.getScope());
     std::string file = dfile->getFilename().str();
-
-    if (auto* cov = interp->caffeine().coverage()) {
+    std::cout << file << std::endl;
+    if (auto cov = interp->caffeine().coverage()) {
       cov->touch(file, line);
     }
   }

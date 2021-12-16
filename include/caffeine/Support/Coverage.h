@@ -61,12 +61,12 @@ public:
   /**
    *  Used to track branch statements
    */
-  void touch_branch(size_t branch_id, size_t hits);
+  void touch_branch(size_t branch_id, size_t hits = 1);
 
   /**
    * Used to track switch statements
    */
-  void touch_switch(size_t switch_id, size_t hits);
+  void touch_switch(size_t switch_id, size_t hits = 1);
 
   // Values
   size_t line() const;
