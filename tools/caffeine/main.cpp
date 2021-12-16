@@ -174,7 +174,7 @@ int main(int argc, char** argv) {
   auto exec = caffeine::Executor(&caffeine, options);
 
   ContextEventLogger ctx_logger(std::cout);
-  ContextEventObserver * ctx_observer = &ctx_logger;
+  ContextEventObserver* ctx_observer = &ctx_logger;
   caffeine.policy()->add_observer(ctx_observer);
   caffeine.store()->add_observer(ctx_observer);
 
