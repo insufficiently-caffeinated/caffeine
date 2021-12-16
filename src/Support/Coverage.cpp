@@ -73,14 +73,6 @@ void Line::touch(size_t hits) {
   hits_ += hits;
 }
 
-void Line::touch_branch(size_t branch_id, size_t hits) {
-  // TODO: Later expansion
-}
-
-void Line::touch_switch(size_t switch_id, size_t hits) {
-  // TODO: Later expansion
-}
-
 size_t Line::line() const {
   return line_;
 }
