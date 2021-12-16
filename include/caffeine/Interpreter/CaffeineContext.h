@@ -42,7 +42,7 @@ struct CaffeineOptions {
   /**
    * @brief Determines whether to track line coverage
    */
-  bool run_line_coverage = true;
+  bool run_line_coverage = false;
 
   CaffeineOptions() = default;
 };

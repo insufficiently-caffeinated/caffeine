@@ -65,7 +65,9 @@ std::shared_ptr<Solver> CaffeineContext::build_solver() const {
 }
 
 CoverageTracker* CaffeineContext::coverage() const {
-  return cov_.get();
+  if (cov_)
+    return cov_.get();
+  return nullptr;
 }
 
 // All builder functions
@@ -88,9 +90,9 @@ CaffeineContext Builder::build() {
   if (!logger_)
     throw std::logic_error("No logger provided when building CaffeineContext");
   ctx.logger_ = std::move(logger_);
-  if (!cov_)
+  if (ctx.options().run_line_coverage && !cov_)
     throw std::logic_error(
-        "No coverage tacker provided when building CaffeineContext");
+        "No coverage tracker provided when building CaffeineContext");
   ctx.cov_ = std::move(cov_);
 
   if (builder_) {
