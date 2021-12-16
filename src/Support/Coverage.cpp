@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <iostream>
+#include <sstream>
+#include <iterator>
 
 namespace caffeine {
 
@@ -16,13 +18,18 @@ void CoverageReport::add_file(std::string filename,
 }
 
 void CoverageReport::print(std::ostream& out) const {
-  // out << "Report" << std::endl;
+  out << "=============Coverage report==============" << std::endl;
 
   for (const auto& [file, lines] : file_lines) {
-      // std::string s(lines.begin(), lines.end())
-      // std::cout << "\t" << file << " [" << s << "]" << std::endl;
+    std::ostringstream oss;
+    if (!lines.empty()) {
+      std::copy(lines.begin(), lines.end()-1,
+        std::ostream_iterator<size_t>(oss, ","));
+      oss << lines.back();
+    }
+    out << "-> " << file << ": [" << oss.str() <<  "]" << std::endl;
   }
-
+  out << "=========================================" << std::endl;
 }
 
 // CoverageTracker
@@ -35,6 +42,7 @@ void CoverageTracker::touch(std::string filename, size_t line) {
     vecPos = file_lines.size();
     std::map<size_t, Line> m;
     file_lines.push_back(m);
+    file_to_vec.emplace(filename, vecPos);
   } else {
     vecPos = (*it_file).second;
   }
@@ -46,6 +54,15 @@ void CoverageTracker::touch(std::string filename, size_t line) {
   } else {
     file_lines[vecPos][line].touch();
   }
+}
+
+CoverageReport CoverageTracker::report() const {
+  CoverageReport report;
+
+  for (const auto& [file, pos] : file_to_vec) {
+    report.add_file(file, file_lines[pos]);
+  }
+  return report;
 }
 
 // --- Line

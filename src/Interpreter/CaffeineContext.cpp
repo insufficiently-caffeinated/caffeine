@@ -88,6 +88,9 @@ CaffeineContext Builder::build() {
   if (!logger_)
     throw std::logic_error("No logger provided when building CaffeineContext");
   ctx.logger_ = std::move(logger_);
+  if (!cov_)
+    throw std::logic_error("No coverage tacker provided when building CaffeineContext");
+  ctx.cov_ = std::move(cov_);
 
   if (builder_) {
     ctx.builder_ = std::move(builder_);
@@ -166,8 +169,8 @@ Builder& Builder::with_default_intrinsics() {
   return *this;
 }
 
-Builder& Builder::with_coverage(CoverageTracker& tracker) {
-  cov_ = std::make_unique<CoverageTracker>(std::move(tracker));
+Builder& Builder::with_coverage(std::unique_ptr<CoverageTracker>&& tracker) {
+  cov_ = std::move(tracker);
   return *this;
 }
 

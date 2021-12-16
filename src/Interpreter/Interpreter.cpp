@@ -68,13 +68,13 @@ void Interpreter::execute() {
 }
 
 void Interpreter::visit(llvm::Instruction& inst) {
-  if (options.run_line_coverage_debugger) {
+  if (interp->caffeine().options().run_line_coverage) {
     getInstLine(inst);
   }
-  llvm::InstVisitor<Interpreter, ExecutionResult>::visit(inst);
+  llvm::InstVisitor<Interpreter, void>::visit(inst);
 }
 
-ExecutionResult Interpreter::visitInstruction(llvm::Instruction& inst) {
+void Interpreter::visitInstruction(llvm::Instruction& inst) {
   CAFFEINE_ABORT(
       fmt::format("Instruction '{}' not implemented!", inst.getOpcodeName()));
 }
@@ -482,10 +482,7 @@ void Interpreter::getInstLine(llvm::Instruction& inst) {
     unsigned line = loc.getLine();
     auto* dfile = static_cast<llvm::DIScope*>(loc.getScope());
     std::string file = dfile->getFilename().str();
-    std::cout << file << std::endl;
-    if (auto cov = interp->caffeine().coverage()) {
-      cov->touch(file, line);
-    }
+    interp->caffeine().coverage()->touch(file, line);
   }
 }
 

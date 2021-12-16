@@ -39,6 +39,11 @@ struct CaffeineOptions {
    */
   uint64_t malloc_alignment = 16;
 
+  /**
+  * @brief Determines whether to track line coverage
+  */
+  bool run_line_coverage = true;
+
   CaffeineOptions() = default;
 };
 
@@ -136,7 +141,7 @@ public:
     Builder& with_options(const CaffeineOptions& options);
 
     // Set the coverage counter used by this context.
-    Builder& with_coverage(CoverageTracker& tracker);
+    Builder& with_coverage(std::unique_ptr<CoverageTracker>&& tracker);
 
     Builder& with_default_functions();
     Builder& with_default_intrinsics();

@@ -159,12 +159,13 @@ int main(int argc, char** argv) {
     return 2;
   }
 
-  CoverageTracker cov;
+  std::unique_ptr<CoverageTracker> cov = std::make_unique<CoverageTracker>();
+
   auto caffeine = CaffeineContext::builder()
                       .with_store(std::move(store))
                       .with_logger(std::make_unique<CountingFailureLogger>(
                           std::cout, function))
-                      .with_coverage(cov)
+                      .with_coverage(std::move(cov))
                       .build();
   auto exec = caffeine::Executor(&caffeine, options);
 
@@ -176,6 +177,10 @@ int main(int argc, char** argv) {
 
   auto logger = static_cast<CountingFailureLogger*>(caffeine.logger());
   int exitcode = logger->num_failures == 0 ? 0 : 1;
+
+  if (caffeine.options().run_line_coverage) {
+    caffeine.coverage()->report().print(std::cout);
+  }
 
   if (invert_exitcode)
     exitcode = !exitcode;
