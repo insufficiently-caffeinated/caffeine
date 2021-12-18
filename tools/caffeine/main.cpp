@@ -86,6 +86,8 @@ cl::opt<std::string> store_type{
              "thread-queue."),
     cl::value_desc("store"), cl::init("thread-queue"),
     cl::cat(caffeine_options)};
+cl::opt<bool> enable_coverage{"coverage", cl::desc("Enable coverage tracking"),
+                              cl::cat(caffeine_options)};
 
 static ExitOnError exit_on_err;
 
@@ -159,7 +161,9 @@ int main(int argc, char** argv) {
     return 2;
   }
 
-  std::unique_ptr<CoverageTracker> cov = std::make_unique<CoverageTracker>();
+  std::unique_ptr<CoverageTracker> cov = nullptr;
+  if (enable_coverage)
+    cov = std::make_unique<CoverageTracker>();
 
   auto caffeine = CaffeineContext::builder()
                       .with_store(std::move(store))
@@ -178,7 +182,7 @@ int main(int argc, char** argv) {
   auto logger = static_cast<CountingFailureLogger*>(caffeine.logger());
   int exitcode = logger->num_failures == 0 ? 0 : 1;
 
-  if (caffeine.options().run_line_coverage) {
+  if (caffeine.coverage()) {
     caffeine.coverage()->report().print(std::cout);
   }
 
