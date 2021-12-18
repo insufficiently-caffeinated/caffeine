@@ -65,9 +65,7 @@ std::shared_ptr<Solver> CaffeineContext::build_solver() const {
 }
 
 CoverageTracker* CaffeineContext::coverage() const {
-  if (cov_)
-    return cov_.get();
-  return nullptr;
+  return cov_.get();
 }
 
 // All builder functions
