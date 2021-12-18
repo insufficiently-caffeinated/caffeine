@@ -68,7 +68,7 @@ void Interpreter::execute() {
 }
 
 void Interpreter::visit(llvm::Instruction& inst) {
-  if (interp->caffeine().options().coverage()) {
+  if (interp->caffeine().coverage()) {
     getInstLine(inst);
   }
   llvm::InstVisitor<Interpreter, void>::visit(inst);
