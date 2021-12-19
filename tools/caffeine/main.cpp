@@ -6,6 +6,7 @@
 #include "caffeine/Interpreter/Store.h"
 #include "caffeine/Interpreter/ThreadQueueStore.h"
 #include "caffeine/Solver/LoggingSolver.h"
+#include "caffeine/Support/Coverage.h"
 #include "caffeine/Support/DiagnosticHandler.h"
 #include "caffeine/Support/Signal.h"
 #include "caffeine/Support/Tracing.h"
@@ -85,6 +86,8 @@ cl::opt<std::string> store_type{
              "thread-queue."),
     cl::value_desc("store"), cl::init("thread-queue"),
     cl::cat(caffeine_options)};
+cl::opt<bool> enable_coverage{"coverage", cl::desc("Enable coverage tracking"),
+                              cl::cat(caffeine_options)};
 
 static ExitOnError exit_on_err;
 
@@ -158,10 +161,15 @@ int main(int argc, char** argv) {
     return 2;
   }
 
+  std::unique_ptr<CoverageTracker> cov = nullptr;
+  if (enable_coverage)
+    cov = std::make_unique<CoverageTracker>();
+
   auto caffeine = CaffeineContext::builder()
                       .with_store(std::move(store))
                       .with_logger(std::make_unique<CountingFailureLogger>(
                           std::cout, function))
+                      .with_coverage(std::move(cov))
                       .build();
   auto exec = caffeine::Executor(&caffeine, options);
 
@@ -173,6 +181,10 @@ int main(int argc, char** argv) {
 
   auto logger = static_cast<CountingFailureLogger*>(caffeine.logger());
   int exitcode = logger->num_failures == 0 ? 0 : 1;
+
+  if (caffeine.coverage()) {
+    caffeine.coverage()->report().print(std::cout);
+  }
 
   if (invert_exitcode)
     exitcode = !exitcode;

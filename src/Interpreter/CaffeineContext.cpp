@@ -4,6 +4,7 @@
 #include "caffeine/Interpreter/Policy.h"
 #include "caffeine/Interpreter/Store.h"
 #include "caffeine/Solver/Solver.h"
+#include "caffeine/Support/Coverage.h"
 
 namespace caffeine {
 
@@ -63,6 +64,10 @@ std::shared_ptr<Solver> CaffeineContext::build_solver() const {
   return builder_->build();
 }
 
+CoverageTracker* CaffeineContext::coverage() const {
+  return cov_.get();
+}
+
 // All builder functions
 
 CaffeineContext Builder::build() {
@@ -83,6 +88,7 @@ CaffeineContext Builder::build() {
   if (!logger_)
     throw std::logic_error("No logger provided when building CaffeineContext");
   ctx.logger_ = std::move(logger_);
+  ctx.cov_ = std::move(cov_);
 
   if (builder_) {
     ctx.builder_ = std::move(builder_);
@@ -158,6 +164,11 @@ Builder& Builder::with_default_intrinsics() {
   with_intrinsic(llvm::Intrinsic::smul_with_overflow,
                  Intrinsics::smul_with_overflow());
 
+  return *this;
+}
+
+Builder& Builder::with_coverage(std::unique_ptr<CoverageTracker>&& tracker) {
+  cov_ = std::move(tracker);
   return *this;
 }
 

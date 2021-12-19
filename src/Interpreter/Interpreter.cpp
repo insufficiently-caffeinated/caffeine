@@ -7,6 +7,7 @@
 #include "caffeine/Interpreter/Store.h"
 #include "caffeine/Model/Value.h"
 #include "caffeine/Support/Assert.h"
+#include "caffeine/Support/Coverage.h"
 #include "caffeine/Support/LLVMFmt.h"
 #include "caffeine/Support/Tracing.h"
 #include "caffeine/Support/UnsupportedOperation.h"
@@ -16,6 +17,8 @@
 #include <boost/range/iterator_range.hpp>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
+#include <llvm/ADT/StringRef.h>
+#include <llvm/IR/DebugInfoMetadata.h>
 #include <llvm/IR/GetElementPtrTypeIterator.h>
 #include <llvm/Support/raw_ostream.h>
 
@@ -62,6 +65,13 @@ void Interpreter::execute() {
   }
 
   traceblock.close();
+}
+
+void Interpreter::visit(llvm::Instruction& inst) {
+  if (interp->caffeine().coverage()) {
+    getInstLine(inst);
+  }
+  llvm::InstVisitor<Interpreter, void>::visit(inst);
 }
 
 void Interpreter::visitInstruction(llvm::Instruction& inst) {
@@ -465,6 +475,15 @@ std::optional<std::string> readSymbolicName(std::shared_ptr<Solver> solver,
   }
 
   return std::string(start, end);
+}
+
+void Interpreter::getInstLine(llvm::Instruction& inst) {
+  if (const auto& loc = inst.getDebugLoc()) {
+    unsigned line = loc.getLine();
+    auto* dfile = static_cast<llvm::DIScope*>(loc.getScope());
+    std::string file = dfile->getFilename().str();
+    interp->caffeine().coverage()->touch(file, line);
+  }
 }
 
 } // namespace caffeine
