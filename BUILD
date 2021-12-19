@@ -1,8 +1,9 @@
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag")
 load("//bazel:configure.bzl", "configure_file")
 load("//bazel:warnings.bzl", "WARNING_FLAGS")
-load("//bazel:clang-format.bzl", "format_test", "do_format")
+load("//bazel:clang-format.bzl", "do_format", "format_test")
 load("//bazel:compile-commands.bzl", "compile_commands")
+load("@hedron_compile_commands//:refresh_compile_commands.bzl", "refresh_compile_commands")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -124,6 +125,9 @@ do_format(
     deps = CAFFEINE_TARGETS,
 )
 
-compile_commands(
+refresh_compile_commands(
     name = "compile-commands",
+    targets = [
+        "//...",
+    ],
 )
