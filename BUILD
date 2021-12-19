@@ -110,7 +110,6 @@ CAFFEINE_TARGETS = [
     ":caffeine",
     "//test/unit:unit-lib",
     "//tools/caffeine",
-    "//tools/compdb",
     "//tools/guided-fuzzing",
     "//tools/opt-plugin",
 ]
