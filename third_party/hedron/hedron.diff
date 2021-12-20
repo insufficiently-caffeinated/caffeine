@@ -1,0 +1,18 @@
+--- external/hedron_compile_commands/extract.py	2021-12-19 21:22:19.185369500 -0500
++++ external/hedron_compile_commands/extract.py	2021-12-19 21:22:12.625369500 -0500
+@@ -204,9 +204,15 @@
+     bazel_workspace_dir = os.environ['BUILD_WORKSPACE_DIRECTORY'] # Set by `bazel run`. Can't call `bazel info workspace` because bazel is running us outside the workspace.
+     # Bazel gotcha warning: If you were tempted to use `bazel info execution_root` as the build working directory for compile_commands...search ImplementationReadme.md to learn why that breaks.
+ 
++    visited = set()
++
+     # Dump em to stdout as compile_commands.json entries
+     for files, command in outputs:
+         for file in files:
++            if file in visited:
++                continue
++            visited.add(file)
++
+             sys.stdout.write(json.dumps({
+                 'file': file,
+                 'command': command,

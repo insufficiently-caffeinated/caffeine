@@ -67,6 +67,11 @@ http_archive(
     url = "https://github.com/hedronvision/bazel-compile-commands-extractor/archive/6749f754ffcfb32fa049021d65ba3fd130c5972f.tar.gz",
     sha256 = "a62a842127b933b89797bb138c63ff75f32ba4d5f54c7cf25e164d4f2f9fe152",
     strip_prefix = "bazel-compile-commands-extractor-6749f754ffcfb32fa049021d65ba3fd130c5972f",
+    # By default the script generates an entry for every single source file that
+    # includes each header. This causes us to generate a 5.7GB file for caffeine
+    # and is more or less completely untenable. This patch changes it to only
+    # generate 1 entry per file, which reduces the file size down to ~20MB.
+    patches = ["//third_party/hedron:hedron.diff"],
 )
 load("@hedron_compile_commands//:workspace_setup.bzl", "hedron_compile_commands_setup")
 hedron_compile_commands_setup()
