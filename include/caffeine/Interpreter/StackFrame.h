@@ -72,7 +72,15 @@ public:
   // Allocations within the current frame.
   std::vector<StackAllocation> allocations;
 
+private:
   std::unordered_map<llvm::Value*, LLVMValue> variables;
+
+  // These classes are the only ones that should be using the variables
+  // directly.
+  friend class InterpreterContext;
+  friend class Context;
+
+public:
   /**
    * Iterators used by Interpreter::execute
    */
