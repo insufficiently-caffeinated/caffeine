@@ -370,6 +370,12 @@ def caffeine_bitcode_test(should_fail = False, skip = False, **kwargs):
         test_args.update({"size": kwargs["size"]})
         kwargs["size"] = None
 
+    if "args" in kwargs:
+        extra_args = kwargs["args"]
+        kwargs["args"] = None
+    else:
+        extra_args = []
+
     name = kwargs["name"]
 
     kwargs["name"] += "#binary"
@@ -389,7 +395,7 @@ def caffeine_bitcode_test(should_fail = False, skip = False, **kwargs):
         "$(location {}#bitcode)".format(name),
         "-t",
         "1",
-    ]
+    ] + extra_args
 
     if "tags" in kwargs:
         tags += kwargs["tags"]
