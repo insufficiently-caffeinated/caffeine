@@ -302,6 +302,124 @@ private:
   void reset();
 };
 
+class OperationData {
+private:
+  Type type_;
+  uint16_t opcode_;
+
+public:
+  using Opcode = Operation::Opcode;
+
+  OperationData();
+  OperationData(Opcode op, Type t);
+  virtual ~OperationData() = default;
+
+public:
+  // Indicate whether this OperationData instance is valid.
+  bool valid() const {
+    return opcode() != Opcode::Invalid;
+  }
+
+  // Get the opcode for this OperationData instance.
+  Opcode opcode() const {
+    return static_cast<Opcode>(opcode_);
+  }
+
+  // Get a static string that contains the opcode name. Returns "Unknown" on
+  // unknown opcode.
+  std::string_view opcode_name() const;
+  static std::string_view opcode_name(Opcode op);
+
+  // The type of this OperationData instance.
+  Type type() const {
+    return type_;
+  }
+
+  /**
+   * Data stored within the aux bits of the opcode. Interpretation of this
+   * depends from opcode to opcode so it is left for derived classes to expose
+   * however they want.
+   */
+  uint16_t aux_data() const {
+    return detail::opcode_aux(opcode());
+  }
+
+  static bool classof(const Operation*) {
+    return true;
+  }
+};
+
+/**
+ * @brief OperationData for symbolic constants.
+ */
+class ConstantData : public OperationData {
+public:
+  ConstantData(Type t, const Symbol& symbol);
+
+  const Symbol& symbol() const {
+    return symbol_;
+  }
+
+  static bool classof(const OperationData* op) {
+    return op->opcode() == Opcode::ConstantNamed ||
+           op->opcode() == Opcode::ConstantNumbered ||
+           op->opcode() == Opcode::ConstantArray;
+  }
+
+private:
+  Symbol symbol_;
+};
+
+class ConstantIntData : public OperationData {
+public:
+  ConstantIntData(const llvm::APInt& val);
+  ConstantIntData(llvm::APInt&& val);
+
+  const llvm::APInt& value() const {
+    return value_;
+  }
+
+  static bool classof(const OperationData* op) {
+    return op->opcode() == Opcode::ConstantInt;
+  }
+
+private:
+  llvm::APInt value_;
+};
+
+class ConstantFloatData : public OperationData {
+public:
+  ConstantFloatData(const llvm::APFloat& val);
+  ConstantFloatData(llvm::APFloat&& val);
+
+  const llvm::APFloat& value() const {
+    return value_;
+  }
+
+  static bool classof(const OperationData* op) {
+    return op->opcode() == Opcode::ConstantFloat;
+  }
+
+private:
+  llvm::APFloat value_;
+};
+
+class FunctionObjectData : public OperationData {
+public:
+  FunctionObjectData(llvm::Function* func);
+
+  llvm::Function* function() const {
+    return func_;
+  }
+
+  static bool classof(const OperationData* op) {
+    return op->opcode() == Opcode::FunctionObject;
+  }
+
+private:
+  llvm::Function* func_;
+};
+
 std::ostream& operator<<(std::ostream& os, const Operation& op);
 std::ostream& operator<<(std::ostream& os, Operation::Opcode opcode);
 
