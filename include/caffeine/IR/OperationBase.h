@@ -250,12 +250,6 @@ public:
    */
   ref<const Operation> as_ref() const;
 
-  /**
-   * Get this operation as a ref, or create a new ref with a copy if it isn't
-   * already a reference.
-   */
-  OpRef into_ref() const;
-
   typedef detail::operand_iterator operand_iterator;
   typedef detail::operand_iterator const_operand_iterator;
 

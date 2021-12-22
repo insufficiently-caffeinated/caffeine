@@ -124,14 +124,14 @@ OpRef Operation::with_new_operands(llvm::ArrayRef<OpRef> operands) const {
   CAFFEINE_ASSERT(operands.size() == num_operands());
 
   if (num_operands() == 0)
-    return into_ref();
+    return shared_from_this();
 
   auto my_operands = std::get<OpVec>(inner_);
   bool equal = std::equal(std::begin(my_operands), std::end(my_operands),
                           std::begin(operands), std::end(operands));
 
   if (equal)
-    return into_ref();
+    return shared_from_this();
 
   Operation next{(Opcode)opcode(), type(), operands.data()};
   next.copy_vtable(*this);
@@ -357,7 +357,7 @@ OpRef ConstantArray::with_new_operands(llvm::ArrayRef<OpRef> operands) const {
   CAFFEINE_ASSERT(operands.size() == 1);
 
   if (size() == operands[0])
-    return into_ref();
+    return shared_from_this();
 
   return Create(symbol(), operands[0]);
 }
@@ -817,13 +817,13 @@ OpRef FixedArray::with_new_operands(llvm::ArrayRef<OpRef> operands) const {
   CAFFEINE_ASSERT(operands.size() == num_operands());
 
   if (num_operands() == 0)
-    return into_ref();
+    return shared_from_this();
 
   bool equal = std::equal(std::begin(operands), std::end(operands),
                           std::begin(data()), std::end(data()));
 
   if (equal)
-    return into_ref();
+    return shared_from_this();
 
   auto transient = data().inner().transient();
   for (size_t i = 0; i < operands.size(); ++i) {
