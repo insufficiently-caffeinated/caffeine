@@ -12,16 +12,6 @@ inline uint64_t ilog2(uint64_t x) {
 }
 
 template <typename T>
-OpRef constant_fold(T& value) {
-  OperationSimplifier<false> fold;
-  return fold(value);
-}
-template <typename T>
-OpRef constant_fold(const T& value) {
-  OperationSimplifier<false> fold;
-  return fold(value);
-}
-template <typename T>
 OpRef constant_fold(T&& value) {
   OperationSimplifier<true> fold;
   return fold(value);

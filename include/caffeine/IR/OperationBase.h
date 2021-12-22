@@ -280,10 +280,7 @@ public:
   virtual const OpRef& operand_at(size_t idx) const;
 
   // Need to define this since refcount shouldn't be copied/moved.
-  Operation(const Operation& op);
   Operation(Operation&& op) noexcept;
-
-  Operation& operator=(const Operation& op);
   Operation& operator=(Operation&& op) noexcept;
 
   // Need to force operation to have a vtable

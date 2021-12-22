@@ -28,7 +28,7 @@ Allocation::Allocation(const OpRef& address, const OpRef& size,
 Allocation::Allocation(const OpRef& address, const ConstantInt& size,
                        const OpRef& data, AllocationKind kind,
                        AllocationPermissions permissions)
-    : Allocation(address, std::make_shared<Operation>(size), data, kind,
+    : Allocation(address, ConstantInt::Create(size.value()), data, kind,
                  permissions) {}
 
 void Allocation::overwrite(const OpRef& newdata) {
