@@ -203,9 +203,15 @@ protected:
   Type type_;
   Inner inner_;
 
+  std::unique_ptr<OperationData> data_;
+  llvm::SmallVector<OpRef, 4> operands_;
+
   friend llvm::hash_code hash_value(const Operation& op);
 
 protected:
+  Operation(
+    std::unique_ptr<OperationData>&& data,
+    std::initializer_list<OpRef> operands = {});
   Operation(Opcode op, Type t, const Inner& inner);
   Operation(Opcode op, Type t, Inner&& inner);
 

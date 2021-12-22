@@ -26,6 +26,19 @@ namespace caffeine {
 
 Operation::Operation() : opcode_(Invalid), type_(Type::void_ty()) {}
 
+Operation::Operation(std::unique_ptr<OperationData>&& data,
+                     std::initializer_list<OpRef> operands)
+    : opcode_(data->opcode()), type_(data->type()), data_(std::move(data)),
+      operands_(operands) {
+  size_t nargs = detail::opcode_nargs(opcode());
+
+  if (nargs != 4) {
+    CAFFEINE_ASSERT(nargs == operands.size(),
+                    fmt::format("invalid number of arguments: {} != {}", nargs,
+                                operands.size()));
+  }
+}
+
 Operation::Operation(Opcode op, Type t, const Inner& inner)
     : opcode_(static_cast<uint16_t>(op)), type_(t), inner_(inner) {}
 Operation::Operation(Opcode op, Type t, Inner&& inner)
