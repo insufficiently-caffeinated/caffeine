@@ -13,56 +13,56 @@ namespace caffeine {
  */
 template <bool MoveOut = false>
 class OperationSimplifier
-    : public ConstOpVisitor<OperationSimplifier<MoveOut>, OpRef> {
+    : public OpVisitor<OperationSimplifier<MoveOut>, OpRef> {
 private:
-  using BaseType = ConstOpVisitor<OperationSimplifier<MoveOut>, OpRef>;
+  using BaseType = OpVisitor<OperationSimplifier<MoveOut>, OpRef>;
 
   static constexpr bool move_input = MoveOut;
 
 public:
-  OpRef visit(const Operation& op);
+  OpRef visit(Operation& op);
 
-  OpRef visitOperation(const Operation& op);
+  OpRef visitOperation(Operation& op);
 
-  OpRef visitAdd(const BinaryOp& op);
-  OpRef visitSub(const BinaryOp& op);
-  OpRef visitMul(const BinaryOp& op);
+  OpRef visitAdd(BinaryOp& op);
+  OpRef visitSub(BinaryOp& op);
+  OpRef visitMul(BinaryOp& op);
 
-  OpRef visitUDiv(const BinaryOp& op);
-  OpRef visitSDiv(const BinaryOp& op);
-  OpRef visitURem(const BinaryOp& op);
-  OpRef visitSRem(const BinaryOp& op);
+  OpRef visitUDiv(BinaryOp& op);
+  OpRef visitSDiv(BinaryOp& op);
+  OpRef visitURem(BinaryOp& op);
+  OpRef visitSRem(BinaryOp& op);
 
-  OpRef visitAnd(const BinaryOp& op);
-  OpRef visitOr(const BinaryOp& op);
-  OpRef visitXor(const BinaryOp& op);
-  OpRef visitShl(const BinaryOp& op);
-  OpRef visitLShr(const BinaryOp& op);
-  OpRef visitAShr(const BinaryOp& op);
+  OpRef visitAnd(BinaryOp& op);
+  OpRef visitOr(BinaryOp& op);
+  OpRef visitXor(BinaryOp& op);
+  OpRef visitShl(BinaryOp& op);
+  OpRef visitLShr(BinaryOp& op);
+  OpRef visitAShr(BinaryOp& op);
 
-  OpRef visitFAdd(const BinaryOp& op);
-  OpRef visitFSub(const BinaryOp& op);
-  OpRef visitFMul(const BinaryOp& op);
-  OpRef visitFDiv(const BinaryOp& op);
-  OpRef visitFRem(const BinaryOp& op);
+  OpRef visitFAdd(BinaryOp& op);
+  OpRef visitFSub(BinaryOp& op);
+  OpRef visitFMul(BinaryOp& op);
+  OpRef visitFDiv(BinaryOp& op);
+  OpRef visitFRem(BinaryOp& op);
 
-  OpRef visitFIsNaN(const UnaryOp& op);
-  OpRef visitNot(const UnaryOp& op);
-  OpRef visitTrunc(const UnaryOp& op);
-  OpRef visitZExt(const UnaryOp& op);
-  OpRef visitSExt(const UnaryOp& op);
-  OpRef visitBitcast(const UnaryOp& op);
+  OpRef visitFIsNaN(UnaryOp& op);
+  OpRef visitNot(UnaryOp& op);
+  OpRef visitTrunc(UnaryOp& op);
+  OpRef visitZExt(UnaryOp& op);
+  OpRef visitSExt(UnaryOp& op);
+  OpRef visitBitcast(UnaryOp& op);
 
-  OpRef visitSelectOp(const SelectOp& op);
+  OpRef visitSelectOp(SelectOp& op);
 
-  OpRef visitICmp(const ICmpOp& op);
-  OpRef visitFCmp(const FCmpOp& op);
+  OpRef visitICmp(ICmpOp& op);
+  OpRef visitFCmp(FCmpOp& op);
 
-  OpRef visitAllocOp(const AllocOp& op);
-  OpRef visitLoadOp(const LoadOp& op);
-  OpRef visitStoreOp(const StoreOp& op);
+  OpRef visitAllocOp(AllocOp& op);
+  OpRef visitLoadOp(LoadOp& op);
+  OpRef visitStoreOp(StoreOp& op);
 
-  OpRef visitFixedArray(const FixedArray& op);
+  OpRef visitFixedArray(FixedArray& op);
 
 private:
   template <typename... Ts>

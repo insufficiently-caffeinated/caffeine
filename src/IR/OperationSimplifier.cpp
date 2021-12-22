@@ -92,7 +92,7 @@ namespace {
   } while (false)
 
 template <bool M>
-OpRef OperationSimplifier<M>::visit(const Operation& op) {
+OpRef OperationSimplifier<M>::visit(Operation& op) {
 #ifdef CAFFEINE_ENABLE_IMPLICIT_CONSTANT_FOLDING
   return BaseType::visit(op);
 #else
@@ -101,7 +101,7 @@ OpRef OperationSimplifier<M>::visit(const Operation& op) {
 }
 
 template <bool M>
-OpRef OperationSimplifier<M>::visitOperation(const Operation& op) {
+OpRef OperationSimplifier<M>::visitOperation(Operation& op) {
   if constexpr (move_input) {
     return OperationCache::default_cache()->cache(
         std::move(const_cast<Operation&>(op)));
@@ -112,7 +112,7 @@ OpRef OperationSimplifier<M>::visitOperation(const Operation& op) {
 }
 
 template <bool M>
-OpRef OperationSimplifier<M>::visitAdd(const BinaryOp& op) {
+OpRef OperationSimplifier<M>::visitAdd(BinaryOp& op) {
   if (op.lhs()->is<Undef>() || op.rhs()->is<Undef>())
     return Undef::Create(op.type());
 
@@ -126,7 +126,7 @@ OpRef OperationSimplifier<M>::visitAdd(const BinaryOp& op) {
   return this->visitBinaryOp(op);
 }
 template <bool M>
-OpRef OperationSimplifier<M>::visitSub(const BinaryOp& op) {
+OpRef OperationSimplifier<M>::visitSub(BinaryOp& op) {
   if (op.lhs()->is<Undef>() || op.rhs()->is<Undef>())
     return Undef::Create(op.type());
 
@@ -141,7 +141,7 @@ OpRef OperationSimplifier<M>::visitSub(const BinaryOp& op) {
   return this->visitBinaryOp(op);
 }
 template <bool M>
-OpRef OperationSimplifier<M>::visitMul(const BinaryOp& op) {
+OpRef OperationSimplifier<M>::visitMul(BinaryOp& op) {
   if (is_constant_int(op.lhs(), 0))
     return op.lhs();
   if (is_constant_int(op.rhs(), 0))
@@ -153,7 +153,7 @@ OpRef OperationSimplifier<M>::visitMul(const BinaryOp& op) {
 }
 
 template <bool M>
-OpRef OperationSimplifier<M>::visitUDiv(const BinaryOp& op) {
+OpRef OperationSimplifier<M>::visitUDiv(BinaryOp& op) {
   if (is_constant_int(op.lhs(), 0) || is_constant_int(*op.rhs(), 1))
     return op.lhs();
 
@@ -165,7 +165,7 @@ OpRef OperationSimplifier<M>::visitUDiv(const BinaryOp& op) {
   return this->visitBinaryOp(op);
 }
 template <bool M>
-OpRef OperationSimplifier<M>::visitSDiv(const BinaryOp& op) {
+OpRef OperationSimplifier<M>::visitSDiv(BinaryOp& op) {
   if (is_constant_int(op.lhs(), 0))
     return op.lhs();
   if (is_constant_int(op.rhs(), 1) && op.type().bitwidth() > 1)
@@ -179,7 +179,7 @@ OpRef OperationSimplifier<M>::visitSDiv(const BinaryOp& op) {
   return this->visitBinaryOp(op);
 }
 template <bool M>
-OpRef OperationSimplifier<M>::visitURem(const BinaryOp& op) {
+OpRef OperationSimplifier<M>::visitURem(BinaryOp& op) {
   if (is_constant_int(op.lhs(), 0))
     return op.lhs();
   if (is_constant_int(op.rhs(), 1))
@@ -193,7 +193,7 @@ OpRef OperationSimplifier<M>::visitURem(const BinaryOp& op) {
   return this->visitBinaryOp(op);
 }
 template <bool M>
-OpRef OperationSimplifier<M>::visitSRem(const BinaryOp& op) {
+OpRef OperationSimplifier<M>::visitSRem(BinaryOp& op) {
   if (is_constant_int(op.lhs(), 0))
     return op.lhs();
   if (is_constant_int(op.rhs(), 1) && op.type().bitwidth() > 1)
@@ -208,7 +208,7 @@ OpRef OperationSimplifier<M>::visitSRem(const BinaryOp& op) {
 }
 
 template <bool M>
-OpRef OperationSimplifier<M>::visitAnd(const BinaryOp& op) {
+OpRef OperationSimplifier<M>::visitAnd(BinaryOp& op) {
   namespace m = matching;
 
   if (is_constant_int(op.lhs(), 0))
@@ -256,7 +256,7 @@ OpRef OperationSimplifier<M>::visitAnd(const BinaryOp& op) {
   return this->visitBinaryOp(op);
 }
 template <bool M>
-OpRef OperationSimplifier<M>::visitOr(const BinaryOp& op) {
+OpRef OperationSimplifier<M>::visitOr(BinaryOp& op) {
   namespace m = matching;
 
   if (is_constant_int(op.lhs(), 0))
@@ -283,7 +283,7 @@ OpRef OperationSimplifier<M>::visitOr(const BinaryOp& op) {
   return this->visitBinaryOp(op);
 }
 template <bool M>
-OpRef OperationSimplifier<M>::visitXor(const BinaryOp& op) {
+OpRef OperationSimplifier<M>::visitXor(BinaryOp& op) {
   if (op.lhs()->is<Undef>() || op.rhs()->is<Undef>())
     return Undef::Create(op.type());
 
@@ -297,7 +297,7 @@ OpRef OperationSimplifier<M>::visitXor(const BinaryOp& op) {
   return this->visitBinaryOp(op);
 }
 template <bool M>
-OpRef OperationSimplifier<M>::visitShl(const BinaryOp& op) {
+OpRef OperationSimplifier<M>::visitShl(BinaryOp& op) {
   namespace m = matching;
 
   if (is_constant_int(op.lhs(), 0) || is_constant_int(op.rhs(), 0))
@@ -324,7 +324,7 @@ OpRef OperationSimplifier<M>::visitShl(const BinaryOp& op) {
   return this->visitBinaryOp(op);
 }
 template <bool M>
-OpRef OperationSimplifier<M>::visitLShr(const BinaryOp& op) {
+OpRef OperationSimplifier<M>::visitLShr(BinaryOp& op) {
   if (is_constant_int(op.lhs(), 0) || is_constant_int(op.rhs(), 0))
     return op.lhs();
 
@@ -333,7 +333,7 @@ OpRef OperationSimplifier<M>::visitLShr(const BinaryOp& op) {
   return this->visitBinaryOp(op);
 }
 template <bool M>
-OpRef OperationSimplifier<M>::visitAShr(const BinaryOp& op) {
+OpRef OperationSimplifier<M>::visitAShr(BinaryOp& op) {
   if (is_constant_int(op.lhs(), 0) || is_constant_int(op.rhs(), 0))
     return op.lhs();
 
@@ -343,31 +343,31 @@ OpRef OperationSimplifier<M>::visitAShr(const BinaryOp& op) {
 }
 
 template <bool M>
-OpRef OperationSimplifier<M>::visitFAdd(const BinaryOp& op) {
+OpRef OperationSimplifier<M>::visitFAdd(BinaryOp& op) {
   TRY_CONST_FLOAT(ConstantFloat::Create(lhs.value() + rhs.value()));
 
   return this->visitBinaryOp(op);
 }
 template <bool M>
-OpRef OperationSimplifier<M>::visitFSub(const BinaryOp& op) {
+OpRef OperationSimplifier<M>::visitFSub(BinaryOp& op) {
   TRY_CONST_FLOAT(ConstantFloat::Create(lhs.value() - rhs.value()));
 
   return this->visitBinaryOp(op);
 }
 template <bool M>
-OpRef OperationSimplifier<M>::visitFMul(const BinaryOp& op) {
+OpRef OperationSimplifier<M>::visitFMul(BinaryOp& op) {
   TRY_CONST_FLOAT(ConstantFloat::Create(lhs.value() * rhs.value()));
 
   return this->visitBinaryOp(op);
 }
 template <bool M>
-OpRef OperationSimplifier<M>::visitFDiv(const BinaryOp& op) {
+OpRef OperationSimplifier<M>::visitFDiv(BinaryOp& op) {
   TRY_CONST_FLOAT(ConstantFloat::Create(lhs.value() / rhs.value()));
 
   return this->visitBinaryOp(op);
 }
 template <bool M>
-OpRef OperationSimplifier<M>::visitFRem(const BinaryOp& op) {
+OpRef OperationSimplifier<M>::visitFRem(BinaryOp& op) {
   TRY_CONST_FLOAT(
       ConstantFloat::Create(llvm::APFloat(lhs.value()).remainder(rhs.value())));
 
@@ -375,7 +375,7 @@ OpRef OperationSimplifier<M>::visitFRem(const BinaryOp& op) {
 }
 
 template <bool M>
-OpRef OperationSimplifier<M>::visitFIsNaN(const UnaryOp& op) {
+OpRef OperationSimplifier<M>::visitFIsNaN(UnaryOp& op) {
   if (const auto* val = llvm::dyn_cast<ConstantFloat>(op.operand().get())) {
     const llvm::APFloat& apf = val->value();
     return ConstantInt::Create(apf.isNaN());
@@ -384,7 +384,7 @@ OpRef OperationSimplifier<M>::visitFIsNaN(const UnaryOp& op) {
   return this->visitUnaryOp(op);
 }
 template <bool M>
-OpRef OperationSimplifier<M>::visitNot(const UnaryOp& op) {
+OpRef OperationSimplifier<M>::visitNot(UnaryOp& op) {
   if (const auto* val = llvm::dyn_cast<ConstantInt>(op.operand().get()))
     return ConstantInt::Create(~val->value());
 
@@ -395,7 +395,7 @@ OpRef OperationSimplifier<M>::visitNot(const UnaryOp& op) {
   return this->visitUnaryOp(op);
 }
 template <bool M>
-OpRef OperationSimplifier<M>::visitTrunc(const UnaryOp& op) {
+OpRef OperationSimplifier<M>::visitTrunc(UnaryOp& op) {
   if (const auto* val = llvm::dyn_cast<ConstantInt>(op.operand().get()))
     return ConstantInt::Create(val->value().trunc(op.type().bitwidth()));
 
@@ -405,7 +405,7 @@ OpRef OperationSimplifier<M>::visitTrunc(const UnaryOp& op) {
   return this->visitUnaryOp(op);
 }
 template <bool M>
-OpRef OperationSimplifier<M>::visitZExt(const UnaryOp& op) {
+OpRef OperationSimplifier<M>::visitZExt(UnaryOp& op) {
   namespace m = matching;
 
   if (const auto* val = llvm::dyn_cast<ConstantInt>(op.operand().get()))
@@ -431,7 +431,7 @@ OpRef OperationSimplifier<M>::visitZExt(const UnaryOp& op) {
   return this->visitUnaryOp(op);
 }
 template <bool M>
-OpRef OperationSimplifier<M>::visitSExt(const UnaryOp& op) {
+OpRef OperationSimplifier<M>::visitSExt(UnaryOp& op) {
   if (const auto* val = llvm::dyn_cast<ConstantInt>(op.operand().get()))
     return ConstantInt::Create(val->value().sext(op.type().bitwidth()));
 
@@ -441,7 +441,7 @@ OpRef OperationSimplifier<M>::visitSExt(const UnaryOp& op) {
   return this->visitUnaryOp(op);
 }
 template <bool M>
-OpRef OperationSimplifier<M>::visitBitcast(const UnaryOp& op) {
+OpRef OperationSimplifier<M>::visitBitcast(UnaryOp& op) {
   {
     OpRef value;
     if (matches(op.operand(), matching::Bitcast(value)) &&
@@ -454,7 +454,7 @@ OpRef OperationSimplifier<M>::visitBitcast(const UnaryOp& op) {
 }
 
 template <bool M>
-OpRef OperationSimplifier<M>::visitSelectOp(const SelectOp& op) {
+OpRef OperationSimplifier<M>::visitSelectOp(SelectOp& op) {
   if (const auto* vcond = llvm::dyn_cast<ConstantInt>(op.condition().get()))
     return vcond->value() == 1 ? op.true_value() : op.false_value();
   if (op.true_value() == op.false_value())
@@ -464,7 +464,7 @@ OpRef OperationSimplifier<M>::visitSelectOp(const SelectOp& op) {
 }
 
 template <bool M>
-OpRef OperationSimplifier<M>::visitICmp(const ICmpOp& op) {
+OpRef OperationSimplifier<M>::visitICmp(ICmpOp& op) {
   TRY_CONST_INT(ConstantInt::Create(
       constant_int_compare(op.comparison(), lhs.value(), rhs.value())));
 
@@ -491,7 +491,7 @@ OpRef OperationSimplifier<M>::visitICmp(const ICmpOp& op) {
   return this->visitBinaryOp(op);
 }
 template <bool M>
-OpRef OperationSimplifier<M>::visitFCmp(const FCmpOp& op) {
+OpRef OperationSimplifier<M>::visitFCmp(FCmpOp& op) {
   TRY_CONST_FLOAT(ConstantInt::Create(
       constant_float_compare(op.comparison(), lhs.value(), rhs.value())));
 
@@ -512,7 +512,7 @@ OpRef OperationSimplifier<M>::visitFCmp(const FCmpOp& op) {
 }
 
 template <bool M>
-OpRef OperationSimplifier<M>::visitAllocOp(const AllocOp& op) {
+OpRef OperationSimplifier<M>::visitAllocOp(AllocOp& op) {
   if (const auto* cnst = llvm::dyn_cast<ConstantInt>(op.size().get())) {
     if (cnst->value().getLimitedValue(SIZE_MAX) < SIZE_MAX) {
       return FixedArray::Create(cnst->type(), op.default_value(),
@@ -523,7 +523,7 @@ OpRef OperationSimplifier<M>::visitAllocOp(const AllocOp& op) {
   return this->visitArrayBase(op);
 }
 template <bool M>
-OpRef OperationSimplifier<M>::visitLoadOp(const LoadOp& op) {
+OpRef OperationSimplifier<M>::visitLoadOp(LoadOp& op) {
   const auto* fixedarray = llvm::dyn_cast<FixedArray>(op.data().get());
   const auto* offset_int = llvm::dyn_cast<ConstantInt>(op.offset().get());
 
@@ -551,7 +551,7 @@ OpRef OperationSimplifier<M>::visitLoadOp(const LoadOp& op) {
   return this->visitOperation(op);
 }
 template <bool M>
-OpRef OperationSimplifier<M>::visitStoreOp(const StoreOp& op) {
+OpRef OperationSimplifier<M>::visitStoreOp(StoreOp& op) {
   const auto* offset_cnst = llvm::dyn_cast<ConstantInt>(op.offset().get());
   const auto* fixedarray = llvm::dyn_cast<FixedArray>(op.data().get());
 
@@ -569,11 +569,11 @@ OpRef OperationSimplifier<M>::visitStoreOp(const StoreOp& op) {
 }
 
 template <bool M>
-OpRef OperationSimplifier<M>::visitFixedArray(const FixedArray& op) {
+OpRef OperationSimplifier<M>::visitFixedArray(FixedArray& op) {
   // Note: We don't cache FixedArray instances since the cost of hashing the
   //       whole array after every change causes quadratic blowups on just about
   //       every program that interacts with memory.
-  return std::make_shared<FixedArray>(std::move(const_cast<FixedArray&>(op)));
+  return std::make_shared<FixedArray>(std::move(op));
 }
 
 // Note that these have to be after all the method definitions
