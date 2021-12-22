@@ -1,5 +1,6 @@
 #include "caffeine/IR/OperationBase.h"
 #include <fmt/format.h>
+#include <llvm/IR/Function.h>
 
 namespace caffeine {
 
@@ -39,6 +40,7 @@ ConstantFloatData::ConstantFloatData(llvm::APFloat&& val)
       value_(std::move(val)) {}
 
 FunctionObjectData::FunctionObjectData(llvm::Function* func)
-    : OperationData(Opcode::FunctionObject, Type::function_ty()), func_(func) {}
+    : OperationData(Opcode::FunctionObject, Type::from_llvm(func->getType())),
+      func_(func) {}
 
 } // namespace caffeine
