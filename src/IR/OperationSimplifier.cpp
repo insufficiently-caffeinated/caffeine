@@ -100,13 +100,8 @@ OpRef OperationSimplifier::visit(Operation& op) {
 }
 
 OpRef OperationSimplifier::visitOperation(Operation& op) {
-  if constexpr (move_input) {
-    return OperationCache::default_cache()->cache(
-        std::move(const_cast<Operation&>(op)));
-  } else {
-    (void)op;
-    CAFFEINE_UNREACHABLE();
-  }
+  return OperationCache::default_cache()->cache(
+      std::move(const_cast<Operation&>(op)));
 }
 
 OpRef OperationSimplifier::visitAdd(BinaryOp& op) {

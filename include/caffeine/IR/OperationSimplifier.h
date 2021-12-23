@@ -15,8 +15,6 @@ class OperationSimplifier : public OpVisitor<OperationSimplifier, OpRef> {
 private:
   using BaseType = OpVisitor<OperationSimplifier, OpRef>;
 
-  static constexpr bool move_input = true;
-
 public:
   OpRef visit(Operation& op);
 
