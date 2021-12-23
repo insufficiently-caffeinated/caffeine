@@ -71,6 +71,7 @@ Operation::Operation(Operation&& op) noexcept
     : std::enable_shared_from_this<Operation>(), opcode_(op.opcode_),
       type_(op.type_), inner_(std::move(op.inner_)) {
   copy_vtable(op);
+  op.reset();
 }
 
 Operation& Operation::operator=(Operation&& op) noexcept {
@@ -79,8 +80,15 @@ Operation& Operation::operator=(Operation&& op) noexcept {
   opcode_ = op.opcode_;
 
   copy_vtable(op);
+  op.reset();
 
   return *this;
+}
+
+void Operation::reset() {
+  opcode_ = Invalid;
+  type_ = Type::void_ty();
+  inner_ = std::monostate{};
 }
 
 bool Operation::operator==(const Operation& op) const {

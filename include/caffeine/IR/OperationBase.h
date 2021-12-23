@@ -297,6 +297,9 @@ protected:
 public:
   // Utility during debugging - should never actually be called by the program.
   void DebugPrint() const;
+
+private:
+  void reset();
 };
 
 std::ostream& operator<<(std::ostream& os, const Operation& op);
