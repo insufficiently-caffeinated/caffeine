@@ -11,13 +11,11 @@ namespace caffeine {
  * This is called internally by the various derived construction functions so
  * you should never have to use it directly.
  */
-template <bool MoveOut = false>
-class OperationSimplifier
-    : public OpVisitor<OperationSimplifier<MoveOut>, OpRef> {
+class OperationSimplifier : public OpVisitor<OperationSimplifier, OpRef> {
 private:
-  using BaseType = OpVisitor<OperationSimplifier<MoveOut>, OpRef>;
+  using BaseType = OpVisitor<OperationSimplifier, OpRef>;
 
-  static constexpr bool move_input = MoveOut;
+  static constexpr bool move_input = true;
 
 public:
   OpRef visit(Operation& op);
@@ -105,8 +103,5 @@ private:
     return nullptr;
   }
 };
-
-extern template class OperationSimplifier<true>;
-extern template class OperationSimplifier<false>;
 
 } // namespace caffeine

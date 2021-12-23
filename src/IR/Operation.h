@@ -13,8 +13,7 @@ inline uint64_t ilog2(uint64_t x) {
 
 template <typename T>
 OpRef constant_fold(T&& value) {
-  OperationSimplifier<true> fold;
-  return fold(value);
+  return OperationSimplifier()(value);
 }
 
 OpRef extract_bit(const OpRef& op, uint32_t bit) {
