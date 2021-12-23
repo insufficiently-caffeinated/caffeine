@@ -106,6 +106,7 @@ OpRef OperationSimplifier<M>::visitOperation(const Operation& op) {
     return OperationCache::default_cache()->cache(
         std::move(const_cast<Operation&>(op)));
   } else {
+    (void)op;
     CAFFEINE_UNREACHABLE();
   }
 }
