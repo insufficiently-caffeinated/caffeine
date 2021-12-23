@@ -1,13 +1,11 @@
 #include "caffeine/IR/OperationBase.h"
-#include <fmt/format.h>
 #include <llvm/IR/Function.h>
 
 namespace caffeine {
 
 OperationData::OperationData()
     : type_(Type::void_ty()), opcode_(Opcode::Invalid) {}
-OperationData::OperationData(Opcode op, Type t)
-    : type_(t), opcode_(static_cast<uint16_t>(op)) {}
+OperationData::OperationData(Opcode op, Type t) : type_(t), opcode_(op) {}
 
 std::string_view OperationData::opcode_name() const {
   return opcode_name(opcode());
@@ -42,5 +40,27 @@ ConstantFloatData::ConstantFloatData(llvm::APFloat&& val)
 FunctionObjectData::FunctionObjectData(llvm::Function* func)
     : OperationData(Opcode::FunctionObject, Type::from_llvm(func->getType())),
       func_(func) {}
+
+llvm::hash_code hash_value(const OperationData& op) {
+  return llvm::hash_combine(op.hash(), op.type(), op.opcode());
+}
+
+using llvm::hash_value;
+
+llvm::hash_code ConstantData::hash() const {
+  return hash_value(symbol_);
+}
+
+llvm::hash_code ConstantIntData::hash() const {
+  return hash_value(value_);
+}
+
+llvm::hash_code ConstantFloatData::hash() const {
+  return hash_value(value_);
+}
+
+llvm::hash_code FunctionObjectData::hash() const {
+  return hash_value(func_);
+}
 
 } // namespace caffeine

@@ -309,10 +309,6 @@ private:
 };
 
 class OperationData {
-private:
-  Type type_;
-  uint16_t opcode_;
-
 public:
   using Opcode = Operation::Opcode;
 
@@ -353,6 +349,23 @@ public:
   static bool classof(const Operation*) {
     return true;
   }
+
+  OperationData(OperationData&&) = delete;
+  OperationData(const OperationData&) = delete;
+  OperationData& operator=(OperationData&&) = delete;
+  OperationData& operator=(const OperationData&) = delete;
+
+  friend llvm::hash_code hash_value(const OperationData& op);
+
+protected:
+  // Hash any data stored in the derived members of this class.
+  virtual llvm::hash_code hash() const {
+    return 0;
+  }
+
+private:
+  Type type_;
+  Opcode opcode_;
 };
 
 /**
@@ -372,6 +385,8 @@ public:
            op->opcode() == Opcode::ConstantArray;
   }
 
+  llvm::hash_code hash() const override;
+
 private:
   Symbol symbol_;
 };
@@ -388,6 +403,8 @@ public:
   static bool classof(const OperationData* op) {
     return op->opcode() == Opcode::ConstantInt;
   }
+
+  llvm::hash_code hash() const override;
 
 private:
   llvm::APInt value_;
@@ -406,6 +423,8 @@ public:
     return op->opcode() == Opcode::ConstantFloat;
   }
 
+  llvm::hash_code hash() const override;
+
 private:
   llvm::APFloat value_;
 };
@@ -421,6 +440,8 @@ public:
   static bool classof(const OperationData* op) {
     return op->opcode() == Opcode::FunctionObject;
   }
+
+  llvm::hash_code hash() const override;
 
 private:
   llvm::Function* func_;
