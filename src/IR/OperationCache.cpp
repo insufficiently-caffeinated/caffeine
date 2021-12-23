@@ -21,9 +21,6 @@ void OperationCache::clear() {
   threshold = min_threshold;
 }
 
-OpRef OperationCache::cache(const Operation& op) {
-  return cache(Operation(op));
-}
 OpRef OperationCache::cache(Operation&& op) {
   auto hash = hash_value(op);
 

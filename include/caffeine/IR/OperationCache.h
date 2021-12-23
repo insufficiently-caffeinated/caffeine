@@ -62,7 +62,6 @@ public:
   // Note that this method does not cache any of the operands of op. If you want
   // to cache recursively then use intern instead.
   OpRef cache(Operation&& op);
-  OpRef cache(const Operation& op);
 
   // Cache op and all of its operands recursively until everything is cached.
   OpRef intern(const OpRef& op);

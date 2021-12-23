@@ -1,3 +1,4 @@
+#pragma once
 
 #ifndef CAFFEINE_IR_OPERATION_INL
 #define CAFFEINE_IR_OPERATION_INL
@@ -175,14 +176,6 @@ inline const Operation& Operation::operator[](size_t idx) const {
 
 inline const OpRef& Operation::operand_at(size_t idx) const {
   return std::get<OpVec>(inner_)[idx];
-}
-
-inline OpRef Operation::into_ref() const {
-  auto weak = weak_from_this();
-
-  if (auto strong = weak.lock())
-    return strong;
-  return std::make_shared<Operation>(*this);
 }
 
 /***************************************************

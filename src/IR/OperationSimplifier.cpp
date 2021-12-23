@@ -106,7 +106,8 @@ OpRef OperationSimplifier<M>::visitOperation(const Operation& op) {
     return OperationCache::default_cache()->cache(
         std::move(const_cast<Operation&>(op)));
   } else {
-    return OperationCache::default_cache()->cache(op);
+    (void)op;
+    CAFFEINE_UNREACHABLE();
   }
 }
 
@@ -572,7 +573,7 @@ OpRef OperationSimplifier<M>::visitFixedArray(const FixedArray& op) {
   // Note: We don't cache FixedArray instances since the cost of hashing the
   //       whole array after every change causes quadratic blowups on just about
   //       every program that interacts with memory.
-  return std::make_shared<Operation>(op);
+  return std::make_shared<FixedArray>(std::move(const_cast<FixedArray&>(op)));
 }
 
 // Note that these have to be after all the method definitions

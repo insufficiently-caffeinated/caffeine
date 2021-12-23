@@ -67,27 +67,12 @@ Operation::Operation(Opcode op, Type t, const OpRef& op0, const OpRef& op1,
   CAFFEINE_ASSERT(detail::opcode_nargs(opcode_) == 3);
 }
 
-Operation::Operation(const Operation& op)
-    : std::enable_shared_from_this<Operation>(), opcode_(op.opcode_),
-      type_(op.type_), inner_(op.inner_) {
-  copy_vtable(op);
-}
 Operation::Operation(Operation&& op) noexcept
     : std::enable_shared_from_this<Operation>(), opcode_(op.opcode_),
       type_(op.type_), inner_(std::move(op.inner_)) {
   copy_vtable(op);
 }
 
-Operation& Operation::operator=(const Operation& op) {
-  // Do inner first for exception safety.
-  inner_ = op.inner_;
-  type_ = op.type_;
-  opcode_ = op.opcode_;
-
-  copy_vtable(op);
-
-  return *this;
-}
 Operation& Operation::operator=(Operation&& op) noexcept {
   inner_ = std::move(op.inner_);
   type_ = op.type_;
@@ -124,14 +109,14 @@ OpRef Operation::with_new_operands(llvm::ArrayRef<OpRef> operands) const {
   CAFFEINE_ASSERT(operands.size() == num_operands());
 
   if (num_operands() == 0)
-    return into_ref();
+    return shared_from_this();
 
   auto my_operands = std::get<OpVec>(inner_);
   bool equal = std::equal(std::begin(my_operands), std::end(my_operands),
                           std::begin(operands), std::end(operands));
 
   if (equal)
-    return into_ref();
+    return shared_from_this();
 
   Operation next{(Opcode)opcode(), type(), operands.data()};
   next.copy_vtable(*this);
@@ -357,7 +342,7 @@ OpRef ConstantArray::with_new_operands(llvm::ArrayRef<OpRef> operands) const {
   CAFFEINE_ASSERT(operands.size() == 1);
 
   if (size() == operands[0])
-    return into_ref();
+    return shared_from_this();
 
   return Create(symbol(), operands[0]);
 }
@@ -817,13 +802,13 @@ OpRef FixedArray::with_new_operands(llvm::ArrayRef<OpRef> operands) const {
   CAFFEINE_ASSERT(operands.size() == num_operands());
 
   if (num_operands() == 0)
-    return into_ref();
+    return shared_from_this();
 
   bool equal = std::equal(std::begin(operands), std::end(operands),
                           std::begin(data()), std::end(data()));
 
   if (equal)
-    return into_ref();
+    return shared_from_this();
 
   auto transient = data().inner().transient();
   for (size_t i = 0; i < operands.size(); ++i) {
