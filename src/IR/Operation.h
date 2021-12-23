@@ -16,7 +16,7 @@ OpRef constant_fold(T&& value) {
   return OperationSimplifier()(value);
 }
 
-OpRef extract_bit(const OpRef& op, uint32_t bit) {
+inline OpRef extract_bit(const OpRef& op, uint32_t bit) {
   CAFFEINE_ASSERT(op->type().is_int());
   CAFFEINE_ASSERT(bit < op->type().bitwidth());
 
