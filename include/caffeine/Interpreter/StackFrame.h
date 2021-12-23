@@ -72,7 +72,15 @@ public:
   // Allocations within the current frame.
   std::vector<StackAllocation> allocations;
 
+private:
   std::unordered_map<llvm::Value*, LLVMValue> variables;
+
+  // These classes are the only ones that should be using the variables
+  // directly.
+  friend class InterpreterContext;
+  friend class Context;
+
+public:
   /**
    * Iterators used by Interpreter::execute
    */
@@ -80,6 +88,10 @@ public:
   llvm::BasicBlock* prev_block = nullptr;
   llvm::BasicBlock::iterator current;
 
+private:
+  IRStackFrame(llvm::Function* function, uint64_t frame_id);
+
+public:
   /**
    * Change the instruction pointer to point at the start of the provided
    * block and update the previous block accordingly.
@@ -88,10 +100,6 @@ public:
    */
   void jump_to(llvm::BasicBlock* block);
 
-private:
-  IRStackFrame(llvm::Function* function, uint64_t frame_id);
-
-public:
   /**
    * Insert a new value into the current stack frame. If that value
    * is already in the current stack frame then it overwrites it.

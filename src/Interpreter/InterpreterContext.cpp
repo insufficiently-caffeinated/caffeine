@@ -66,6 +66,14 @@ llvm::Instruction* InterpreterContext::getCurrentInstruction() const {
 //       with variables in external stack frames. Note that external stack
 //       frames will definitely have variables for argument values.
 LLVMValue InterpreterContext::load(llvm::Value* value) {
+  if (auto variable = lookup(value)) {
+    return std::move(variable).value();
+  }
+
+  return ExprEvaluator{this}.visit(value);
+}
+
+std::optional<LLVMValue> InterpreterContext::lookup(llvm::Value* value) const {
   const auto& frame = context().stack_top();
 
   if (frame.is_external()) {
@@ -79,7 +87,7 @@ LLVMValue InterpreterContext::load(llvm::Value* value) {
     return it->second;
   }
 
-  return ExprEvaluator{this}.visit(value);
+  return std::nullopt;
 }
 
 void InterpreterContext::store(llvm::Value* ident, const LLVMValue& value) {

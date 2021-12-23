@@ -48,10 +48,9 @@ OpRef ExprEvaluator::scalarize(const LLVMScalar& scalar) const {
 }
 
 LLVMValue ExprEvaluator::visit(llvm::Value* val) {
-  const auto& frame = interp->context().stack_top().get_regular();
-  auto it = frame.variables.find(val);
-  if (it != frame.variables.end())
-    return it->second;
+  if (auto variable = interp->lookup(val)) {
+    return std::move(variable).value();
+  }
 
   return evaluate(val);
 }

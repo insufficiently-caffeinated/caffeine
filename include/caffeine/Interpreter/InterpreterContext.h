@@ -90,6 +90,15 @@ public:
   LLVMValue load(llvm::Value* value);
 
   /**
+   * Look up a value only within the current stack frame.
+   *
+   * If `value` does not refer to a value created within the current stack frame
+   * then this will return nullopt. This will happen even if value refers to a
+   * valid constant expression or an existing global.
+   */
+  std::optional<LLVMValue> lookup(llvm::Value* value) const;
+
+  /**
    * Store a value into the current stack frame.
    *
    * In order for this method to be correct the value should be a local value

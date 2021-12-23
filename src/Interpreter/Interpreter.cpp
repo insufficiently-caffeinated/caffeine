@@ -56,11 +56,8 @@ void Interpreter::execute() {
     // Printing expressions can be potentially very expensive so we only do it
     // if expensive annotations are enabled.
     if (CAFFEINE_TRACING_EXPENSIVE_ANNOTATIONS) {
-      auto& frame = interp->context().stack_top().get_regular();
-      auto it = frame.variables.find(&inst);
-      if (it != frame.variables.end()) {
-        traceblock.annotate("value", fmt::format("{}", it->second));
-      }
+      if (auto variable = interp->lookup(&inst))
+        traceblock.annotate("value", fmt::format("{}", *variable));
     }
   }
 
