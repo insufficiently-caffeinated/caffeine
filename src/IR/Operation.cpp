@@ -312,10 +312,9 @@ Operation::Opcode Constant::op_for_symbol(const Symbol& symbol) {
  * ConstantInt                                     *
  ***************************************************/
 ConstantInt::ConstantInt(const llvm::APInt& iconst)
-    : Operation(Opcode::ConstantInt, Type::type_of(iconst), iconst) {}
+    : Operation(std::make_unique<ConstantIntData>(iconst)) {}
 ConstantInt::ConstantInt(llvm::APInt&& iconst)
-    : Operation(Opcode::ConstantInt, Type::type_of(iconst), std::move(iconst)) {
-}
+    : Operation(std::make_unique<ConstantIntData>(std::move(iconst))) {}
 
 Value ConstantInt::as_value() const {
   return Value(value());

@@ -233,7 +233,7 @@ inline bool Constant::is_named() const {
  * ConstantInt                                     *
  ***************************************************/
 inline const llvm::APInt& ConstantInt::value() const {
-  return std::get<llvm::APInt>(inner_);
+  return llvm::cast<ConstantIntData>(data_.get())->value();
 }
 
 /***************************************************
