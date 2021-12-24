@@ -166,3 +166,12 @@ TEST(OperationTests, float_load_store_simplify_to_noop) {
   ASSERT_EQ((Operation::Opcode)read->opcode(), Operation::ConstantNumbered);
   ASSERT_EQ(value, read) << read;
 }
+
+TEST(OperationTests, constant_int_has_correct_value) {
+  auto v1 = ConstantInt::Create(llvm::APInt(37, 0));
+  auto v2 = ConstantInt::Create(llvm::APInt(37, 14));
+  uint64_t extracted =
+      llvm::cast<ConstantInt>(v2.get())->value().getLimitedValue();
+
+  ASSERT_EQ(extracted, 14);
+}

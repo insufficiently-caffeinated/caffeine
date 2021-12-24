@@ -15,6 +15,24 @@ std::string_view OperationData::opcode_name(Opcode op) {
   return Operation::opcode_name(op);
 }
 
+bool OperationData::operator==(const OperationData& op) const {
+  if (type_ != op.type_ || opcode_ != op.opcode_)
+    return false;
+
+  if (auto data = llvm::dyn_cast<ConstantData>(this))
+    return data->symbol() == llvm::cast<ConstantData>(op).symbol();
+  if (auto data = llvm::dyn_cast<ConstantIntData>(this))
+    return data->value() == llvm::cast<ConstantIntData>(op).value();
+  if (auto data = llvm::dyn_cast<ConstantFloatData>(this))
+    return data->value() == llvm::cast<ConstantFloatData>(op).value();
+  if (auto data = llvm::dyn_cast<FunctionObjectData>(this))
+    return data->function() == llvm::cast<FunctionObjectData>(op).function();
+  return true;
+}
+bool OperationData::operator!=(const OperationData& op) const {
+  return !(*this == op);
+}
+
 ConstantData::ConstantData(Type t, const Symbol& symbol)
     : OperationData(([&] {
                       if (t.is_array())

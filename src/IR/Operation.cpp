@@ -112,6 +112,16 @@ void Operation::reset() {
 bool Operation::operator==(const Operation& op) const {
   if (opcode_ != op.opcode_ || type_ != op.type_)
     return false;
+  if (operands_ != op.operands_)
+    return false;
+
+  if (data_ != op.data_) {
+    if ((bool)data_ != (bool)op.data_)
+      return false;
+
+    if (*data_ != *op.data_)
+      return false;
+  }
 
   return std::visit(
       [](const auto& a, const auto& b) {
