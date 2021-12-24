@@ -1,4 +1,5 @@
 #include "caffeine/IR/OperationBase.h"
+#include "caffeine/IR/Operation.h"
 #include <llvm/IR/Function.h>
 
 namespace caffeine {
