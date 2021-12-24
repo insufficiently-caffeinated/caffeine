@@ -64,9 +64,9 @@ llvm_disable_optional_support_deps()
 # https://github.com/hedronvision/bazel-compile-commands-extractor
 http_archive(
     name = "hedron_compile_commands",
-    url = "https://github.com/hedronvision/bazel-compile-commands-extractor/archive/6749f754ffcfb32fa049021d65ba3fd130c5972f.tar.gz",
-    sha256 = "a62a842127b933b89797bb138c63ff75f32ba4d5f54c7cf25e164d4f2f9fe152",
-    strip_prefix = "bazel-compile-commands-extractor-6749f754ffcfb32fa049021d65ba3fd130c5972f",
+    url = "https://github.com/hedronvision/bazel-compile-commands-extractor/archive/ea0cda20c126b1df5cd3a056f8bd897aae7e2f28.tar.gz",
+    sha256 = "567322ef8d2cb80b2d03ecd9ebcde1a7f68dd65f13676e4864578f3a10013b9e",
+    strip_prefix = "bazel-compile-commands-extractor-ea0cda20c126b1df5cd3a056f8bd897aae7e2f28",
     # By default the script generates an entry for every single source file that
     # includes each header. This causes us to generate a 5.7GB file for caffeine
     # and is more or less completely untenable. This patch changes it to only
