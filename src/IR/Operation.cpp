@@ -871,11 +871,10 @@ OpRef FixedArray::Create(Type index_ty, const OpRef& value, size_t size) {
  * FunctionObject                                  *
  ***************************************************/
 FunctionObject::FunctionObject(llvm::Function* function)
-    : Operation(Operation::FunctionObject, Type::from_llvm(function->getType()),
-                function) {}
+    : Operation(std::make_unique<FunctionObjectData>(function)) {}
 
 llvm::Function* FunctionObject::function() const {
-  return std::get<llvm::Function*>(inner_);
+  return llvm::cast<FunctionObjectData>(data_.get())->function();
 }
 
 OpRef FunctionObject::Create(llvm::Function* function) {
