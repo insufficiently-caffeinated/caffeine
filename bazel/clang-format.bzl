@@ -55,7 +55,9 @@ def _format_rule(ctx, command):
         transitive = [dep[FormatInfo].sources for dep in ctx.attr.deps],
     )
 
-    content = "#!/bin/bash\n"
+    content = """#!/bin/bash
+RESULT=0
+"""
 
     # Note: hard-coded hack until I can figure out how to do this properly
     content += ctx.expand_location(
@@ -73,6 +75,8 @@ process()
 
     for source in sources.to_list():
         content += "process '{}'\n".format(source.path)
+
+    content += "exit $RESULT"
 
     script = ctx.actions.declare_file(ctx.label.name + ".sh")
     ctx.actions.write(
@@ -97,7 +101,11 @@ process()
 def _check_format(ctx):
     return _format_rule(
         ctx,
-        """diff --color -u "$1" <("$CLANG_FORMAT" "$1")""",
+        """
+if ! diff --color -u "$1" <("$CLANG_FORMAT" "$1"); then
+    RESULT=1
+fi
+""",
     )
 
 def _do_format(ctx):
