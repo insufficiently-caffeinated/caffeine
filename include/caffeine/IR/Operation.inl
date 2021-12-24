@@ -240,7 +240,7 @@ inline const llvm::APInt& ConstantInt::value() const {
  * ConstantFloat                                   *
  ***************************************************/
 inline const llvm::APFloat& ConstantFloat::value() const {
-  return std::get<llvm::APFloat>(inner_);
+  return llvm::cast<ConstantFloatData>(data_.get())->value();
 }
 
 /***************************************************

@@ -341,10 +341,9 @@ OpRef ConstantInt::CreateZero(unsigned bitwidth) {
  * ConstantFloat                                   *
  ***************************************************/
 ConstantFloat::ConstantFloat(const llvm::APFloat& fconst)
-    : Operation(Operation::ConstantFloat, Type::type_of(fconst), fconst) {}
+    : Operation(std::make_unique<ConstantFloatData>(fconst)) {}
 ConstantFloat::ConstantFloat(llvm::APFloat&& fconst)
-    : Operation(Operation::ConstantFloat, Type::type_of(fconst),
-                std::move(fconst)) {}
+    : Operation(std::make_unique<ConstantFloatData>(std::move(fconst))) {}
 
 OpRef ConstantFloat::Create(const llvm::APFloat& fconst) {
   return Create(llvm::APFloat(fconst));
