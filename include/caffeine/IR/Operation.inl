@@ -210,7 +210,7 @@ inline bool Symbol::operator!=(const Symbol& symbol) const {
  * Constant                                        *
  ***************************************************/
 inline const Symbol& Constant::symbol() const {
-  return std::get<ConstantData>(inner_).first;
+  return llvm::cast<caffeine::ConstantData>(data_.get())->symbol();
 }
 
 inline InternedString Constant::name() const {

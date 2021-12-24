@@ -290,10 +290,10 @@ std::ostream& operator<<(std::ostream& os, const Symbol& symbol) {
  * Constant                                        *
  ***************************************************/
 Constant::Constant(Type t, const Symbol& symbol)
-    : Operation(op_for_symbol(symbol), t, ConstantData(symbol, nullptr)) {}
+    : Operation(std::make_unique<caffeine::ConstantData>(t, symbol)) {}
 Constant::Constant(Type t, Symbol&& symbol)
-    : Operation(op_for_symbol(symbol), t,
-                ConstantData(std::move(symbol), nullptr)) {}
+    : Operation(
+          std::make_unique<caffeine::ConstantData>(t, std::move(symbol))) {}
 
 OpRef Constant::Create(Type t, const Symbol& symbol) {
   return Constant::Create(t, Symbol(symbol));
