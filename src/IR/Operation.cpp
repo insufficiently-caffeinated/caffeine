@@ -26,6 +26,19 @@ namespace caffeine {
 
 Operation::Operation() : opcode_(Invalid), type_(Type::void_ty()) {}
 
+Operation::Operation(std::unique_ptr<OperationData>&& data,
+                     std::initializer_list<OpRef> operands)
+    : opcode_(data->opcode()), type_(data->type()), data_(std::move(data)),
+      operands_(operands) {
+  size_t nargs = detail::opcode_nargs(opcode());
+
+  if (nargs != 4) {
+    CAFFEINE_ASSERT(nargs == operands.size(),
+                    fmt::format("invalid number of arguments: {} != {}", nargs,
+                                operands.size()));
+  }
+}
+
 Operation::Operation(Opcode op, Type t, const Inner& inner)
     : opcode_(static_cast<uint16_t>(op)), type_(t), inner_(inner) {}
 Operation::Operation(Opcode op, Type t, Inner&& inner)
@@ -69,13 +82,16 @@ Operation::Operation(Opcode op, Type t, const OpRef& op0, const OpRef& op1,
 
 Operation::Operation(Operation&& op) noexcept
     : std::enable_shared_from_this<Operation>(), opcode_(op.opcode_),
-      type_(op.type_), inner_(std::move(op.inner_)) {
+      type_(op.type_), inner_(std::move(op.inner_)), data_(std::move(op.data_)),
+      operands_(std::move(op.operands_)) {
   copy_vtable(op);
   op.reset();
 }
 
 Operation& Operation::operator=(Operation&& op) noexcept {
   inner_ = std::move(op.inner_);
+  data_ = std::move(op.data_);
+  operands_ = std::move(op.operands_);
   type_ = op.type_;
   opcode_ = op.opcode_;
 
@@ -88,6 +104,8 @@ Operation& Operation::operator=(Operation&& op) noexcept {
 void Operation::reset() {
   opcode_ = Invalid;
   type_ = Type::void_ty();
+  operands_.clear();
+  data_ = nullptr;
   inner_ = std::monostate{};
 }
 
@@ -866,7 +884,11 @@ static llvm::hash_code hash_value(const OpRef& op) {
 }
 
 llvm::hash_code hash_value(const Operation& op) {
-  std::size_t hash = llvm::hash_combine(op.opcode(), op.type());
+  std::size_t hash = llvm::hash_combine(
+      op.opcode(), op.type(),
+      llvm::hash_combine_range(op.operands_.begin(), op.operands_.end()));
+  if (op.data_)
+    hash = llvm::hash_combine(*op.data_);
 
   return std::visit(
       [&](const auto& v) {
