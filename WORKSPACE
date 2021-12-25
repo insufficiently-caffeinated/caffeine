@@ -64,14 +64,9 @@ llvm_disable_optional_support_deps()
 # https://github.com/hedronvision/bazel-compile-commands-extractor
 http_archive(
     name = "hedron_compile_commands",
-    url = "https://github.com/hedronvision/bazel-compile-commands-extractor/archive/ea0cda20c126b1df5cd3a056f8bd897aae7e2f28.tar.gz",
-    sha256 = "567322ef8d2cb80b2d03ecd9ebcde1a7f68dd65f13676e4864578f3a10013b9e",
-    strip_prefix = "bazel-compile-commands-extractor-ea0cda20c126b1df5cd3a056f8bd897aae7e2f28",
-    # By default the script generates an entry for every single source file that
-    # includes each header. This causes us to generate a 5.7GB file for caffeine
-    # and is more or less completely untenable. This patch changes it to only
-    # generate 1 entry per file, which reduces the file size down to ~20MB.
-    patches = ["//third_party/hedron:hedron.diff"],
+    url = "https://github.com/hedronvision/bazel-compile-commands-extractor/archive/084957eaa1bf6e2bd031f50b1f5d04c89273103a.tar.gz",
+    sha256 = "39e7607efcaca5abb34314744491492d82d30fcb6f6592d88ae15772da588b42",
+    strip_prefix = "bazel-compile-commands-extractor-084957eaa1bf6e2bd031f50b1f5d04c89273103a",
 )
 load("@hedron_compile_commands//:workspace_setup.bzl", "hedron_compile_commands_setup")
 hedron_compile_commands_setup()
