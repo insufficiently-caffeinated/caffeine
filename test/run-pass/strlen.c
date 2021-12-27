@@ -5,5 +5,5 @@
 const char * thing = "";
 
 void test(int x) {
-  caffeine_assert(strlen(thing) == 5);
+  caffeine_assert(strlen(thing) < 5);
 }
