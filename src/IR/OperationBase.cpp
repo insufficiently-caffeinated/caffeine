@@ -27,6 +27,11 @@ bool OperationData::operator==(const OperationData& op) const {
     return data->value() == llvm::cast<ConstantFloatData>(op).value();
   if (auto data = llvm::dyn_cast<FunctionObjectData>(this))
     return data->function() == llvm::cast<FunctionObjectData>(op).function();
+
+  // If this assertion triggers then you have added a new derived class for
+  // OperationData without adding the corresponding equality check to this
+  // method.
+  CAFFEINE_ASSERT(typeid(*this) == typeid(OperationData));
   return true;
 }
 bool OperationData::operator!=(const OperationData& op) const {
