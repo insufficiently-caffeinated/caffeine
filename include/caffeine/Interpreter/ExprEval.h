@@ -84,7 +84,8 @@ public:
   LLVMValue visitFunction(llvm::Function& func);
 
   // Extras
-  void visitGlobalData(llvm::Constant& cnst, Allocation& alloc, unsigned AS);
+  void visitGlobalData(llvm::Constant& cnst, Allocation& alloc, unsigned AS,
+                       AllocationPermissions perms);
   LLVMValue visitConstantExpr(llvm::ConstantExpr& expr);
 
   /*********************************************

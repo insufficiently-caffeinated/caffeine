@@ -373,8 +373,10 @@ void Interpreter::visitStoreInst(llvm::StoreInst& inst) {
 
     Allocation* alloc = fork.ptr_allocation(ptr);
     CAFFEINE_ASSERT(alloc);
-    alloc->write(ptr.offset(), inst.getValueOperand()->getType(), value,
-                 fork.context().heaps, layout);
+    try {
+      alloc->write(ptr.offset(), inst.getValueOperand()->getType(), value,
+                   fork.context().heaps, layout);
+    } catch (AllocationException& ex) { fork.fail(ex.what()); }
   }
 }
 void Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {

@@ -9,6 +9,7 @@
 #include <llvm/ADT/APInt.h>
 #include <llvm/ADT/DenseMap.h>
 #include <llvm/IR/DataLayout.h>
+#include <stdexcept>
 #include <vector>
 
 namespace caffeine {
@@ -44,6 +45,12 @@ enum class AllocationPermissions {
   Write = 0x2,
   Execute = 0x4,
   ReadWrite = Read | Write,
+};
+
+class AllocationException : public std::runtime_error {
+public:
+  AllocationException(const std::string& what_arg)
+      : std::runtime_error(what_arg) {}
 };
 
 /**
@@ -84,6 +91,7 @@ public:
   AllocationKind kind() const;
 
   AllocationPermissions permissions() const;
+  void permissions(AllocationPermissions& new_perm);
 
   const OpRef& data() const;
   OpRef& data();
