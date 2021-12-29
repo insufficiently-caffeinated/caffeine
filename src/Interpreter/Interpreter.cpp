@@ -343,8 +343,8 @@ void Interpreter::visitLoadInst(llvm::LoadInst& inst) {
   //       revisited.
 
   auto unresolved = interp->load(inst.getOperand(0)).scalar().pointer();
-  auto resolved =
-      interp->resolve_ptr(unresolved, inst.getType(), "invalid pointer read");
+  auto resolved = interp->resolve_ptr(unresolved, inst.getType(),
+                                      "invalid pointer read during load");
   interp->kill();
 
   for (const Pointer& ptr : resolved) {
@@ -373,8 +373,10 @@ void Interpreter::visitStoreInst(llvm::StoreInst& inst) {
 
     Allocation* alloc = fork.ptr_allocation(ptr);
     CAFFEINE_ASSERT(alloc);
-    alloc->write(ptr.offset(), inst.getValueOperand()->getType(), value,
-                 fork.context().heaps, layout);
+    try {
+      alloc->write(ptr.offset(), inst.getValueOperand()->getType(), value,
+                   fork.context().heaps, layout);
+    } catch (AllocationException& ex) { fork.fail(ex.what()); }
   }
 }
 void Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {

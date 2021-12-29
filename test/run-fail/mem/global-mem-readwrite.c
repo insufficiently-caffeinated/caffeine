@@ -1,5 +1,3 @@
-#include "caffeine.h"
-
 const char data[] = "abcdef";
 
 __attribute__((noinline)) void write_to_data(char* mem) {
