@@ -143,6 +143,7 @@ void ThreadQueueContextStore::add_context(Context&& ctx) {
 
   size.fetch_add(1);
   tqueue->queue.push_back(ctx);
+  notify_context_added();
 }
 
 void ThreadQueueContextStore::add_context_multi(Span<Context> ctxs) {
@@ -151,6 +152,7 @@ void ThreadQueueContextStore::add_context_multi(Span<Context> ctxs) {
   auto queue_lock = std::unique_lock(tqueue->mutex);
 
   size.fetch_add(ctxs.size());
+  notify_context_added(ctxs.size());
   for (auto&& ctx : ctxs) {
     tqueue->queue.push_back(std::move(ctx));
   }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "caffeine/IR/Assertion.h"
+#include "caffeine/Interpreter/ContextEvent.h"
 
 namespace caffeine {
 
@@ -14,7 +15,7 @@ class Context;
  * If you don't care about controlling queuing behaviour you may want to derive
  * from AlwaysAllowExecutionPolicy instead of the base ExecutionPolicy class.
  */
-class ExecutionPolicy {
+class ExecutionPolicy : public ContextEventNotifier {
 public:
   enum ExitStatus {
     // The context returned from the top-level function.

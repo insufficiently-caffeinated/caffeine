@@ -140,9 +140,9 @@ function(declare_test TEST_NAME_OUT test EXPECTED)
   )
 
   if ("${EXPECTED}" STREQUAL "FAIL")
-    set(TEST_FLAGS --invert-exitcode)
+    set(TEST_FLAGS --invert-exitcode --no-progress)
   else()
-    set(TEST_FLAGS "")
+    set(TEST_FLAGS --no-progress)
   endif()
 
   if(should_skip)
