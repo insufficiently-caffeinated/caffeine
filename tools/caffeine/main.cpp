@@ -88,8 +88,9 @@ cl::opt<std::string> store_type{
     cl::cat(caffeine_options)};
 cl::opt<bool> enable_coverage{"coverage", cl::desc("Enable coverage tracking"),
                               cl::cat(caffeine_options)};
-cl::opt<bool> no_progress{"no-progress", cl::desc("Disable the progress bar output"),
-                              cl::cat(caffeine_options)};
+cl::opt<bool> no_progress{"no-progress",
+                          cl::desc("Disable the progress bar output"),
+                          cl::cat(caffeine_options)};
 
 static ExitOnError exit_on_err;
 

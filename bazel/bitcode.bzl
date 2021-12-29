@@ -395,6 +395,7 @@ def caffeine_bitcode_test(should_fail = False, skip = False, **kwargs):
         "$(location {}#bitcode)".format(name),
         "-t",
         "1",
+        "--no-progress",
     ] + extra_args
 
     if "tags" in kwargs:
