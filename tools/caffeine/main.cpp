@@ -88,6 +88,8 @@ cl::opt<std::string> store_type{
     cl::cat(caffeine_options)};
 cl::opt<bool> enable_coverage{"coverage", cl::desc("Enable coverage tracking"),
                               cl::cat(caffeine_options)};
+cl::opt<bool> no_progress{"no-progress", cl::desc("Disable the progress bar output"),
+                              cl::cat(caffeine_options)};
 
 static ExitOnError exit_on_err;
 
@@ -175,8 +177,10 @@ int main(int argc, char** argv) {
 
   ContextEventLogger ctx_logger(std::cout);
   ContextEventObserver* ctx_observer = &ctx_logger;
-  caffeine.policy()->add_observer(ctx_observer);
-  caffeine.store()->add_observer(ctx_observer);
+  if (!no_progress) {
+    caffeine.policy()->add_observer(ctx_observer);
+    caffeine.store()->add_observer(ctx_observer);
+  }
 
   auto context = Context(function);
   context.heaps.set_concrete(!force_symbolic_allocator);
