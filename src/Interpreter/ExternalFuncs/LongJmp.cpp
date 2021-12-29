@@ -33,8 +33,8 @@ namespace {
         auto jmpbuf_size = layout.getTypeStoreSize(jmpbuf_ty);
 
         auto unresolved = args[0].scalar().pointer();
-        auto resolved =
-            ctx.resolve_ptr(unresolved, jmpbuf_size, "invalid pointer read");
+        auto resolved = ctx.resolve_ptr(unresolved, jmpbuf_size,
+                                        "invalid pointer read during longjmp");
 
         ctx.fork_external<LongJmpFrame>(resolved, [=](InterpreterContext& ctx,
                                                       LongJmpFrame* frame,

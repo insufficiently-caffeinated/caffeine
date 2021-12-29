@@ -343,8 +343,8 @@ void Interpreter::visitLoadInst(llvm::LoadInst& inst) {
   //       revisited.
 
   auto unresolved = interp->load(inst.getOperand(0)).scalar().pointer();
-  auto resolved =
-      interp->resolve_ptr(unresolved, inst.getType(), "invalid pointer read");
+  auto resolved = interp->resolve_ptr(unresolved, inst.getType(),
+                                      "invalid pointer read during load");
   interp->kill();
 
   for (const Pointer& ptr : resolved) {
