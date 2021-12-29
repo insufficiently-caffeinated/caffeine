@@ -2,7 +2,7 @@
 
 namespace caffeine {
 
-class CaffeineAssertFunction : public ExternalFunction {
+class AbortFunction : public ExternalFunction {
 public:
   void call(InterpreterContext& ctx, Span<LLVMValue> args) const override;
 };

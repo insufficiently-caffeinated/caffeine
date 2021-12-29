@@ -72,8 +72,9 @@ public:
   static std::unique_ptr<ExternalFunction> caffeine_calloc();
   static std::unique_ptr<ExternalFunction> caffeine_free();
 
-  static std::unique_ptr<ExternalFunction> setjmp();
+  static std::unique_ptr<ExternalFunction> abort();
   static std::unique_ptr<ExternalFunction> longjmp();
+  static std::unique_ptr<ExternalFunction> setjmp();
 
 private:
   ExternalFunctions() = delete;
