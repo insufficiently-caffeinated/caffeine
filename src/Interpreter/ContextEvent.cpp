@@ -33,15 +33,18 @@ void ContextEventObserver::update_finished_contexts(size_t finished) {
   update();
 }
 
-ContextEventLogger::ContextEventLogger(std::ostream& o)
+ContextEventLogger::ContextEventLogger(std::ostream& o, bool no_output)
     : ContextEventObserver(), os(&o) {
-  struct winsize w;
-  ioctl(0, TIOCGWINSZ, &w);
 
-  size_t lines = w.ws_row;
-  *os << "\n"
-      << "\0337"
-      << "\033[0;" << lines << "r\0338\033[1A";
+  if (!no_output) {
+    struct winsize w;
+    ioctl(0, TIOCGWINSZ, &w);
+
+    size_t lines = w.ws_row;
+    *os << "\n"
+        << "\0337"
+        << "\033[0;" << lines << "r\0338\033[1A";
+  }
 };
 
 void ContextEventLogger::update() {
