@@ -345,6 +345,9 @@ public:
     return detail::opcode_aux(opcode());
   }
 
+  bool operator==(const OperationData& op) const;
+  bool operator!=(const OperationData& op) const;
+
   static bool classof(const Operation*) {
     return true;
   }

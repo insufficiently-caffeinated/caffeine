@@ -210,7 +210,7 @@ inline bool Symbol::operator!=(const Symbol& symbol) const {
  * Constant                                        *
  ***************************************************/
 inline const Symbol& Constant::symbol() const {
-  return std::get<ConstantData>(inner_).first;
+  return llvm::cast<caffeine::ConstantData>(data_.get())->symbol();
 }
 
 inline InternedString Constant::name() const {
@@ -233,14 +233,14 @@ inline bool Constant::is_named() const {
  * ConstantInt                                     *
  ***************************************************/
 inline const llvm::APInt& ConstantInt::value() const {
-  return std::get<llvm::APInt>(inner_);
+  return llvm::cast<ConstantIntData>(data_.get())->value();
 }
 
 /***************************************************
  * ConstantFloat                                   *
  ***************************************************/
 inline const llvm::APFloat& ConstantFloat::value() const {
-  return std::get<llvm::APFloat>(inner_);
+  return llvm::cast<ConstantFloatData>(data_.get())->value();
 }
 
 /***************************************************

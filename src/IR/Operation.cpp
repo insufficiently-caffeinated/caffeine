@@ -112,6 +112,16 @@ void Operation::reset() {
 bool Operation::operator==(const Operation& op) const {
   if (opcode_ != op.opcode_ || type_ != op.type_)
     return false;
+  if (operands_ != op.operands_)
+    return false;
+
+  if (data_ != op.data_) {
+    if ((bool)data_ != (bool)op.data_)
+      return false;
+
+    if (*data_ != *op.data_)
+      return false;
+  }
 
   return std::visit(
       [](const auto& a, const auto& b) {
@@ -280,10 +290,10 @@ std::ostream& operator<<(std::ostream& os, const Symbol& symbol) {
  * Constant                                        *
  ***************************************************/
 Constant::Constant(Type t, const Symbol& symbol)
-    : Operation(op_for_symbol(symbol), t, ConstantData(symbol, nullptr)) {}
+    : Operation(std::make_unique<caffeine::ConstantData>(t, symbol)) {}
 Constant::Constant(Type t, Symbol&& symbol)
-    : Operation(op_for_symbol(symbol), t,
-                ConstantData(std::move(symbol), nullptr)) {}
+    : Operation(
+          std::make_unique<caffeine::ConstantData>(t, std::move(symbol))) {}
 
 OpRef Constant::Create(Type t, const Symbol& symbol) {
   return Constant::Create(t, Symbol(symbol));
@@ -302,10 +312,9 @@ Operation::Opcode Constant::op_for_symbol(const Symbol& symbol) {
  * ConstantInt                                     *
  ***************************************************/
 ConstantInt::ConstantInt(const llvm::APInt& iconst)
-    : Operation(Opcode::ConstantInt, Type::type_of(iconst), iconst) {}
+    : Operation(std::make_unique<ConstantIntData>(iconst)) {}
 ConstantInt::ConstantInt(llvm::APInt&& iconst)
-    : Operation(Opcode::ConstantInt, Type::type_of(iconst), std::move(iconst)) {
-}
+    : Operation(std::make_unique<ConstantIntData>(std::move(iconst))) {}
 
 Value ConstantInt::as_value() const {
   return Value(value());
@@ -332,10 +341,9 @@ OpRef ConstantInt::CreateZero(unsigned bitwidth) {
  * ConstantFloat                                   *
  ***************************************************/
 ConstantFloat::ConstantFloat(const llvm::APFloat& fconst)
-    : Operation(Operation::ConstantFloat, Type::type_of(fconst), fconst) {}
+    : Operation(std::make_unique<ConstantFloatData>(fconst)) {}
 ConstantFloat::ConstantFloat(llvm::APFloat&& fconst)
-    : Operation(Operation::ConstantFloat, Type::type_of(fconst),
-                std::move(fconst)) {}
+    : Operation(std::make_unique<ConstantFloatData>(std::move(fconst))) {}
 
 OpRef ConstantFloat::Create(const llvm::APFloat& fconst) {
   return Create(llvm::APFloat(fconst));
@@ -863,11 +871,10 @@ OpRef FixedArray::Create(Type index_ty, const OpRef& value, size_t size) {
  * FunctionObject                                  *
  ***************************************************/
 FunctionObject::FunctionObject(llvm::Function* function)
-    : Operation(Operation::FunctionObject, Type::from_llvm(function->getType()),
-                function) {}
+    : Operation(std::make_unique<FunctionObjectData>(function)) {}
 
 llvm::Function* FunctionObject::function() const {
-  return std::get<llvm::Function*>(inner_);
+  return llvm::cast<FunctionObjectData>(data_.get())->function();
 }
 
 OpRef FunctionObject::Create(llvm::Function* function) {
