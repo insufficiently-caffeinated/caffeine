@@ -107,6 +107,8 @@ function(declare_test TEST_NAME_OUT test EXPECTED)
   llvm_link_libraries     ("${test_target}" PRIVATE caffeine-builtins)
   if (CAFFEINE_ENABLE_LIBC AND "${test_ext}" STREQUAL ".cpp")
     llvm_link_libraries     ("${test_target}" PRIVATE libcxx)
+  elseif (CAFFEINE_ENABLE_LIBC)
+    llvm_link_libraries     ("${test_target}" PRIVATE libc)
   endif()
   llvm_compile_options    ("${test_target}" PRIVATE -O3)
 
