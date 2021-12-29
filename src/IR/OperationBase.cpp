@@ -1,5 +1,6 @@
 #include "caffeine/IR/OperationBase.h"
 #include "caffeine/IR/Operation.h"
+#include <boost/config.hpp>
 #include <llvm/IR/Function.h>
 
 namespace caffeine {
@@ -28,10 +29,13 @@ bool OperationData::operator==(const OperationData& op) const {
   if (auto data = llvm::dyn_cast<FunctionObjectData>(this))
     return data->function() == llvm::cast<FunctionObjectData>(op).function();
 
+#if !defined(BOOST_NO_RTTI)
   // If this assertion triggers then you have added a new derived class for
   // OperationData without adding the corresponding equality check to this
   // method.
   CAFFEINE_ASSERT(typeid(*this) == typeid(OperationData));
+#endif
+
   return true;
 }
 bool OperationData::operator!=(const OperationData& op) const {
