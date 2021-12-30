@@ -1,5 +1,7 @@
 """
 """
+# Note, currently libc / muslc is downloaded from Github
+# via third_party/musl/setup.bzl
 
 load(
     "@rules_cc//cc:cc_toolchain_config_lib.bzl",
@@ -43,6 +45,7 @@ def _bitcode_toolchain_config(ctx):
                         flag_group(
                             flags = [
                                 "-emit-llvm",
+                                "-fgnuc-version=0",
                                 "-g",
                                 "-nostdinc",
                                 "-ffreestanding",

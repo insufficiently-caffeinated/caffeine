@@ -142,12 +142,12 @@ function(llvm_library TARGET_NAME)
       "$<TARGET_PROPERTY:${TARGET_NAME},INCLUDE_DIRECTORIES>"
       "-I"
     )
-    
+
     get_source_file_property(includes "${source}" INCLUDE_DIRECTORIES)
     get_source_file_property(options "${source}" LLVM_COMPILE_OPTIONS)
     file(RELATIVE_PATH object_rel "${CMAKE_BINARY_DIR}" "${object}")
 
-    string(CONCAT COMPILER 
+    string(CONCAT COMPILER
       "$<$<STREQUAL:${source_language},C>:${CLANG}>"
       "$<$<STREQUAL:${source_language},CXX>:${CLANGXX}>"
     )
@@ -177,7 +177,7 @@ function(llvm_library TARGET_NAME)
     add_custom_command(
       OUTPUT "${object}"
       COMMAND "${COMPILER}" ARGS
-        -emit-llvm -MMD -g -c
+        -emit-llvm -MMD -g -c -fgnuc-version=0 -Wno-literal-range
         "${sys_includes}"
         "${tgt_includes}"
         "${src_includes}"
@@ -253,7 +253,7 @@ function(llvm_compile_options TARGET_NAME VISIBILITY)
   if (VISIBILITY STREQUAL "PUBLIC" OR VISIBILITY STREQUAL "INTERFACE")
     set_property(
       TARGET ${TARGET_NAME} APPEND
-      PROPERTY LLVM_INTERFACE_COMPILE_OPTIONS ${options} 
+      PROPERTY LLVM_INTERFACE_COMPILE_OPTIONS ${options}
     )
   endif()
 endfunction()
@@ -289,22 +289,22 @@ function(llvm_link_libraries TARGET_NAME VISIBILITY)
       if (VISIBILITY STREQUAL "PRIVATE" OR VISIBILITY STREQUAL "PUBLIC")
         set_property(
           TARGET ${TARGET_NAME} APPEND
-          PROPERTY INCLUDE_DIRECTORIES 
+          PROPERTY INCLUDE_DIRECTORIES
           "$<GENEX_EVAL:$<TARGET_PROPERTY:${library},INTERFACE_INCLUDE_DIRECTORIES>>"
         )
         set_property(
           TARGET ${TARGET_NAME} APPEND
-          PROPERTY LLVM_COMPILE_OPTIONS 
+          PROPERTY LLVM_COMPILE_OPTIONS
           "$<GENEX_EVAL:$<TARGET_PROPERTY:${library},LLVM_INTERFACE_COMPILE_OPTIONS>>"
         )
         set_property(
           TARGET ${TARGET_NAME} APPEND
-          PROPERTY LLVM_LINK_OPTIONS 
+          PROPERTY LLVM_LINK_OPTIONS
           "$<GENEX_EVAL:$<TARGET_PROPERTY:${library},LLVM_INTERFACE_LINK_OPTIONS>>"
         )
         set_property(
           TARGET ${TARGET_NAME} APPEND
-          PROPERTY LLVM_LINK_LIBRARIES 
+          PROPERTY LLVM_LINK_LIBRARIES
           "$<GENEX_EVAL:$<TARGET_PROPERTY:${library},LLVM_INTERFACE_LINK_LIBRARIES>>"
           "$<TARGET_PROPERTY:${library},OUTPUT>"
         )
@@ -313,22 +313,22 @@ function(llvm_link_libraries TARGET_NAME VISIBILITY)
       if (VISIBILITY STREQUAL "INTERFACE" OR VISIBILITY STREQUAL "PUBLIC")
         set_property(
           TARGET ${TARGET_NAME} APPEND
-          PROPERTY INTERFACE_INCLUDE_DIRECTORIES 
+          PROPERTY INTERFACE_INCLUDE_DIRECTORIES
           "$<GENEX_EVAL:$<TARGET_PROPERTY:${library},INTERFACE_INCLUDE_DIRECTORIES>>"
         )
         set_property(
           TARGET ${TARGET_NAME} APPEND
-          PROPERTY LLVM_INTERFACE_COMPILE_OPTIONS 
+          PROPERTY LLVM_INTERFACE_COMPILE_OPTIONS
           "$<GENEX_EVAL:$<TARGET_PROPERTY:${library},LLVM_INTERFACE_COMPILE_OPTIONS>>"
         )
         set_property(
           TARGET ${TARGET_NAME} APPEND
-          PROPERTY LLVM_INTERFACE_LINK_OPTIONS 
+          PROPERTY LLVM_INTERFACE_LINK_OPTIONS
           "$<GENEX_EVAL:$<TARGET_PROPERTY:${library},LLVM_INTERFACE_LINK_OPTIONS>>"
         )
         set_property(
           TARGET ${TARGET_NAME} APPEND
-          PROPERTY LLVM_INTERFACE_LINK_LIBRARIES 
+          PROPERTY LLVM_INTERFACE_LINK_LIBRARIES
           "$<GENEX_EVAL:$<TARGET_PROPERTY:${library},LLVM_INTERFACE_LINK_LIBRARIES>>"
         )
       endif()
@@ -336,7 +336,7 @@ function(llvm_link_libraries TARGET_NAME VISIBILITY)
       if (VISIBILITY STREQUAL "PRIVATE" OR VISIBILITY STREQUAL "PUBLIC")
         set_property(
           TARGET ${TARGET_NAME} APPEND
-          PROPERTY LLVM_LINK_LIBRARIES 
+          PROPERTY LLVM_LINK_LIBRARIES
           "${library}"
         )
       endif()
@@ -344,11 +344,10 @@ function(llvm_link_libraries TARGET_NAME VISIBILITY)
       if (VISIBILITY STREQUAL "INTERFACE" OR VISIBILITY STREQUAL "PUBLIC")
         set_property(
           TARGET ${TARGET_NAME} APPEND
-          PROPERTY LLVM_INTERFACE_LINK_LIBRARIES 
+          PROPERTY LLVM_INTERFACE_LINK_LIBRARIES
           "${library}"
         )
       endif()
     endif()
   endforeach()
 endfunction()
-
