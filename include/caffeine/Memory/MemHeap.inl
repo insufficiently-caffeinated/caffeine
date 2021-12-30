@@ -40,6 +40,10 @@ inline AllocationPermissions Allocation::permissions() const {
   return perms_;
 }
 
+inline void Allocation::permissions(AllocationPermissions p) {
+  perms_ = p;
+}
+
 /***************************************************
  * Pointer                                         *
  ***************************************************/

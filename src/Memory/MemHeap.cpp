@@ -32,13 +32,15 @@ Allocation::Allocation(const OpRef& address, const ConstantInt& size,
                  permissions) {}
 
 void Allocation::overwrite(const OpRef& newdata) {
-  CAFFEINE_ASSERT(perms_ & AllocationPermissions::Write,
-                  "tried to write to unwritable allocation");
+  if (!(perms_ & AllocationPermissions::Write)) {
+    throw AllocationException("tried to write to unwritable allocation");
+  }
   data_ = newdata;
 }
 void Allocation::overwrite(OpRef&& newdata) {
-  CAFFEINE_ASSERT(perms_ & AllocationPermissions::Write,
-                  "tried to write to unwritable allocation");
+  if (!(perms_ & AllocationPermissions::Write)) {
+    throw AllocationException("tried to write to unwritable allocation");
+  }
   data_ = std::move(newdata);
 }
 
@@ -74,6 +76,9 @@ OpRef Allocation::read(const OpRef& offset, const Type& t,
 
   CAFFEINE_ASSERT(!t.is_void(), "attempted to read a value of type void");
   CAFFEINE_ASSERT(!t.is_array(), "attempted to read a value of type array");
+  if (!(perms_ & AllocationPermissions::Read)) {
+    throw AllocationException("tried to read unreadable allocation");
+  }
 
   uint32_t width = t.byte_size(llvm);
   llvm::SmallVector<OpRef, 8> bytes;
@@ -113,6 +118,10 @@ OpRef Allocation::read(const OpRef& offset, const Type& t,
 }
 LLVMValue Allocation::read(const OpRef& offset, llvm::Type* type,
                            const llvm::DataLayout& layout) {
+  if (!(perms_ & AllocationPermissions::Read)) {
+    throw AllocationException("tried to read unreadable allocation");
+  }
+
   if (type->isPointerTy()) {
     auto heap = type->getPointerElementType()->isFunctionTy()
                     ? MemHeapMgr::FUNCTION_INDEX
@@ -182,8 +191,9 @@ void Allocation::write(const OpRef& offset, const OpRef& value_,
 
   CAFFEINE_ASSERT(offset->type().is_int(),
                   "tried to write at non-integer offset");
-  CAFFEINE_ASSERT(perms_ & AllocationPermissions::Write,
-                  "tried to write to unwritable allocation");
+  if (!(perms_ & AllocationPermissions::Write)) {
+    throw AllocationException("tried to write to unwritable allocation");
+  }
 
   auto value = value_;
   Type t = value->type();
@@ -223,8 +233,10 @@ void Allocation::write(const OpRef& offset, const LLVMScalar& value,
 void Allocation::write(const OpRef& offset, llvm::Type* type,
                        const LLVMValue& value, const MemHeapMgr& heapmgr,
                        const llvm::DataLayout& layout) {
-  CAFFEINE_ASSERT(perms_ & AllocationPermissions::Write,
-                  "tried to write to unwritable allocation");
+  if (!(perms_ & AllocationPermissions::Write)) {
+    throw AllocationException("tried to write to unwritable allocation");
+  }
+
   if (value.is_vector()) {
     if (type->isVectorTy()) {
       auto fixedVectorTy = llvm::dyn_cast<llvm::FixedVectorType>(type);

@@ -5,6 +5,7 @@
 #include "caffeine/IR/Operation.h"
 #include "caffeine/Memory/Allocator.h"
 #include "caffeine/Memory/BumpAllocator.h"
+#include "caffeine/Support/UnsupportedOperation.h"
 #include <climits>
 #include <llvm/ADT/APInt.h>
 #include <llvm/ADT/DenseMap.h>
@@ -46,6 +47,12 @@ enum class AllocationPermissions {
   ReadWrite = Read | Write,
 };
 
+class AllocationException : public UnsupportedOperationException {
+public:
+  AllocationException(std::string&& what_arg)
+      : UnsupportedOperationException(std::move(what_arg)) {}
+};
+
 /**
  * A memory allocation (either alive or dead).
  *
@@ -84,6 +91,7 @@ public:
   AllocationKind kind() const;
 
   AllocationPermissions permissions() const;
+  void permissions(AllocationPermissions new_perm);
 
   const OpRef& data() const;
   OpRef& data();

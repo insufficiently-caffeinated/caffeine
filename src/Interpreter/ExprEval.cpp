@@ -1,4 +1,5 @@
 #include "caffeine/Interpreter/ExprEval.h"
+#include "caffeine/ADT/Guard.h"
 #include "caffeine/Interpreter/Context.h"
 #include "caffeine/Interpreter/InterpreterContext.h"
 #include "caffeine/Memory/MemHeap.h"
@@ -334,20 +335,24 @@ LLVMValue ExprEvaluator::visitGlobalVariable(llvm::GlobalVariable& global) {
       llvm::APInt(bitwidth, layout.getTypeAllocSize(type).getFixedSize()));
   OpRef alloc_data = AllocOp::Create(size, ConstantInt::CreateZero(8));
 
-  auto perms = global.isConstant() ? AllocationPermissions::Write
+  auto perms = global.isConstant() ? AllocationPermissions::Read
                                    : AllocationPermissions::ReadWrite;
 
   unsigned alignment = global.getAlignment();
 
+  // Initially we create the allocation with a ReadWrite permission so that
+  // we can write the constant data into it via visitGlobalData. Then in
+  // visitGlobalData we set the permissions to the correct thing
   auto ptr = interp->allocate(
       size, interp->createConstantInt(bitwidth, alignment), alloc_data,
-      global.getAddressSpace(), AllocationKind::Global, perms);
+      global.getAddressSpace(), AllocationKind::Global,
+      AllocationPermissions::ReadWrite);
   auto res = LLVMValue(ptr);
 
   interp->context().globals.emplace(&global, res);
 
   visitGlobalData(*global.getInitializer(), *interp->ptr_allocation(ptr),
-                  global.getAddressSpace());
+                  global.getAddressSpace(), perms);
 
   return res;
 }
@@ -372,7 +377,9 @@ LLVMValue ExprEvaluator::visitFunction(llvm::Function& func) {
 }
 
 void ExprEvaluator::visitGlobalData(llvm::Constant& constant, Allocation& alloc,
-                                    unsigned AS) {
+                                    unsigned AS, AllocationPermissions perms) {
+  auto guard = make_guard([&] { alloc.permissions(perms); });
+
   llvm::Type* type = constant.getType();
   const llvm::DataLayout& layout = interp->getModule()->getDataLayout();
   unsigned bitwidth = layout.getPointerSizeInBits(AS);

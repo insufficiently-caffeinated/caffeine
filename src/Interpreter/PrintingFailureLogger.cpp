@@ -75,6 +75,7 @@ void PrintingFailureLogger::log_failure(const Model* model, const Context& ctx,
 
   if (!failure.message.empty())
     ss << "Reason:\n  " << failure.message << '\n';
+  ss << "Assertion:\n" << failure.check << '\n';
 
   std::unique_lock lock(mtx);
   *os << ss.str() << std::flush;
