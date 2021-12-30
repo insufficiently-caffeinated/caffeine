@@ -3,30 +3,26 @@
 
 load("@caffeine//bazel:bitcode.bzl", "bitcode_import", "bitcode_optimize")
 
+headers = glob(["include/c++/v1/**"])
+
 cc_library(
-    name = "libc-hdrs-impl",
-    hdrs = glob(["include/**/*.h"]),
-    includes = ["include"],
-    # libcxx depends on libc
-    visibility = ["@libcxx//:__subpackages__"],
+    name = "libcxx-hdrs-impl",
+    hdrs = headers,
+    deps = ["@musl//:libc-hdrs-impl"],
+    includes = ["include/c++/v1"]
 )
 
 bitcode_import(
-    name = "libc-hdrs",
-    dep = ":libc-hdrs-impl",
+    name = "libcxx-hdrs",
+    dep = ":libcxx-hdrs-impl",
     visibility = ["//visibility:public"],
 )
 
-STRIP_FUNCTIONS = [
-    "calloc",
-    "malloc",
-    "free",
-    "posix_memalign",
-]
+STRIP_FUNCTIONS = []
 
 bitcode_optimize(
-    name = "libc-opt",
-    src = "lib/libc.bc",
+    name = "libcxx-opt",
+    src = "lib/libcxx.bc",
     args = [
         "--caffeine-strip-functions",
         "--globaldce",
@@ -39,8 +35,8 @@ bitcode_optimize(
 )
 
 bitcode_import(
-    name = "libc",
-    dep = ":libc-hdrs-impl",
-    bitcode = ":libc-opt",
+    name = "libcxx",
+    dep = ":libcxx-hdrs-impl",
+    bitcode = ":libcxx-opt",
     visibility = ["//visibility:public"],
 )

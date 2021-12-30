@@ -12,6 +12,7 @@ load("@caffeine//third_party/capnp:setup.bzl", "setup_capnproto")
 load("@caffeine//third_party/googletest:setup.bzl", "setup_googletest")
 load("@caffeine//third_party/boost:setup.bzl", "setup_boost")
 load("@caffeine//third_party/musl:setup.bzl", "setup_musl")
+load("@caffeine//third_party/libcxx:setup.bzl", "setup_libcxx")
 
 caffeine_dependencies()
 
@@ -30,6 +31,7 @@ setup_llvm(name = "llvm-raw")
 setup_googletest(name = "googletest")
 setup_boost(name = "com_github_nelhage_rules_boost")
 setup_musl(name = "musl")
+setup_libcxx(name = "libcxx")
 
 # Some dependencies require multiple setup stages. These are added here.
 
