@@ -72,6 +72,8 @@ TEST_F(MemHeapTests, resolve_pointer_single) {
 }
 
 TEST_F(MemHeapTests, resolve_pointer_mixed) {
+  GTEST_SKIP();
+
   MemHeapMgr heaps;
   Context context{function.get()};
 
