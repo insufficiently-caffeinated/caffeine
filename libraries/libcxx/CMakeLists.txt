@@ -35,7 +35,7 @@ if(NOT ${STATUS_CODE} EQUAL 0)
 endif()
 
 llvm_library(libcxx ${CMAKE_CURRENT_BINARY_DIR}/libcxx.bc "${CMAKE_CURRENT_BINARY_DIR}/dummy.c")
-llvm_link_libraries(libcxx PRIVATE musl_libc)
+llvm_link_libraries(libcxx PRIVATE libc)
 
 endif()
 endfunction()
