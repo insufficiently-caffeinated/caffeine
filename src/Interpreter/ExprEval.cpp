@@ -333,11 +333,7 @@ LLVMValue ExprEvaluator::visitGlobalVariable(llvm::GlobalVariable& global) {
   llvm::Type* type = global.getInitializer()->getType();
   OpRef size = ConstantInt::Create(
       llvm::APInt(bitwidth, layout.getTypeAllocSize(type).getFixedSize()));
-
-  // Don't want to be too nice to the end user code, make the default
-  // initialization something that the end user doesn't expect
-  OpRef alloc_data =
-      AllocOp::Create(size, ConstantInt::Create(llvm::APInt(8, 0xFF)));
+  OpRef alloc_data = AllocOp::Create(size, ConstantInt::CreateZero(8));
 
   auto perms = global.isConstant() ? AllocationPermissions::Read
                                    : AllocationPermissions::ReadWrite;
@@ -387,6 +383,11 @@ void ExprEvaluator::visitGlobalData(llvm::Constant& constant, Allocation& alloc,
   llvm::Type* type = constant.getType();
   const llvm::DataLayout& layout = interp->getModule()->getDataLayout();
   unsigned bitwidth = layout.getPointerSizeInBits(AS);
+
+  // Don't bother to evaluate the rest of the initializer if we already know
+  // that we're going to get all zeros.
+  if (llvm::isa<llvm::ConstantAggregateZero>(constant))
+    return;
 
   LLVMValue value = visit(&constant);
 

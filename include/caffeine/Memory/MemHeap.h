@@ -5,11 +5,11 @@
 #include "caffeine/IR/Operation.h"
 #include "caffeine/Memory/Allocator.h"
 #include "caffeine/Memory/BumpAllocator.h"
+#include "caffeine/Support/UnsupportedOperation.h"
 #include <climits>
 #include <llvm/ADT/APInt.h>
 #include <llvm/ADT/DenseMap.h>
 #include <llvm/IR/DataLayout.h>
-#include <stdexcept>
 #include <vector>
 
 namespace caffeine {
@@ -47,10 +47,10 @@ enum class AllocationPermissions {
   ReadWrite = Read | Write,
 };
 
-class AllocationException : public std::runtime_error {
+class AllocationException : public UnsupportedOperationException {
 public:
-  AllocationException(const std::string& what_arg)
-      : std::runtime_error(what_arg) {}
+  AllocationException(std::string&& what_arg)
+      : UnsupportedOperationException(std::move(what_arg)) {}
 };
 
 /**
@@ -91,7 +91,7 @@ public:
   AllocationKind kind() const;
 
   AllocationPermissions permissions() const;
-  void permissions(AllocationPermissions& new_perm);
+  void permissions(AllocationPermissions new_perm);
 
   const OpRef& data() const;
   OpRef& data();
