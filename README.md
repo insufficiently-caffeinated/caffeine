@@ -35,8 +35,8 @@ It's also possible to specify UBSAN, ASAN, and others with the following flags:
 ```
 apt-get update \
     && apt-get -y install \
-        llvm-11-dev \
-        clang-11 \
+        llvm-12-dev \
+        clang-12 \
         libz-dev \
         build-essential \
         gcc-9 \

@@ -25,7 +25,7 @@ jobs:
             libfmt-dev \
             libboost-all-dev \
             capnproto libcapnp-dev
-          sudo ./.github/scripts/update-alternatives-llvm.sh 11 20
+          sudo ./.github/scripts/update-alternatives-llvm.sh 12 20
           go get github.com/SRI-CSL/gllvm/cmd/...
 
       - name: Setup environment variables
