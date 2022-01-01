@@ -1,3 +1,8 @@
 load("//test:tests.bzl", "generate_tests")
 
-generate_tests(skip_files = ["malloc-free.c"])
+generate_tests(
+    skip_files = [
+        "malloc-free.c",
+        "symbolic-malloc-free.c",
+    ],
+)
