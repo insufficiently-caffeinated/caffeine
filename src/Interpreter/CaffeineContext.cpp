@@ -151,9 +151,13 @@ Builder& Builder::with_default_functions() {
                 ExternalFunctions::caffeine_builtin_resolve());
   with_function("caffeine_calloc", ExternalFunctions::caffeine_calloc());
   with_function("caffeine_free", ExternalFunctions::caffeine_free());
-  with_function("_setjmp", ExternalFunctions::setjmp());
-  with_function("setjmp", ExternalFunctions::setjmp());
+  with_function("caffeine_malloc_aligned",
+                ExternalFunctions::caffeine_malloc_aligned());
+
+  with_function("abort", ExternalFunctions::abort());
   with_function("longjmp", ExternalFunctions::longjmp());
+  with_function("setjmp", ExternalFunctions::setjmp());
+  with_function("_setjmp", ExternalFunctions::setjmp());
 
   return *this;
 }

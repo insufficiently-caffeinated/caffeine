@@ -1,5 +1,6 @@
 #include "caffeine/Interpreter/Executor.h"
 #include "caffeine/Interpreter/CaffeineContext.h"
+#include "caffeine/Interpreter/ExprEval.h"
 #include "caffeine/Interpreter/Interpreter.h"
 #include "caffeine/Interpreter/Store.h"
 #include "caffeine/Support/UnsupportedOperation.h"
@@ -29,6 +30,10 @@ void Executor::run_worker() {
       try {
         Interpreter interp{&ictx};
         interp.execute();
+      } catch (ExprEvaluator::Unevaluatable& ex) {
+        logger->log_failure(nullptr, ctx.value(),
+                            Failure(Assertion(), ex.what()));
+        break;
       } catch (UnsupportedOperationException&) {
         // The assert that threw this already printed an error message
         // TODO: We should have a better way to indicate that this failed to the
