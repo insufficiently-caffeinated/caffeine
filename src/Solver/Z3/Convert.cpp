@@ -414,7 +414,13 @@ z3::expr Z3OpVisitor::visitSExt(const UnaryOp& op) {
   return z3::sext(src, op.type().bitwidth() - src.get_sort().bv_size());
 }
 z3::expr Z3OpVisitor::visitSIToFp(const UnaryOp& op) {
-  CAFFEINE_UNOP_UNIMPLEMENTED(op);
+  auto src = normalize_to_bv(visit(*op.operand()));
+
+  z3::expr expr{src.ctx(), Z3_mk_fpa_to_fp_signed(
+                               src.ctx(), src.ctx().fpa_rounding_mode(), src,
+                               type_to_sort(src.ctx(), op.type()))};
+  src.ctx().check_error();
+  return expr;
 }
 z3::expr Z3OpVisitor::visitUIToFp(const UnaryOp& op) {
   CAFFEINE_UNOP_UNIMPLEMENTED(op);
