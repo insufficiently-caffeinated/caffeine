@@ -43,6 +43,7 @@ BITCODE_LIB_ATTRS = {
         default = [
             "@caffeine//interface:caffeine",
             "@caffeine//libraries/builtins",
+            "@libcxx//:libcxx",
             "@musl//:libc",
         ],
         providers = [BitcodeCcInfo],

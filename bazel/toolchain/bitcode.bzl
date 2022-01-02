@@ -44,8 +44,8 @@ def _bitcode_toolchain_config(ctx):
                     flag_groups = [
                         flag_group(
                             flags = [
+                                "-D__DEFINED_max_align_t",
                                 "-emit-llvm",
-                                "-fgnuc-version=0",
                                 "-g",
                                 "-nostdinc",
                                 "-ffreestanding",
@@ -71,9 +71,6 @@ def _bitcode_toolchain_config(ctx):
         compiler = "clang",
         abi_version = "unknown",
         abi_libc_version = "unknown",
-        # cxx_builtin_include_directories = [
-        #     "/usr/include",
-        # ],
     )
 
 bitcode_toolchain_config = rule(
