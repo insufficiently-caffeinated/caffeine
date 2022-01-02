@@ -82,6 +82,7 @@ public:
   // Subclasses of GlobalValue
   LLVMValue visitGlobalVariable(llvm::GlobalVariable& global);
   LLVMValue visitFunction(llvm::Function& func);
+  LLVMValue visitGlobalAlias(llvm::GlobalAlias& alias);
 
   // Extras
   void visitGlobalData(llvm::Constant& cnst, Allocation& alloc, unsigned AS,

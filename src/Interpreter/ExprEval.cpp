@@ -95,6 +95,8 @@ LLVMValue ExprEvaluator::evaluate(llvm::Value* val) {
     return visitGlobalVariable(*cnst);
   if (auto* cnst = llvm::dyn_cast<llvm::Function>(val))
     return visitFunction(*cnst);
+  if (auto* cnst = llvm::dyn_cast<llvm::GlobalAlias>(val))
+    return visitGlobalAlias(*cnst);
 
   CAFFEINE_UNSUPPORTED(fmt::format(
       "Unsupported expression ({}): {}",
@@ -374,6 +376,12 @@ LLVMValue ExprEvaluator::visitFunction(llvm::Function& func) {
 
   interp->context().globals.emplace(&func, pointer);
   return pointer;
+}
+
+LLVMValue ExprEvaluator::visitGlobalAlias(llvm::GlobalAlias& alias) {
+  auto res = visit(alias.getAliasee());
+  interp->context().globals.emplace(&alias, res);
+  return res;
 }
 
 void ExprEvaluator::visitGlobalData(llvm::Constant& constant, Allocation& alloc,
