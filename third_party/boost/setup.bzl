@@ -9,7 +9,7 @@ def setup_boost(name):
 
     git_repository(
         name = name,
-        commit = "fce83babe3f6287bccb45d2df013a309fa3194b8",
+        commit = "c8b9b4a75c4301778d2e256b8d72ce47a6c9a1a4",
         remote = "https://github.com/nelhage/rules_boost",
-        shallow_since = "1630079166 -0700",
+        shallow_since = "1640124117 -0800",
     )
