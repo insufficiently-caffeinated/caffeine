@@ -21,6 +21,6 @@ def setup_fmt(name):
             "Move-Item -Path support/bazel/BUILD.bazel -Destination BUILD.bazel",
             "Move-Item -Path support/bazel/WORKSPACE.bazel -Destination WORKSPACE.bazel",
         ],
-        commit = "1266c2b6003e6391046bbab57dcf20293e25dedd",
-        shallow_since = "1634486868 -0700",
+        commit = "64dc8fbada9898fccddce0dda3cb0c9695712a3d",
+        shallow_since = "1641141241 -0800",
     )
