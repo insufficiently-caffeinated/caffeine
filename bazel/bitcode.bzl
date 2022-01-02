@@ -323,7 +323,7 @@ def _bitcode_optimize(ctx):
         executable = ctx.executable._opt,
         arguments = [args],
         mnemonic = "BitcodeLink",
-        progress_message = "Optimizing %{input}",
+        progress_message = "Optimizing {}".format(output),
     )
 
     return [DefaultInfo(files = depset([output]))]
