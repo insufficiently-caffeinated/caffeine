@@ -432,10 +432,22 @@ z3::expr Z3OpVisitor::visitUIToFp(const UnaryOp& op) {
   return expr;
 }
 z3::expr Z3OpVisitor::visitFpToSI(const UnaryOp& op) {
-  CAFFEINE_UNOP_UNIMPLEMENTED(op);
+  z3::expr src = visit(*op.operand());
+
+  z3::expr expr{src.ctx(),
+                Z3_mk_fpa_to_sbv(src.ctx(), src.ctx().fpa_rounding_mode(), src,
+                                 op.type().bitwidth())};
+  src.ctx().check_error();
+  return expr;
 }
 z3::expr Z3OpVisitor::visitFpToUI(const UnaryOp& op) {
-  CAFFEINE_UNOP_UNIMPLEMENTED(op);
+  z3::expr src = visit(*op.operand());
+
+  z3::expr expr{src.ctx(),
+                Z3_mk_fpa_to_ubv(src.ctx(), src.ctx().fpa_rounding_mode(), src,
+                                 op.type().bitwidth())};
+  src.ctx().check_error();
+  return expr;
 }
 z3::expr Z3OpVisitor::visitFpExt(const UnaryOp& op) {
   CAFFEINE_UNOP_UNIMPLEMENTED(op);
