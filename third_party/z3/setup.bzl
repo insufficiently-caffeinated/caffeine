@@ -20,25 +20,25 @@ cc_library(
 """
 
 def setup_z3(name):
-    version = "4.8.12"
+    version = "4.8.14"
     matrix = [
         (
             "windows",
             "https://github.com/Z3Prover/z3/releases/download/z3-{0}/z3-{0}-x64-win.zip",
-            "de12fb2160798a464244954236b28da597e79289f33955b170853b8bf0d1f078",
+            "a3fa1edc62d66403008ae01efec2d3499c8f4b730382acbfb3564f82f3ead7a9",
             "z3-{0}-x64-win",
         ),
         (
             "linux",
             "https://github.com/Z3Prover/z3/releases/download/z3-{0}/z3-{0}-x64-glibc-2.31.zip",
-            "648e8a7afb57445440ad711b733bd675e3888da2767c14ae5122582c924d8d52",
+            "5ffa4b8b2e04309560d78ef88779bd8353f64248129ca24f6d9e7eb9fdb0af6c",
             "z3-{0}-x64-glibc-2.31",
         ),
         (
             "darwin",
-            "https://github.com/Z3Prover/z3/releases/download/z3-{0}/z3-{0}-x64-osx-10.15.7.zip",
-            "a1f6ef3c99456147c4d3f2652dc6bc90951c4ab3fe7741a255eb794f0ab8938c",
-            "z3-{0}-x64-osx-10.15.7",
+            "https://github.com/Z3Prover/z3/releases/download/z3-{0}/z3-{0}-x64-osx-10.16.zip",
+            "",
+            "z3-{0}-x64-osx-10.16",
         ),
     ]
 
