@@ -305,7 +305,7 @@ void Interpreter::visitIntrinsicInst(llvm::IntrinsicInst& intrin) {
   for (auto& arg : intrin.args())
     args.push_back(interp->load(arg.get()));
 
-  func->call(*interp, args);
+  func->call(&intrin, *interp, args);
 }
 void Interpreter::visitIndirectCall(llvm::CallBase& call) {
   CAFFEINE_ASSERT(
@@ -440,7 +440,7 @@ void Interpreter::visitExternFunc(llvm::CallBase& call) {
       args.push_back(interp->load(call.getArgOperand(i)));
     }
 
-    extern_func->call(*interp, args);
+    extern_func->call(&call, *interp, args);
     return;
   }
 

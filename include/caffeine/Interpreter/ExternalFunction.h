@@ -2,6 +2,8 @@
 
 #include "caffeine/ADT/Span.h"
 
+#include <llvm/IR/InstrTypes.h>
+
 namespace caffeine {
 class InterpreterContext;
 class LLVMValue;
@@ -39,7 +41,8 @@ public:
    *            execution.
    * @param args The arguments to the current function.
    */
-  virtual void call(InterpreterContext& ctx, Span<LLVMValue> args) const = 0;
+  virtual void call(llvm::CallBase* cb, InterpreterContext& ctx,
+                    Span<LLVMValue> args) const = 0;
 
   ExternalFunction() = default;
   virtual ~ExternalFunction() = default;

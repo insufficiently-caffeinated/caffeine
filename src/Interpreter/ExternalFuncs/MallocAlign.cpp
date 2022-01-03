@@ -6,7 +6,7 @@
 
 namespace caffeine {
 
-void MallocAlignFunction::call(InterpreterContext& ctx,
+void MallocAlignFunction::call(llvm::CallBase*, InterpreterContext& ctx,
                                Span<LLVMValue> args) const {
   if (args.size() != 2) {
     ctx.fail("invalid malloc_align signature (invalid number of arguments)");
