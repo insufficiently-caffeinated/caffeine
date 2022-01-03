@@ -1,9 +1,12 @@
 #include "caffeine/Interpreter/ExternalFuncs/Abort.h"
 #include "caffeine/Interpreter/InterpreterContext.h"
 
+#include <llvm/IR/InstrTypes.h>
+
 namespace caffeine {
 
-void AbortFunction::call(InterpreterContext& ctx, Span<LLVMValue> args) const {
+void AbortFunction::call(llvm::CallBase*, InterpreterContext& ctx,
+                         Span<LLVMValue> args) const {
   if (args.size() != 0) {
     ctx.fail("abort called with bad signature (wrong number of "
              "arguments)");

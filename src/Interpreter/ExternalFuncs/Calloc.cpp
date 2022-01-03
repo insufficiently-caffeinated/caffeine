@@ -9,7 +9,8 @@ namespace {
 
   class CallocFunction : public ExternalFunction {
   public:
-    void call(InterpreterContext& ctx, Span<LLVMValue> args) const {
+    void call(llvm::CallBase*, InterpreterContext& ctx,
+              Span<LLVMValue> args) const {
       if (args.size() != 1) {
         ctx.fail(
             "invalid caffeine_calloc signature (invalid number of arguments)");

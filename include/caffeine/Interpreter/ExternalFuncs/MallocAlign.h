@@ -6,7 +6,8 @@ namespace caffeine {
 
 class MallocAlignFunction : public ExternalFunction {
 public:
-  void call(InterpreterContext& ctx, Span<LLVMValue> args) const override;
+  void call(llvm::CallBase*, InterpreterContext& ctx,
+            Span<LLVMValue> args) const override;
 };
 
 } // namespace caffeine

@@ -22,7 +22,8 @@ namespace {
 
   class SetJmpFunction : public ExternalFunction {
   public:
-    void call(InterpreterContext& ctx, Span<LLVMValue> args) const override {
+    void call(llvm::CallBase*, InterpreterContext& ctx,
+              Span<LLVMValue> args) const override {
       if (args.size() != 1) {
         ctx.fail("invalid number of arguments for setjmp");
         return;

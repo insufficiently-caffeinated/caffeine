@@ -9,7 +9,8 @@ namespace {
 
   class CaffeineBuiltinResolveFunction : public ExternalFunction {
   public:
-    void call(InterpreterContext& ctx, Span<LLVMValue> args) const override {
+    void call(llvm::CallBase*, InterpreterContext& ctx,
+              Span<LLVMValue> args) const override {
       if (args.size() != 2) {
         ctx.fail("invalid caffeine_builtin_resolve signature (invalid number "
                  "of arguments)");
