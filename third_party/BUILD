@@ -12,11 +12,7 @@ alias(
 
 alias(
     name = "z3",
-    actual = select({
-        "@bazel_tools//src/conditions:windows": "@z3-windows//:z3",
-        "@bazel_tools//src/conditions:darwin": "@z3-darwin//:z3",
-        "//conditions:default": "@z3-linux//:z3",
-    }),
+    actual = "//third_party/z3",
 )
 
 alias(

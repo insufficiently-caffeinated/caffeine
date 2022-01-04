@@ -3,50 +3,19 @@
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
-BUILD_FILE_CONTENT = """
-cc_import(
-    name = "z3-raw",
-    static_library = "bin/libz3.a",
-    shared_library = "bin/libz3.so",
-)
+def setup_z3(name):
+    version = "4.8.14"
 
-cc_library(
-    name = "z3",
-    hdrs = glob(["include/**/*"]),
-    deps = [":z3-raw"],
-    strip_include_prefix = "include",
-    visibility = ["//visibility:public"],
+    http_archive(
+        name = "{}-cmake".format(name),
+        url = "https://github.com/Z3Prover/z3/archive/refs/tags/z3-{}.tar.gz".format(version),
+        sha256 = "96a1f49a7701120cc38bfa63c02ff93be4d64c7926cea41977dedec7d87a1364",
+        strip_prefix = "z3-z3-{}".format(version),
+        build_file_content = """
+filegroup(
+    name = "srcs",
+    srcs = glob(["**"]),
+    visibility = ["//visibility:public"]
 )
 """
-
-def setup_z3(name):
-    version = "4.8.12"
-    matrix = [
-        (
-            "windows",
-            "https://github.com/Z3Prover/z3/releases/download/z3-{0}/z3-{0}-x64-win.zip",
-            "de12fb2160798a464244954236b28da597e79289f33955b170853b8bf0d1f078",
-            "z3-{0}-x64-win",
-        ),
-        (
-            "linux",
-            "https://github.com/Z3Prover/z3/releases/download/z3-{0}/z3-{0}-x64-glibc-2.31.zip",
-            "648e8a7afb57445440ad711b733bd675e3888da2767c14ae5122582c924d8d52",
-            "z3-{0}-x64-glibc-2.31",
-        ),
-        (
-            "darwin",
-            "https://github.com/Z3Prover/z3/releases/download/z3-{0}/z3-{0}-x64-osx-10.15.7.zip",
-            "a1f6ef3c99456147c4d3f2652dc6bc90951c4ab3fe7741a255eb794f0ab8938c",
-            "z3-{0}-x64-osx-10.15.7",
-        ),
-    ]
-
-    for plat, url, sha256, prefix in matrix:
-        http_archive(
-            name = "{}-{}".format(name, plat),
-            url = url.format(version),
-            sha256 = sha256,
-            strip_prefix = prefix.format(version),
-            build_file_content = BUILD_FILE_CONTENT,
-        )
+    )
