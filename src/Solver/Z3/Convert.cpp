@@ -462,7 +462,14 @@ z3::expr Z3OpVisitor::visitFpExt(const UnaryOp& op) {
   return expr;
 }
 z3::expr Z3OpVisitor::visitFpTrunc(const UnaryOp& op) {
-  CAFFEINE_UNOP_UNIMPLEMENTED(op);
+  z3::expr src = visit(*op.operand());
+  z3::sort tgt = type_to_sort(src.ctx(), op.type());
+
+  z3::expr expr{src.ctx(),
+                Z3_mk_fpa_to_fp_float(src.ctx(), src.ctx().fpa_rounding_mode(),
+                                      src, tgt)};
+  src.ctx().check_error();
+  return expr;
 }
 
 z3::expr Z3OpVisitor::visitLoad(const LoadOp& op) {
