@@ -4,7 +4,7 @@ namespace caffeine {
 
 class AbortFunction : public ExternalFunction {
 public:
-  void call(llvm::CallBase* cb, InterpreterContext& ctx,
+  void call(llvm::Function* cb, InterpreterContext& ctx,
             Span<LLVMValue> args) const override;
 };
 

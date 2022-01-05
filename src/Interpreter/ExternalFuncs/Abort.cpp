@@ -5,7 +5,7 @@
 
 namespace caffeine {
 
-void AbortFunction::call(llvm::CallBase*, InterpreterContext& ctx,
+void AbortFunction::call(llvm::Function*, InterpreterContext& ctx,
                          Span<LLVMValue> args) const {
   if (args.size() != 0) {
     ctx.fail("abort called with bad signature (wrong number of "
