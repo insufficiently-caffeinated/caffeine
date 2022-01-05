@@ -22,28 +22,19 @@ namespace {
 
   class SetJmpFunction : public ExternalFunction {
   public:
-    void call(llvm::CallBase*, InterpreterContext& ctx,
+    void call(llvm::Function* func, InterpreterContext& ctx,
               Span<LLVMValue> args) const override {
       if (args.size() != 1) {
         ctx.fail("invalid number of arguments for setjmp");
         return;
       }
 
-      auto inst = ctx.getCurrentInstruction();
-      CAFFEINE_ASSERT(inst);
-
-      auto call = llvm::dyn_cast<llvm::CallBase>(inst);
-      if (!call) {
-        ctx.fail("setjmp was not called from a call/invoke instruction");
-        return;
-      }
-
-      if (!call->getType()->isIntegerTy()) {
+      if (!func->getReturnType()->isIntegerTy()) {
         ctx.fail("invalid setjmp signature (invalid return type)");
         return;
       }
 
-      if (!call->getArgOperand(0)->getType()->isPointerTy()) {
+      if (!func->getArg(0)->getType()->isPointerTy()) {
         ctx.fail("invalid setjmp signature (invalid first argument)");
         return;
       }
@@ -51,12 +42,12 @@ namespace {
       const auto& layout = ctx.getModule()->getDataLayout();
       const auto& frame = ctx.context().stack_top();
 
-      LLVMValue jmpbuf = getJmpBuf(frame.frame_id, call);
+      LLVMValue jmpbuf = getJmpBuf(frame.frame_id, ctx.getCurrentInstruction());
       llvm::Type* jmpbuf_ty = getJmpBufType(ctx.getModule()->getContext());
 
       unsigned jmpbuf_size = layout.getTypeStoreSize(jmpbuf_ty);
       unsigned real_size = layout.getTypeStoreSize(
-          call->getArgOperand(0)->getType()->getPointerElementType());
+          func->getArg(0)->getType()->getPointerElementType());
 
       if (real_size < jmpbuf_size) {
         ctx.fail(fmt::format(
@@ -76,8 +67,8 @@ namespace {
             ICmpOp::CreateICmpEQ(unresolved.value(ctx.context().heaps),
                                  ptr.value(ctx.context().heaps)));
         fork.mem_write(ptr, jmpbuf_ty, jmpbuf);
-        fork.jump_return(LLVMValue(
-            ConstantInt::CreateZero(inst->getType()->getIntegerBitWidth())));
+        fork.jump_return(LLVMValue(ConstantInt::CreateZero(
+            func->getReturnType()->getIntegerBitWidth())));
       }
     }
 
