@@ -4,7 +4,7 @@ namespace caffeine {
 
 class CaffeineAssertFunction : public ExternalFunction {
 public:
-  void call(llvm::CallBase* cb, InterpreterContext& ctx,
+  void call(llvm::Function* func, InterpreterContext& ctx,
             Span<LLVMValue> args) const override;
 };
 
