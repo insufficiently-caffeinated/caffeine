@@ -591,10 +591,20 @@ LLVMValue ExprEvaluator::visitIntToPtr(llvm::IntToPtrInst& inst) {
 }
 
 LLVMValue ExprEvaluator::visitBitCast(llvm::BitCastInst& inst) {
-  CAFFEINE_ASSERT(inst.getType()->isPointerTy(),
-                  "Non-pointer bitcasts are not implemented");
+  llvm::Type* dst = inst.getDestTy();
+  llvm::Type* src = inst.getSrcTy();
 
-  return visit(inst.getOperand(0));
+  if (dst->isPointerTy() && src->isPointerTy())
+    return visit(inst.getOperand(0));
+
+  if ((dst->isIntegerTy() && src->isFloatingPointTy()) ||
+      (dst->isFloatingPointTy() && src->isIntegerTy())) {
+    return interp->createBitcast(Type::from_llvm(dst),
+                                 visit(inst.getOperand(0)));
+  }
+
+  CAFFEINE_UNSUPPORTED(
+      fmt::format("Bitcasts from {} to {} are not supported", *src, *dst));
 }
 
 LLVMValue ExprEvaluator::visitGetElementPtr(llvm::GetElementPtrInst& inst) {
