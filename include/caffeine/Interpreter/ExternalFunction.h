@@ -44,16 +44,10 @@ public:
    * @param args The arguments to the current function.
    */
   virtual void call(llvm::Function* func, InterpreterContext& ctx,
-                    Span<LLVMValue> args) const;
+                    Span<LLVMValue> args) const = 0;
 
   ExternalFunction() = default;
   virtual ~ExternalFunction() = default;
-
-protected:
-  [[deprecated]] virtual void call(llvm::CallBase*, InterpreterContext&,
-                                   Span<LLVMValue>) const {
-    CAFFEINE_UNIMPLEMENTED();
-  }
 
 protected:
   ExternalFunction(const ExternalFunction&) = default;
