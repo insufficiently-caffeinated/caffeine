@@ -2,6 +2,7 @@
 
 #include "caffeine/ADT/Span.h"
 
+#include <caffeine/Support/Assert.h>
 #include <llvm/IR/InstrTypes.h>
 
 namespace caffeine {
@@ -37,11 +38,12 @@ public:
    * This function should be thread-safe as it may be called concurrently from
    * multiple threads.
    *
+   * @param func The LLVM function that is being called.
    * @param ctx An InterpreterContext which represents the current thread of
    *            execution.
    * @param args The arguments to the current function.
    */
-  virtual void call(llvm::CallBase* cb, InterpreterContext& ctx,
+  virtual void call(llvm::Function* func, InterpreterContext& ctx,
                     Span<LLVMValue> args) const = 0;
 
   ExternalFunction() = default;

@@ -143,20 +143,19 @@ namespace {
 
   class LongJmpFunction : public ExternalFunction {
   public:
-    void call(llvm::CallBase*, InterpreterContext& ctx,
+    void call(llvm::Function* func, InterpreterContext& ctx,
               Span<LLVMValue> args) const override {
       if (args.size() != 2) {
         ctx.fail("invalid longjmp signature (invalid number of arguments)");
         return;
       }
 
-      auto inst = llvm::cast<llvm::CallBase>(ctx.getCurrentInstruction());
-      if (!inst->getArgOperand(0)->getType()->isPointerTy()) {
+      if (!func->getArg(0)->getType()->isPointerTy()) {
         ctx.fail("invalid longjmp signature (invalid first argument)");
         return;
       }
 
-      if (!inst->getArgOperand(1)->getType()->isIntegerTy()) {
+      if (!func->getArg(1)->getType()->isIntegerTy()) {
         ctx.fail("invalid longjmp signature (invalid second argument)");
         return;
       }
@@ -166,7 +165,7 @@ namespace {
 
       unsigned jmpbuf_size = layout.getTypeStoreSize(jmpbuf_ty);
       unsigned real_size = layout.getTypeStoreSize(
-          inst->getArgOperand(0)->getType()->getPointerElementType());
+          func->getArg(0)->getType()->getPointerElementType());
 
       if (real_size < jmpbuf_size) {
         ctx.fail(fmt::format(
@@ -176,8 +175,7 @@ namespace {
       }
 
       ctx.call_external_function(std::make_unique<LongJmpFrame>(
-          std::vector<LLVMValue>(args.begin(), args.end()),
-          inst->getCalledFunction()));
+          std::vector<LLVMValue>(args.begin(), args.end()), func));
     }
   };
 

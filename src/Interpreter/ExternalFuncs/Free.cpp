@@ -8,7 +8,7 @@ namespace {
 
   class CaffeineFreeFunction : public ExternalFunction {
   public:
-    void call(llvm::CallBase*, InterpreterContext& ctx,
+    void call(llvm::Function* func, InterpreterContext& ctx,
               Span<LLVMValue> args) const override {
       if (args.size() != 1) {
         ctx.fail(
@@ -16,22 +16,12 @@ namespace {
         return;
       }
 
-      auto inst = ctx.getCurrentInstruction();
-      CAFFEINE_ASSERT(inst,
-                      "caffeine_free called without a current instruction");
-
-      auto call = llvm::dyn_cast<llvm::CallBase>(inst);
-      if (!call) {
-        ctx.fail("caffeine_free called from a non-call/invoke instruction");
-        return;
-      }
-
-      if (!call->getType()->isVoidTy()) {
+      if (!func->getReturnType()->isVoidTy()) {
         ctx.fail("invalid caffeine_free signature (invalid return type)");
         return;
       }
 
-      if (!call->getArgOperand(0)->getType()->isPointerTy()) {
+      if (!func->getArg(0)->getType()->isPointerTy()) {
         ctx.fail("invalid caffeine_free signature (invalid first argument)");
         return;
       }

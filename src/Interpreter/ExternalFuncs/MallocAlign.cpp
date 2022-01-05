@@ -6,28 +6,26 @@
 
 namespace caffeine {
 
-void MallocAlignFunction::call(llvm::CallBase*, InterpreterContext& ctx,
+void MallocAlignFunction::call(llvm::Function* func, InterpreterContext& ctx,
                                Span<LLVMValue> args) const {
   if (args.size() != 2) {
     ctx.fail("invalid malloc_align signature (invalid number of arguments)");
     return;
   }
 
-  auto inst = ctx.getCurrentInstruction();
-  if (!inst->getType()->isPointerTy()) {
+  llvm::Type* ret_ty = func->getReturnType();
+
+  if (!ret_ty->isPointerTy()) {
     ctx.fail("invalid malloc_align signature (invalid return type)");
     return;
   }
 
   const llvm::DataLayout& layout = ctx.getModule()->getDataLayout();
-  unsigned address_space = inst->getType()->getPointerAddressSpace();
-  auto ptr_width = layout.getPointerTypeSizeInBits(inst->getType());
+  unsigned address_space = ret_ty->getPointerAddressSpace();
+  auto ptr_width = layout.getPointerTypeSizeInBits(ret_ty);
 
-  auto call = llvm::dyn_cast<llvm::CallBase>(inst);
-  CAFFEINE_ASSERT(call);
-
-  auto size_ty = call->getArgOperand(0)->getType();
-  auto align_ty = call->getArgOperand(1)->getType();
+  auto size_ty = func->getArg(0)->getType();
+  auto align_ty = func->getArg(1)->getType();
 
   if (!size_ty->isIntegerTy() || size_ty->getIntegerBitWidth() !=
                                      layout.getIndexSizeInBits(address_space)) {

@@ -7,7 +7,7 @@ namespace caffeine {
 namespace {
   class UMulWithOverflowIntrinsic : public ExternalFunction {
   public:
-    void call(llvm::CallBase*, InterpreterContext& ctx,
+    void call(llvm::Function*, InterpreterContext& ctx,
               Span<LLVMValue> args) const {
       CAFFEINE_ASSERT(args.size() == 2);
 
