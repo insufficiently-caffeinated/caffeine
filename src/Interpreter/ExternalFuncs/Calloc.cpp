@@ -9,7 +9,7 @@ namespace {
 
   class CallocFunction : public ExternalFunction {
   public:
-    void call(llvm::CallBase*, InterpreterContext& ctx,
+    void call(llvm::Function* func, InterpreterContext& ctx,
               Span<LLVMValue> args) const {
       if (args.size() != 1) {
         ctx.fail(
@@ -17,23 +17,21 @@ namespace {
         return;
       }
 
+      llvm::Type* ret_ty = func->getReturnType();
+
       auto inst = ctx.getCurrentInstruction();
       CAFFEINE_ASSERT(inst, "cannot call calloc without a current instruction");
 
-      auto call = llvm::dyn_cast<llvm::CallBase>(inst);
-      CAFFEINE_ASSERT(
-          call, "caffeine_calloc called from a non-call/invoke instruction?");
-
-      if (!call->getType()->isPointerTy()) {
+      if (!ret_ty->isPointerTy()) {
         ctx.fail("invalid caffeine_calloc signature (invalid return type)");
         return;
       }
 
       const llvm::DataLayout& layout = ctx.getModule()->getDataLayout();
-      unsigned address_space = call->getType()->getPointerAddressSpace();
-      unsigned ptr_width = layout.getPointerTypeSizeInBits(call->getType());
+      unsigned address_space = ret_ty->getPointerAddressSpace();
+      unsigned ptr_width = layout.getPointerTypeSizeInBits(ret_ty);
 
-      auto size_ty = call->getArgOperand(0)->getType();
+      auto size_ty = func->getArg(0)->getType();
       if (!size_ty->isIntegerTy() ||
           size_ty->getIntegerBitWidth() !=
               layout.getIndexSizeInBits(address_space)) {
