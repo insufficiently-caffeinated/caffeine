@@ -17,7 +17,7 @@ namespace {
 
   class CaffeineSymbolicAlloca : public ExternalFunction {
   public:
-    void call(llvm::CallBase*, InterpreterContext& ctx,
+    void call(llvm::Function* func, InterpreterContext& ctx,
               Span<LLVMValue> args) const override {
       if (args.size() != 2) {
         ctx.fail("invalid caffeine_symbolic_alloca signature (invalid number "
@@ -26,8 +26,6 @@ namespace {
       }
 
       const auto& layout = ctx.getModule()->getDataLayout();
-      llvm::Function* func =
-          ctx.getModule()->getFunction("caffeine_builtin_symbolic_alloca");
 
       unsigned address_space = func->getReturnType()->getPointerAddressSpace();
       unsigned ptr_width = layout.getPointerSizeInBits(address_space);
