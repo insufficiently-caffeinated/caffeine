@@ -1,5 +1,7 @@
 #include "caffeine/Interpreter/ExternalFunction.h"
 #include "caffeine/Interpreter/InterpreterContext.h"
+#include "caffeine/Support/LLVMFmt.h"
+#include <fmt/format.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Module.h>
@@ -9,7 +11,7 @@ namespace {
 
   class CaffeineBuiltinResolveFunction : public ExternalFunction {
   public:
-    void call(llvm::CallBase*, InterpreterContext& ctx,
+    void call(llvm::Function* func, InterpreterContext& ctx,
               Span<LLVMValue> args) const override {
       if (args.size() != 2) {
         ctx.fail("invalid caffeine_builtin_resolve signature (invalid number "
@@ -17,25 +19,19 @@ namespace {
         return;
       }
 
-      if (auto inst = ctx.getCurrentInstruction()) {
-        auto call = llvm::dyn_cast<llvm::CallBase>(inst);
-        if (!call) {
-          ctx.fail("expected a call/invoke instruction");
-          return;
-        }
+      fmt::print("{}\n", *func);
 
-        if (call->getType() != call->getArgOperand(0)->getType() ||
-            !call->getType()->isPointerTy()) {
-          ctx.fail("invalid caffeine_builtin_resolve signature (invalid first "
-                   "argument)");
-          return;
-        }
+      if (func->getReturnType() != func->getArg(0)->getType() ||
+          !func->getReturnType()->isPointerTy()) {
+        ctx.fail("invalid caffeine_builtin_resolve signature (invalid first "
+                 "argument)");
+        return;
+      }
 
-        if (!call->getArgOperand(1)->getType()->isIntegerTy()) {
-          ctx.fail("invalid caffeine_builtin_resolve signature (invalid second "
-                   "argument)");
-          return;
-        }
+      if (!func->getArg(1)->getType()->isIntegerTy()) {
+        ctx.fail("invalid caffeine_builtin_resolve signature (invalid second "
+                 "argument)");
+        return;
       }
 
       const auto& layout = ctx.getModule()->getDataLayout();
