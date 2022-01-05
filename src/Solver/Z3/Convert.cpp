@@ -398,7 +398,9 @@ z3::expr Z3OpVisitor::visitBitcast(const UnaryOp& op) {
     return expr;
   }
 
-  CAFFEINE_UNIMPLEMENTED();
+  CAFFEINE_UNIMPLEMENTED(
+      fmt::format(FMT_STRING("Bitcasting between {} and {} is not supported"),
+                  op.type(), op.operand()->type()));
 }
 
 z3::expr Z3OpVisitor::visitZExt(const UnaryOp& op) {
