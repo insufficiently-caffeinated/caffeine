@@ -741,7 +741,14 @@ OpRef ICmpOp::CreateICmp(ICmpOpcode cmp, int64_t lhs, const OpRef& rhs) {
       rhs);
 }
 OpRef ICmpOp::CreateICmp(ICmpOpcode cmp, const OpRef& lhs, int64_t rhs) {
-  return ICmpOp::CreateICmp(cmp, rhs, lhs);
+  CAFFEINE_ASSERT(lhs, "rhs was null");
+  CAFFEINE_ASSERT(lhs->type().is_int(),
+                  "icmp can only be created with integer operands");
+
+  auto literal = llvm::APInt(64, static_cast<uint64_t>(rhs));
+  return ICmpOp::CreateICmp(
+      cmp, lhs,
+      ConstantInt::Create(literal.sextOrTrunc(lhs->type().bitwidth())));
 }
 
 /***************************************************
