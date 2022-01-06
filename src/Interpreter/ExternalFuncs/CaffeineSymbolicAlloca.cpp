@@ -2,6 +2,7 @@
 #include "caffeine/Interpreter/InterpreterContext.h"
 #include "caffeine/Memory/MemHeap.h"
 #include "caffeine/Support/LLVMFmt.h"
+#include <caffeine/IR/Operation.h>
 #include <fmt/ostream.h>
 #include <iostream>
 #include <llvm/ADT/APInt.h>
@@ -31,25 +32,22 @@ namespace {
       unsigned ptr_width = layout.getPointerSizeInBits(address_space);
       unsigned index_width = layout.getIndexSizeInBits(address_space);
 
-      if (llvm::Instruction* inst = ctx.getCurrentInstruction()) {
-        llvm::CallBase* call = llvm::cast<llvm::CallBase>(inst);
-        auto size_ty = call->getArgOperand(0)->getType();
-        auto name_ty = call->getArgOperand(1)->getType();
+      auto size_ty = func->getArg(0)->getType();
+      auto name_ty = func->getArg(1)->getType();
 
-        if (!size_ty->isIntegerTy() ||
-            size_ty->getIntegerBitWidth() != index_width) {
-          ctx.fail("invalid caffeine_symbolic_alloca signature (invalid first "
-                   "argument)");
-          return;
-        }
+      if (!size_ty->isIntegerTy() ||
+          size_ty->getIntegerBitWidth() != index_width) {
+        ctx.fail("invalid caffeine_symbolic_alloca signature (invalid first "
+                 "argument)");
+        return;
+      }
 
-        if (!name_ty->isPointerTy() ||
-            !name_ty->getPointerElementType()->isIntegerTy() ||
-            name_ty->getPointerElementType()->getIntegerBitWidth() != 8) {
-          ctx.fail("invalid caffeine_symbolic_alloca signature (invalid second "
-                   "argument)");
-          return;
-        }
+      if (!name_ty->isPointerTy() ||
+          !name_ty->getPointerElementType()->isIntegerTy() ||
+          name_ty->getPointerElementType()->getIntegerBitWidth() != 8) {
+        ctx.fail("invalid caffeine_symbolic_alloca signature (invalid second "
+                 "argument)");
+        return;
       }
 
       auto unresolved = args[1].scalar().pointer();
@@ -77,17 +75,8 @@ namespace {
       auto size = args[0].scalar().expr();
       auto csize = llvm::dyn_cast<ConstantInt>(size.get());
       if (csize && csize->value().getLimitedValue() < MAX_FIXED_CONSTANT_SIZE) {
-        size_t data_size = csize->value().getLimitedValue();
-        std::vector<OpRef> constants;
-        constants.reserve(data_size);
-
-        for (size_t i = 0; i < data_size; ++i) {
-          constants.push_back(Constant::Create(
-              Type::int_ty(8), Symbol(ctx.context().next_constant())));
-        }
-
-        data =
-            FixedArray::Create(size->type(), PersistentArray<OpRef>(constants));
+        data = createFixedLengthSymbolicData(csize->value().getLimitedValue(),
+                                             size->type(), ctx);
       } else {
         data = ConstantArray::Create(Symbol(*alloc_name), size);
       }
@@ -133,6 +122,40 @@ namespace {
       }
 
       return std::string(start, end);
+    }
+
+    static OpRef createFixedLengthSymbolicData(size_t data_size,
+                                               const Type& type,
+                                               InterpreterContext& ctx) {
+
+      if (data_size == 1 || data_size == 2 || data_size == 4 ||
+          data_size == 8) {
+        auto data =
+            ctx.createAlloc(ctx.createConstantInt(type.bitwidth(), data_size),
+                            ctx.createConstantZero(8));
+
+        auto constant = Constant::Create(Type::int_ty(data_size * 8),
+                                         Symbol(ctx.context().next_constant()));
+
+        for (size_t i = 0; i < data_size; ++i) {
+          auto byte =
+              ctx.createTrunc(Type::int_ty(8), ctx.createLShr(constant, i * 8));
+          auto index = ctx.createConstantInt(type.bitwidth(), i);
+
+          data = ctx.createStore(data, index, byte);
+        }
+
+        return data;
+      } else {
+        std::vector<OpRef> constants;
+        constants.reserve(data_size);
+
+        for (size_t i = 0; i < data_size; ++i) {
+          constants.push_back(Constant::Create(
+              Type::int_ty(8), Symbol(ctx.context().next_constant())));
+        }
+        return FixedArray::Create(type, PersistentArray<OpRef>(constants));
+      }
     }
   };
 
