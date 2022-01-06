@@ -2,6 +2,7 @@
 #include "Operation.h"
 #include "caffeine/IR/Type.h"
 #include "caffeine/IR/Value.h"
+#include "caffeine/Support/LLVMFmt.h"
 #include "caffeine/Support/Macros.h"
 
 #include <boost/algorithm/string.hpp>
@@ -202,9 +203,11 @@ static std::ostream& print_cons(std::ostream& os, const Ts&... values) {
 
 std::ostream& operator<<(std::ostream& os, const Operation& op) {
   if (const auto* constant = llvm::dyn_cast<Constant>(&op)) {
+    std::string label = fmt::format("const.{}", op.type().bitwidth());
+
     if (constant->is_named())
-      return print_cons(os, "const", constant->name());
-    return print_cons(os, "const", constant->number());
+      return print_cons(os, label, constant->name());
+    return print_cons(os, label, constant->number());
   }
 
   if (const auto* constant = llvm::dyn_cast<ConstantInt>(&op)) {
@@ -216,10 +219,7 @@ std::ostream& operator<<(std::ostream& os, const Operation& op) {
   }
 
   if (const auto* constant = llvm::dyn_cast<ConstantFloat>(&op)) {
-    std::string s;
-    llvm::raw_string_ostream o(s);
-    constant->value().print(o);
-    return print_cons(os, op.type(), s);
+    return print_cons(os, op.type(), fmt::format("{}", constant->value()));
   }
 
   if (const auto* function = llvm::dyn_cast<FunctionObject>(&op)) {
