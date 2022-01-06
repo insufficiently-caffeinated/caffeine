@@ -11,6 +11,7 @@
 #include "caffeine/Support/Signal.h"
 #include "caffeine/Support/Tracing.h"
 
+#include <caffeine/Solver/Solver.h>
 #include <cstdlib>
 #include <divine/Passes/CppLsda.h>
 
@@ -65,6 +66,10 @@ cl::opt<bool> invert_exitcode{
              "otherwise. All other exit codes remain the same."),
     cl::cat(caffeine_options),
 };
+cl::opt<bool> log_queries{
+    "log-queries",
+    cl::desc("whether to log queries before sending them to the solver."),
+    cl::cat(caffeine_options), cl::init(false)};
 cl::opt<size_t> threads{
     "t", cl::desc("the number of threads to use. 0 means num_cpus"),
     cl::cat(caffeine_options)};
@@ -168,11 +173,16 @@ int main(int argc, char** argv) {
   if (enable_coverage)
     cov = std::make_unique<CoverageTracker>();
 
+  auto solver_builder = SolverBuilder::with_default();
+  if (log_queries)
+    solver_builder.with<LoggingSolver>();
+
   auto caffeine = CaffeineContext::builder()
                       .with_store(std::move(store))
                       .with_logger(std::make_unique<CountingFailureLogger>(
                           std::cout, function))
                       .with_coverage(std::move(cov))
+                      .with_solver_builder(std::move(solver_builder))
                       .build();
   auto exec = caffeine::Executor(&caffeine, options);
 
