@@ -1,0 +1,12 @@
+"""Caffeine symbolic execution engine
+"""
+
+module(
+    name = "caffeine",
+    version = "0.1.0",
+)
+
+bazel_dep(name = "fmt", version = "8.1.0")
+bazel_dep(name = "googletest", version = "1.11.0")
+bazel_dep(name = "immer", version = "0.7.0")
+bazel_dep(name = "magic_enum", version = "0.7.3")
