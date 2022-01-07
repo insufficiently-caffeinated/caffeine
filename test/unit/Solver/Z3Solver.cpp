@@ -1,9 +1,14 @@
 
 #include "src/Solver/Z3Solver.h"
+#include "caffeine/IR/Operation.h"
+#include "caffeine/Solver/Z3/Convert.h"
+#include "caffeine/Support/LLVMFmt.h"
+#include <fmt/format.h>
+#include <fmt/ostream.h>
 
 #include <gtest/gtest.h>
 
-using caffeine::z3_to_apfloat;
+using namespace caffeine;
 
 class Z3ConversionTests : public ::testing::Test {
 public:
@@ -66,4 +71,19 @@ TEST_F(Z3ConversionTests, dbl_max_to_apfloat) {
 
   ASSERT_TRUE(val.isFiniteNonZero());
   ASSERT_EQ(val.convertToDouble(), DBL_MAX);
+}
+
+TEST_F(Z3ConversionTests, apfloat_f32_to_z3_roundtrip) {
+  Z3ConstMap map;
+  z3::solver solver{ctx};
+
+  auto flt = llvm::APFloat(4.0f);
+  auto val = ConstantFloat::Create(flt);
+  auto fpa = Z3OpVisitor(&solver, map).visit(*val);
+
+  solver.check();
+  auto model = solver.get_model();
+  auto res = z3_to_apfloat(model.eval(fpa));
+
+  ASSERT_TRUE(flt == res) << fmt::format("{} != {}", flt, res);
 }

@@ -19,8 +19,6 @@ namespace {
         return;
       }
 
-      fmt::print("{}\n", *func);
-
       if (func->getReturnType() != func->getArg(0)->getType() ||
           !func->getReturnType()->isPointerTy()) {
         ctx.fail("invalid caffeine_builtin_resolve signature (invalid first "

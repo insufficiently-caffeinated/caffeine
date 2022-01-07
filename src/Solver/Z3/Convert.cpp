@@ -4,6 +4,7 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 #include <llvm/ADT/SmallString.h>
+#include <z3_fpa.h>
 
 namespace caffeine {
 namespace {
@@ -69,6 +70,20 @@ namespace {
     }
 
     CAFFEINE_UNREACHABLE();
+  }
+
+  z3::expr bv_to_fpa(const Type& dst, const z3::expr& src) {
+    unsigned ebits = dst.exponent_bits();
+    unsigned sbits = dst.mantissa_bits();
+    unsigned tbits = ebits + sbits;
+
+    z3::expr sig = src.extract(sbits - 2, 0);
+    z3::expr exp = src.extract(tbits - 2, sbits - 1);
+    z3::expr sgn = src.extract(tbits - 1, tbits - 1);
+
+    z3::expr expr{src.ctx(), Z3_mk_fpa_fp(src.ctx(), sgn, exp, sig)};
+    src.ctx().check_error();
+    return expr;
   }
 
 } // namespace
@@ -144,13 +159,8 @@ z3::expr Z3OpVisitor::visitConstantInt(const ConstantInt& op) {
   return ctx->bv_val(str.c_str(), op.value().getBitWidth());
 }
 z3::expr Z3OpVisitor::visitConstantFloat(const ConstantFloat& op) {
-  // TODO: Reimplement this correctly
-  auto expr = z3::expr(
-      *ctx, Z3_mk_fpa_numeral_double(*ctx, op.value().convertToDouble(),
-                                     ctx->fpa_sort(op.type().exponent_bits(),
-                                                   op.type().mantissa_bits())));
-  expr.check_error();
-  return expr;
+  z3::expr src = visit(*ConstantInt::Create(op.value().bitcastToAPInt()));
+  return bv_to_fpa(op.type(), src);
 }
 z3::expr Z3OpVisitor::visitUndef(const Undef& op) {
   // TODO: Semantically, we can return absolutely any value when working with
@@ -385,17 +395,7 @@ z3::expr Z3OpVisitor::visitBitcast(const UnaryOp& op) {
     return expr;
   }
   if (op.type().is_float() && op.operand()->type().is_int()) {
-    unsigned ebits = op.type().exponent_bits();
-    unsigned sbits = op.type().mantissa_bits();
-    unsigned tbits = ebits + sbits;
-
-    z3::expr sig = src.extract(sbits - 2, 0);
-    z3::expr exp = src.extract(tbits - 2, sbits - 1);
-    z3::expr sgn = src.extract(tbits - 1, tbits - 1);
-
-    z3::expr expr{src.ctx(), Z3_mk_fpa_fp(src.ctx(), sgn, exp, sig)};
-    ctx->check_error();
-    return expr;
+    return bv_to_fpa(op.type(), src);
   }
 
   CAFFEINE_UNIMPLEMENTED(
