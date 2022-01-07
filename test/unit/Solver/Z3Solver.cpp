@@ -80,7 +80,10 @@ TEST_F(Z3ConversionTests, apfloat_f32_to_z3_roundtrip) {
   auto flt = llvm::APFloat(4.0f);
   auto val = ConstantFloat::Create(flt);
   auto fpa = Z3OpVisitor(&solver, map).visit(*val);
-  auto res = z3_to_apfloat(fpa);
+
+  solver.check();
+  auto model = solver.get_model();
+  auto res = z3_to_apfloat(model.eval(fpa));
 
   ASSERT_TRUE(flt == res) << fmt::format("{} != {}", flt, res);
 }
