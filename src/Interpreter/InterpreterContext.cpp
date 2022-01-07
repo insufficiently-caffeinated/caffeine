@@ -51,15 +51,7 @@ llvm::Instruction* InterpreterContext::getCurrentInstruction() const {
   if (frame.is_external())
     return nullptr;
 
-  const auto& regular = frame.get_regular();
-  if (regular.current == regular.current_block->begin()) {
-    if (!regular.prev_block)
-      return nullptr;
-
-    return regular.prev_block->getTerminator();
-  }
-
-  return &*std::prev(regular.current);
+  return frame.get_regular().get_current_instruction();
 }
 
 // TODO: This is basically a placeholder. We need to figure out how to deal
@@ -77,8 +69,7 @@ std::optional<LLVMValue> InterpreterContext::lookup(llvm::Value* value) const {
   const auto& frame = context().stack_top();
 
   if (frame.is_external()) {
-    CAFFEINE_UNIMPLEMENTED("Loading variables within external stack frames is "
-                           "still being implemented");
+    return std::nullopt;
   }
 
   auto& regular = frame.get_regular();
@@ -200,11 +191,24 @@ void InterpreterContext::jump_resume(const LLVMValue& resume) {
 }
 
 void InterpreterContext::function_return(std::optional<LLVMValue> retval) {
-  if (getCurrentFunction() &&
-      getCurrentFunction()->getReturnType()->isVoidTy()) {
-    CAFFEINE_ASSERT(!retval.has_value());
-  } else {
-    CAFFEINE_ASSERT(retval.has_value());
+  auto func = getCurrentFunction();
+  if (func) {
+    auto ret_ty = func->getReturnType();
+    if (ret_ty->isVoidTy()) {
+      CAFFEINE_ASSERT(!retval.has_value());
+    } else {
+      CAFFEINE_ASSERT(retval.has_value());
+
+      if (ret_ty->isIntegerTy()) {
+        CAFFEINE_ASSERT(retval->is_scalar());
+        CAFFEINE_ASSERT(retval->scalar().is_expr());
+        CAFFEINE_ASSERT(retval->scalar().expr()->type().is_int());
+        CAFFEINE_ASSERT(retval->scalar().expr()->type().bitwidth() ==
+                        ret_ty->getIntegerBitWidth());
+      }
+
+      // TODO: Other types
+    }
   }
 
   auto& ctx = context();

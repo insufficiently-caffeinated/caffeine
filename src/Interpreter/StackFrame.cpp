@@ -15,7 +15,7 @@ std::atomic<uint64_t> StackFrame::next_frame_id{0};
 
 IRStackFrame::IRStackFrame(llvm::Function* function, uint64_t frame_id)
     : frame_id{frame_id}, current_block(&function->getEntryBlock()),
-      prev_block(nullptr), current(current_block->begin()) {}
+      prev_block(nullptr), current(current_block->begin()), func(function) {}
 
 void IRStackFrame::jump_to(llvm::BasicBlock* block) {
   CAFFEINE_ASSERT(block, "Cannot jump to null block");
@@ -30,6 +30,17 @@ void IRStackFrame::insert(llvm::Value* value, const OpRef& expr) {
 }
 void IRStackFrame::insert(llvm::Value* value, const LLVMValue& exprs) {
   variables.insert_or_assign(value, exprs);
+}
+
+llvm::Instruction* IRStackFrame::get_current_instruction() const {
+  if (current == current_block->begin()) {
+    if (!prev_block)
+      return nullptr;
+
+    return prev_block->getTerminator();
+  }
+
+  return &*std::prev(current);
 }
 
 void IRStackFrame::set_result(std::optional<LLVMValue> result,
