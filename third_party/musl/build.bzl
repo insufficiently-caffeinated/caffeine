@@ -18,6 +18,7 @@ bitcode_import(
 )
 
 STRIP_FUNCTIONS = [
+    "abort",
     "calloc",
     "malloc",
     "free",
