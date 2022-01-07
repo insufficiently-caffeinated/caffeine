@@ -143,16 +143,16 @@ Builder& Builder::with_solver_builder(SolverBuilder&& builder) {
 Builder& Builder::with_default_functions() {
   with_function("caffeine_assert", ExternalFunctions::caffeine_assert());
   with_function("caffeine_assume", ExternalFunctions::caffeine_assume());
-  with_function("caffeine_malloc_aligned",
-                ExternalFunctions::caffeine_malloc_aligned());
-  with_function("caffeine_builtin_symbolic_alloca",
-                ExternalFunctions::caffeine_builtin_symbolic_alloca());
   with_function("caffeine_builtin_resolve",
                 ExternalFunctions::caffeine_builtin_resolve());
+  with_function("caffeine_builtin_symbolic_alloca",
+                ExternalFunctions::caffeine_builtin_symbolic_alloca());
   with_function("caffeine_calloc", ExternalFunctions::caffeine_calloc());
   with_function("caffeine_free", ExternalFunctions::caffeine_free());
   with_function("caffeine_malloc_aligned",
                 ExternalFunctions::caffeine_malloc_aligned());
+  with_function("caffeine_unwind_phase1",
+                ExternalFunctions::caffeine_unwind_phase1());
 
   with_function("abort", ExternalFunctions::abort());
   with_function("longjmp", ExternalFunctions::longjmp());

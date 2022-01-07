@@ -1,6 +1,7 @@
 #pragma once
 
 #include "caffeine.h"
+#include "caffeine-unwind.h"
 
 #include <stdlib.h>
 
