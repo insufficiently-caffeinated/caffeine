@@ -46,7 +46,7 @@ jobs:
           echo build --google_default_credentials           >> local.bazelrc
           echo build --remote_max_connections=1000          >> local.bazelrc
           echo build --local_cpu_resources=2                >> local.bazelrc
-          echo build --jobs=96                              >> local.bazelrc
+          echo build --jobs=256                             >> local.bazelrc
           echo build --remote_cache=https://storage.googleapis.com/swlynch-devenv-bazel-remote-cache >> local.bazelrc
       
       - name: Avoid uploading if we don't have credentials
@@ -86,7 +86,7 @@ jobs:
           echo build --google_default_credentials           >> local.bazelrc
           echo build --remote_max_connections=1000          >> local.bazelrc
           echo build --local_cpu_resources=2                >> local.bazelrc
-          echo build --jobs=96                              >> local.bazelrc
+          echo build --jobs=256                             >> local.bazelrc
           echo build --remote_cache=https://storage.googleapis.com/swlynch-devenv-bazel-remote-cache >> local.bazelrc
       
       - name: Avoid uploading if we don't have credentials
