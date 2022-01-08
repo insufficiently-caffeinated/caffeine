@@ -60,8 +60,6 @@ jobs:
         run: |
           echo build --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }} >> local.bazelrc
 
-      # - uses: lhotari/action-upterm@v1
-
       - name: Run all tests
         run: |
           bazelisk test -- //... \
@@ -77,27 +75,32 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - uses: google-github-actions/auth@v0
-        id: 'auth'
-        with:
-          credentials_json: '${{ secrets.GOOGLE_CREDENTIALS }}'
-
       - name: Configure bazel flags
         shell: bash
         run: |
           echo > bazel/cache.bazelrc
-          echo build --compilation_mode=${{ matrix.mode }}  >> local.bazelrc
-          echo build --google_default_credentials           >> local.bazelrc
-          echo build --remote_max_connections=1000          >> local.bazelrc
-          echo build --local_cpu_resources=2                >> local.bazelrc
-          echo build --jobs=256                             >> local.bazelrc
-          echo build --remote_cache=https://storage.googleapis.com/swlynch-devenv-bazel-remote-cache >> local.bazelrc
+          cat >> local.bazelrc <<- EOF
+          build --compilation_mode=${{ matrix.mode }}
+          build --remote_max_connections=1000
+          build --local_cpu_resources=2
+          build --jobs=256
+          build --bes_backend=grpcs://cloud.buildbuddy.io
+          build --remote_cache=grpcs://cloud.buildbuddy.io
+          build --remote_timeout=3600
+          build --bes_results_url=https://app.buildbuddy.io/invocation/
+          EOF
       
       - name: Avoid uploading if we don't have credentials
-        if: env.GOOGLE_CREDENTIALS == null
+        if: env.BUILDBUDDY_API_KEY == null
         shell: bash
         run: |
           echo build --remote_upload_local_results=false >> local.bazelrc
+
+      - name: Specify azure authorization
+        if: env.BUILDBUDDY_API_KEY != null
+        shell: bash
+        run: |
+          echo build --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }} >> local.bazelrc
       
       - name: Check formatting of all targets
         run: bazelisk run -- //:check-format
