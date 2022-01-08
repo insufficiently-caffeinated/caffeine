@@ -55,9 +55,6 @@ jobs:
         run: |
           echo build --remote_upload_local_results=false >> local.bazelrc
 
-      - name: Build all caffeine targets
-        run: bazelisk build -- //...
-
       - name: Run all tests
         run: |
           bazelisk test -- //... \
