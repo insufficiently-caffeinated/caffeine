@@ -8,7 +8,7 @@ on:
   pull_request:
 
 env:
-  GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+  AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
 
 jobs:
   build:
@@ -20,11 +20,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-
-      - uses: google-github-actions/auth@v0
-        id: 'auth'
-        with:
-          credentials_json: '${{ secrets.GOOGLE_CREDENTIALS }}'
 
       - name: Find bazel output base
         id: bazel_info
@@ -38,22 +33,36 @@ jobs:
             ${{ steps.bazel_info.outputs.output_base }}/external
           key: bazel-external-${{ hashFiles('WORKSPACE', 'third_party/*/*', 'bazel/dependencies.bzl') }}
 
+      - uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
       - name: Configure bazel flags
         shell: bash
         run: |
           echo > bazel/cache.bazelrc
           echo build --compilation_mode=${{ matrix.mode }}  >> local.bazelrc
-          echo build --google_default_credentials           >> local.bazelrc
           echo build --remote_max_connections=1000          >> local.bazelrc
           echo build --local_cpu_resources=2                >> local.bazelrc
           echo build --jobs=256                             >> local.bazelrc
-          echo build --remote_cache=https://storage.googleapis.com/swlynch-devenv-bazel-remote-cache >> local.bazelrc
+          echo build --remote_cache=https://swlynchbazelremotecache.blob.core.windows.net/remote-cache >> local.bazelrc
       
       - name: Avoid uploading if we don't have credentials
-        if: env.GOOGLE_CREDENTIALS == null
+        if: env.AZURE_CREDENTIALS == null
         shell: bash
         run: |
           echo build --remote_upload_local_results=false >> local.bazelrc
+
+      - name: Specify azure authorization
+        if: env.AZURE_CREDENTIALS != null
+        shell: bash
+        run: |
+          TOKEN=$(az account get-access-token --resource https://storage.azure.com/ --query accessToken -o tsv)
+          echo build '"'--remote_header=Authorization=Bearer $TOKEN'"' >> local.bazelrc
+          echo build --remote_header=x-ms-version=2018-03-28           >> local.bazelrc
+          echo build --remote_header=x-ms-blob-type=BlockBlob          >> local.bazelrc
+
+      # - uses: lhotari/action-upterm@v1
 
       - name: Run all tests
         run: |
