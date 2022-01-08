@@ -34,7 +34,7 @@ jobs:
           echo build --compilation_mode=${{ matrix.mode }}  >> local.bazelrc
           echo build --google_default_credentials           >> local.bazelrc
           echo build --remote_max_connections=1000          >> local.bazelrc
-          echo build --local_cpu_resources=HOST_CPUS        >> local.bazelrc
+          echo build --local_cpu_resources=2                >> local.bazelrc
           echo build --jobs=96                              >> local.bazelrc
           echo build --remote_cache=https://storage.googleapis.com/swlynch-devenv-bazel-remote-cache >> local.bazelrc
       
@@ -75,7 +75,7 @@ jobs:
           echo build --compilation_mode=${{ matrix.mode }}  >> local.bazelrc
           echo build --google_default_credentials           >> local.bazelrc
           echo build --remote_max_connections=1000          >> local.bazelrc
-          echo build --local_cpu_resources=HOST_CPUS        >> local.bazelrc
+          echo build --local_cpu_resources=2                >> local.bazelrc
           echo build --jobs=96                              >> local.bazelrc
           echo build --remote_cache=https://storage.googleapis.com/swlynch-devenv-bazel-remote-cache >> local.bazelrc
       
