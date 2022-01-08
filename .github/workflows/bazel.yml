@@ -26,6 +26,18 @@ jobs:
         with:
           credentials_json: '${{ secrets.GOOGLE_CREDENTIALS }}'
 
+      - name: Find bazel output base
+        id: bazel_info
+        shell: bash
+        run: |
+          echo "::set-output name=output_base::$(bazel info output_base)"
+
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ${{ steps.bazel_info.outputs.output_base }}/external
+          key: bazel-external-${{ hashFiles('WORKSPACE', 'third_party/*/*', 'bazel/dependencies.bzl') }}
+
       - name: Configure bazel flags
         shell: bash
         run: |
