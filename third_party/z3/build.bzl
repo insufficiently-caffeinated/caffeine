@@ -6,9 +6,11 @@ load(
     "gen_db",
     "gen_gparams",
     "gen_install_tactic",
+    "gen_version",
     "mem_initializer",
     "pyg2hpp",
 )
+load("//:version.bzl", "VERSION")
 
 PY_BINARIES = [
     "mk_consts_files",
@@ -96,11 +98,18 @@ gen_gparams(
     out = "src/gparams_register_modules.cpp",
 )
 
+gen_version(
+    name = "gen_version",
+    version = VERSION,
+    out = "src/util/z3_version.h",
+)
+
 cc_library(
     name = "z3-impl",
     hdrs = Z3_HDRS + PYGHDRS + [
         "src/api/api_log_macros.h",
         "src/ast/pattern/database.h",
+        "src/util/z3_version.h",
     ],
     srcs = glob(["src/**/*.cpp"], exclude = EXCLUDES) + [
         ":gen_api",

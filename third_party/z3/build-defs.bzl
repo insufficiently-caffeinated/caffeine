@@ -171,3 +171,32 @@ gen_gparams = rule(
         ),
     },
 )
+
+def _gen_version(ctx):
+    components = ctx.attr.version.split(".")
+
+    content = """
+// automatically generated file.
+#define Z3_MAJOR_VERSION   {}
+#define Z3_MINOR_VERSION   {}
+#define Z3_BUILD_NUMBER    {}
+#define Z3_REVISION_NUMBER {}
+
+#define Z3_FULL_VERSION    "{}"
+""".format(
+        components[0],
+        components[1],
+        components[2],
+        components[3],
+        ctx.attr.version,
+    )
+
+    ctx.actions.write(ctx.outputs.out, content)
+
+gen_version = rule(
+    implementation = _gen_version,
+    attrs = {
+        "version": attr.string(),
+        "out": attr.output(),
+    },
+)
