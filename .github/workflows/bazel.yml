@@ -8,7 +8,7 @@ on:
   pull_request:
 
 env:
-  AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
+  BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
 
 jobs:
   build:
@@ -33,34 +33,32 @@ jobs:
             ${{ steps.bazel_info.outputs.output_base }}/external
           key: bazel-external-${{ hashFiles('WORKSPACE', 'third_party/*/*', 'bazel/dependencies.bzl') }}
 
-      - uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
       - name: Configure bazel flags
         shell: bash
         run: |
           echo > bazel/cache.bazelrc
-          echo build --compilation_mode=${{ matrix.mode }}  >> local.bazelrc
-          echo build --remote_max_connections=1000          >> local.bazelrc
-          echo build --local_cpu_resources=2                >> local.bazelrc
-          echo build --jobs=256                             >> local.bazelrc
-          echo build --remote_cache=https://swlynchbazelremotecache.blob.core.windows.net/remote-cache >> local.bazelrc
+          cat >> local.bazelrc <<- EOF
+          build --compilation_mode=${{ matrix.mode }}
+          build --remote_max_connections=1000
+          build --local_cpu_resources=2
+          build --jobs=256
+          build --bes_backend=grpcs://cloud.buildbuddy.io
+          build --remote_cache=grpcs://cloud.buildbuddy.io
+          build --remote_timeout=3600
+          build --bes_results_url=https://app.buildbuddy.io/invocation/
+          EOF
       
       - name: Avoid uploading if we don't have credentials
-        if: env.AZURE_CREDENTIALS == null
+        if: env.BUILDBUDDY_API_KEY == null
         shell: bash
         run: |
           echo build --remote_upload_local_results=false >> local.bazelrc
 
       - name: Specify azure authorization
-        if: env.AZURE_CREDENTIALS != null
+        if: env.BUILDBUDDY_API_KEY != null
         shell: bash
         run: |
-          TOKEN=$(az account get-access-token --resource https://storage.azure.com/ --query accessToken -o tsv)
-          echo build '"'--remote_header=Authorization=Bearer $TOKEN'"' >> local.bazelrc
-          echo build --remote_header=x-ms-version=2018-03-28           >> local.bazelrc
-          echo build --remote_header=x-ms-blob-type=BlockBlob          >> local.bazelrc
+          echo build --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }} >> local.bazelrc
 
       # - uses: lhotari/action-upterm@v1
 
