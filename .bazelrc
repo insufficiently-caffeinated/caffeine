@@ -16,5 +16,5 @@ test --test_output=errors
 # Workspace status command for use within RBE
 # build --workspace_status_command=$(pwd)/workspace_status.sh
 
-try-import %workspace/bazel/cache.bazelrc
+try-import %workspace%/bazel/cache.bazelrc
 try-import %workspace%/local.bazelrc
