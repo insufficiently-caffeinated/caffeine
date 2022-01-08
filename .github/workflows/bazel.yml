@@ -29,7 +29,6 @@ jobs:
       - name: Configure bazel flags
         shell: bash
         run: |
-          echo 4.2.2 > .bazelversion
           echo > bazel/cache.bazelrc
           echo build --compilation_mode=${{ matrix.mode }}  >> local.bazelrc
           echo build --google_default_credentials           >> local.bazelrc
@@ -70,7 +69,6 @@ jobs:
       - name: Configure bazel flags
         shell: bash
         run: |
-          echo 4.2.2 > .bazelversion
           echo > bazel/cache.bazelrc
           echo build --compilation_mode=${{ matrix.mode }}  >> local.bazelrc
           echo build --google_default_credentials           >> local.bazelrc
