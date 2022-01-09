@@ -8,7 +8,6 @@ on:
   pull_request:
 
 env:
-  BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
   GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
 
 jobs:
@@ -68,43 +67,46 @@ jobs:
           bazelisk test -- //... \
             $(bazelisk query 'kind(".*_test", //...) intersect attr("tags", "manual", //...)')
 
-  # format:
-  #   runs-on: ubuntu-latest
-  #   strategy:
-  #     matrix:
-  #       mode: [fastbuild]
-  #     fail-fast: false
+  format:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        mode: [fastbuild]
+      fail-fast: false
 
-  #   steps:
-  #     - uses: actions/checkout@v2
+    steps:
+      - uses: actions/checkout@v2
 
-  #     - name: Configure bazel flags
-  #       shell: bash
-  #       run: |
-  #         echo > bazel/cache.bazelrc
-  #         cat >> local.bazelrc <<- EOF
-  #         build --compilation_mode=${{ matrix.mode }}
-  #         build --remote_max_connections=1000
-  #         build --local_cpu_resources=2
-  #         build --jobs=256
-  #         build --bes_backend=grpcs://cloud.buildbuddy.io
-  #         build --remote_cache=grpcs://cloud.buildbuddy.io
-  #         build --remote_timeout=3600
-  #         build --bes_results_url=https://app.buildbuddy.io/invocation/
-  #         EOF
+      - uses: google-github-actions/auth@v0
+        id: 'auth'
+        with:
+          credentials_json: '${{ secrets.GOOGLE_CREDENTIALS }}'
+
+      - name: Configure bazel flags
+        shell: bash
+        run: |
+          echo > bazel/cache.bazelrc
+          cat >> local.bazelrc <<- EOF
+          build --compilation_mode=${{ matrix.mode }}
+          build --remote_max_connections=1000
+          build --local_cpu_resources=2
+          build --jobs=256
+          build --remote_cache=http://35.211.199.119
+          EOF
       
-  #     - name: Avoid uploading if we don't have credentials
-  #       if: env.BUILDBUDDY_API_KEY == null
-  #       shell: bash
-  #       run: |
-  #         echo build --remote_upload_local_results=false >> local.bazelrc
-
-  #     - name: Specify buildbuddy api key
-  #       if: env.BUILDBUDDY_API_KEY != null
-  #       shell: bash
-  #       run: |
-  #         echo build --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }} >> local.bazelrc
+      - name: Avoid uploading if we don't have credentials
+        if: env.GOOGLE_CREDENTIALS == null
+        shell: bash
+        run: |
+          echo build --remote_upload_local_results=false >> local.bazelrc
       
-  #     - name: Check formatting of all targets
-  #       run: bazelisk run -- //:check-format
+      - name: Pass google credentials
+        if: env.GOOGLE_CREDENTIALS != null
+        shell: bash
+        run: |
+          echo build --google_credentials=${{ env.GOOGLE_APPLICATION_CREDENTIALS }} >> local.bazelrc
+
+      
+      - name: Check formatting of all targets
+        run: bazelisk run -- //:check-format
 
