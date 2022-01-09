@@ -20,6 +20,8 @@ public:
   void add_context(Context&& ctx) override;
   void add_context_multi(Span<Context> contexts) override;
 
+  void shutdown() override;
+
 private:
   std::unique_ptr<ExecutionContextStore> store;
   std::atomic<uint64_t> count{0};

@@ -10,6 +10,8 @@ CountLimitedStore::CountLimitedStore(
 
 std::optional<Context> CountLimitedStore::next_context() {
   uint64_t current = count.fetch_add(1, std::memory_order_relaxed);
+  if (current == limit)
+    shutdown();
   if (current > limit)
     return std::nullopt;
 
@@ -21,6 +23,10 @@ void CountLimitedStore::add_context(Context&& ctx) {
 }
 void CountLimitedStore::add_context_multi(Span<Context> contexts) {
   store->add_context_multi(contexts);
+}
+
+void CountLimitedStore::shutdown() {
+  store->shutdown();
 }
 
 } // namespace caffeine

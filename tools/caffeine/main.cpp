@@ -108,6 +108,11 @@ cl::opt<uint64_t> limit_contexts{
              "caffeine ends up splitting a context into multiple and then "
              "executing both."),
     cl::cat(caffeine_options), cl::init(0)};
+cl::opt<uint64_t> limit_time_seconds{
+    "limit-time-seconds",
+    cl::desc("Instructs caffeine to stop symbolic execution after the given "
+             "number of seconds have elapsed."),
+    cl::value_desc("seconds"), cl::cat(caffeine_options), cl::init(0)};
 
 static ExitOnError exit_on_err;
 
@@ -184,6 +189,13 @@ int main(int argc, char** argv) {
   if (limit_contexts != 0) {
     store =
         std::make_unique<CountLimitedStore>(limit_contexts, std::move(store));
+  }
+
+  if (limit_time_seconds != 0) {
+    store = std::make_unique<TimeLimitedStore>(
+        std::chrono::steady_clock::now() +
+            std::chrono::seconds(limit_time_seconds),
+        std::move(store));
   }
 
   std::unique_ptr<CoverageTracker> cov = nullptr;

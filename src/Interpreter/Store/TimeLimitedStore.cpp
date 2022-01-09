@@ -13,8 +13,10 @@ TimeLimitedStore::TimeLimitedStore(
 std::optional<Context> TimeLimitedStore::next_context() {
   auto now = std::chrono::steady_clock::now();
 
-  if (now > endpoint)
+  if (now > endpoint) {
+    shutdown();
     return std::nullopt;
+  }
 
   return store->next_context();
 }
@@ -24,6 +26,11 @@ void TimeLimitedStore::add_context(Context&& ctx) {
 }
 void TimeLimitedStore::add_context_multi(Span<Context> contexts) {
   store->add_context_multi(contexts);
+}
+
+void TimeLimitedStore::shutdown() {
+  if (!shutdown_started.exchange(true))
+    store->shutdown();
 }
 
 } // namespace caffeine

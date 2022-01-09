@@ -64,7 +64,7 @@ public:
   void add_context(Context&& ctx) override;
   void add_context_multi(Span<Context> ctxs) override;
 
-  void shutdown();
+  void shutdown() override;
 
 private:
   // Lock the store, doesn't ever create a new queue
