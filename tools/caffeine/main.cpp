@@ -4,6 +4,8 @@
 #include "caffeine/Interpreter/Interpreter.h"
 #include "caffeine/Interpreter/Policy.h"
 #include "caffeine/Interpreter/Store.h"
+#include "caffeine/Interpreter/Store/CountLimitedStore.h"
+#include "caffeine/Interpreter/Store/TimeLimitedStore.h"
 #include "caffeine/Interpreter/ThreadQueueStore.h"
 #include "caffeine/Solver/LoggingSolver.h"
 #include "caffeine/Solver/Solver.h"
@@ -26,6 +28,7 @@
 #include <llvm/Support/raw_os_ostream.h>
 #include <memory>
 #include <signal.h>
+#include <string>
 #include <thread>
 #include <z3++.h>
 
@@ -89,7 +92,7 @@ cl::opt<std::string> enable_tracing{
     cl::value_desc("filename"), cl::cat(caffeine_options)};
 cl::opt<std::string> store_type{
     "store",
-    cl::desc("Choose which solver caffeine will use. Should be one of: queue, "
+    cl::desc("Choose which store caffeine will use. Should be one of: queue, "
              "thread-queue."),
     cl::value_desc("store"), cl::init("thread-queue"),
     cl::cat(caffeine_options)};
@@ -98,6 +101,13 @@ cl::opt<bool> enable_coverage{"coverage", cl::desc("Enable coverage tracking"),
 cl::opt<bool> no_progress{"no-progress",
                           cl::desc("Disable the progress bar output"),
                           cl::cat(caffeine_options)};
+cl::opt<uint64_t> limit_contexts{
+    "limit-contexts",
+    cl::desc("Limit the number of contexts that caffeine will execute before "
+             "exiting. This roughly corresponds to the number of times that "
+             "caffeine ends up splitting a context into multiple and then "
+             "executing both."),
+    cl::cat(caffeine_options), cl::init(0)};
 
 static ExitOnError exit_on_err;
 
@@ -162,13 +172,18 @@ int main(int argc, char** argv) {
       threads != 0 ? threads : std::thread::hardware_concurrency();
 
   std::unique_ptr<ExecutionContextStore> store;
-  if (store_type == "queue")
+  if (store_type == "queue") {
     store = std::make_unique<QueueingContextStore>(options.num_threads);
-  else if (store_type == "thread-queue")
+  } else if (store_type == "thread-queue") {
     store = std::make_unique<ThreadQueueContextStore>(options.num_threads);
-  else {
+  } else {
     WithColor::error() << " unknown store type '" << store_type << "'\n";
     return 2;
+  }
+
+  if (limit_contexts != 0) {
+    store =
+        std::make_unique<CountLimitedStore>(limit_contexts, std::move(store));
   }
 
   std::unique_ptr<CoverageTracker> cov = nullptr;

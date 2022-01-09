@@ -72,13 +72,6 @@ ThreadQueueContextStore::ThreadQueueContextStore(unsigned numthreads)
 ThreadQueueContextStore::~ThreadQueueContextStore() {
   if (explicit_shutdown)
     return;
-
-  for (auto& [id, tqueue] : queues) {
-    auto& queue = tqueue->queue;
-    CAFFEINE_ASSERT(
-        queue.empty(),
-        "ThreadQueueContextStore shut down with elments still in queues.");
-  }
 }
 
 std::optional<Context> ThreadQueueContextStore::next_context() {

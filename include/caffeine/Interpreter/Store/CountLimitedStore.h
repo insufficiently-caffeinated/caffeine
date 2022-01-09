@@ -21,7 +21,7 @@ public:
   void add_context_multi(Span<Context> contexts) override;
 
 private:
-  std::unique_ptr<ExecutionContextStore>&& store;
+  std::unique_ptr<ExecutionContextStore> store;
   std::atomic<uint64_t> count{0};
   uint64_t limit;
 };
