@@ -1,11 +1,13 @@
 #pragma once
 
 #include "caffeine/Interpreter/Store.h"
-#include <chrono>
 #include <atomic>
+#include <chrono>
 
 namespace caffeine {
 
+// A store that keeps returning new contexts until the provided end time has
+// passed.
 class TimeLimitedStore : public ExecutionContextStore {
 public:
   TimeLimitedStore(std::chrono::time_point<std::chrono::steady_clock> endpoint,
