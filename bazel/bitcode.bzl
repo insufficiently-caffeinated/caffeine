@@ -15,18 +15,24 @@ BitcodeCcInfo = provider(
     ],
 )
 
-_ALLOWED_SRC_EXTS = [
+_C_SRC_EXTS = [
+    ".c",
+]
+
+_CPP_SRC_EXTS = [
     ".cpp",
     ".cc",
     ".cxx",
     ".c++",
-    ".c",
-    ".h",
-    ".hh",
-    ".hpp",
+]
+
+_ALLOWED_SRC_EXTS = [
     ".bc",
     ".ll",
-]
+    ".hpp",
+    ".hh",
+    ".h",
+] + _CPP_SRC_EXTS + _C_SRC_EXTS
 
 BITCODE_LIB_ATTRS = {
     "srcs": attr.label_list(allow_files = _ALLOWED_SRC_EXTS),
@@ -43,7 +49,18 @@ BITCODE_LIB_ATTRS = {
         default = [
             "@caffeine//interface:caffeine",
             "@caffeine//libraries/builtins",
+        ],
+        providers = [BitcodeCcInfo],
+    ),
+    "_cxx_deps": attr.label_list(
+        default = [
             "@libcxx//:libcxx",
+            "@musl//:libc",
+        ],
+        providers = [BitcodeCcInfo],
+    ),
+    "_c_deps": attr.label_list(
+        default = [
             "@musl//:libc",
         ],
         providers = [BitcodeCcInfo],
@@ -102,7 +119,16 @@ def _bitcode_library_common(ctx):
         unsupported_features = ctx.disabled_features,
     )
 
-    deps = ctx.attr.deps + ctx.attr._builtin_deps
+    stdlib_deps = []
+    for src in ctx.files.srcs:
+        if ("." + src.extension) in _C_SRC_EXTS:
+            stdlib_deps = ctx.attr._c_deps
+            continue
+        if ("." + src.extension) in _CPP_SRC_EXTS:
+            stdlib_deps = ctx.attr._cxx_deps
+            break
+
+    deps = ctx.attr.deps + ctx.attr._builtin_deps + stdlib_deps
     public_hdrs = [hdr for hdr in ctx.files.hdrs if hdr.extension in [x[1:] for x in _ALLOWED_HDR_EXTS]]
     addtnl_hdrs = [hdr for hdr in ctx.files.hdrs if hdr.extension not in [x[1:] for x in _ALLOWED_HDR_EXTS]]
     private_hdrs = [hdr for hdr in ctx.files.srcs if hdr.extension in _ALLOWED_HDR_EXTS]
