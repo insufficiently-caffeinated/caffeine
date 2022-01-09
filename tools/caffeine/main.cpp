@@ -6,15 +6,16 @@
 #include "caffeine/Interpreter/Store.h"
 #include "caffeine/Interpreter/ThreadQueueStore.h"
 #include "caffeine/Solver/LoggingSolver.h"
+#include "caffeine/Solver/Solver.h"
 #include "caffeine/Support/Coverage.h"
 #include "caffeine/Support/DiagnosticHandler.h"
 #include "caffeine/Support/Signal.h"
 #include "caffeine/Support/Tracing.h"
-
-#include <caffeine/Solver/Solver.h>
+#include <atomic>
 #include <cstdlib>
 #include <divine/Passes/CppLsda.h>
-
+#include <exception>
+#include <iostream>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/PassManager.h>
 #include <llvm/IRReader/IRReader.h>
@@ -23,14 +24,10 @@
 #include <llvm/Support/InitLLVM.h>
 #include <llvm/Support/WithColor.h>
 #include <llvm/Support/raw_os_ostream.h>
-#include <z3++.h>
-
-#include <atomic>
-#include <exception>
-#include <iostream>
 #include <memory>
 #include <signal.h>
 #include <thread>
+#include <z3++.h>
 
 using namespace llvm;
 using namespace caffeine;
@@ -38,6 +35,7 @@ using namespace caffeine;
 class CountingFailureLogger : public caffeine::PrintingFailureLogger {
 public:
   std::atomic<uint64_t> num_failures = 0;
+  std::atomic<bool> any_unsupported = false;
   llvm::Function* func;
 
   CountingFailureLogger(std::ostream& os, llvm::Function* func)
@@ -45,6 +43,10 @@ public:
 
   void log_failure(const caffeine::Model* model, const caffeine::Context& ctx,
                    const caffeine::Failure& failure) override {
+    if (failure.message == "internal error: unsupported operation") {
+      any_unsupported.store(true);
+    }
+
     num_failures += 1;
     caffeine::PrintingFailureLogger::log_failure(model, ctx, failure);
   }
@@ -200,7 +202,7 @@ int main(int argc, char** argv) {
   exec.run();
 
   auto logger = static_cast<CountingFailureLogger*>(caffeine.logger());
-  int exitcode = logger->num_failures == 0 ? 0 : 1;
+  int exitcode = logger->num_failures == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 
   if (caffeine.coverage()) {
     caffeine.coverage()->report().print(std::cout);
@@ -208,6 +210,11 @@ int main(int argc, char** argv) {
 
   if (invert_exitcode)
     exitcode = !exitcode;
+
+  // We always want to exit with a failure when we run into an unsupported
+  // operation.
+  if (logger->any_unsupported)
+    exitcode = EXIT_FAILURE;
 
   return exitcode;
 }
