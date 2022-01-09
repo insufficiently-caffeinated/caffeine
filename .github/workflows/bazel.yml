@@ -32,8 +32,9 @@ jobs:
           path: |
             ${{ steps.bazel_info.outputs.output_base }}/external
           key: bazel-external-${{ hashFiles('WORKSPACE', 'third_party/*/*', 'bazel/dependencies.bzl') }}
-          
+
       - uses: google-github-actions/auth@v0
+        if: env.GOOGLE_CREDENTIALS != null
         id: 'auth'
         with:
           credentials_json: '${{ secrets.GOOGLE_CREDENTIALS }}'
@@ -49,13 +50,13 @@ jobs:
           build --jobs=256
           build --remote_cache=http://35.211.199.119
           EOF
-      
+
       - name: Avoid uploading if we don't have credentials
         if: env.GOOGLE_CREDENTIALS == null
         shell: bash
         run: |
           echo build --remote_upload_local_results=false >> local.bazelrc
-      
+
       - name: Pass google credentials
         if: env.GOOGLE_CREDENTIALS != null
         shell: bash
@@ -76,8 +77,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-
+          
       - uses: google-github-actions/auth@v0
+        if: env.GOOGLE_CREDENTIALS != null
         id: 'auth'
         with:
           credentials_json: '${{ secrets.GOOGLE_CREDENTIALS }}'
@@ -93,20 +95,19 @@ jobs:
           build --jobs=256
           build --remote_cache=http://35.211.199.119
           EOF
-      
+
       - name: Avoid uploading if we don't have credentials
         if: env.GOOGLE_CREDENTIALS == null
         shell: bash
         run: |
           echo build --remote_upload_local_results=false >> local.bazelrc
-      
+
       - name: Pass google credentials
         if: env.GOOGLE_CREDENTIALS != null
         shell: bash
         run: |
           echo build --google_credentials=${{ env.GOOGLE_APPLICATION_CREDENTIALS }} >> local.bazelrc
 
-      
       - name: Check formatting of all targets
         run: bazelisk run -- //:check-format
 
