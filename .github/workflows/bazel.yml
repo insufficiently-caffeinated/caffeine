@@ -96,7 +96,7 @@ jobs:
         run: |
           echo build --remote_upload_local_results=false >> local.bazelrc
 
-      - name: Specify azure authorization
+      - name: Specify buildbuddy api key
         if: env.BUILDBUDDY_API_KEY != null
         shell: bash
         run: |
