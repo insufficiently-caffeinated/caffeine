@@ -87,6 +87,7 @@ public:
   llvm::BasicBlock* current_block = nullptr;
   llvm::BasicBlock* prev_block = nullptr;
   llvm::BasicBlock::iterator current;
+  llvm::Function* func = nullptr;
 
 private:
   IRStackFrame(llvm::Function* function, uint64_t frame_id);
@@ -106,6 +107,8 @@ public:
    */
   void insert(llvm::Value* value, const OpRef& expr);
   void insert(llvm::Value* value, const LLVMValue& exprs);
+
+  llvm::Instruction* get_current_instruction() const;
 
 private:
   void set_result(std::optional<LLVMValue> result,
