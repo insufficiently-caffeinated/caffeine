@@ -12,4 +12,4 @@ build:ci --jobs=16
 build:ci --experimental_remote_cache_async
 
 # Avoid downloading artifacts that aren't needed.
-# build:ci --remote_download_minimal
+build:ci --remote_download_minimal
