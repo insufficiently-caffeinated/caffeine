@@ -9,6 +9,7 @@ on:
 
 env:
   GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+  CACHE_CREDENTIALS: ${{ secrets.CACHE_CREDENTIALS }}
 
 jobs:
   build:
@@ -34,40 +35,29 @@ jobs:
             ${{ steps.bazel_info.outputs.output_base }}/external
           key: bazel-external-${{ hashFiles('WORKSPACE', 'third_party/*/*', 'bazel/dependencies.bzl') }}
 
-      - uses: google-github-actions/auth@v0
-        if: env.GOOGLE_CREDENTIALS != null
-        id: 'auth'
-        with:
-          credentials_json: '${{ secrets.GOOGLE_CREDENTIALS }}'
-
       - name: Configure bazel flags
         shell: bash
         run: |
           cat >> local.bazelrc <<- EOF
           build --compilation_mode=${{ matrix.mode }}
-          build --remote_max_connections=1000
-          build --local_cpu_resources=2
-          build --jobs=256
-          build --experimental_remote_cache_compression
-          build --remote_download_minimal
-          build --remote_cache=http://35.211.199.119
           EOF
 
       - name: Avoid uploading if we don't have credentials
-        if: env.GOOGLE_CREDENTIALS == null
+        if: env.CACHE_CREDENTIALS == null
         shell: bash
         run: |
-          echo build --remote_upload_local_results=false >> local.bazelrc
+          echo build --remote_cache=grpc://52.149.230.247:9092/ >> local.bazelrc
+          echo build --remote_upload_local_results=false       >> local.bazelrc
 
-      - name: Pass google credentials
-        if: env.GOOGLE_CREDENTIALS != null
+      - name: Pass credentials
+        if: env.CACHE_CREDENTIALS != null
         shell: bash
         run: |
-          echo build --google_credentials=${{ env.GOOGLE_APPLICATION_CREDENTIALS }} >> local.bazelrc
+          echo "build '--remote_cache=grpc://bazel:${{ env.CACHE_CREDENTIALS }}@52.149.230.247:9092/'" >> local.bazelrc
 
       - name: Run all tests
         run: |
-          bazelisk test -- //... \
+          bazelisk test --config=ci -- //... \
             $(bazelisk query 'kind(".*_test", //...) intersect attr("tags", "manual", //...)')
 
   format:
@@ -87,38 +77,26 @@ jobs:
           echo last_downstream_green > .bazelversion 
           echo "::set-output name=output_base::$(bazel info output_base)"
 
-
-      - uses: google-github-actions/auth@v0
-        if: env.GOOGLE_CREDENTIALS != null
-        id: 'auth'
-        with:
-          credentials_json: '${{ secrets.GOOGLE_CREDENTIALS }}'
-
       - name: Configure bazel flags
         shell: bash
         run: |
-          echo > cat >> local.bazelrc <<- EOF
+          cat >> local.bazelrc <<- EOF
           build --compilation_mode=${{ matrix.mode }}
-          build --remote_max_connections=1000
-          build --local_cpu_resources=2
-          build --jobs=256
-          build --experimental_remote_cache_compression
-          build --remote_download_minimal
-          build --remote_cache=http://35.211.199.119
           EOF
 
       - name: Avoid uploading if we don't have credentials
-        if: env.GOOGLE_CREDENTIALS == null
+        if: env.CACHE_CREDENTIALS == null
         shell: bash
         run: |
-          echo build --remote_upload_local_results=false >> local.bazelrc
+          echo build --remote_cache=grpc://52.149.230.247:9092/ >> local.bazelrc
+          echo build --remote_upload_local_results=false       >> local.bazelrc
 
-      - name: Pass google credentials
-        if: env.GOOGLE_CREDENTIALS != null
+      - name: Pass credentials
+        if: env.CACHE_CREDENTIALS != null
         shell: bash
         run: |
-          echo build --google_credentials=${{ env.GOOGLE_APPLICATION_CREDENTIALS }} >> local.bazelrc
+          echo "build '--remote_cache=grpc://bazel:${{ env.CACHE_CREDENTIALS }}@52.149.230.247:9092/'" >> local.bazelrc
 
       - name: Check formatting of all targets
-        run: bazelisk run -- //:check-format
+        run: bazelisk run --config=ci -- //:check-format
 
