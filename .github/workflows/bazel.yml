@@ -46,8 +46,8 @@ jobs:
           cat >> local.bazelrc <<- EOF
           build --compilation_mode=${{ matrix.mode }}
           build --remote_max_connections=1000
-          build --jobs=2
-          build --experimental_remote_cache_async
+          build --local_cpu_resources=2
+          build --jobs=512
           build --experimental_remote_cache_compression
           build --remote_cache=http://35.211.199.119
           EOF
@@ -92,8 +92,8 @@ jobs:
           cat >> local.bazelrc <<- EOF
           build --compilation_mode=${{ matrix.mode }}
           build --remote_max_connections=1000
-          build --jobs=2
-          build --experimental_remote_cache_async
+          build --local_cpu_resources=2
+          build --jobs=512
           build --experimental_remote_cache_compression
           build --remote_cache=http://35.211.199.119
           EOF
