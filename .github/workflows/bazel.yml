@@ -42,13 +42,14 @@ jobs:
       - name: Configure bazel flags
         shell: bash
         run: |
-          echo > bazel/cache.bazelrc
+          echo last_downstream_green > .bazelversion 
           cat >> local.bazelrc <<- EOF
           build --compilation_mode=${{ matrix.mode }}
           build --remote_max_connections=1000
           build --local_cpu_resources=2
-          build --jobs=512
+          build --jobs=256
           build --experimental_remote_cache_compression
+          build --remote_download_minimal
           build --remote_cache=http://35.211.199.119
           EOF
 
@@ -88,13 +89,14 @@ jobs:
       - name: Configure bazel flags
         shell: bash
         run: |
-          echo > bazel/cache.bazelrc
-          cat >> local.bazelrc <<- EOF
+          echo last_downstream_green > .bazelversion 
+          echo > cat >> local.bazelrc <<- EOF
           build --compilation_mode=${{ matrix.mode }}
           build --remote_max_connections=1000
           build --local_cpu_resources=2
-          build --jobs=512
+          build --jobs=256
           build --experimental_remote_cache_compression
+          build --remote_download_minimal
           build --remote_cache=http://35.211.199.119
           EOF
 
