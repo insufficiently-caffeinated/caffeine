@@ -53,7 +53,7 @@ jobs:
         if: env.CACHE_CREDENTIALS != null
         shell: bash
         run: |
-          echo "build '--remote_cache=grpc://bazel:${{ env.CACHE_CREDENTIALS }}@52.149.230.247:9092/'" >> local.bazelrc
+          echo "build '--remote_cache=grpc://bazel:${{ env.CACHE_CREDENTIALS }}@bazel-cache.airmash.cc:9092/'" >> local.bazelrc
 
       - name: Run all tests
         run: |
@@ -95,7 +95,7 @@ jobs:
         if: env.CACHE_CREDENTIALS != null
         shell: bash
         run: |
-          echo "build '--remote_cache=grpc://bazel:${{ env.CACHE_CREDENTIALS }}@52.149.230.247:9092/'" >> local.bazelrc
+          echo "build '--remote_cache=grpc://bazel:${{ env.CACHE_CREDENTIALS }}@bazel-cache.airmash.cc:9092/'" >> local.bazelrc
 
       - name: Check formatting of all targets
         run: bazelisk run --config=ci -- //:check-format
