@@ -33,7 +33,7 @@ jobs:
         with:
           path: |
             ${{ steps.bazel_info.outputs.output_base }}/external
-          key: bazel-external-${{ hashFiles('WORKSPACE', 'third_party/*/*', 'bazel/dependencies.bzl') }}
+          key: bazel-external-${{ hashFiles('WORKSPACE', 'MODULE.bazel', 'third_party/*/*') }}
 
       - name: Configure bazel flags
         shell: bash
