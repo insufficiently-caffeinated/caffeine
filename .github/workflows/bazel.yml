@@ -7,6 +7,10 @@ on:
       - stackbot/**
   pull_request:
 
+env:
+  GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+  CACHE_CREDENTIALS: ${{ secrets.CACHE_CREDENTIALS }}
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -18,55 +22,43 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Find bazel output base
+        id: bazel_info
+        shell: bash
+        run: |
+          echo last_downstream_green > .bazelversion 
+          echo "::set-output name=output_base::$(bazel info output_base)"
+
       - uses: actions/cache@v2
-        if: ${{ !endsWith(github.ref, '/merge') }}
         with:
           path: |
-            ~/.cache/bazel-disk-cache
-          key: bazel-build-${{ matrix.mode }}-${{ github.sha }}
-          # Prefer our own cache if possible but fall back to using the format
-          # one otherwise.
-          restore-keys: |
-            bazel-build-${{ matrix.mode }}-
-            bazel-format-${{ matrix.mode }}-
-      
-      # Use a fork of the cache action that doesn't save the cache if it got a cache hit
-      - uses: Phantomical/cache@44a67f2178cb7151430282b0650055385d637880
-        if: ${{ endsWith(github.ref, '/merge') }}
-        with:
-          path: |
-            ~/.cache/bazel-disk-cache
-          key: bazel-build-${{ matrix.mode }}-${{ github.sha }}
-          # Prefer our own cache if possible but fall back to using
-          restore-keys: |
-            bazel-build-${{ matrix.mode }}-
-            bazel-format-${{ matrix.mode }}-
-      
+            ${{ steps.bazel_info.outputs.output_base }}/external
+          key: bazel-external-${{ hashFiles('WORKSPACE', 'third_party/*/*', 'bazel/dependencies.bzl') }}
+
       - name: Configure bazel flags
         shell: bash
         run: |
-          echo build --compilation_mode=${{ matrix.mode }} >> local.bazelrc
-      
-      - name: Reset accessed time of files within the cache
+          cat >> local.bazelrc <<- EOF
+          build --compilation_mode=${{ matrix.mode }}
+          EOF
+
+      - name: Avoid uploading if we don't have credentials
+        if: env.CACHE_CREDENTIALS == null
         shell: bash
         run: |
-          mkdir -p ~/.cache/bazel-disk-cache
-          find ~/.cache/bazel-disk-cache -type f -exec touch -a -d "10 years ago" {} \;
-      
-      - name: Build all caffeine targets
-        run: bazel build -- //...
+          echo build --remote_cache=grpc://bazel-cache.airmash.cc:9092/ >> local.bazelrc
+          echo build --remote_upload_local_results=false       >> local.bazelrc
+
+      - name: Pass credentials
+        if: env.CACHE_CREDENTIALS != null
+        shell: bash
+        run: |
+          echo "build '--remote_cache=grpc://bazel:${{ env.CACHE_CREDENTIALS }}@bazel-cache.airmash.cc:9092/'" >> local.bazelrc
 
       - name: Run all tests
         run: |
-          bazel test -- //... \
-            $(bazel query 'kind(".*_test", //...) intersect attr("tags", "manual", //...)')
-
-      - name: Prune unused build cache files
-        shell: bash
-        run: |
-          NFILES=$(find ~/.cache/bazel-disk-cache -type f -atime +100 | wc -l)
-          echo "Deleting $NFILES files"
-          find ~/.cache/bazel-disk-cache -type f -atime +100 | xargs -r -- rm -f
+          bazelisk test --config=ci -- //... \
+            $(bazelisk query 'kind(".*_test", //...) intersect attr("tags", "manual", //...)')
 
   format:
     runs-on: ubuntu-latest
@@ -77,36 +69,34 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      
-      # Use a fork of the cache action that doesn't save the cache if it got a cache hit
-      - uses: Phantomical/cache@44a67f2178cb7151430282b0650055385d637880
-        with:
-          path: |
-            ~/.cache/bazel-disk-cache
-          key: bazel-format-${{ matrix.mode }}-${{ github.sha }}
-          # Prefer the build cache so that it keeps being used.
-          restore-keys: |
-            bazel-build-${{ matrix.mode }}-
-            bazel-format-${{ matrix.mode }}-
-      
+
+      - name: Find bazel output base
+        id: bazel_info
+        shell: bash
+        run: |
+          echo last_downstream_green > .bazelversion 
+          echo "::set-output name=output_base::$(bazel info output_base)"
+
       - name: Configure bazel flags
         shell: bash
         run: |
-          echo build --compilation_mode=${{ matrix.mode }} >> local.bazelrc
-      
-      - name: Reset accessed time of files within the cache
-        shell: bash
-        run: |
-          mkdir -p ~/.cache/bazel-disk-cache
-          find ~/.cache/bazel-disk-cache -type f -exec touch -a -d "10 years ago" {} \;
-      
-      - name: Check formatting of all targets
-        run: bazel run -- //:check-format
+          cat >> local.bazelrc <<- EOF
+          build --compilation_mode=${{ matrix.mode }}
+          EOF
 
-      - name: Prune unused build cache files
+      - name: Avoid uploading if we don't have credentials
+        if: env.CACHE_CREDENTIALS == null
         shell: bash
         run: |
-          NFILES=$(find ~/.cache/bazel-disk-cache -type f -atime +100 | wc -l)
-          echo "Deleting $NFILES files"
-          find ~/.cache/bazel-disk-cache -type f -atime +100 | xargs -r -- rm -f
+          echo build --remote_cache=grpc://bazel-cache.airmash.cc:9092/ >> local.bazelrc
+          echo build --remote_upload_local_results=false       >> local.bazelrc
+
+      - name: Pass credentials
+        if: env.CACHE_CREDENTIALS != null
+        shell: bash
+        run: |
+          echo "build '--remote_cache=grpc://bazel:${{ env.CACHE_CREDENTIALS }}@bazel-cache.airmash.cc:9092/'" >> local.bazelrc
+
+      - name: Check formatting of all targets
+        run: bazelisk run --config=ci -- //:check-format
 

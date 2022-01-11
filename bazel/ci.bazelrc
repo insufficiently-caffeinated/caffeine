@@ -1,0 +1,15 @@
+
+# Allow many remote connections so that we can do lots of downloads
+# in parallel
+build:ci --remote_max_connections=1000
+
+# Github runners have limited CPU but we still need lots of jobs running
+# in parallel in order to download everything.
+build:ci --local_cpu_resources=2
+build:ci --jobs=64
+
+# Reduce network traffic by compressing things with zstd.
+build:ci --experimental_remote_cache_async
+
+# Avoid downloading artifacts that aren't needed.
+build:ci --remote_download_toplevel
