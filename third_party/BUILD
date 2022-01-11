@@ -12,7 +12,7 @@ alias(
 
 alias(
     name = "z3",
-    actual = "//third_party/z3",
+    actual = "@z3//:z3",
 )
 
 alias(
