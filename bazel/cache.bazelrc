@@ -1,1 +1,16 @@
 build --disk_cache=~/.cache/bazel-disk-cache
+
+# Reduce network traffic by compressing things with zstd.
+build:cache-common --experimental_remote_cache_async
+
+# Avoid downloading artifacts that aren't needed.
+build:cache-common --remote_download_toplevel
+
+# build:cache-common --define=EXECUTOR=remote
+# build:cache-common --spawn_strategy=docker --genrule_strategy=docker
+build:cache-common --experimental_docker_image=gcr.io/cloud-marketplace/google/rbe-ubuntu18-04
+build:cache-common --experimental_enable_docker_sandbox
+build:cache-common --incompatible_enable_cc_toolchain_resolution
+
+common:cached --config=cache-common
+build:cached '--remote_cache=grpc://bazel-cache.airmash.cc:9092/'

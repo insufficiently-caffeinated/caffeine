@@ -46,7 +46,7 @@ cc_toolchain(
 
 bitcode_toolchain_config(
     name = "bitcode-toolchain-config",
-    clang = "@llvm//clang:clang",
-    llvm_link = "@llvm//llvm:llvm-link",
-    opt = "@llvm//llvm:opt",
+    clang = "@caffeine//third_party/llvm:clang",
+    llvm_link = "@caffeine//third_party/llvm:llvm-link",
+    opt = "@caffeine//third_party/llvm:opt",
 )

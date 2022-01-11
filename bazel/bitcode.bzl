@@ -70,14 +70,14 @@ BITCODE_LIB_ATTRS = {
         default = ["@llvm//clang:builtin-headers"],
     ),
     "_llvm_link": attr.label(
-        default = "@llvm//llvm:llvm-link",
+        default = "@caffeine//third_party/llvm:llvm-link",
         executable = True,
         cfg = "exec",
     ),
     "_llvm_opt": attr.label(
         executable = True,
         cfg = "exec",
-        default = "@llvm//llvm:opt",
+        default = "@caffeine//third_party/llvm:opt",
     ),
     "_opt_plugin": attr.label(
         executable = True,
@@ -100,7 +100,7 @@ BITCODE_BIN_ATTRS = update(
         ),
         "_bin_ext": attr.string(default = ".bc"),
         "_llvm_dis": attr.label(
-            default = "@llvm//llvm:llvm-dis",
+            default = "@caffeine//third_party/llvm:llvm-dis",
             executable = True,
             cfg = "exec",
         ),
