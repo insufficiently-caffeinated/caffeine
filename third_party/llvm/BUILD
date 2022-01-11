@@ -1,18 +1,29 @@
+load("@bazel_skylib//rules:native_binary.bzl", "native_binary")
+
 package(default_visibility = ["//visibility:public"])
 
-sh_binary(
+native_binary(
     name = "clang",
-    srcs = ["@llvm_toolchain_llvm//:bin/clang"],
+    src = "@llvm_toolchain_llvm//:bin/clang",
+    out = "clang",
 )
 
-sh_binary(
+native_binary(
     name = "llvm-dis",
-    srcs = ["@llvm_toolchain_llvm//:bin/llvm-dis"],
+    src = "@llvm_toolchain_llvm//:bin/llvm-dis",
+    out = "llvm-dis",
 )
 
-sh_binary(
+native_binary(
     name = "llvm-link",
-    srcs = ["@llvm_toolchain_llvm//:bin/llvm-link"],
+    src = "@llvm_toolchain_llvm//:bin/llvm-link",
+    out = "llvm-link",
+)
+
+native_binary(
+    name = "clang-format",
+    src = "@llvm_toolchain_llvm//:bin/clang-format",
+    out = "clang-format",
 )
 
 # alias(
@@ -28,6 +39,11 @@ sh_binary(
 # alias(
 #     name = "llvm-link",
 #     actual = "@llvm//llvm:llvm-link",
+# )
+
+# alias(
+#     name = "clang-format",
+#     actual = "@llvm//clang:clang-format",
 # )
 
 # Note that opt must be built manually since we link against it.

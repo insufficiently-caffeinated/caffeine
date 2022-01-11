@@ -121,9 +121,7 @@ fi
 """,
     )
 
-format_test = rule(
-    implementation = _check_format,
-    attrs = {
+_ATTRS = {
         "deps": attr.label_list(
             aspects = [clang_format],
             mandatory = True,
@@ -135,29 +133,19 @@ format_test = rule(
         "_clang_format": attr.label(
             executable = True,
             cfg = "exec",
-            default = "@llvm//clang:clang-format",
+            default = "@caffeine//third_party/llvm:clang-format",
         ),
-    },
+    }
+
+format_test = rule(
+    implementation = _check_format,
+    attrs = _ATTRS,
     executable = True,
     test = True,
 )
 
 do_format = rule(
     implementation = _do_format,
-    attrs = {
-        "deps": attr.label_list(
-            aspects = [clang_format],
-            mandatory = True,
-        ),
-        "_config": attr.label(
-            allow_single_file = True,
-            default = "@caffeine//:.clang-format",
-        ),
-        "_clang_format": attr.label(
-            executable = True,
-            cfg = "exec",
-            default = "@llvm//clang:clang-format",
-        ),
-    },
+    attrs = _ATTRS,
     executable = True,
 )
