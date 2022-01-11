@@ -40,7 +40,6 @@ jobs:
         run: |
           cat >> local.bazelrc <<- EOF
           build --compilation_mode=${{ matrix.mode }}
-          build --remote_download_minimal
           EOF
 
       - name: Avoid uploading if we don't have credentials

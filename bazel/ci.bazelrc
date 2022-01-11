@@ -10,3 +10,6 @@ build:ci --jobs=16
 
 # Reduce network traffic by compressing things with zstd.
 build:ci --experimental_remote_cache_async
+
+# Avoid downloading artifacts that aren't needed.
+build:ci --remote_download_toplevel
