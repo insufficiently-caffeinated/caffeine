@@ -93,7 +93,7 @@ load("@com_grail_bazel_toolchain//toolchain:rules.bzl", "llvm_toolchain")
 llvm_toolchain(
     name = "llvm_toolchain",
     llvm_version = "13.0.0",
-    absolute_paths = True,
+    absolute_paths = False,
 )
 
 load("@llvm_toolchain//:toolchains.bzl", "llvm_register_toolchains")
