@@ -40,11 +40,8 @@ local_repository(
     path = "bazel/toolchain",
 )
 
-load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
 load("@com_github_nelhage_rules_boost//:boost/boost.bzl", "boost_deps")
 load("@llvm-bazel//:configure.bzl", "llvm_configure", "llvm_disable_optional_support_deps")
-
-rules_foreign_cc_dependencies()
 
 boost_deps()
 
