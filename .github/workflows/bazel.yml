@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        mode: [opt, fastbuild]
+        mode: [opt, fastbuild, dbg]
       fail-fast: false
 
     steps:
