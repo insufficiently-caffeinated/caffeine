@@ -6,7 +6,7 @@ filegroup(name = "empty")
 
 filegroup(
     name = "toolchain-files",
-    srcs = ["@llvm//clang"],
+    srcs = ["@caffeine//third_party/llvm:clang"],
     visibility = ["//visibility:public"],
 )
 
