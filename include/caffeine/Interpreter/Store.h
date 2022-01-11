@@ -35,6 +35,10 @@ public:
   // By default this will just call add_context in a loop.
   virtual void add_context_multi(Span<Context> contexts);
 
+  // Indicate that the current context should shut down. By default this is a
+  // no-op but some derived contexts may need it.
+  virtual void shutdown() {}
+
 protected:
   ExecutionContextStore(ExecutionContextStore&&) = default;
   ExecutionContextStore(const ExecutionContextStore&) = default;
@@ -60,7 +64,7 @@ public:
   void add_context(Context&& ctx) override;
   void add_context_multi(Span<Context> contexts) override;
 
-  void shutdown();
+  void shutdown() override;
 
 private:
   Context dequeue();
