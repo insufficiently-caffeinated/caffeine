@@ -16,22 +16,6 @@ def skylib():
         ],
     )
 
-def hopscotch_map():
-    new_git_repository(
-        name = "tsl",
-        commit = "29030f55ca518bb1be5113ab0a8e134772024a9d",
-        remote = "https://github.com/Tessil/hopscotch-map",
-        shallow_since = "1592802410 +0100",
-        build_file_content = """
-cc_library(
-    name = "hopscotch-map",
-    hdrs = glob(["include/**/*.h"]),
-    strip_include_prefix = "include",
-    visibility = ["//visibility:public"],
-)
-""",
-    )
-
 def afl():
     new_git_repository(
         name = "afl",
@@ -63,5 +47,4 @@ def caffeine_dependencies():
 
     skylib()
     rules_foreign_cc()
-    hopscotch_map()
     afl()

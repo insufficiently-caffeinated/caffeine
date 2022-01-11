@@ -22,7 +22,7 @@ alias(
 
 alias(
     name = "hopscotch-map",
-    actual = "@tsl//:hopscotch-map",
+    actual = "@tsl_hopscotch_map//:hopscotch-map",
 )
 
 alias(
