@@ -1,7 +1,9 @@
 
 
+build --disk_cache=~/.cache/bazel-disk-cache
 build --action_env=BAZEL_CXXOPTS=-std=c++17
 build --cxxopt='-std=c++17'
+common --experimental_enable_bzlmod
 
 # Tell bazel to use a static value for PATH and not to inherit LD_LIBRARY_PATH or TMPDIR.
 # This is to prevent full recompiles whenever 
@@ -13,8 +15,9 @@ build --output_filter=^//
 # Don't show test output unless the test fails
 test --test_output=errors
 
-# Workspace status command for use within RBE
-# build --workspace_status_command=$(pwd)/workspace_status.sh
+# Bazel registries for finding bzlmod dependencies
+common --registry=https://raw.githubusercontent.com/insufficiently-caffeinated/caffeine-bazel-repository/main/
+common --registry=https://raw.githubusercontent.com/bazelbuild/bazel-central-registry/main
 
 try-import %workspace%/bazel/ci.bazelrc
 try-import %workspace%/bazel/cache.bazelrc

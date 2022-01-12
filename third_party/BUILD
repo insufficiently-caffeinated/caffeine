@@ -12,17 +12,17 @@ alias(
 
 alias(
     name = "z3",
-    actual = "//third_party/z3",
+    actual = "@z3//:z3",
 )
 
 alias(
     name = "magic-enum",
-    actual = "@magic-enum//:magic_enum",
+    actual = "@magic_enum//:magic_enum",
 )
 
 alias(
     name = "hopscotch-map",
-    actual = "@tsl//:hopscotch-map",
+    actual = "@tsl_hopscotch_map//:hopscotch-map",
 )
 
 alias(
