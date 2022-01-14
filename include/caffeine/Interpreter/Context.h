@@ -30,6 +30,7 @@ public:
   immer::map<std::string, OpRef> constants;
 
   llvm::Module* mod;
+  bool global_ctors_ran = false;
 
 private:
   uint64_t constant_num_ = 0;

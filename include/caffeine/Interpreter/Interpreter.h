@@ -73,6 +73,8 @@ public:
 
   void visitDbgInfoIntrinsic(llvm::DbgInfoIntrinsic&);
 
+  void visitGlobalCtors();
+
 private:
   void getInstLine(llvm::Instruction& inst);
   void visitExternFunc(llvm::CallBase& inst);
