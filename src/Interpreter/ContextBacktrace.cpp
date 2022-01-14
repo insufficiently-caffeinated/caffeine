@@ -43,20 +43,7 @@ void Context::print_backtrace(std::ostream& OS) const {
 
     if (frame_.is_regular()) {
       const auto& frame = frame_.get_regular();
-      if (!frame.current_block || frame.current == frame.current_block->end()) {
-        // We don't have a valid iterator.
-        current = nullptr;
-      } else if (frame.current == frame.current_block->begin()) {
-        // This case probably shouldn't happen but this method gets called when
-        // things are going wrong so we need to handle all possibilities.
-        if (frame.prev_block) {
-          current = &frame.prev_block->back();
-        } else {
-          current = &*frame.current;
-        }
-      } else {
-        current = &*std::prev(frame.current);
-      }
+      current = frame.get_current_instruction();
 
       if (frame.current_block) {
         if (llvm::Function* func = frame.current_block->getParent()) {
