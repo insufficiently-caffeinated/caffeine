@@ -2,6 +2,7 @@
 #include "caffeine/Interpreter/CaffeineContext.h"
 #include "caffeine/Interpreter/ExprEval.h"
 #include "caffeine/Interpreter/ExternalFuncs/CaffeineAssert.h"
+#include "caffeine/Interpreter/ExternalFuncs/ChainCall.h"
 #include "caffeine/Interpreter/Policy.h"
 #include "caffeine/Interpreter/StackFrame.h"
 #include "caffeine/Interpreter/Store.h"
@@ -30,6 +31,11 @@ namespace caffeine {
 Interpreter::Interpreter(InterpreterContext* interp) : interp(interp) {}
 
 void Interpreter::execute() {
+  if (!interp->context().global_ctors_ran) {
+    visitGlobalCtors();
+    interp->context().global_ctors_ran = true;
+  }
+
   auto& frame_wrapper = interp->context().stack_top();
   if (frame_wrapper.is_external()) {
     frame_wrapper.get_external()->step(*interp);
@@ -312,6 +318,9 @@ void Interpreter::visitIndirectCall(llvm::CallBase& call) {
       call.isIndirectCall() || !call.getCalledFunction(),
       "visitIndirectCall called with a non-indirect call instruction");
 
+  auto is_undef = llvm::dyn_cast<llvm::UndefValue>(call.getCalledOperand());
+  CAFFEINE_ASSERT(!is_undef, "cannot indirect call an undef function");
+
   auto pointer = interp->load(call.getCalledOperand()).scalar().pointer();
   CAFFEINE_ASSERT(
       pointer.heap() == MemHeapMgr::FUNCTION_INDEX,
@@ -483,6 +492,49 @@ void Interpreter::getInstLine(llvm::Instruction& inst) {
     std::string file = dfile->getFilename().str();
     interp->caffeine().coverage()->touch(file, line);
   }
+}
+
+void Interpreter::visitGlobalCtors() {
+  auto gcs = interp->context().mod->getGlobalVariable("llvm.global_ctors");
+  if (!gcs) {
+    return;
+  }
+
+  if (gcs->getInitializer()->isNullValue()) {
+    return;
+  }
+
+  auto gcs_ca = llvm::dyn_cast<llvm::ConstantArray>(gcs->getInitializer());
+  CAFFEINE_ASSERT(gcs_ca, "@llvm.global_ctors must be a constant array");
+
+  uint64_t numEle = gcs_ca->getType()->getNumElements();
+  std::vector<std::pair<uint64_t, llvm::Function*>> ctors;
+
+  for (uint64_t i = 0; i < numEle; i++) {
+    auto ele = gcs_ca->getAggregateElement(i);
+    CAFFEINE_ASSERT(ele, "element must be not null");
+    unsigned int j = 0;
+    auto ind = ele->getAggregateElement(j);
+    ele = ele->getAggregateElement(j + 1);
+
+    auto ind_val = llvm::dyn_cast<llvm::ConstantInt>(ind);
+    CAFFEINE_ASSERT(ind_val, "key must be a constant int");
+
+    llvm::Function* fp_val = llvm::dyn_cast<llvm::Function>(ele);
+    CAFFEINE_ASSERT(fp_val, "value must be a function pointer");
+
+    ctors.push_back(
+        std::make_pair(ind_val->getValue().getLimitedValue(), fp_val));
+  }
+
+  std::sort(ctors.begin(), ctors.end());
+  std::vector<llvm::Function*> to_call;
+  for (auto& it : ctors) {
+    to_call.push_back(it.second);
+  }
+
+  interp->call_external_function(
+      std::make_unique<ChainCall>(std::move(to_call)));
 }
 
 } // namespace caffeine

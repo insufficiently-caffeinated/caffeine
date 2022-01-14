@@ -8,7 +8,7 @@ set_directory_properties(PROPERTIES COMPILE_OPTIONS "-w")
 find_program(JQ jq REQUIRED)
 
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/dummy.c" "")
-set(CAFFEINE_LIBCXX_VERSION "v0.0.34")
+set(CAFFEINE_LIBCXX_VERSION "v0.0.39")
 set(RELEASE_URL "https://github.com/insufficiently-caffeinated/libcxx/releases/download/${CAFFEINE_LIBCXX_VERSION}/libcxx.bc")
 
 message("Downloading libcxx.bc from ${RELEASE_URL}")
