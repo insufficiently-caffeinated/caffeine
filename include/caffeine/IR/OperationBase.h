@@ -175,8 +175,8 @@ protected:
             std::initializer_list<OpRef> operands = {});
   Operation(std::unique_ptr<OperationData>&& data,
             llvm::ArrayRef<OpRef> operands);
-  [[deprecated]] Operation(Opcode op, Type t, const Inner& inner);
-  [[deprecated]] Operation(Opcode op, Type t, Inner&& inner);
+  Operation(Opcode op, Type t, const Inner& inner);
+  Operation(Opcode op, Type t, Inner&& inner);
 
   Operation(Opcode op, Type t, const OpRef* operands);
 
