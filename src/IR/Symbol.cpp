@@ -2,12 +2,9 @@
 
 namespace caffeine {
 
-Symbol::Symbol(const std::string& name)
-    : value_(StringInterner::default_interner().intern(name)) {}
-Symbol::Symbol(std::string&& name)
-    : value_(StringInterner::default_interner().intern(std::move(name))) {}
-Symbol::Symbol(std::string_view name)
-    : value_(StringInterner::default_interner().intern(name)) {}
+Symbol::Symbol(const std::string& name) : value_(name) {}
+Symbol::Symbol(std::string&& name) : value_(std::move(name)) {}
+Symbol::Symbol(std::string_view name) : Symbol(std::string(name)) {}
 Symbol::Symbol(uint64_t number) : value_(number) {}
 
 std::ostream& operator<<(std::ostream& os, const Symbol& symbol) {
@@ -23,7 +20,7 @@ bool Symbol::is_numbered() const {
   return value_.index() == Numbered;
 }
 
-InternedString Symbol::name() const {
+std::string_view Symbol::name() const {
   return std::get<Named>(value_);
 }
 uint64_t Symbol::number() const {

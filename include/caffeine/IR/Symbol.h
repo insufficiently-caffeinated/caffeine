@@ -1,7 +1,7 @@
 #pragma once
 
-#include "caffeine/ADT/StringInterner.h"
 #include <iosfwd>
+#include <llvm/ADT/Hashing.h>
 #include <string>
 #include <string_view>
 #include <variant>
@@ -22,7 +22,7 @@ private:
     Numbered = 1,
   };
 
-  std::variant<InternedString, uint64_t> value_;
+  std::variant<std::string, uint64_t> value_;
 
 public:
   Symbol(const std::string& name);
@@ -36,7 +36,7 @@ public:
   bool is_named() const;
   bool is_numbered() const;
 
-  InternedString name() const;
+  std::string_view name() const;
   uint64_t number() const;
 
   bool operator==(const Symbol& symbol) const;

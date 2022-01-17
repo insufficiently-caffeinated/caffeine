@@ -18,7 +18,6 @@
 #include "caffeine/ADT/PersistentArray.h"
 #include "caffeine/ADT/Ref.h"
 #include "caffeine/ADT/SharedArray.h"
-#include "caffeine/ADT/StringInterner.h"
 #include "caffeine/IR/Type.h"
 #include "caffeine/Support/Assert.h"
 #include "caffeine/Support/CopyVTable.h"
@@ -61,7 +60,7 @@ private:
 
 public:
   const Symbol& symbol() const;
-  InternedString name() const;
+  std::string_view name() const;
   uint64_t number() const;
 
   bool is_numbered() const;
