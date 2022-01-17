@@ -100,6 +100,7 @@ public:
   static std::unique_ptr<ExternalFunction> abs();
   static std::unique_ptr<ExternalFunction> smul_with_overflow();
   static std::unique_ptr<ExternalFunction> umul_with_overflow();
+  static std::unique_ptr<ExternalFunction> memset();
 
 private:
   Intrinsics() = delete;
