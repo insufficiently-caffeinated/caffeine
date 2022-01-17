@@ -1,7 +1,6 @@
 #pragma once
 
 #include "caffeine/ADT/PersistentArray.h"
-#include "caffeine/ADT/StringInterner.h"
 #include "caffeine/IR/Symbol.h"
 #include "caffeine/IR/Type.h"
 #include "caffeine/Support/Assert.h"

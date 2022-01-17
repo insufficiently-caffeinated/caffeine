@@ -139,7 +139,7 @@ inline const Symbol& Constant::symbol() const {
   return llvm::cast<caffeine::ConstantData>(data_.get())->symbol();
 }
 
-inline InternedString Constant::name() const {
+inline std::string_view Constant::name() const {
   CAFFEINE_ASSERT(is_named(), "tried to access name of unnamed constant");
   return symbol().name();
 }
