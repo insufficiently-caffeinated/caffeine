@@ -7,12 +7,15 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/container_hash/hash.hpp>
+#include <caffeine/IR/OperationBase.h>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 #include <immer/vector_transient.hpp>
+#include <initializer_list>
 #include <llvm/ADT/Hashing.h>
 #include <llvm/ADT/SmallString.h>
 #include <llvm/Support/raw_ostream.h>
+#include <memory>
 
 #define SIZE_BITS (sizeof(size_t) * CHAR_BIT)
 
@@ -314,23 +317,6 @@ std::ostream& operator<<(std::ostream& os, Operation::Opcode opcode) {
   default:
     return os << "Unknown(" << (uint16_t)opcode << ")";
   }
-}
-
-/***************************************************
- * Symbol                                          *
- ***************************************************/
-Symbol::Symbol(const std::string& name)
-    : value_(StringInterner::default_interner().intern(name)) {}
-Symbol::Symbol(std::string&& name)
-    : value_(StringInterner::default_interner().intern(std::move(name))) {}
-Symbol::Symbol(std::string_view name)
-    : value_(StringInterner::default_interner().intern(name)) {}
-Symbol::Symbol(uint64_t number) : value_(number) {}
-
-std::ostream& operator<<(std::ostream& os, const Symbol& symbol) {
-  if (symbol.is_named())
-    return os << symbol.name();
-  return os << symbol.number();
 }
 
 /***************************************************

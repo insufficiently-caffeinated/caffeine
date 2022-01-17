@@ -133,34 +133,6 @@ namespace detail {
 } // namespace detail
 
 /***************************************************
- * Symbol                                          *
- ***************************************************/
-template <size_t N>
-inline Symbol::Symbol(const char (&name)[N])
-    : Symbol(std::string_view(name, N)) {}
-
-inline bool Symbol::is_named() const {
-  return value_.index() == Named;
-}
-inline bool Symbol::is_numbered() const {
-  return value_.index() == Numbered;
-}
-
-inline InternedString Symbol::name() const {
-  return std::get<Named>(value_);
-}
-inline uint64_t Symbol::number() const {
-  return std::get<Numbered>(value_);
-}
-
-inline bool Symbol::operator==(const Symbol& symbol) const {
-  return value_ == symbol.value_;
-}
-inline bool Symbol::operator!=(const Symbol& symbol) const {
-  return !(*this == symbol);
-}
-
-/***************************************************
  * Constant                                        *
  ***************************************************/
 inline const Symbol& Constant::symbol() const {
