@@ -1,5 +1,5 @@
-#include "caffeine/IR/OperationBase.h"
 #include "caffeine/IR/OperationData.h"
+#include "caffeine/IR/OperationBase.h"
 #include "caffeine/IR/Symbol.h"
 #include "caffeine/IR/Type.h"
 #include <boost/config.hpp>
