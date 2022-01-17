@@ -1,5 +1,4 @@
 #include "caffeine/IR/Symbol.h"
-#include <iostream>
 
 namespace caffeine {
 
