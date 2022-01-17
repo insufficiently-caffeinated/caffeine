@@ -126,7 +126,7 @@ OpRef ConstantArray::with_new_operands(llvm::ArrayRef<OpRef> operands) const {
  * BinaryOp                                        *
  ***************************************************/
 BinaryOp::BinaryOp(Opcode op, Type t, const OpRef& lhs, const OpRef& rhs)
-    : Operation(op, t, lhs, rhs) {}
+    : Operation(std::make_unique<OperationData>(op, t), {lhs, rhs}) {}
 
 OpRef BinaryOp::Create(Opcode op, const OpRef& lhs, const OpRef& rhs) {
   CAFFEINE_ASSERT((op & 0x3) == 2, "Opcode doesn't have 2 operands");
