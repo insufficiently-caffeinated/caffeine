@@ -72,21 +72,22 @@ BITCODE_LIB_ATTRS = {
     "_llvm_link": attr.label(
         default = "@llvm//llvm:llvm-link",
         executable = True,
-        cfg = "exec",
+        cfg = "host",
     ),
     "_llvm_opt": attr.label(
         executable = True,
-        cfg = "exec",
+        cfg = "host",
         default = "@llvm//llvm:opt",
     ),
     "_opt_plugin": attr.label(
         executable = True,
-        cfg = "exec",
+        cfg = "host",
         default = "@caffeine//tools/opt-plugin",
     ),
     "_cc_toolchain": attr.label(
         default = Label("@caffeine_toolchain//:bitcode"),
         providers = [cc_common.CcToolchainInfo],
+        cfg = "host"
     ),
     "_rule": attr.string(default = "bitcode_library_standalone"),
 }
@@ -102,7 +103,7 @@ BITCODE_BIN_ATTRS = update(
         "_llvm_dis": attr.label(
             default = "@llvm//llvm:llvm-dis",
             executable = True,
-            cfg = "exec",
+            cfg = "host",
         ),
         "_rule": attr.string(default = "bitcode_binary"),
     },
@@ -360,14 +361,14 @@ bitcode_optimize = rule(
         "src": attr.label(allow_single_file = [".bc", ".ll"]),
         "plugins": attr.label_list(
             default = ["@caffeine//tools/opt-plugin"],
-            cfg = "exec",
+            cfg = "host",
         ),
         "args": attr.string_list(),
         "data": attr.label_list(allow_files = True),
         "_opt": attr.label(
             default = "@llvm//llvm:opt",
             executable = True,
-            cfg = "exec",
+            cfg = "host",
         ),
     },
 )

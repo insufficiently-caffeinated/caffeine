@@ -134,7 +134,7 @@ format_test = rule(
         ),
         "_clang_format": attr.label(
             executable = True,
-            cfg = "exec",
+            cfg = "host",
             default = "@llvm//clang:clang-format",
         ),
     },
@@ -155,7 +155,7 @@ do_format = rule(
         ),
         "_clang_format": attr.label(
             executable = True,
-            cfg = "exec",
+            cfg = "host",
             default = "@llvm//clang:clang-format",
         ),
     },

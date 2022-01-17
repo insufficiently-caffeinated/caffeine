@@ -78,17 +78,17 @@ bitcode_toolchain_config = rule(
     attrs = {
         "clang": attr.label(
             executable = True,
-            cfg = "exec",
+            cfg = "host",
             mandatory = True,
         ),
         "llvm_link": attr.label(
             executable = True,
-            cfg = "exec",
+            cfg = "host",
             mandatory = True,
         ),
         "opt": attr.label(
             executable = True,
-            cfg = "exec",
+            cfg = "host",
             mandatory = True,
         ),
     },
