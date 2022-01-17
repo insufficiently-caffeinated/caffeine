@@ -39,7 +39,7 @@ protected:
   using Operation::Operation;
 
 public:
-  virtual OpRef size() const = 0;
+  OpRef size() const;
 
   static bool classof(const Operation* op);
 };
@@ -132,8 +132,6 @@ private:
   ConstantArray(Symbol&& symbol, const OpRef& size);
 
 public:
-  OpRef size() const override;
-
   const Symbol& symbol() const;
 
   static OpRef Create(const Symbol& symbol, const OpRef& size);
@@ -363,7 +361,6 @@ private:
   AllocOp(const OpRef& size, const OpRef& defaultval);
 
 public:
-  OpRef size() const override;
   const OpRef& default_value() const;
 
   static OpRef Create(const OpRef& size, const OpRef& defaultval);
@@ -400,7 +397,6 @@ private:
   StoreOp(const OpRef& data, const OpRef& offset, const OpRef& value);
 
 public:
-  OpRef size() const override;
   const OpRef& data() const;
   const OpRef& offset() const;
   const OpRef& value() const;
@@ -437,7 +433,6 @@ private:
 
 public:
   const PersistentArray<OpRef>& data() const;
-  OpRef size() const override;
 
   size_t num_operands() const override;
 
