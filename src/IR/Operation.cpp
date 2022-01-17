@@ -535,7 +535,8 @@ OpRef AllocOp::Create(const OpRef& size, const OpRef& defaultval) {
  * LoadOp                                          *
  ***************************************************/
 LoadOp::LoadOp(const OpRef& data, const OpRef& offset)
-    : Operation(Opcode::Load, Type::int_ty(8), data, offset) {}
+    : Operation(std::make_unique<OperationData>(Opcode::Load, Type::int_ty(8)),
+                {data, offset}) {}
 
 OpRef LoadOp::Create(const OpRef& data, const OpRef& offset) {
   CAFFEINE_ASSERT(data, "data was null");
