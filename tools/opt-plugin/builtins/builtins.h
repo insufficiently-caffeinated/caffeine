@@ -7,15 +7,6 @@
 namespace caffeine {
 
 /**
- * Generate an implementation for an instance of the llvm.memset.* builtin and
- * replace the provided function with it within the parent module.
- *
- * This function takes a function pointer to a memset defintion within the
- * current module and generates the corresponding implementation.
- */
-llvm::Function* generateMemset(llvm::Module* mod, llvm::Function* memsetDecl);
-
-/**
  * Generate an implementation for an instance of the llvm.memcpy.* builtin and
  * replace the provided function with it within the parent module.
  *

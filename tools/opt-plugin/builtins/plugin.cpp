@@ -17,12 +17,6 @@ bool GenBuiltinsPass::runOnModule(Module& module) {
       continue;
 
     auto name = function.getName();
-    if (name.startswith("llvm.memset.")) {
-      caffeine::generateMemset(&module, &function);
-      updated = true;
-      continue;
-    }
-
     if (name.startswith("llvm.memmove.")) {
       caffeine::generateMemmove(&module, &function);
       continue;
