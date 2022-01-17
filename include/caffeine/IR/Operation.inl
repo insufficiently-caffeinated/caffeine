@@ -172,10 +172,6 @@ inline const llvm::APFloat& ConstantFloat::value() const {
 /***************************************************
  * ConstantArray                                   *
  ***************************************************/
-inline OpRef ConstantArray::size() const {
-  return operand_at(0);
-}
-
 inline const Symbol& ConstantArray::symbol() const {
   return std::get<ConstantData>(inner_).first;
 }
@@ -248,10 +244,6 @@ inline bool FCmpOp::is_unordered() const {
 /***************************************************
  * AllocOp                                         *
  ***************************************************/
-inline OpRef AllocOp::size() const {
-  return operand_at(0);
-}
-
 inline const OpRef& AllocOp::default_value() const {
   return operand_at(1);
 }
@@ -270,10 +262,6 @@ inline const OpRef& LoadOp::offset() const {
 /***************************************************
  * StoreOp                                         *
  ***************************************************/
-inline OpRef StoreOp::size() const {
-  return llvm::cast<ArrayBase>(*data()).size();
-}
-
 inline const OpRef& StoreOp::data() const {
   return operand_at(0);
 }
@@ -291,10 +279,6 @@ inline const OpRef& StoreOp::value() const {
  ***************************************************/
 inline const PersistentArray<OpRef>& FixedArray::data() const {
   return std::get<PersistentArray<OpRef>>(inner_);
-}
-
-inline OpRef FixedArray::size() const {
-  return ConstantInt::Create(llvm::APInt(type().bitwidth(), data().size()));
 }
 
 inline size_t FixedArray::num_operands() const {
