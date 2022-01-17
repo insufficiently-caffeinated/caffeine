@@ -11,7 +11,7 @@ file(
   "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h"
 )
 
-add_library(divine SHARED
+add_library(divine
   ${sources} ${headers}
 )
 
