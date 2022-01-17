@@ -132,52 +132,6 @@ namespace detail {
   }
 } // namespace detail
 
-inline bool Operation::valid() const {
-  return opcode_ != 0;
-}
-
-inline uint16_t Operation::opcode() const {
-  return opcode_;
-}
-
-inline size_t Operation::num_operands() const {
-  return detail::opcode_nargs(opcode_);
-}
-inline ref<const Operation> Operation::as_ref() const {
-  CAFFEINE_ASSERT(!weak_from_this().expired(),
-                  "Unable to convert non-refcounted Operation "
-                  "instance to a refcounted one");
-  return shared_from_this();
-}
-
-inline llvm::iterator_range<Operation::const_operand_iterator>
-Operation::operands() const {
-  return llvm::iterator_range<Operation::const_operand_iterator>{
-      const_operand_iterator(this, 0),
-      const_operand_iterator(this, num_operands())};
-}
-
-inline uint16_t Operation::aux_data() const {
-  return detail::opcode_aux(opcode());
-}
-inline Type Operation::type() const {
-  return type_;
-}
-
-inline bool Operation::is_constant() const {
-  return detail::opcode_base(opcode_) == 1;
-}
-
-inline const Operation& Operation::operator[](size_t idx) const {
-  CAFFEINE_ASSERT(idx < num_operands(),
-                  "Tried to access out-of-bounds operand");
-  return *operand_at(idx);
-}
-
-inline const OpRef& Operation::operand_at(size_t idx) const {
-  return std::get<OpVec>(inner_)[idx];
-}
-
 /***************************************************
  * Symbol                                          *
  ***************************************************/
