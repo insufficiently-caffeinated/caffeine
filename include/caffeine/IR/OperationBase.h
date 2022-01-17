@@ -311,6 +311,8 @@ public:
   bool operator==(const OperationData& op) const;
   bool operator!=(const OperationData& op) const;
 
+  std::unique_ptr<OperationData> clone() const;
+
   static bool classof(const Operation*) {
     return true;
   }
