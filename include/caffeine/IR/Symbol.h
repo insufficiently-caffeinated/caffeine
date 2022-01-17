@@ -3,6 +3,7 @@
 #include "caffeine/ADT/StringInterner.h"
 #include <iosfwd>
 #include <string>
+#include <string_view>
 #include <variant>
 
 namespace caffeine {
@@ -45,5 +46,9 @@ public:
 };
 
 std::ostream& operator<<(std::ostream& os, const Symbol& symbol);
+
+template <size_t N>
+inline Symbol::Symbol(const char (&name)[N])
+    : Symbol(std::string_view(name, N)) {}
 
 } // namespace caffeine
