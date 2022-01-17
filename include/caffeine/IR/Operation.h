@@ -24,6 +24,7 @@
 #include "caffeine/Support/CopyVTable.h"
 
 #include "caffeine/IR/OperationBase.h"
+#include "caffeine/IR/OperationData.h"
 
 namespace caffeine {
 

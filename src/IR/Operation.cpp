@@ -1,5 +1,6 @@
 #include "caffeine/IR/Operation.h"
 #include "Operation.h"
+#include "caffeine/IR/OperationData.h"
 #include "caffeine/IR/Type.h"
 #include "caffeine/IR/Value.h"
 #include "caffeine/Support/LLVMFmt.h"
