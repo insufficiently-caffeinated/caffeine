@@ -69,7 +69,6 @@ public:
 
   void visitMemCpyInst(llvm::MemCpyInst& memcpy);
   void visitMemMoveInst(llvm::MemMoveInst& memmove);
-  void visitMemSetInst(llvm::MemSetInst& memset);
 
   void visitDbgInfoIntrinsic(llvm::DbgInfoIntrinsic&);
 

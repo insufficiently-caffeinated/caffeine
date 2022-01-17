@@ -168,6 +168,7 @@ Builder& Builder::with_default_intrinsics() {
                  Intrinsics::umul_with_overflow());
   with_intrinsic(llvm::Intrinsic::smul_with_overflow,
                  Intrinsics::smul_with_overflow());
+  with_intrinsic(llvm::Intrinsic::memset, Intrinsics::memset());
 
   return *this;
 }
