@@ -416,11 +416,6 @@ void Interpreter::visitMemMoveInst(llvm::MemMoveInst&) {
                  "interpreter. Run gen-builtins over the input bitcode file "
                  "first to generate definitions that caffeine can execute.");
 }
-void Interpreter::visitMemSetInst(llvm::MemSetInst&) {
-  CAFFEINE_ABORT("llvm.memset is not implemented natively within the caffeine "
-                 "interpreter. Run gen-builtins over the input bitcode file "
-                 "first to generate definitions that caffeine can execute.");
-}
 
 void Interpreter::visitDbgInfoIntrinsic(llvm::DbgInfoIntrinsic&) {
   // Ignore debug info since it doesn't affect semantics.
