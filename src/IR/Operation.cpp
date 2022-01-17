@@ -215,7 +215,7 @@ Type Operation::type() const {
 }
 
 bool Operation::is_constant() const {
-  return detail::opcode_base(opcode_) == 1;
+  return detail::opcode_base(opcode()) == 1;
 }
 
 const Operation& Operation::operator[](size_t idx) const {
