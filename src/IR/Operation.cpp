@@ -100,9 +100,9 @@ OpRef ConstantFloat::Create(double value) {
  * ConstantArray                                   *
  ***************************************************/
 ConstantArray::ConstantArray(Symbol&& symbol, const OpRef& size)
-    : ArrayBase(Operation::ConstantArray,
-                Type::array_ty(size->type().bitwidth()),
-                ConstantData(std::move(symbol), size)) {}
+    : ArrayBase(std::make_unique<caffeine::ConstantData>(
+                    Type::array_ty(size->type().bitwidth()), std::move(symbol)),
+                {size}) {}
 
 OpRef ConstantArray::Create(const Symbol& symbol, const OpRef& size) {
   return Create(Symbol(symbol), size);
@@ -120,6 +120,15 @@ OpRef ConstantArray::with_new_operands(llvm::ArrayRef<OpRef> operands) const {
     return shared_from_this();
 
   return Create(symbol(), operands[0]);
+}
+
+const Symbol& ConstantArray::symbol() const {
+  return llvm::cast<caffeine::ConstantData>(data_.get())->symbol();
+}
+
+const OpRef& ConstantArray::operand_at(size_t idx) const {
+  CAFFEINE_ASSERT(idx == 0, "Accessed out of bounds operand index");
+  return operands_[idx];
 }
 
 /***************************************************
