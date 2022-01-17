@@ -568,7 +568,8 @@ OpRef StoreOp::Create(const OpRef& data, const OpRef& offset,
 /***************************************************
  * Undef                                           *
  ***************************************************/
-Undef::Undef(const Type& t) : Operation(Opcode::Undef, t) {}
+Undef::Undef(const Type& t)
+    : Operation(std::make_unique<OperationData>(Opcode::Undef, t)) {}
 
 OpRef Undef::Create(const Type& t) {
   return constant_fold(Undef(t));
