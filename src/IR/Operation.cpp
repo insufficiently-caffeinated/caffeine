@@ -550,7 +550,8 @@ OpRef LoadOp::Create(const OpRef& data, const OpRef& offset) {
  * StoreOp                                         *
  ***************************************************/
 StoreOp::StoreOp(const OpRef& data, const OpRef& offset, const OpRef& value)
-    : ArrayBase(Opcode::Store, data->type(), data, offset, value) {}
+    : ArrayBase(std::make_unique<OperationData>(Opcode::Store, data->type()),
+                {data, offset, value}) {}
 
 OpRef StoreOp::Create(const OpRef& data, const OpRef& offset,
                       const OpRef& value) {
