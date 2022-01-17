@@ -4,6 +4,7 @@
 #include "caffeine/IR/Type.h"
 #include <boost/config.hpp>
 #include <llvm/IR/Function.h>
+#include <memory>
 
 // #include "caffeine/IR/Operation.h"
 
@@ -44,6 +45,26 @@ bool OperationData::operator==(const OperationData& op) const {
 }
 bool OperationData::operator!=(const OperationData& op) const {
   return !(*this == op);
+}
+
+std::unique_ptr<OperationData> OperationData::clone() const {
+  if (auto data = llvm::dyn_cast<ConstantData>(this))
+    return std::make_unique<ConstantData>(data->type(), data->symbol());
+  if (auto data = llvm::dyn_cast<ConstantIntData>(this))
+    return std::make_unique<ConstantIntData>(data->value());
+  if (auto data = llvm::dyn_cast<ConstantFloatData>(this))
+    return std::make_unique<ConstantFloatData>(data->value());
+  if (auto data = llvm::dyn_cast<FunctionObjectData>(this))
+    return std::make_unique<FunctionObjectData>(data->function());
+
+#if !defined(BOOST_NO_RTTI)
+  // If this assertion triggers then you have added a new derived class for
+  // OperationData without adding the corresponding clone implementation to this
+  // method.
+  CAFFEINE_ASSERT(typeid(*this) == typeid(OperationData));
+#endif
+
+  return std::make_unique<OperationData>(opcode(), type());
 }
 
 ConstantData::ConstantData(Type t, const Symbol& symbol)

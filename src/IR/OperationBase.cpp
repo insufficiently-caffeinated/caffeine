@@ -22,6 +22,18 @@ Operation::Operation(std::unique_ptr<OperationData>&& data,
                                 operands.size()));
   }
 }
+Operation::Operation(std::unique_ptr<OperationData>&& data,
+                     llvm::ArrayRef<OpRef> operands)
+    : opcode_(data->opcode()), type_(data->type()), data_(std::move(data)),
+      operands_(operands.begin(), operands.end()) {
+  size_t nargs = detail::opcode_nargs(opcode());
+
+  if (nargs != 4) {
+    CAFFEINE_ASSERT(nargs == operands.size(),
+                    fmt::format("invalid number of arguments: {} != {}", nargs,
+                                operands.size()));
+  }
+}
 
 Operation::Operation(Opcode op, Type t, const Inner& inner)
     : opcode_(static_cast<uint16_t>(op)), type_(t), inner_(inner) {}
@@ -131,16 +143,25 @@ OpRef Operation::with_new_operands(llvm::ArrayRef<OpRef> operands) const {
   if (num_operands() == 0)
     return shared_from_this();
 
-  auto my_operands = std::get<OpVec>(inner_);
-  bool equal = std::equal(std::begin(my_operands), std::end(my_operands),
-                          std::begin(operands), std::end(operands));
+  if (!data_) {
+    auto my_operands = std::get<OpVec>(inner_);
+    bool equal = std::equal(std::begin(my_operands), std::end(my_operands),
+                            std::begin(operands), std::end(operands));
 
-  if (equal)
-    return shared_from_this();
+    if (equal)
+      return shared_from_this();
 
-  Operation next{(Opcode)opcode(), type(), operands.data()};
-  next.copy_vtable(*this);
-  return constant_fold(std::move(next));
+    Operation next{(Opcode)opcode(), type(), operands.data()};
+    next.copy_vtable(*this);
+    return constant_fold(std::move(next));
+  } else {
+    if ((llvm::ArrayRef<OpRef>)operands_ == operands)
+      return shared_from_this();
+
+    Operation next{data_->clone(), operands};
+    next.copy_vtable(*this);
+    return constant_fold(std::move(next));
+  }
 }
 
 std::string_view Operation::opcode_name() const {
@@ -173,6 +194,8 @@ uint16_t Operation::opcode() const {
 }
 
 size_t Operation::num_operands() const {
+  if (data_)
+    return operands_.size();
   return detail::opcode_nargs(opcode_);
 }
 
@@ -208,6 +231,8 @@ const Operation& Operation::operator[](size_t idx) const {
 }
 
 const OpRef& Operation::operand_at(size_t idx) const {
+  if (data_)
+    return operands_[idx];
   return std::get<OpVec>(inner_)[idx];
 }
 
