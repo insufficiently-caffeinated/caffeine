@@ -120,12 +120,12 @@ capnp_gen = rule(
         "includes": attr.string_list(),
         "_capnpc": attr.label(
             executable = True,
-            cfg = "exec",
+            cfg = "host",
             default = "@capnproto//:capnpc",
         ),
         "_capnpc_cpp": attr.label(
             executable = True,
-            cfg = "exec",
+            cfg = "host",
             default = "@capnproto//:capnpc-cpp",
         ),
     },

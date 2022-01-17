@@ -8,6 +8,7 @@ cc_binary(
     ]),
     copts = ["-Itools/opt-plugin"] + WARNING_FLAGS,
     linkshared = True,
+    tags = ["manual"],
     visibility = ["//visibility:public"],
     deps = [
         "//:caffeine-assert",
