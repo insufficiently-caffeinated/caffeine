@@ -181,6 +181,53 @@ std::string_view Operation::opcode_name(Opcode op) {
 #endif
 }
 
+bool Operation::valid() const {
+  return opcode() != 0;
+}
+
+uint16_t Operation::opcode() const {
+  return opcode_;
+}
+
+size_t Operation::num_operands() const {
+  return detail::opcode_nargs(opcode_);
+}
+
+ref<const Operation> Operation::as_ref() const {
+  CAFFEINE_ASSERT(!weak_from_this().expired(),
+                  "Unable to convert non-refcounted Operation "
+                  "instance to a refcounted one");
+  return shared_from_this();
+}
+
+llvm::iterator_range<Operation::const_operand_iterator>
+Operation::operands() const {
+  return llvm::iterator_range<Operation::const_operand_iterator>{
+      const_operand_iterator(this, 0),
+      const_operand_iterator(this, num_operands())};
+}
+
+uint16_t Operation::aux_data() const {
+  return detail::opcode_aux(opcode());
+}
+Type Operation::type() const {
+  return type_;
+}
+
+bool Operation::is_constant() const {
+  return detail::opcode_base(opcode()) == 1;
+}
+
+const Operation& Operation::operator[](size_t idx) const {
+  CAFFEINE_ASSERT(idx < num_operands(),
+                  "Tried to access out-of-bounds operand");
+  return *operand_at(idx);
+}
+
+const OpRef& Operation::operand_at(size_t idx) const {
+  return std::get<OpVec>(inner_)[idx];
+}
+
 template <typename T, typename... Ts>
 static std::ostream& print_spaced(std::ostream& os, const T& first,
                                   const Ts&... values) {
