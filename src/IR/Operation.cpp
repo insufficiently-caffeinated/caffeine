@@ -442,7 +442,8 @@ OpRef UnaryOp::CreateTruncOrSExt(Type tgt, const OpRef& operand) {
  ***************************************************/
 SelectOp::SelectOp(Type t, const OpRef& cond, const OpRef& true_val,
                    const OpRef& false_val)
-    : Operation(Opcode::Select, t, cond, true_val, false_val) {}
+    : Operation(std::make_unique<OperationData>(Opcode::Select, t),
+                {cond, true_val, false_val}) {}
 
 OpRef SelectOp::Create(const OpRef& cond, const OpRef& true_value,
                        const OpRef& false_value) {
