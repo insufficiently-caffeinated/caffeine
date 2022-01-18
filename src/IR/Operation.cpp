@@ -323,7 +323,7 @@ DEF_INT_BINOP_CONST_CREATE(AShr);
  * UnaryOp                                         *
  ***************************************************/
 UnaryOp::UnaryOp(Opcode op, Type t, const OpRef& operand)
-    : Operation(op, t, operand) {}
+    : Operation(std::make_unique<OperationData>(op, t), {operand}) {}
 
 OpRef UnaryOp::Create(Opcode op, const OpRef& operand) {
   return Create(op, operand, operand->type());
