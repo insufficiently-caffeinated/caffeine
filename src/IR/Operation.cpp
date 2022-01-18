@@ -525,8 +525,9 @@ OpRef FCmpOp::CreateFCmp(FCmpOpcode cmp, const OpRef& lhs, const OpRef& rhs) {
  * AllocOp                                         *
  ***************************************************/
 AllocOp::AllocOp(const OpRef& size, const OpRef& defaultval)
-    : ArrayBase(Opcode::Alloc, Type::array_ty(size->type().bitwidth()), size,
-                defaultval) {}
+    : ArrayBase(std::make_unique<OperationData>(
+                    Opcode::Alloc, Type::array_ty(size->type().bitwidth())),
+                {size, defaultval}) {}
 
 OpRef AllocOp::Create(const OpRef& size, const OpRef& defaultval) {
   CAFFEINE_ASSERT(size, "size was null");
