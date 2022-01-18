@@ -1,5 +1,6 @@
 #pragma once
 
+#include <caffeine/ADT/PersistentArray.h>
 #ifndef CAFFEINE_IR_OPERATION_INL
 #define CAFFEINE_IR_OPERATION_INL
 
@@ -260,21 +261,6 @@ inline const OpRef& StoreOp::offset() const {
 
 inline const OpRef& StoreOp::value() const {
   return operand_at(2);
-}
-
-/***************************************************
- * FixedArray                                      *
- ***************************************************/
-inline const PersistentArray<OpRef>& FixedArray::data() const {
-  return std::get<PersistentArray<OpRef>>(inner_);
-}
-
-inline size_t FixedArray::num_operands() const {
-  return data().size();
-}
-
-inline const OpRef& FixedArray::operand_at(size_t i) const {
-  return data().get(i);
 }
 
 /***************************************************

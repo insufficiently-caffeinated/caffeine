@@ -428,18 +428,12 @@ public:
  */
 class FixedArray final : public ArrayBase {
 private:
-  FixedArray(Type t, const PersistentArray<OpRef>& data);
+  FixedArray(Type t, llvm::ArrayRef<OpRef> data);
 
 public:
-  const PersistentArray<OpRef>& data() const;
+  llvm::ArrayRef<OpRef> data() const;
 
-  size_t num_operands() const override;
-
-  OpRef with_new_operands(llvm::ArrayRef<OpRef> operands) const override;
-
-  const OpRef& operand_at(size_t i) const override;
-
-  static OpRef Create(Type index_ty, const PersistentArray<OpRef>& data);
+  static OpRef Create(Type index_ty, llvm::ArrayRef<OpRef> data);
   static OpRef Create(Type index_ty, const OpRef& value, size_t size);
 
   static bool classof(const Operation* op);

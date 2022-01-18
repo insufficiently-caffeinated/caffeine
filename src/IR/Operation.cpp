@@ -587,32 +587,15 @@ OpRef Undef::Create(const Type& t) {
 /***************************************************
  * FixedArray                                      *
  ***************************************************/
-FixedArray::FixedArray(Type t, const PersistentArray<OpRef>& data)
-    : ArrayBase(Operation::FixedArray, t, data) {}
+FixedArray::FixedArray(Type t, llvm::ArrayRef<OpRef> data)
+    : ArrayBase(std::make_unique<OperationData>(Operation::FixedArray, t),
+                data) {}
 
-OpRef FixedArray::with_new_operands(llvm::ArrayRef<OpRef> operands) const {
-  CAFFEINE_ASSERT(operands.size() == num_operands());
-
-  if (num_operands() == 0)
-    return shared_from_this();
-
-  bool equal = std::equal(std::begin(operands), std::end(operands),
-                          std::begin(data()), std::end(data()));
-
-  if (equal)
-    return shared_from_this();
-
-  auto transient = data().inner().transient();
-  for (size_t i = 0; i < operands.size(); ++i) {
-    if (transient[i] != operands[i])
-      transient.set(i, operands[i]);
-  }
-
-  return OpRef(
-      new FixedArray(type(), PersistentArray<OpRef>(transient.persistent())));
+llvm::ArrayRef<OpRef> FixedArray::data() const {
+  return operands_;
 }
 
-OpRef FixedArray::Create(Type index_ty, const PersistentArray<OpRef>& data) {
+OpRef FixedArray::Create(Type index_ty, llvm::ArrayRef<OpRef> data) {
   CAFFEINE_ASSERT(index_ty.is_int());
   CAFFEINE_ASSERT(
       index_ty.bitwidth() >= ilog2(data.size()),
@@ -621,8 +604,7 @@ OpRef FixedArray::Create(Type index_ty, const PersistentArray<OpRef>& data) {
   return constant_fold(FixedArray(Type::array_ty(index_ty.bitwidth()), data));
 }
 OpRef FixedArray::Create(Type index_ty, const OpRef& value, size_t size) {
-  return FixedArray::Create(
-      index_ty, PersistentArray<OpRef>(std::vector<OpRef>(size, value)));
+  return FixedArray::Create(index_ty, std::vector<OpRef>(size, value));
 }
 
 /***************************************************

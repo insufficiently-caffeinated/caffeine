@@ -12,8 +12,8 @@ OpRef ArrayBase::size() const {
   case Store:
     return llvm::cast<ArrayBase>(*operand_at(0)).size();
   case FixedArray:
-    return ConstantInt::Create(llvm::APInt(
-        type().bitwidth(), std::get<PersistentArray<OpRef>>(inner_).size()));
+    return ConstantInt::Create(
+        llvm::APInt(type().bitwidth(), operands_.size()));
   }
 
   CAFFEINE_UNIMPLEMENTED("unexpected ArrayBase opcode");

@@ -227,7 +227,7 @@ OpRef OperationBuilder::createUndef(Type t) {
 }
 
 OpRef OperationBuilder::createFixedArray(Type index_ty,
-                                         const PersistentArray<OpRef>& data) {
+                                         llvm::ArrayRef<OpRef> data) {
   return FixedArray::Create(index_ty, data);
 }
 OpRef OperationBuilder::createFixedArray(Type index_ty, const OpRef& value,
