@@ -204,8 +204,8 @@ public:
   typedef detail::operand_iterator operand_iterator;
   typedef detail::operand_iterator const_operand_iterator;
 
-  virtual size_t num_operands() const;
-  virtual llvm::iterator_range<const_operand_iterator> operands() const;
+  size_t num_operands() const;
+  llvm::iterator_range<const_operand_iterator> operands() const;
 
   const Operation& operator[](size_t idx) const;
 
@@ -223,12 +223,12 @@ public:
    * Create a new operation using the same opcode as the current one but with
    * new operands.
    */
-  virtual OpRef with_new_operands(llvm::ArrayRef<OpRef> operands) const;
+  OpRef with_new_operands(llvm::ArrayRef<OpRef> operands) const;
 
   /**
    * Accessors to operand references.
    */
-  virtual const OpRef& operand_at(size_t idx) const;
+  const OpRef& operand_at(size_t idx) const;
 
   // Need to define this since refcount shouldn't be copied/moved.
   Operation(Operation&& op) noexcept;

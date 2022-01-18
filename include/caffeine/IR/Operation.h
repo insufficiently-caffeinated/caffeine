@@ -136,10 +136,6 @@ public:
   static OpRef Create(const Symbol& symbol, const OpRef& size);
   static OpRef Create(Symbol&& symbol, const OpRef& size);
 
-  OpRef with_new_operands(llvm::ArrayRef<OpRef> operands) const override;
-
-  const OpRef& operand_at(size_t idx) const override;
-
   static bool classof(const Operation* op);
 };
 

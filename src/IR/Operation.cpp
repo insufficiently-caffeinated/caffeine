@@ -113,22 +113,8 @@ OpRef ConstantArray::Create(Symbol&& symbol, const OpRef& size) {
   return constant_fold(ConstantArray(std::move(symbol), size));
 }
 
-OpRef ConstantArray::with_new_operands(llvm::ArrayRef<OpRef> operands) const {
-  CAFFEINE_ASSERT(operands.size() == 1);
-
-  if (size() == operands[0])
-    return shared_from_this();
-
-  return Create(symbol(), operands[0]);
-}
-
 const Symbol& ConstantArray::symbol() const {
   return llvm::cast<caffeine::ConstantData>(data_.get())->symbol();
-}
-
-const OpRef& ConstantArray::operand_at(size_t idx) const {
-  CAFFEINE_ASSERT(idx == 0, "Accessed out of bounds operand index");
-  return operands_[idx];
 }
 
 /***************************************************
