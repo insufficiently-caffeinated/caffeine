@@ -117,8 +117,7 @@ enum class FCmpOpcode : uint8_t {
  *    Visitor.cpp. This may also require adding new built-in methods to the
  *    Value type.
  */
-class Operation : private CopyVTable,
-                  public std::enable_shared_from_this<Operation> {
+class Operation : public std::enable_shared_from_this<Operation> {
 protected:
   // Base opcode used for FCmp opcodes
   static constexpr uint16_t fcmp_base = CAFFEINE_FCMP_BASE;
@@ -152,9 +151,6 @@ public:
   };
 
 protected:
-  uint16_t opcode_;
-  uint16_t dummy_ = 0; // Unused, used for padding
-
   Type type_;
 
   std::unique_ptr<OperationData> data_;
@@ -169,8 +165,6 @@ protected:
             llvm::ArrayRef<OpRef> operands);
 
   Operation();
-
-  using CopyVTable::copy_vtable;
 
 public:
   /**
@@ -230,9 +224,8 @@ public:
    */
   const OpRef& operand_at(size_t idx) const;
 
-  // Need to define this since refcount shouldn't be copied/moved.
-  Operation(Operation&& op) noexcept;
-  Operation& operator=(Operation&& op) noexcept;
+  Operation(Operation&& op) noexcept = default;
+  Operation& operator=(Operation&& op) noexcept = default;
 
   // Need to force operation to have a vtable
   virtual ~Operation() = default;

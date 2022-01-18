@@ -8,23 +8,15 @@
 
 namespace caffeine {
 
-Operation::Operation() : opcode_(Invalid), type_(Type::void_ty()) {}
+Operation::Operation() : type_(Type::void_ty()) {}
 
 Operation::Operation(std::unique_ptr<OperationData>&& data,
                      std::initializer_list<OpRef> operands)
-    : opcode_(data->opcode()), type_(data->type()), data_(std::move(data)),
-      operands_(operands) {
-  size_t nargs = detail::opcode_nargs(opcode());
-
-  if (nargs != 4) {
-    CAFFEINE_ASSERT(nargs == operands.size(),
-                    fmt::format("invalid number of arguments: {} != {}", nargs,
-                                operands.size()));
-  }
-}
+    : Operation(std::move(data),
+                llvm::ArrayRef<OpRef>(operands.begin(), operands.end())) {}
 Operation::Operation(std::unique_ptr<OperationData>&& data,
                      llvm::ArrayRef<OpRef> operands)
-    : opcode_(data->opcode()), type_(data->type()), data_(std::move(data)),
+    : type_(data->type()), data_(std::move(data)),
       operands_(operands.begin(), operands.end()) {
   size_t nargs = detail::opcode_nargs(opcode());
 
@@ -35,36 +27,13 @@ Operation::Operation(std::unique_ptr<OperationData>&& data,
   }
 }
 
-Operation::Operation(Operation&& op) noexcept
-    : std::enable_shared_from_this<Operation>(), opcode_(op.opcode_),
-      type_(op.type_), data_(std::move(op.data_)),
-      operands_(std::move(op.operands_)) {
-  copy_vtable(op);
-  op.reset();
-}
-
-Operation& Operation::operator=(Operation&& op) noexcept {
-  data_ = std::move(op.data_);
-  operands_ = std::move(op.operands_);
-  type_ = op.type_;
-  opcode_ = op.opcode_;
-
-  copy_vtable(op);
-  op.reset();
-
-  return *this;
-}
-
 void Operation::reset() {
-  opcode_ = Invalid;
   type_ = Type::void_ty();
   operands_.clear();
   data_ = nullptr;
 }
 
 bool Operation::operator==(const Operation& op) const {
-  if (opcode_ != op.opcode_ || type_ != op.type_)
-    return false;
   if (operands_ != op.operands_)
     return false;
 
@@ -91,9 +60,7 @@ OpRef Operation::with_new_operands(llvm::ArrayRef<OpRef> operands) const {
   if ((llvm::ArrayRef<OpRef>)operands_ == operands)
     return shared_from_this();
 
-  Operation next{data_->clone(), operands};
-  next.copy_vtable(*this);
-  return constant_fold(std::move(next));
+  return constant_fold(Operation{data_->clone(), operands});
 }
 
 std::string_view Operation::opcode_name() const {
@@ -118,17 +85,17 @@ std::string_view Operation::opcode_name(Opcode op) {
 }
 
 bool Operation::valid() const {
-  return opcode() != 0;
+  return opcode() != Opcode::Invalid;
 }
 
 uint16_t Operation::opcode() const {
-  return opcode_;
+  return !data_ ? Opcode::Invalid : data_->opcode();
 }
 
 size_t Operation::num_operands() const {
   if (data_)
     return operands_.size();
-  return detail::opcode_nargs(opcode_);
+  return detail::opcode_nargs(opcode());
 }
 
 ref<const Operation> Operation::as_ref() const {
