@@ -152,17 +152,10 @@ public:
   };
 
 protected:
-  using ConstantData = std::pair<Symbol, OpRef>;
-  using FixedData = PersistentArray<OpRef>;
-  using OpVec = boost::container::static_vector<OpRef, 3>;
-  using Inner = std::variant<std::monostate, OpVec, llvm::APInt, llvm::APFloat,
-                             FixedData, ConstantData, llvm::Function*>;
-
   uint16_t opcode_;
   uint16_t dummy_ = 0; // Unused, used for padding
 
   Type type_;
-  Inner inner_;
 
   std::unique_ptr<OperationData> data_;
   llvm::SmallVector<OpRef, 4> operands_;
@@ -174,18 +167,8 @@ protected:
             std::initializer_list<OpRef> operands = {});
   Operation(std::unique_ptr<OperationData>&& data,
             llvm::ArrayRef<OpRef> operands);
-  Operation(Opcode op, Type t, const Inner& inner);
-  Operation(Opcode op, Type t, Inner&& inner);
-
-  Operation(Opcode op, Type t, const OpRef* operands);
-
-  Operation(Opcode op, Type t, const OpRef& op0);
-  Operation(Opcode op, Type t, const OpRef& op0, const OpRef& op1);
-  Operation(Opcode op, Type t, const OpRef& op0, const OpRef& op1,
-            const OpRef& op2);
 
   Operation();
-  Operation(Opcode op, Type t);
 
   using CopyVTable::copy_vtable;
 

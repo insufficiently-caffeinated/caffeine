@@ -630,7 +630,7 @@ OpRef FunctionObject::Create(llvm::Function* function) {
 /***************************************************
  * hashing implementations                         *
  ***************************************************/
-static llvm::hash_code hash_value(const OpRef& op) {
+llvm::hash_code hash_value(const OpRef& op) {
   return std::hash<OpRef>()(op);
 }
 
@@ -641,20 +641,7 @@ llvm::hash_code hash_value(const Operation& op) {
   if (op.data_)
     hash = llvm::hash_combine(*op.data_);
 
-  return std::visit(
-      [&](const auto& v) {
-        using type = std::decay_t<decltype(v)>;
-
-        if constexpr (std::is_same_v<type, Operation::OpVec>) {
-          return llvm::hash_combine(
-              hash, llvm::hash_combine_range(v.begin(), v.end()));
-        } else if constexpr (std::is_same_v<type, std::monostate>) {
-          return llvm::hash_combine(hash, std::hash<type>()(v));
-        } else {
-          return llvm::hash_combine(hash, v);
-        }
-      },
-      op.inner_);
+  return hash;
 }
 llvm::hash_code hash_value(const Symbol& symbol) {
   return std::visit(
