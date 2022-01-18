@@ -116,7 +116,7 @@ uint16_t Operation::aux_data() const {
   return detail::opcode_aux(opcode());
 }
 Type Operation::type() const {
-  return type_;
+  return data_ ? type_ : Type::void_ty();
 }
 
 bool Operation::is_constant() const {
