@@ -224,8 +224,8 @@ public:
    */
   const OpRef& operand_at(size_t idx) const;
 
-  Operation(Operation&& op) noexcept = default;
-  Operation& operator=(Operation&& op) noexcept = default;
+  Operation(Operation&& op) = default;
+  Operation& operator=(Operation&& op) = default;
 
   // Need to force operation to have a vtable
   virtual ~Operation() = default;
