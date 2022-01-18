@@ -154,7 +154,7 @@ namespace {
           constants.push_back(Constant::Create(
               Type::int_ty(8), Symbol(ctx.context().next_constant())));
         }
-        return FixedArray::Create(type, PersistentArray<OpRef>(constants));
+        return FixedArray::Create(type, constants);
       }
     }
   };

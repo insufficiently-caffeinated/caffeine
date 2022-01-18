@@ -519,8 +519,8 @@ OpRef OperationSimplifier::visitStoreOp(StoreOp& op) {
   const auto* fixedarray = llvm::dyn_cast<FixedArray>(op.data().get());
 
   if (offset_cnst && fixedarray) {
-    auto data = fixedarray->data();
-    data.set(offset_cnst->value().getLimitedValue(), op.value());
+    auto data = fixedarray->data().vec();
+    data[offset_cnst->value().getLimitedValue()] = op.value();
     return FixedArray::Create(op.offset()->type(), data);
   } else if (fixedarray) {
     auto cached = OperationCache::default_cache()->intern(op.data());

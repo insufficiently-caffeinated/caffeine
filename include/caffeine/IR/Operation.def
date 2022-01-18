@@ -145,7 +145,7 @@ HANDLE_UNARY_OP_FIRST(Not)
 
 // Other instructions
 HANDLE_FULL_OP(Select,     Select,     SelectOp,   20, 3, 0)
-HANDLE_FULL_OP(FixedArray, FixedArray, FixedArray, 21, 0, 0)
+HANDLE_FULL_OP(FixedArray, FixedArray, FixedArray, 21, 4, 0)
 
 // Allocation instructions
 /**

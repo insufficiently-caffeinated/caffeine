@@ -125,7 +125,7 @@ public:
   OpRef createStore(const OpRef& data, const OpRef& offset, const OpRef& value);
   OpRef createUndef(Type t);
 
-  OpRef createFixedArray(Type index_ty, const PersistentArray<OpRef>& data);
+  OpRef createFixedArray(Type index_ty, llvm::ArrayRef<OpRef> data);
   OpRef createFixedArray(Type index_ty, const OpRef& value, size_t size);
 
   OpRef createFunctionObject(llvm::Function* function);
