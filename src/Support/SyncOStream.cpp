@@ -2,11 +2,9 @@
 
 namespace caffeine {
 
-std::map<std::ostream *, std::mutex> sync_ostream_wrapper::locks;
+std::map<std::ostream*, std::mutex> sync_ostream_wrapper::locks;
 
-sync_ostream_wrapper::sync_ostream_wrapper( std::ostream& o )
-  : os(&o)
-{
+sync_ostream_wrapper::sync_ostream_wrapper(std::ostream& o) : os(&o) {
   if (locks.find(os) == locks.end()) {
     locks[os];
   }

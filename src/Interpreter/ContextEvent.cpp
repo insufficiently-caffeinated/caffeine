@@ -2,8 +2,8 @@
 
 #include "caffeine/Support/SyncOStream.h"
 
-#include <sstream>
 #include <ostream>
+#include <sstream>
 #include <sys/ioctl.h>
 
 namespace caffeine {

@@ -1,5 +1,6 @@
 #include "caffeine/IR/Visitor.h"
 #include "caffeine/Interpreter/FailureLogger.h"
+#include "caffeine/Support/SyncOStream.h"
 #include <boost/range/adaptor/reversed.hpp>
 #include <cctype>
 #include <iostream>
@@ -78,7 +79,9 @@ void PrintingFailureLogger::log_failure(const Model* model, const Context& ctx,
   ss << "Assertion:\n" << failure.check << '\n';
 
   std::unique_lock lock(mtx);
-  *os << ss.str() << std::flush;
+  sync_ostream_wrapper sync(*os);
+  sync << ss.str();
+  // *os << ss.str() << std::flush;
 }
 
 } // namespace caffeine

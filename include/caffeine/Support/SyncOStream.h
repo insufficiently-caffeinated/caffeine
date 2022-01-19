@@ -13,26 +13,24 @@ namespace caffeine {
  * the version that is in C++20
  */
 class sync_ostream_wrapper {
-  static std::map<std::ostream *, std::mutex> locks;
+  static std::map<std::ostream*, std::mutex> locks;
 
-  std::ostream * os;
+  std::ostream* os;
   std::stringstream sstream;
 
   void flush();
 
 public:
-
-  sync_ostream_wrapper( std::ostream& o );
+  sync_ostream_wrapper(std::ostream& o);
   ~sync_ostream_wrapper();
 
   std::string get_formatted_string();
 
   template <typename T>
-  sync_ostream_wrapper& operator<< (T&& s) {
+  sync_ostream_wrapper& operator<<(T&& s) {
     sstream << s;
     return *this;
   };
-
 };
 
 } // namespace caffeine
