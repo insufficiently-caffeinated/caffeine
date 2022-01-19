@@ -15,7 +15,10 @@ build --output_filter=^//
 # Don't show test output unless the test fails
 test --test_output=errors
 
+common --experimental_cc_implementation_deps
+
 # Bazel registries for finding bzlmod dependencies
+common --registry=http://localhost:8000
 common --registry=https://raw.githubusercontent.com/insufficiently-caffeinated/caffeine-bazel-repository/main/
 common --registry=https://raw.githubusercontent.com/bazelbuild/bazel-central-registry/main
 

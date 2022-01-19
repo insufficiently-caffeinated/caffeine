@@ -1,8 +1,10 @@
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag")
 load("//bazel:configure.bzl", "configure_file")
 load("//bazel:warnings.bzl", "WARNING_FLAGS")
+load("//bazel:packaging.bzl", "caffeine_naming", "pkg_headers")
 load("//bazel:clang-format.bzl", "do_format", "format_test")
 load("@hedron_compile_commands//:refresh_compile_commands.bzl", "refresh_compile_commands")
+load("@rules_pkg//:pkg.bzl", "pkg_tar")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -82,8 +84,8 @@ cc_library(
         "include/caffeine/**/*.def",
     ]),
     copts = WARNING_FLAGS,
-    # strip_include_prefix = "include",
-    includes = ["include"],
+    strip_include_prefix = "include",
+    # includes = ["include"],
     deps = [
         ":config",
         "//src/Protos:caffeine-protos",
@@ -99,6 +101,47 @@ cc_library(
         "@llvm//llvm:Passes",
     ],
 )
+
+pkg_headers(
+    name = "caffeine-headers",
+    mappings = {
+        "llvm/include": "",
+    },
+    visibility = ["//visibility:private"],
+    deps = [":caffeine"],
+)
+
+filegroup(
+    name = "caffeine-static",
+    srcs = [":caffeine"],
+    output_group = "archive",
+    visibility = ["//visibility:private"],
+)
+
+caffeine_naming(
+    name = "caffeine-naming-vars",
+)
+
+pkg_tar(
+    name = "tarball",
+    srcs = [
+        ":caffeine-headers",
+    ],
+    out = "caffeine.tar.gz",
+    files = {
+        "//tools/caffeine": "bin/caffeine",
+        "//tools/opt-plugin": "lib/libcaffeine-opt-plugin.so",
+        ":caffeine-static": "lib/libcaffeine.a",
+        "//interface:caffeine.h": "include/caffeine.h",
+        "//libraries/builtins": "lib/caffeine/caffeine-builtins.bc",
+        "//libraries/libc": "lib/caffeine/libc.bc",
+        "//libraries/libcxx": "lib/caffeine/libcxx.bc",
+    },
+    package_file_name = "caffeine-{mode}.tar.gz",
+    package_variables = ":caffeine-naming-vars",
+)
+
+####################################################################
 
 # All relevant targets within caffeine. This is used to discover
 # source files that are used within these targets so that they
