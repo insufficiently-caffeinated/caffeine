@@ -25,8 +25,14 @@ public:
   sync_ostream_wrapper( std::ostream& o );
   ~sync_ostream_wrapper();
 
-  sync_ostream_wrapper& operator<< (const std::string & s);
-  // TODO: potentially other functions for string output...
+  std::string get_formatted_string();
+
+  template <typename T>
+  sync_ostream_wrapper& operator<< (T&& s) {
+    sstream << s;
+    return *this;
+  };
+
 };
 
 } // namespace caffeine

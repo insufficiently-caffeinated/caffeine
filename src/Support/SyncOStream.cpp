@@ -2,7 +2,7 @@
 
 namespace caffeine {
 
-std::map<std::ostream *, std::mutex> locks;
+std::map<std::ostream *, std::mutex> sync_ostream_wrapper::locks;
 
 sync_ostream_wrapper::sync_ostream_wrapper( std::ostream& o )
   : os(&o)
@@ -13,7 +13,7 @@ sync_ostream_wrapper::sync_ostream_wrapper( std::ostream& o )
 }
 
 sync_ostream_wrapper::~sync_ostream_wrapper() {
-    flush();
+  flush();
 }
 
 void sync_ostream_wrapper::flush() {
@@ -21,9 +21,8 @@ void sync_ostream_wrapper::flush() {
   *os << sstream.str() << std::flush;
 }
 
-sync_ostream_wrapper& sync_ostream_wrapper::operator<< (const std::string & s) {
-  sstream << s;
-  return *this;
+std::string sync_ostream_wrapper::get_formatted_string() {
+  return sstream.str();
 }
 
 } // namespace caffeine
