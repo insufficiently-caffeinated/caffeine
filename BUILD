@@ -5,6 +5,7 @@ load("//bazel:packaging.bzl", "caffeine_naming", "pkg_headers")
 load("//bazel:clang-format.bzl", "do_format", "format_test")
 load("@hedron_compile_commands//:refresh_compile_commands.bzl", "refresh_compile_commands")
 load("@rules_pkg//:pkg.bzl", "pkg_tar")
+# load("//bazel:cc_static_library.bzl", "cc_static_library")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -45,6 +46,15 @@ configure_file(
         "CAFFEINE_ENABLE_TRACING": "//:enable-tracing",
         "CAFFEINE_TRACING_EXPENSIVE_ANNOTATIONS": "//:enable-tracing-expensive-annotations",
         "CAFFEINE_ENABLE_IMPLICIT_CONSTANT_FOLDING": "//:enable-implicit-constant-folding",
+    },
+)
+
+configure_file(
+    name = "cmake-config",
+    src = "cmake/CaffeineBazelConfig.cmake.in",
+    out = "caffeine-config.cmake",
+    config = {
+        "CAFFEINE_VERSION": "//:version",
     },
 )
 
@@ -111,6 +121,13 @@ pkg_headers(
     deps = [":caffeine"],
 )
 
+cc_binary(
+    name = "caffeine-shared",
+    deps = [":caffeine"],
+    visibility = ["//visibility:private"],
+    linkshared = 1
+)
+
 filegroup(
     name = "caffeine-static",
     srcs = [":caffeine"],
@@ -131,11 +148,12 @@ pkg_tar(
     files = {
         "//tools/caffeine": "bin/caffeine",
         "//tools/opt-plugin": "lib/libcaffeine-opt-plugin.so",
-        ":caffeine-static": "lib/libcaffeine.a",
-        "//interface:caffeine.h": "include/caffeine.h",
+        "//:caffeine-shared": "lib/libcaffeine.so",
+        "//interface:caffeine.h": "include/caffeine/interface/caffeine.h",
         "//libraries/builtins": "lib/caffeine/caffeine-builtins.bc",
         "//libraries/libc": "lib/caffeine/libc.bc",
         "//libraries/libcxx": "lib/caffeine/libcxx.bc",
+        "//:cmake-config": "lib/cmake/caffeine/caffeine-config.cmake",
     },
     package_file_name = "caffeine-{mode}.tar.gz",
     package_variables = ":caffeine-naming-vars",
