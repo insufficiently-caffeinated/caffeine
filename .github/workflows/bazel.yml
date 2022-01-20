@@ -63,14 +63,13 @@ jobs:
       - name: Build tarball
         run: |
           bazelisk build --config=ci -- //:tarball
-          ls
-          ls bazel-bin
+          mv bazel-bin/caffeine-${{ matrix.mode }}.tar.gz caffeine.tar.gz
 
       - name: Upload release tarball
         uses: actions/upload-artifact@v2
         with:
           name: caffeine-${{ matrix.mode }}
-          path: bazel-bin/caffeine.tar.gz
+          path: caffeine.tar.gz
 
   format:
     runs-on: ubuntu-latest
