@@ -14,6 +14,3 @@ bazel_dep(name = "immer", version = "0.7.0")
 bazel_dep(name = "magic_enum", version = "0.7.3")
 bazel_dep(name = "tsl_hopscotch_map", version = "2.3.0")
 bazel_dep(name = "z3", version = "4.8.14")
-
-# Using this seems to run into some error in bazel
-# bazel_dep(name = "rules_pkg", version = "0.5.1")
