@@ -26,6 +26,8 @@ http_archive(
     urls = ["https://github.com/bazelbuild/rules_cc/releases/download/0.0.1/rules_cc-0.0.1.tar.gz"],
 )
 
+# We use the latest head for rules_pkg since v0.5.1 doesn't have the macros
+# we would like to use.
 RULES_PKG_COMMIT = "5a976bc14fb28fca13abf23d488a88501221c55e"
 http_archive(
     name = "rules_pkg",
