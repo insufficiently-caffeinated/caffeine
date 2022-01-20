@@ -63,6 +63,8 @@ jobs:
       - name: Build tarball
         run: |
           bazelisk build --config=ci -- //:tarball
+          ls
+          ls bazel-bin
 
       - name: Upload release tarball
         uses: actions/upload-artifact@v2
