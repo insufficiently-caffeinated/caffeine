@@ -25,13 +25,13 @@ http_archive(
     sha256 = "4dccbfd22c0def164c8f47458bd50e0c7148f3d92002cdb459c2a96a68498241",
     urls = ["https://github.com/bazelbuild/rules_cc/releases/download/0.0.1/rules_cc-0.0.1.tar.gz"],
 )
+
+RULES_PKG_COMMIT = "5a976bc14fb28fca13abf23d488a88501221c55e"
 http_archive(
     name = "rules_pkg",
-    urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_pkg/releases/download/0.5.1/rules_pkg-0.5.1.tar.gz",
-        "https://github.com/bazelbuild/rules_pkg/releases/download/0.5.1/rules_pkg-0.5.1.tar.gz",
-    ],
-    sha256 = "a89e203d3cf264e564fcb96b6e06dd70bc0557356eb48400ce4b5d97c2c3720d",
+    url = "https://github.com/bazelbuild/rules_pkg/archive/{}.zip".format(RULES_PKG_COMMIT),
+    strip_prefix = "rules_pkg-{}".format(RULES_PKG_COMMIT),
+    sha256 = "da090edc17c54befb67c5630e1d1781a1319800df3d8c620e78c78742bfea0c9",
 )
 
 setup_capnproto(name = "capnproto")
