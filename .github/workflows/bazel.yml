@@ -60,6 +60,10 @@ jobs:
           bazelisk test --config=ci -- //... \
             $(bazelisk query 'kind(".*_test", //...) intersect attr("tags", "manual", //...)')
 
+      - name: Build tarball
+        run: |
+          bazelisk build --config=ci -- //:tarball
+
       - name: Upload release tarball
         uses: actions/upload-artifact@v2
         with:
