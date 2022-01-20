@@ -117,8 +117,7 @@ enum class FCmpOpcode : uint8_t {
  *    Visitor.cpp. This may also require adding new built-in methods to the
  *    Value type.
  */
-class Operation : private CopyVTable,
-                  public std::enable_shared_from_this<Operation> {
+class Operation : public std::enable_shared_from_this<Operation> {
 protected:
   // Base opcode used for FCmp opcodes
   static constexpr uint16_t fcmp_base = CAFFEINE_FCMP_BASE;
@@ -152,17 +151,7 @@ public:
   };
 
 protected:
-  using ConstantData = std::pair<Symbol, OpRef>;
-  using FixedData = PersistentArray<OpRef>;
-  using OpVec = boost::container::static_vector<OpRef, 3>;
-  using Inner = std::variant<std::monostate, OpVec, llvm::APInt, llvm::APFloat,
-                             FixedData, ConstantData, llvm::Function*>;
-
-  uint16_t opcode_;
-  uint16_t dummy_ = 0; // Unused, used for padding
-
   Type type_;
-  Inner inner_;
 
   std::unique_ptr<OperationData> data_;
   llvm::SmallVector<OpRef, 4> operands_;
@@ -174,20 +163,8 @@ protected:
             std::initializer_list<OpRef> operands = {});
   Operation(std::unique_ptr<OperationData>&& data,
             llvm::ArrayRef<OpRef> operands);
-  Operation(Opcode op, Type t, const Inner& inner);
-  Operation(Opcode op, Type t, Inner&& inner);
-
-  Operation(Opcode op, Type t, const OpRef* operands);
-
-  Operation(Opcode op, Type t, const OpRef& op0);
-  Operation(Opcode op, Type t, const OpRef& op0, const OpRef& op1);
-  Operation(Opcode op, Type t, const OpRef& op0, const OpRef& op1,
-            const OpRef& op2);
 
   Operation();
-  Operation(Opcode op, Type t);
-
-  using CopyVTable::copy_vtable;
 
 public:
   /**
@@ -221,8 +198,8 @@ public:
   typedef detail::operand_iterator operand_iterator;
   typedef detail::operand_iterator const_operand_iterator;
 
-  virtual size_t num_operands() const;
-  virtual llvm::iterator_range<const_operand_iterator> operands() const;
+  size_t num_operands() const;
+  llvm::iterator_range<const_operand_iterator> operands() const;
 
   const Operation& operator[](size_t idx) const;
 
@@ -240,19 +217,17 @@ public:
    * Create a new operation using the same opcode as the current one but with
    * new operands.
    */
-  virtual OpRef with_new_operands(llvm::ArrayRef<OpRef> operands) const;
+  OpRef with_new_operands(llvm::ArrayRef<OpRef> operands) const;
 
   /**
    * Accessors to operand references.
    */
-  virtual const OpRef& operand_at(size_t idx) const;
+  const OpRef& operand_at(size_t idx) const;
 
-  // Need to define this since refcount shouldn't be copied/moved.
-  Operation(Operation&& op) noexcept;
-  Operation& operator=(Operation&& op) noexcept;
+  Operation(Operation&& op) = default;
+  Operation& operator=(Operation&& op) = default;
 
-  // Need to force operation to have a vtable
-  virtual ~Operation() = default;
+  ~Operation() = default;
 
 protected:
   /**

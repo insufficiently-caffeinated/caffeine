@@ -113,22 +113,8 @@ OpRef ConstantArray::Create(Symbol&& symbol, const OpRef& size) {
   return constant_fold(ConstantArray(std::move(symbol), size));
 }
 
-OpRef ConstantArray::with_new_operands(llvm::ArrayRef<OpRef> operands) const {
-  CAFFEINE_ASSERT(operands.size() == 1);
-
-  if (size() == operands[0])
-    return shared_from_this();
-
-  return Create(symbol(), operands[0]);
-}
-
 const Symbol& ConstantArray::symbol() const {
   return llvm::cast<caffeine::ConstantData>(data_.get())->symbol();
-}
-
-const OpRef& ConstantArray::operand_at(size_t idx) const {
-  CAFFEINE_ASSERT(idx == 0, "Accessed out of bounds operand index");
-  return operands_[idx];
 }
 
 /***************************************************
@@ -630,7 +616,7 @@ OpRef FunctionObject::Create(llvm::Function* function) {
 /***************************************************
  * hashing implementations                         *
  ***************************************************/
-static llvm::hash_code hash_value(const OpRef& op) {
+llvm::hash_code hash_value(const OpRef& op) {
   return std::hash<OpRef>()(op);
 }
 
@@ -641,20 +627,7 @@ llvm::hash_code hash_value(const Operation& op) {
   if (op.data_)
     hash = llvm::hash_combine(*op.data_);
 
-  return std::visit(
-      [&](const auto& v) {
-        using type = std::decay_t<decltype(v)>;
-
-        if constexpr (std::is_same_v<type, Operation::OpVec>) {
-          return llvm::hash_combine(
-              hash, llvm::hash_combine_range(v.begin(), v.end()));
-        } else if constexpr (std::is_same_v<type, std::monostate>) {
-          return llvm::hash_combine(hash, std::hash<type>()(v));
-        } else {
-          return llvm::hash_combine(hash, v);
-        }
-      },
-      op.inner_);
+  return hash;
 }
 llvm::hash_code hash_value(const Symbol& symbol) {
   return std::visit(

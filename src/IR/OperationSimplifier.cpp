@@ -92,6 +92,7 @@ namespace {
   } while (false)
 
 OpRef OperationSimplifier::visit(Operation& op) {
+  CAFFEINE_ASSERT(op.valid());
 #ifdef CAFFEINE_ENABLE_IMPLICIT_CONSTANT_FOLDING
   return BaseType::visit(op);
 #else
