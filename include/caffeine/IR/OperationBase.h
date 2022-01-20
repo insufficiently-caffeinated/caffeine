@@ -227,8 +227,7 @@ public:
   Operation(Operation&& op) = default;
   Operation& operator=(Operation&& op) = default;
 
-  // Need to force operation to have a vtable
-  virtual ~Operation() = default;
+  ~Operation() = default;
 
 protected:
   /**
