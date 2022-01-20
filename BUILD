@@ -123,9 +123,9 @@ pkg_headers(
 
 cc_binary(
     name = "caffeine-shared",
-    deps = [":caffeine"],
+    linkshared = 1,
     visibility = ["//visibility:private"],
-    linkshared = 1
+    deps = [":caffeine"],
 )
 
 filegroup(
@@ -154,6 +154,8 @@ pkg_tar(
         "//libraries/libc": "lib/caffeine/libc.bc",
         "//libraries/libcxx": "lib/caffeine/libcxx.bc",
         "//:cmake-config": "lib/cmake/caffeine/caffeine-config.cmake",
+        "scripts/vcpkg/gllvm-toolchain.cmake": "share/vcpkg/gllvm-toolchain.cmake",
+        "scripts/vcpkg/x64-linux-gllvm.cmake": "share/vcpkg/x64-linux-gllvm",
     },
     package_file_name = "caffeine-{mode}.tar.gz",
     package_variables = ":caffeine-naming-vars",
