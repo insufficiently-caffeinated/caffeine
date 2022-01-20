@@ -60,9 +60,11 @@ jobs:
           bazelisk test --config=ci -- //... \
             $(bazelisk query 'kind(".*_test", //...) intersect attr("tags", "manual", //...)')
 
-      - name: Build tarball
+      # This is needed to work around a bug in actions/upload-artifact.
+      # Specficially, it fails if the directory that contains the artifact
+      # is actually a symlink to a directory (as happens with bazel-bin).
+      - name: Move tarball to a different directory
         run: |
-          bazelisk build --config=ci -- //:tarball
           mv bazel-bin/caffeine-${{ matrix.mode }}.tar.gz caffeine.tar.gz
 
       - name: Upload release tarball
