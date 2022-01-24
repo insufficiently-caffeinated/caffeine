@@ -51,8 +51,6 @@ def _library_public_headers(target, ctx):
 
             path = _strip_prefix(path, include_prefix)
 
-            # print(file.path, path, include_prefix)
-
             files[path] = file
         direct = ctx.rule.files.hdrs
 
@@ -83,11 +81,8 @@ def _pkg_headers(ctx):
                 path = "{}/{}".format(replacement, path[len(prefix):].strip("/"))
 
         path = "{}/{}".format(ctx.attr.prefix, path.strip("/"))
-        # print(path, ":", file)
-
         outputs[path] = file
 
-    # print(outputs)
 
     return [
         PackageFilesInfo(

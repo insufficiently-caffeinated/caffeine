@@ -96,7 +96,6 @@ cc_library(
     ]),
     copts = WARNING_FLAGS,
     strip_include_prefix = "include",
-    # includes = ["include"],
     deps = [
         ":config",
         "//src/Protos:caffeine-protos",
