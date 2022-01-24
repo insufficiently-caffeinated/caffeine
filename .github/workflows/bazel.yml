@@ -60,6 +60,19 @@ jobs:
           bazelisk test --config=ci -- //... \
             $(bazelisk query 'kind(".*_test", //...) intersect attr("tags", "manual", //...)')
 
+      # This is needed to work around a bug in actions/upload-artifact.
+      # Specficially, it fails if the directory that contains the artifact
+      # is actually a symlink to a directory (as happens with bazel-bin).
+      - name: Move tarball to a different directory
+        run: |
+          mv bazel-bin/caffeine-${{ matrix.mode }}.tar.gz caffeine.tar.gz
+
+      - name: Upload release tarball
+        uses: actions/upload-artifact@v2
+        with:
+          name: caffeine-${{ matrix.mode }}
+          path: caffeine.tar.gz
+
   format:
     runs-on: ubuntu-latest
     strategy:

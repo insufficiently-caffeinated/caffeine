@@ -15,6 +15,10 @@ build --output_filter=^//
 # Don't show test output unless the test fails
 test --test_output=errors
 
+# We want to use this to avoid having Z3 internals show up in the installed
+# tarball. It may also be useful for bitcode targets in the future as well.
+build --experimental_cc_implementation_deps
+
 # Bazel registries for finding bzlmod dependencies
 common --registry=https://raw.githubusercontent.com/insufficiently-caffeinated/caffeine-bazel-repository/main/
 common --registry=https://raw.githubusercontent.com/bazelbuild/bazel-central-registry/main

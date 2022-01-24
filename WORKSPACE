@@ -26,6 +26,16 @@ http_archive(
     urls = ["https://github.com/bazelbuild/rules_cc/releases/download/0.0.1/rules_cc-0.0.1.tar.gz"],
 )
 
+# We use the latest head for rules_pkg since v0.5.1 doesn't have the macros
+# we would like to use.
+RULES_PKG_COMMIT = "5a976bc14fb28fca13abf23d488a88501221c55e"
+http_archive(
+    name = "rules_pkg",
+    url = "https://github.com/bazelbuild/rules_pkg/archive/{}.zip".format(RULES_PKG_COMMIT),
+    strip_prefix = "rules_pkg-{}".format(RULES_PKG_COMMIT),
+    sha256 = "da090edc17c54befb67c5630e1d1781a1319800df3d8c620e78c78742bfea0c9",
+)
+
 setup_capnproto(name = "capnproto")
 setup_llvm(name = "llvm-raw")
 setup_boost(name = "com_github_nelhage_rules_boost")
@@ -42,8 +52,11 @@ local_repository(
 
 load("@com_github_nelhage_rules_boost//:boost/boost.bzl", "boost_deps")
 load("@llvm-bazel//:configure.bzl", "llvm_configure", "llvm_disable_optional_support_deps")
+load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
 
 boost_deps()
+
+rules_pkg_dependencies()
 
 llvm_configure(
     name = "llvm",
