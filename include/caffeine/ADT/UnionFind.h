@@ -6,7 +6,7 @@
 
 namespace caffeine {
 
-template<typename T = size_t>
+template <typename T = size_t>
 class UnionFind {
 public:
   UnionFind() = default;
