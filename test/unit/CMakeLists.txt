@@ -18,6 +18,7 @@ target_include_directories(caffeine-unittest PRIVATE "${CMAKE_SOURCE_DIR}/includ
 target_include_directories(caffeine-unittest PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 target_include_directories(caffeine-unittest PRIVATE "${CMAKE_SOURCE_DIR}")
 target_include_directories(caffeine-unittest PRIVATE "${CMAKE_BINARY_DIR}/gen/")
+target_compile_definitions(caffeine-unittest PRIVATE CAFFEINE_EXPOSE_FOR_TEST)
 
 if (CAFFEINE_ENABLE_COVERAGE)
   add_test(
