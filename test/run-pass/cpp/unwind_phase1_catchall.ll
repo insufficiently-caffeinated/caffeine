@@ -9,7 +9,6 @@ target triple = "x86_64-pc-linux-gnu"
 @_ZTIi0 = internal constant i64 0, align 8
 @_ZTIi1 = internal constant i64 1, align 8
 
-; Here we sign extend an i8 to an i16
 define dso_local void @test(i8 %x) personality i8* bitcast (i32 (i32, i32, i64, %struct._Unwind_Exception*, %struct._Unwind_Context*)* @__gxx_personality_v0 to i8*) {
   %type_info = alloca %"class.std::type_info"*, align 8
   store %"class.std::type_info"* bitcast (i64* @_ZTIi0 to %"class.std::type_info"*), %"class.std::type_info"** %type_info, align 8
