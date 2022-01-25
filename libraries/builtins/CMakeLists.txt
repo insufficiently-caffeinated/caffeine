@@ -5,6 +5,7 @@ file(
   *.c
   *.h
   *.ll
+  *.cpp
 )
 
 llvm_library(caffeine-builtins

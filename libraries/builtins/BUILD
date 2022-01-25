@@ -3,7 +3,7 @@ load("@//bazel:bitcode.bzl", "bitcode_library_standalone")
 bitcode_library_standalone(
     name = "builtins-impl",
     srcs = glob(
-        ["*.c"],
+        ["*.c", "*.cpp"],
         exclude = ["threading.c"],
     ),
     hdrs = glob(["*.h"]),

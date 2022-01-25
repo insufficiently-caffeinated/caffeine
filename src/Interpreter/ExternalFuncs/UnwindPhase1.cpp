@@ -49,10 +49,10 @@ namespace {
       AssertionList unmatched_exceptions;
       size_t clause_num;
 
-      UnwindPhaseState(State state, CatchType catch_type, size_t catching_frame,
+      UnwindPhaseState(State state, CatchType catch_type, int current_frame,
                        llvm::Constant* catching_clause,
                        AssertionList assertions)
-          : state{state}, catch_type{catch_type},
+          : state{state}, catch_type{catch_type}, current_frame{current_frame},
             catching_clause{catching_clause}, assertions{assertions} {}
 
       UnwindPhaseState() = default;
