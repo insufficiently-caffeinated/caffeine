@@ -8,7 +8,7 @@ EGraphNode::EGraphNode(Type t, size_t id)
     : Operation(std::make_unique<EGraphNodeData>(t, id)) {}
 
 size_t EGraphNode::id() const {
-  return llvm::cast<EGraphNodeData>(data().get())->id();
+  return llvm::cast<EGraphNodeData>(data_.get())->id();
 }
 
 OpRef EGraphNode::Create(Type t, size_t id) {
