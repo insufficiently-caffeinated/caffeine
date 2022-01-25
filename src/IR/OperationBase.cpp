@@ -5,15 +5,12 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 #include <llvm/ADT/SmallString.h>
+#include <memory>
 
 namespace caffeine {
 
 Operation::Operation() : type_(Type::void_ty()) {}
 
-Operation::Operation(std::unique_ptr<OperationData>&& data,
-                     std::initializer_list<OpRef> operands)
-    : Operation(std::move(data),
-                llvm::ArrayRef<OpRef>(operands.begin(), operands.end())) {}
 Operation::Operation(std::unique_ptr<OperationData>&& data,
                      llvm::ArrayRef<OpRef> operands)
     : type_(data->type()), data_(std::move(data)),
@@ -21,7 +18,19 @@ Operation::Operation(std::unique_ptr<OperationData>&& data,
   size_t nargs = detail::opcode_nargs(opcode());
 
   if (nargs != 4) {
-    CAFFEINE_ASSERT(nargs == operands.size(),
+    CAFFEINE_ASSERT(nargs == operands_.size(),
+                    fmt::format("invalid number of arguments: {} != {}", nargs,
+                                operands.size()));
+  }
+}
+Operation::Operation(const std::shared_ptr<OperationData>& data,
+                     llvm::SmallVector<OpRef, 4>&& operands)
+    : type_(data->type()), data_(std::move(data)),
+      operands_(std::move(operands)) {
+  size_t nargs = detail::opcode_nargs(opcode());
+
+  if (nargs != 4) {
+    CAFFEINE_ASSERT(nargs == operands_.size(),
                     fmt::format("invalid number of arguments: {} != {}", nargs,
                                 operands.size()));
   }
@@ -61,6 +70,10 @@ OpRef Operation::with_new_operands(llvm::ArrayRef<OpRef> operands) const {
     return shared_from_this();
 
   return constant_fold(Operation{data_->clone(), operands});
+}
+
+const std::shared_ptr<OperationData>& Operation::data() const {
+  return data_;
 }
 
 std::string_view Operation::opcode_name() const {
@@ -131,6 +144,16 @@ const Operation& Operation::operator[](size_t idx) const {
 
 const OpRef& Operation::operand_at(size_t idx) const {
   return operands_[idx];
+}
+
+OpRef Operation::CreateRaw(const std::shared_ptr<OperationData>& data,
+                           llvm::ArrayRef<OpRef> operands) {
+  return CreateRaw(
+      data, llvm::SmallVector<OpRef, 4>(operands.begin(), operands.end()));
+}
+OpRef Operation::CreateRaw(const std::shared_ptr<OperationData>& data,
+                           llvm::SmallVector<OpRef, 4>&& operands) {
+  return constant_fold(Operation(data, std::move(operands)));
 }
 
 template <typename T, typename... Ts>

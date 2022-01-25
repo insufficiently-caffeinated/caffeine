@@ -153,16 +153,16 @@ public:
 protected:
   Type type_;
 
-  std::unique_ptr<OperationData> data_;
+  std::shared_ptr<OperationData> data_;
   llvm::SmallVector<OpRef, 4> operands_;
 
   friend llvm::hash_code hash_value(const Operation& op);
 
 protected:
   Operation(std::unique_ptr<OperationData>&& data,
-            std::initializer_list<OpRef> operands = {});
-  Operation(std::unique_ptr<OperationData>&& data,
             llvm::ArrayRef<OpRef> operands);
+  Operation(const std::shared_ptr<OperationData>& data,
+            llvm::SmallVector<OpRef, 4>&& operands);
 
   Operation();
 
@@ -224,10 +224,21 @@ public:
    */
   const OpRef& operand_at(size_t idx) const;
 
+  const std::shared_ptr<OperationData>& data() const;
+
   Operation(Operation&& op) = default;
   Operation& operator=(Operation&& op) = default;
 
   ~Operation() = default;
+
+  /**
+   * Create an operation instance directly from an OperationData instance and an
+   * array of operands.
+   */
+  static OpRef CreateRaw(const std::shared_ptr<OperationData>& data,
+                         llvm::ArrayRef<OpRef> operands = {});
+  static OpRef CreateRaw(const std::shared_ptr<OperationData>& data,
+                         llvm::SmallVector<OpRef, 4>&& operands);
 
 protected:
   /**
