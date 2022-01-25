@@ -1,6 +1,6 @@
 #include "caffeine/IR/Operation.h"
 #include "caffeine/IR/OperationData.h"
-#include "src/IR/Operation.h"
+#include "../Operation.h"
 
 namespace caffeine {
 
