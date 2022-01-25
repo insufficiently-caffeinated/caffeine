@@ -12,10 +12,6 @@ namespace caffeine {
 Operation::Operation() : type_(Type::void_ty()) {}
 
 Operation::Operation(std::unique_ptr<OperationData>&& data,
-                     std::initializer_list<OpRef> operands)
-    : Operation(std::move(data),
-                llvm::ArrayRef<OpRef>(operands.begin(), operands.end())) {}
-Operation::Operation(std::unique_ptr<OperationData>&& data,
                      llvm::ArrayRef<OpRef> operands)
     : type_(data->type()), data_(std::move(data)),
       operands_(operands.begin(), operands.end()) {
