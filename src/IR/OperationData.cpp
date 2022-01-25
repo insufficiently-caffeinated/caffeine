@@ -116,4 +116,8 @@ llvm::hash_code FunctionObjectData::hash() const {
   return hash_value(func_);
 }
 
+llvm::hash_code EGraphNodeData::hash() const {
+  return hash_value(id_);
+}
+
 } // namespace caffeine
