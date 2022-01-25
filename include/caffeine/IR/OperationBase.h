@@ -161,6 +161,8 @@ protected:
 
 protected:
   Operation(std::unique_ptr<OperationData>&& data,
+            std::initializer_list<OpRef> operands = {});
+  Operation(std::unique_ptr<OperationData>&& data,
             llvm::ArrayRef<OpRef> operands);
   Operation(const std::shared_ptr<OperationData>& data,
             llvm::SmallVector<OpRef, 4>&& operands);
