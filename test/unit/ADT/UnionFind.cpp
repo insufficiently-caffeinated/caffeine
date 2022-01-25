@@ -27,7 +27,7 @@ TEST(UnionFindTest, union_find) {
   for (size_t i = 0; i < 10; ++i) {
     uf.find(i);
   }
-  
+
   std::vector<size_t> expected = {0, 0, 0, 0, 4, 5, 6, 6, 6, 6};
   ASSERT_EQ(uf.parents, expected);
 }
