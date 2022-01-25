@@ -7,6 +7,7 @@
 #include "caffeine/Support/CopyVTable.h"
 #include <boost/container/static_vector.hpp>
 #include <cstdint>
+#include <initializer_list>
 #include <llvm/ADT/APFloat.h>
 #include <llvm/ADT/APInt.h>
 #include <llvm/Support/Casting.h>
@@ -159,6 +160,8 @@ protected:
   friend llvm::hash_code hash_value(const Operation& op);
 
 protected:
+  Operation(std::unique_ptr<OperationData>&& data,
+            std::initializer_list<OpRef> operands = {});
   Operation(std::unique_ptr<OperationData>&& data,
             llvm::ArrayRef<OpRef> operands);
   Operation(const std::shared_ptr<OperationData>& data,
