@@ -10,10 +10,11 @@ target triple = "x86_64-pc-linux-gnu"
 @_ZTIi1 = internal constant i64 1, align 8
 
 define dso_local void @test(i8 %x) personality i8* bitcast (i32 (i32, i32, i64, %struct._Unwind_Exception*, %struct._Unwind_Context*)* @__gxx_personality_v0 to i8*) {
+  %dummy_ptr = alloca i8*
   %type_info = alloca %"class.std::type_info"*, align 8
   store %"class.std::type_info"* bitcast (i64* @_ZTIi0 to %"class.std::type_info"*), %"class.std::type_info"** %type_info, align 8
   %load_res = load %"class.std::type_info"*, %"class.std::type_info"** %type_info, align 8
-  %unwind_res = invoke i32 @caffeine_unwind_phase1(%"class.std::type_info"* %load_res)
+  %unwind_res = invoke i32 @caffeine_unwind_phase1(%"class.std::type_info"* %load_res, i8** %dummy_ptr)
           to label %regular_return unwind label %unwind_return
 
 regular_return:
@@ -34,7 +35,7 @@ declare dso_local void @caffeine_assume(i1 zeroext) local_unnamed_addr
 
 declare dso_local void @caffeine_assert(i1 zeroext) local_unnamed_addr
 
-declare dso_local i32 @caffeine_unwind_phase1(%"class.std::type_info"*)
+declare dso_local i32 @caffeine_unwind_phase1(%"class.std::type_info"*, i8**)
 
 declare i32 @__gxx_personality_v0(i32 %0, i32 %1, i64 %2, %struct._Unwind_Exception* %3, %struct._Unwind_Context* %4)
 

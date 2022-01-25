@@ -19,21 +19,25 @@ namespace {
   class UnwindPhase1 final : public ExternalStackFrameMixin<UnwindPhase1> {
   private:
     enum State : uint8_t {
+      UNINITIALIZED,
       SEARCHING,
       RETURNING,
+      PROCESSING_CATCH,
       DONE,
     };
 
+    enum CatchType : uint8_t { NONE, CATCH, FILTER, CLEANUP };
+
   public:
     struct UnwindPhaseState {
-      State state = SEARCHING;
+      State state = UNINITIALIZED;
 
       // Filters have a negative select value so we need to keep track of
       // what actually caught the exception
-      bool was_catch = true;
+      CatchType catch_type = NONE;
 
       // The index of the frame that caught the exception
-      std::optional<size_t> catching_frame = std::nullopt;
+      int current_frame;
 
       // The landingpad clause which caught the exception
       llvm::Constant* catching_clause = nullptr;
@@ -41,11 +45,14 @@ namespace {
       // Assertions to add to the new context
       AssertionList assertions;
 
-      UnwindPhaseState(State state, bool was_catch,
-                       std::optional<size_t> catching_frame,
+      std::vector<UnwindPhaseState> possible_states;
+      AssertionList unmatched_exceptions;
+      size_t clause_num;
+
+      UnwindPhaseState(State state, CatchType catch_type, size_t catching_frame,
                        llvm::Constant* catching_clause,
                        AssertionList assertions)
-          : state{state}, was_catch{was_catch}, catching_frame{catching_frame},
+          : state{state}, catch_type{catch_type},
             catching_clause{catching_clause}, assertions{assertions} {}
 
       UnwindPhaseState() = default;
@@ -54,14 +61,10 @@ namespace {
     };
 
   private:
-    std::vector<UnwindPhaseState> getPossibleStates(InterpreterContext& ctx) {
-      AssertionList unmatched_exceptions;
-      std::vector<UnwindPhaseState> possible_states;
-
-      // Subtract two because we don't want to check the current stack frame
-      // (it's an ExternalStackFrame for UnwindPhase1)
-      for (int i = ctx.context().stack.size() - 2; i >= 0; i--) {
-        StackFrame& frame_wrapper = ctx.context().stack.at(i);
+    bool getPossibleStates(InterpreterContext& ctx) {
+      for (; uw_state.current_frame >= 0; uw_state.current_frame--) {
+        StackFrame& frame_wrapper =
+            ctx.context().stack.at(uw_state.current_frame);
         if (frame_wrapper.is_external()) {
           continue;
         }
@@ -92,41 +95,52 @@ namespace {
         auto lpad = bb->getLandingPadInst();
         if (lpad->isCleanup()) {
           // Always enter a cleanup clause
-          possible_states.emplace_back(RETURNING, true, i, nullptr,
-                                       AssertionList());
-          return possible_states;
+          uw_state.possible_states.emplace_back(RETURNING, CLEANUP,
+                                                uw_state.current_frame, nullptr,
+                                                AssertionList());
+          return true;
         }
 
-        for (size_t j = 0; j < lpad->getNumClauses(); j++) {
-          auto clause = lpad->getClause(j);
-          if (lpad->isCatch(j)) {
+        for (; uw_state.clause_num < lpad->getNumClauses();
+             uw_state.clause_num++) {
+          auto clause = lpad->getClause(uw_state.clause_num);
+          if (lpad->isCatch(uw_state.clause_num)) {
+            // Null clauses are also always entered
+            if (clause->isNullValue()) {
+              uw_state.possible_states.emplace_back(RETURNING, CATCH,
+                                                    uw_state.current_frame,
+                                                    clause, AssertionList());
+              return true;
+            }
+
+            // TODO:
+            // * call caffeine_can_catch
+            // * set state PROCESSING_CATCH
+            // * return false;
+            // * deal with whether we can catch this there
+
             Assertion should_enter = ICmpOp::CreateICmpEQ(
                 ctx.load(clause).scalar().pointer().value(ctx.context().heaps),
                 args[0].scalar().pointer().value(ctx.context().heaps));
 
-            // Null clauses are also always entered
-            if (clause->isNullValue()) {
-              possible_states.emplace_back(RETURNING, true, i, clause,
-                                           AssertionList());
-              return possible_states;
-            }
-
             if (ctx.check(should_enter) == SolverResult::SAT) {
-              possible_states.emplace_back(RETURNING, true, i, clause,
-                                           AssertionList(should_enter));
+              uw_state.possible_states.emplace_back(
+                  RETURNING, CATCH, uw_state.current_frame, clause,
+                  AssertionList(should_enter));
             }
 
             if (ctx.check(!should_enter) == SolverResult::SAT) {
-              unmatched_exceptions.insert(!should_enter);
+              uw_state.unmatched_exceptions.insert(!should_enter);
             } else {
               // The exception always resolves to this clause
-              return possible_states;
+              return true;
             }
-          } else if (lpad->isFilter(j)) {
+          } else if (lpad->isFilter(uw_state.clause_num)) {
             if (clause->isNullValue()) {
-              possible_states.emplace_back(RETURNING, false, i, clause,
-                                           AssertionList());
-              return possible_states;
+              uw_state.possible_states.emplace_back(RETURNING, FILTER,
+                                                    uw_state.current_frame,
+                                                    clause, AssertionList());
+              return true;
             }
 
             LLVMValue clause_value = ctx.load(clause);
@@ -146,37 +160,44 @@ namespace {
             Assertion should_enter = !Assertion(matches_any_ele);
 
             if (ctx.check(should_enter) == SolverResult::SAT) {
-              possible_states.emplace_back(RETURNING, false, i, clause,
-                                           AssertionList(should_enter));
+              uw_state.possible_states.emplace_back(
+                  RETURNING, FILTER, uw_state.current_frame, clause,
+                  AssertionList(should_enter));
             }
 
             if (ctx.check(!should_enter) == SolverResult::SAT) {
-              unmatched_exceptions.insert(!should_enter);
+              uw_state.unmatched_exceptions.insert(!should_enter);
             } else {
               // The exception always resolves to this clause
-              return possible_states;
+              return true;
             }
           } else {
             CAFFEINE_UNREACHABLE();
           }
         }
+
+        uw_state.clause_num = 0;
       }
 
-      possible_states.emplace_back(RETURNING, true, std::nullopt, nullptr,
-                                   unmatched_exceptions);
+      uw_state.possible_states.emplace_back(RETURNING, NONE,
+                                            uw_state.current_frame, nullptr,
+                                            uw_state.unmatched_exceptions);
 
-      return possible_states;
+      return true;
     }
 
     void findLandingPad(InterpreterContext& ctx) {
-      std::vector<UnwindPhaseState> possible_states = getPossibleStates(ctx);
+      if (!getPossibleStates(ctx)) {
+        return;
+      }
 
-      ctx.fork_external<UnwindPhase1>(
-          possible_states, [=](InterpreterContext&, UnwindPhase1* frame,
-                               const UnwindPhaseState& s) {
-            frame->uw_state = s;
-            frame->uw_state.state = RETURNING;
-          });
+      ctx.fork_external<UnwindPhase1>(uw_state.possible_states,
+                                      [=](InterpreterContext&,
+                                          UnwindPhase1* frame,
+                                          const UnwindPhaseState& s) {
+                                        frame->uw_state = s;
+                                        frame->uw_state.state = RETURNING;
+                                      });
     }
 
   public:
@@ -186,6 +207,15 @@ namespace {
     void step(InterpreterContext& ctx) override {
 
       switch (uw_state.state) {
+      case UNINITIALIZED: {
+        uw_state.state = SEARCHING;
+
+        // Subtract two because we don't want to check the current stack frame
+        // (it's an ExternalStackFrame for UnwindPhase1)
+        uw_state.current_frame = ctx.context().stack.size() - 2;
+
+        uw_state.clause_num = 0;
+      }
       case SEARCHING: {
         findLandingPad(ctx);
         return;
@@ -201,7 +231,7 @@ namespace {
 
         _Unwind_Reason_Code result = _URC_END_OF_STACK;
 
-        if (uw_state.catching_frame) {
+        if (uw_state.catch_type != NONE) {
           result = _URC_NO_REASON;
         }
 
@@ -210,6 +240,12 @@ namespace {
             llvm::APInt(ret_ty->getIntegerBitWidth(), result))));
 
         return;
+      }
+      case PROCESSING_CATCH: {
+        CAFFEINE_ASSERT(result_);
+        CAFFEINE_ASSERT(!resume_value_);
+
+        // TODO
       }
 
       default:
@@ -226,7 +262,7 @@ namespace {
   public:
     void call(llvm::Function* func, InterpreterContext& ctx,
               Span<LLVMValue> args) const override {
-      if (args.size() != 1) {
+      if (args.size() != 2) {
         ctx.fail("invalid UnwindPhase1Function signature (invalid number of "
                  "arguments)");
         return;
@@ -235,6 +271,12 @@ namespace {
       if (!func->getArg(0)->getType()->isPointerTy()) {
         ctx.fail(
             "invalid UnwindPhase1Function signature (invalid first argument)");
+        return;
+      }
+
+      if (!func->getArg(1)->getType()->isPointerTy()) {
+        ctx.fail(
+            "invalid UnwindPhase1Function signature (invalid second argument)");
         return;
       }
 
