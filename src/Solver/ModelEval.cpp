@@ -146,7 +146,7 @@ Value ModelEvaluator::visitSIToFp(const UnaryOp&) {
   CAFFEINE_UNIMPLEMENTED();
 }
 
-Value ModelEvaluator::visitEGraphNode(const EGraphNode& O) {
+Value ModelEvaluator::visitEGraphNode(const EGraphNode&) {
   CAFFEINE_ABORT("Attempted to evaluate EGraphNode");
 }
 
