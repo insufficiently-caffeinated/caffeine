@@ -489,4 +489,8 @@ z3::expr Z3OpVisitor::visitFunctionObject(const FunctionObject&) {
   CAFFEINE_ABORT("Encountered a symbolic FunctionObject instance");
 }
 
+z3::expr Z3OpVisitor::visitEGraphNode(const EGraphNode& op) {
+  CAFFEINE_ABORT("Z3OpVisitor got an incomplete expression");
+}
+
 } // namespace caffeine

@@ -447,6 +447,22 @@ public:
   static bool classof(const Operation* op);
 };
 
+/**
+ * Represents a node within the E-Graph. The rest of the expression can then be
+ * retrieved by querying the E-Graph.
+ */
+class EGraphNode final : public Operation {
+private:
+  EGraphNode(Type t, size_t id);
+
+public:
+  size_t id() const;
+
+  static OpRef Create(Type t, size_t id);
+
+  static bool classof(const Operation* op);
+};
+
 } // namespace caffeine
 
 #include "caffeine/IR/Operation.inl"

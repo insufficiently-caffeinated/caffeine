@@ -146,6 +146,10 @@ Value ModelEvaluator::visitSIToFp(const UnaryOp&) {
   CAFFEINE_UNIMPLEMENTED();
 }
 
+Value ModelEvaluator::visitEGraphNode(const EGraphNode& O) {
+  CAFFEINE_ABORT("Attempted to evaluate EGraphNode");
+}
+
 Value ModelEvaluator::visitAlloc(const AllocOp& op) {
   auto size = visit(*op.size()).apint().getLimitedValue();
   CAFFEINE_ASSERT(size <= (uint64_t)SIZE_MAX);
