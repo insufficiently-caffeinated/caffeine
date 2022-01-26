@@ -50,15 +50,9 @@ void EClass::merge(EClass& eclass) {
 
   nodes.insert(nodes.end(), std::move_iterator(eclass.nodes.begin()),
                std::move_iterator(eclass.nodes.end()));
-
-  // This e-class will not be used again, free all its memory
-  eclass.nodes.clear();
-  eclass.nodes.shrink_to_fit();
-
   for (auto it = eclass.parents.begin(); it != eclass.parents.end(); ++it) {
     parents.emplace(it.key(), it.value());
   }
-  eclass.parents = decltype(eclass.parents)();
 }
 
 size_t EGraph::find(size_t id) const {
@@ -85,6 +79,7 @@ size_t EGraph::merge(size_t id1, size_t id2) {
   auto new_id = union_find.do_union(id1, id2);
 
   classes.at(new_id).merge(classes.at(id2));
+  classes.erase(id2);
 
   worklist.push_back(new_id);
   return new_id;
