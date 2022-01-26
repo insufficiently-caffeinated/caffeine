@@ -7,5 +7,7 @@ cc_binary(
     visibility = ["//visibility:public"],
     deps = [
         "//:caffeine",
+        "@llvm//llvm:IRReader",
+        "@llvm//llvm:Support",
     ],
 )

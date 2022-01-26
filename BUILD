@@ -105,10 +105,9 @@ cc_library(
         "//third_party:magic-enum",
         "//third_party:z3",
         "//third_party/capnp",
-        "//third_party/divine",
         "@boost//:thread",
         "@llvm//llvm:Core",
-        "@llvm//llvm:Passes",
+        "@llvm//llvm:Support",
     ],
 )
 

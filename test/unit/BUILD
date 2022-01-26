@@ -18,6 +18,7 @@ cc_library(
     deps = [
         "//:caffeine",
         "//third_party:gtest",
+        "@llvm//llvm:IRReader",
     ],
     alwayslink = 1,
 )

@@ -11,9 +11,7 @@ cc_library(
         "//:caffeine",
         "//third_party:fmt",
         "@afl//:afl-hdrs",
-        "@llvm//llvm:BitWriter",
         "@llvm//llvm:Core",
         "@llvm//llvm:IRReader",
-        "@llvm//llvm:TransformUtils",
     ],
 )
