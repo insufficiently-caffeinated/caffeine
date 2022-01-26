@@ -9,7 +9,10 @@ cc_library(
     hdrs = glob(["**/*.h"]),
     copts = WARNING_FLAGS,
     data = ["Interpreter/ir-with-global.ll"],
-    local_defines = ["CAFFEINE_BAZEL"],
+    local_defines = [
+        "CAFFEINE_BAZEL",
+        "CAFFEINE_EXPOSE_FOR_TESTING",
+    ],
     strip_include_prefix = "/test/unit",
     visibility = ["//:__pkg__"],
     deps = [
