@@ -24,6 +24,7 @@ namespace {
       RETURNING,
       PROCESSING_CATCH,
       DONE,
+      FORKING,
     };
 
     enum CatchType : uint8_t { NONE, CATCH, FILTER, CLEANUP };
@@ -61,6 +62,8 @@ namespace {
     };
 
   private:
+    // Returns whether all the possible states have been returned or if this
+    // function needs to be called again
     bool getPossibleStates(InterpreterContext& ctx) {
       for (; uw_state.current_frame >= 0; uw_state.current_frame--) {
         StackFrame& frame_wrapper =
@@ -113,28 +116,11 @@ namespace {
               return true;
             }
 
-            // TODO:
-            // * call caffeine_can_catch
-            // * set state PROCESSING_CATCH
-            // * return false;
-            // * deal with whether we can catch this there
-
-            Assertion should_enter = ICmpOp::CreateICmpEQ(
-                ctx.load(clause).scalar().pointer().value(ctx.context().heaps),
-                args[0].scalar().pointer().value(ctx.context().heaps));
-
-            if (ctx.check(should_enter) == SolverResult::SAT) {
-              uw_state.possible_states.emplace_back(
-                  RETURNING, CATCH, uw_state.current_frame, clause,
-                  AssertionList(should_enter));
-            }
-
-            if (ctx.check(!should_enter) == SolverResult::SAT) {
-              uw_state.unmatched_exceptions.insert(!should_enter);
-            } else {
-              // The exception always resolves to this clause
-              return true;
-            }
+            std::vector<LLVMValue> args_ = {args[0], ctx.load(clause), args[1]};
+            ctx.call_function(can_catch_func, args_);
+            uw_state.state = PROCESSING_CATCH;
+            uw_state.catching_clause = clause;
+            return false;
           } else if (lpad->isFilter(uw_state.clause_num)) {
             if (clause->isNullValue()) {
               uw_state.possible_states.emplace_back(RETURNING, FILTER,
@@ -191,13 +177,7 @@ namespace {
         return;
       }
 
-      ctx.fork_external<UnwindPhase1>(uw_state.possible_states,
-                                      [=](InterpreterContext&,
-                                          UnwindPhase1* frame,
-                                          const UnwindPhaseState& s) {
-                                        frame->uw_state = s;
-                                        frame->uw_state.state = RETURNING;
-                                      });
+      uw_state.state = FORKING;
     }
 
   public:
@@ -215,6 +195,10 @@ namespace {
         uw_state.current_frame = ctx.context().stack.size() - 2;
 
         uw_state.clause_num = 0;
+
+        can_catch_func = ctx.getModule()->getFunction("caffeine_can_catch");
+        CAFFEINE_ASSERT(can_catch_func);
+        return;
       }
       case SEARCHING: {
         findLandingPad(ctx);
@@ -245,7 +229,36 @@ namespace {
         CAFFEINE_ASSERT(result_);
         CAFFEINE_ASSERT(!resume_value_);
 
-        // TODO
+        Assertion should_enter = ICmpOp::CreateICmpEQ(
+            (*result_).scalar().expr(), ConstantInt::Create(true));
+
+        if (ctx.check(should_enter) == SolverResult::SAT) {
+          uw_state.possible_states.emplace_back(
+              RETURNING, CATCH, uw_state.current_frame,
+              uw_state.catching_clause, AssertionList(should_enter));
+        }
+
+        if (ctx.check(!should_enter) == SolverResult::SAT) {
+          uw_state.unmatched_exceptions.insert(!should_enter);
+          // Keep searching
+          uw_state.state = SEARCHING;
+        } else {
+          // The exception always resolves to this clause
+          uw_state.state = FORKING;
+        }
+
+        return;
+      }
+
+      case FORKING: {
+        ctx.fork_external<UnwindPhase1>(uw_state.possible_states,
+                                        [=](InterpreterContext&,
+                                            UnwindPhase1* frame,
+                                            const UnwindPhaseState& s) {
+                                          frame->uw_state = s;
+                                          frame->uw_state.state = RETURNING;
+                                        });
+        return;
       }
 
       default:
@@ -256,6 +269,7 @@ namespace {
 
   private:
     UnwindPhaseState uw_state;
+    llvm::Function* can_catch_func;
   };
 
   class UnwindPhase1Function : public ExternalFunction {
