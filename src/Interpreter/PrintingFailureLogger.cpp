@@ -81,7 +81,6 @@ void PrintingFailureLogger::log_failure(const Model* model, const Context& ctx,
   std::unique_lock lock(mtx);
   sync_ostream_wrapper sync(*os);
   sync << ss.str();
-  // *os << ss.str() << std::flush;
 }
 
 } // namespace caffeine

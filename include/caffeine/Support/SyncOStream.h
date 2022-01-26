@@ -27,7 +27,7 @@ public:
   std::string get_formatted_string();
 
   template <typename T>
-  sync_ostream_wrapper& operator<<(T&& s) {
+  sync_ostream_wrapper& operator<<(const T& s) {
     sstream << s;
     return *this;
   };
