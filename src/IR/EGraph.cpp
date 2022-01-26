@@ -1,7 +1,8 @@
 #include "caffeine/IR/EGraph.h"
 #include "caffeine/IR/Operation.h"
-#include <caffeine/IR/OperationBase.h>
+#include <algorithm>
 #include <cstdint>
+#include <deque>
 #include <iterator>
 #include <limits>
 
@@ -48,10 +49,32 @@ llvm::hash_code hash_value(const EClass& eclass) {
 void EClass::merge(EClass& eclass) {
   CAFFEINE_ASSERT(this != &eclass);
 
+  bool constant = eclass.is_constant();
+  size_t start = nodes.size();
+
   nodes.insert(nodes.end(), std::move_iterator(eclass.nodes.begin()),
                std::move_iterator(eclass.nodes.end()));
   for (auto it = eclass.parents.begin(); it != eclass.parents.end(); ++it) {
     parents.emplace(it.key(), it.value());
+  }
+
+  if (constant) {
+    std::swap(nodes.front(), nodes[start]);
+  }
+}
+
+bool EClass::is_constant() const {
+  using Opcode = Operation::Opcode;
+
+  if (nodes.empty())
+    return false;
+
+  switch (nodes.front().data->opcode()) {
+  case Opcode::ConstantInt:
+  case Opcode::ConstantFloat:
+    return true;
+  default:
+    return false;
   }
 }
 
@@ -175,6 +198,118 @@ void EGraph::unparent(size_t eclass_id) {
     for (size_t operand : node.operands) {
       EClass& child = classes.at(operand);
       child.parents.erase(node);
+    }
+  }
+}
+
+#define CONST_INT_FOLD(expr)                                                   \
+  do {                                                                         \
+    if (!operands_are_constant)                                                \
+      continue;                                                                \
+                                                                               \
+    const llvm::APInt& lhs =                                                   \
+        llvm::cast<ConstantIntData>(                                           \
+            classes.at(node.operands[0]).nodes[0].data.get())                  \
+            ->value();                                                         \
+    const llvm::APInt& rhs =                                                   \
+        llvm::cast<ConstantIntData>(                                           \
+            classes.at(node.operands[0]).nodes[0].data.get())                  \
+            ->value();                                                         \
+                                                                               \
+    eclass.nodes.push_back(ENode{std::make_shared<ConstantIntData>(expr)});    \
+  } while (false);                                                             \
+  break
+#define CONST_ICMP_FOLD(expr)                                                  \
+  CONST_INT_FOLD([&] {                                                         \
+    bool result = expr;                                                        \
+    return llvm::APInt(1, (uint64_t)result);                                   \
+  }())
+
+void EGraph::constprop() {
+  tsl::hopscotch_set<size_t> constants;
+  std::deque<size_t> worklist;
+
+  for (auto it = classes.begin(); it != classes.end(); ++it) {
+    size_t id = it.key();
+    EClass& eclass = it.value();
+
+    if (eclass.is_constant()) {
+      // e-classes with a constant value have all their other expressions
+      // dropped since a single constant value is the simplest form of the
+      // expression.
+      unparent(id);
+      eclass.nodes.resize(1);
+
+      constants.insert(id);
+    } else {
+      worklist.push_back(id);
+    }
+  }
+
+  while (!worklist.empty()) {
+    size_t id = worklist.front();
+    EClass& eclass = classes.at(id);
+    worklist.pop_front();
+
+    if (constants.contains(id))
+      continue;
+
+    for (ENode& node : eclass.nodes) {
+      bool operands_are_constant = std::all_of(
+          node.operands.begin(), node.operands.end(),
+          [&](size_t operand) { return constants.contains(operand); });
+
+      switch (node.data->opcode()) {
+        // clang-format off
+      case Operation::Add:  CONST_INT_FOLD(lhs + rhs);
+      case Operation::Sub:  CONST_INT_FOLD(lhs - rhs);
+      case Operation::Mul:  CONST_INT_FOLD(lhs * rhs);
+      case Operation::UDiv: CONST_INT_FOLD(rhs == 0 ? lhs.udiv(rhs) : rhs);
+      case Operation::SDiv: CONST_INT_FOLD(rhs == 0 ? lhs.sdiv(rhs) : rhs);
+      case Operation::URem: CONST_INT_FOLD(rhs == 0 ? lhs.urem(rhs) : rhs);
+      case Operation::SRem: CONST_INT_FOLD(rhs == 0 ? lhs.srem(rhs) : rhs);
+
+      case Operation::And:  CONST_INT_FOLD(lhs & rhs);
+      case Operation::Or:   CONST_INT_FOLD(lhs | rhs);
+      case Operation::Xor:  CONST_INT_FOLD(lhs ^ rhs);
+      case Operation::Shl:  CONST_INT_FOLD(lhs.shl(rhs));
+      case Operation::LShr: CONST_INT_FOLD(lhs.lshr(rhs));
+      case Operation::AShr: CONST_INT_FOLD(lhs.ashr(rhs));
+
+      case Operation::ICmpEq:  CONST_ICMP_FOLD(lhs == rhs);
+      case Operation::ICmpNe:  CONST_ICMP_FOLD(lhs != rhs);
+      case Operation::ICmpUgt: CONST_ICMP_FOLD(lhs.ugt(rhs));
+      case Operation::ICmpUge: CONST_ICMP_FOLD(lhs.uge(rhs));
+      case Operation::ICmpUlt: CONST_ICMP_FOLD(lhs.ult(rhs));
+      case Operation::ICmpUle: CONST_ICMP_FOLD(lhs.ule(rhs));
+      case Operation::ICmpSgt: CONST_ICMP_FOLD(lhs.sgt(rhs));
+      case Operation::ICmpSge: CONST_ICMP_FOLD(lhs.sge(rhs));
+      case Operation::ICmpSlt: CONST_ICMP_FOLD(lhs.slt(rhs));
+      case Operation::ICmpSle: CONST_ICMP_FOLD(lhs.sle(rhs));
+        // clang-format on
+
+        // TODO: Handle non-binary opcodes
+
+      default:
+        continue;
+      }
+
+      unparent(id);
+      std::swap(eclass.nodes.front(), eclass.nodes.back());
+      eclass.nodes.resize(1);
+      constants.insert(id);
+
+      for (const auto& [pnode, pclass] : eclass.parents) {
+        bool constant = std::all_of(
+            pnode.operands.begin(), pnode.operands.end(),
+            [&](size_t operand) { return constants.contains(operand); });
+
+        if (constant) {
+          worklist.push_back(pclass);
+        }
+      }
+
+      break;
     }
   }
 }

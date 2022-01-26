@@ -38,6 +38,8 @@ public:
 
   void merge(EClass& eclass);
 
+  bool is_constant() const;
+
   friend llvm::hash_code hash_value(const EClass& node);
 };
 
@@ -95,6 +97,8 @@ public:
                     llvm::SmallVectorImpl<OpRef>* exprs);
   void bulk_extract(llvm::ArrayRef<size_t> ids,
                     llvm::SmallVectorImpl<OpRef>* exprs) const;
+  
+  void constprop();
 
 private:
   // Add without first doing a rebuild.
