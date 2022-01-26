@@ -19,6 +19,9 @@ WARNING_FLAGS = select({
         "-Wall",
         "-Wextra",
         "-Wno-unknown-pragmas",
+        # Immer has some code that triggers this and gcc doesn't seem to have the
+        # required options to silence warnings under certain prefixes.
+        "-Wno-unused-parameter",
     ],
     "//bazel:msvc": [
         "/experimental:external",
