@@ -17,6 +17,7 @@ jobs:
     strategy:
       matrix:
         mode: [opt, fastbuild]
+        compiler: [gcc, clang]
       fail-fast: false
 
     steps:
@@ -40,6 +41,7 @@ jobs:
         run: |
           cat >> local.bazelrc <<- EOF
           build --compilation_mode=${{ matrix.mode }}
+          build --config=${{ matrix.compiler }}
           EOF
 
       - name: Avoid uploading if we don't have credentials
