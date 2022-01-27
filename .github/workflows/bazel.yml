@@ -114,6 +114,7 @@ jobs:
         run: bazelisk run --config=ci -- //:check-format
 
   all-test-pass:
+    name: Verify all tests pass
     needs: [build, format]
     runs-on: ubuntu-latest
 
