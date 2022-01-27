@@ -2,6 +2,7 @@
 #define CAFFEINE_INTERP_CONTEXT_H
 
 #include "caffeine/IR/Assertion.h"
+#include "caffeine/IR/EGraph.h"
 #include "caffeine/Interpreter/StackFrame.h"
 #include "caffeine/Memory/MemHeap.h"
 #include "caffeine/Model/AssertionList.h"
@@ -31,6 +32,8 @@ public:
 
   llvm::Module* mod;
   bool global_ctors_ran = false;
+
+  EGraph egraph;
 
 private:
   uint64_t constant_num_ = 0;

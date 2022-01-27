@@ -28,19 +28,19 @@ OpRef OperationBuilder::createConstantFloat(llvm::APFloat&& value) {
 }
 
 OpRef OperationBuilder::createConstant(Type t, const Symbol& symbol) {
-  return Constant::Create(t, symbol);
+  return to_egraph(Constant::Create(t, symbol));
 }
 OpRef OperationBuilder::createConstant(Type t, Symbol&& symbol) {
-  return Constant::Create(t, std::move(symbol));
+  return to_egraph(Constant::Create(t, std::move(symbol)));
 }
 
 OpRef OperationBuilder::createConstantArray(const Symbol& symbol,
                                             const OpRef& size) {
-  return ConstantArray::Create(symbol, size);
+  return to_egraph(ConstantArray::Create(symbol, size));
 }
 OpRef OperationBuilder::createConstantArray(Symbol&& symbol,
                                             const OpRef& size) {
-  return ConstantArray::Create(std::move(symbol), size);
+  return to_egraph(ConstantArray::Create(std::move(symbol), size));
 }
 
 #define DEF_INT_BINOP_OVERLOADS(op)                                            \
@@ -88,7 +88,7 @@ OpRef OperationBuilder::createConstantArray(Symbol&& symbol,
 
 #define DEF_BINOP(op)                                                          \
   OpRef OperationBuilder::create##op(const OpRef& lhs, const OpRef& rhs) {     \
-    return BinaryOp::Create##op(lhs, rhs);                                     \
+    return to_egraph(BinaryOp::Create##op(lhs, rhs));                          \
   }                                                                            \
   LLVMValue OperationBuilder::create##op(const LLVMValue& lhs,                 \
                                          const LLVMValue& rhs) {               \
@@ -101,7 +101,7 @@ OpRef OperationBuilder::createConstantArray(Symbol&& symbol,
   static_assert(true)
 #define DEF_UNOP(op)                                                           \
   OpRef OperationBuilder::create##op(const OpRef& operand) {                   \
-    return UnaryOp::Create##op(operand);                                       \
+    return to_egraph(UnaryOp::Create##op(operand));                            \
   }                                                                            \
   LLVMValue OperationBuilder::create##op(const LLVMValue& arg) {               \
     return transform_elements(                                                 \
@@ -113,7 +113,7 @@ OpRef OperationBuilder::createConstantArray(Symbol&& symbol,
   static_assert(true)
 #define DEF_CONVERT(op)                                                        \
   OpRef OperationBuilder::create##op(Type tgt, const OpRef& operand) {         \
-    return UnaryOp::Create##op(tgt, operand);                                  \
+    return to_egraph(UnaryOp::Create##op(tgt, operand));                       \
   }                                                                            \
   LLVMValue OperationBuilder::create##op(Type tgt, const LLVMValue& x) {       \
     return transform_elements(                                                 \
@@ -184,7 +184,7 @@ LLVMValue OperationBuilder::createICmp(ICmpOpcode opcode, const LLVMValue& lhs,
 }
 OpRef OperationBuilder::createICmp(ICmpOpcode opcode, const OpRef& lhs,
                                    const OpRef& rhs) {
-  return ICmpOp::CreateICmp(opcode, lhs, rhs);
+  return to_egraph(ICmpOp::CreateICmp(opcode, lhs, rhs));
 }
 
 DEF_ICMP_BINOP_FWD(EQ);
@@ -208,7 +208,7 @@ LLVMValue OperationBuilder::createFCmp(FCmpOpcode opcode, const LLVMValue& lhs,
 }
 OpRef OperationBuilder::createFCmp(FCmpOpcode opcode, const OpRef& lhs,
                                    const OpRef& rhs) {
-  return FCmpOp::CreateFCmp(opcode, lhs, rhs);
+  return to_egraph(FCmpOp::CreateFCmp(opcode, lhs, rhs));
 }
 
 OpRef OperationBuilder::createAlloc(const OpRef& size,
@@ -216,14 +216,14 @@ OpRef OperationBuilder::createAlloc(const OpRef& size,
   return AllocOp::Create(size, defaultval);
 }
 OpRef OperationBuilder::createLoad(const OpRef& data, const OpRef& offset) {
-  return LoadOp::Create(data, offset);
+  return to_egraph(LoadOp::Create(data, offset));
 }
 OpRef OperationBuilder::createStore(const OpRef& data, const OpRef& offset,
                                     const OpRef& value) {
   return StoreOp::Create(data, offset, value);
 }
 OpRef OperationBuilder::createUndef(Type t) {
-  return Undef::Create(t);
+  return to_egraph(Undef::Create(t));
 }
 
 OpRef OperationBuilder::createFixedArray(Type index_ty,
@@ -247,6 +247,10 @@ OpRef OperationBuilder::to_expr(const LLVMScalar& scalar) {
 }
 OpRef OperationBuilder::to_expr(const Pointer& ptr) {
   return ptr.value(ctx->heaps);
+}
+
+OpRef OperationBuilder::to_egraph(const OpRef& op) {
+  return EGraphNode::Create(op->type(), ctx->egraph.add(*op));
 }
 
 } // namespace caffeine
