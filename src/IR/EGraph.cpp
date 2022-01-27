@@ -178,6 +178,8 @@ struct EGraphExtractor {
   tsl::hopscotch_map<size_t, OpRef> expressions;
   tsl::hopscotch_set<size_t> visited;
 
+  EGraphExtractor(const EGraph* graph) : graph(graph) {}
+
   std::pair<uint64_t, size_t> eval_cost(size_t eclass_id) {
     eclass_id = graph->find(eclass_id);
 

@@ -20,7 +20,7 @@ namespace caffeine {
 class ENode {
 public:
   std::shared_ptr<OperationData> data;
-  llvm::SmallVector<size_t, 2> operands;
+  llvm::SmallVector<size_t, 2> operands = {};
 
   bool operator==(const ENode& node) const;
   bool operator!=(const ENode& node) const;
@@ -31,7 +31,7 @@ public:
 class EClass {
 public:
   std::vector<ENode> nodes;
-  tsl::hopscotch_map<ENode, size_t> parents;
+  tsl::hopscotch_map<ENode, size_t> parents = {};
 
   bool operator==(const EClass& eclass) const;
   bool operator!=(const EClass& eclass) const;
