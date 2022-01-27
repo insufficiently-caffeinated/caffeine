@@ -113,3 +113,12 @@ jobs:
       - name: Check formatting of all targets
         run: bazelisk run --config=ci -- //:check-format
 
+  all-test-pass:
+    needs: [build, format]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: No-op
+        run: |
+          echo "All checks passed!""
+
