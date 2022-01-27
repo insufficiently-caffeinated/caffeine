@@ -60,6 +60,7 @@ llvm::hash_code hash_value(const EClass& eclass) {
 
 void EClass::merge(EClass& eclass) {
   CAFFEINE_ASSERT(this != &eclass);
+  CAFFEINE_ASSERT(type() == eclass.type());
 
   bool constant = eclass.is_constant();
   size_t start = nodes.size();
