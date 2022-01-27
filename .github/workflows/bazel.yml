@@ -17,6 +17,7 @@ jobs:
     strategy:
       matrix:
         mode: [opt, fastbuild]
+        compiler: [gcc, clang]
       fail-fast: false
 
     steps:
@@ -26,7 +27,6 @@ jobs:
         id: bazel_info
         shell: bash
         run: |
-          echo last_downstream_green > .bazelversion 
           echo "::set-output name=output_base::$(bazel info output_base)"
 
       - uses: actions/cache@v2
@@ -40,6 +40,7 @@ jobs:
         run: |
           cat >> local.bazelrc <<- EOF
           build --compilation_mode=${{ matrix.mode }}
+          build --config=${{ matrix.compiler }}
           EOF
 
       - name: Avoid uploading if we don't have credentials
@@ -111,4 +112,14 @@ jobs:
 
       - name: Check formatting of all targets
         run: bazelisk run --config=ci -- //:check-format
+
+  all-test-pass:
+    name: Verify all tests pass
+    needs: [build, format]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: No-op
+        run: |
+          echo "All checks passed!"
 
