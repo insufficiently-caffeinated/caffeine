@@ -120,5 +120,5 @@ jobs:
     steps:
       - name: No-op
         run: |
-          echo "All checks passed!""
+          echo "All checks passed!"
 
