@@ -27,7 +27,6 @@ jobs:
         id: bazel_info
         shell: bash
         run: |
-          echo last_downstream_green > .bazelversion 
           echo "::set-output name=output_base::$(bazel info output_base)"
 
       - uses: actions/cache@v2
