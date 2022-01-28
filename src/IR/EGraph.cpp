@@ -22,11 +22,27 @@ bool ENode::operator!=(const ENode& node) const {
   return !(*this == node);
 }
 
+llvm::hash_code hash_value(const ENode& node) {
+  using llvm::hash_value;
+
+  return llvm::hash_combine(
+      node.data ? hash_value(*node.data) : hash_value(node.data.get()),
+      llvm::hash_combine_range(node.operands.begin(), node.operands.end()));
+}
+
 bool EClass::operator==(const EClass& eclass) const {
   return nodes == eclass.nodes && parents == eclass.parents;
 }
 bool EClass::operator!=(const EClass& eclass) const {
   return !(*this == eclass);
+}
+
+llvm::hash_code hash_value(const EClass& eclass) {
+  using llvm::hash_value;
+
+  return llvm::hash_combine(
+      llvm::hash_combine_range(eclass.nodes.begin(), eclass.nodes.end()),
+      llvm::hash_combine_range(eclass.parents.begin(), eclass.parents.end()));
 }
 
 void EClass::merge(EClass& eclass) {
