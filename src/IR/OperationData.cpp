@@ -33,6 +33,8 @@ bool OperationData::operator==(const OperationData& op) const {
     return data->value() == llvm::cast<ConstantFloatData>(op).value();
   if (auto data = llvm::dyn_cast<FunctionObjectData>(this))
     return data->function() == llvm::cast<FunctionObjectData>(op).function();
+  if (auto data = llvm::dyn_cast<EGraphNodeData>(this))
+    return data->id() == llvm::cast<EGraphNodeData>(op).id();
 
 #if !defined(BOOST_NO_RTTI)
   // If this assertion triggers then you have added a new derived class for
@@ -56,6 +58,8 @@ std::unique_ptr<OperationData> OperationData::clone() const {
     return std::make_unique<ConstantFloatData>(data->value());
   if (auto data = llvm::dyn_cast<FunctionObjectData>(this))
     return std::make_unique<FunctionObjectData>(data->function());
+  if (auto data = llvm::dyn_cast<EGraphNodeData>(this))
+    return std::make_unique<EGraphNodeData>(data->type(), data->id());
 
 #if !defined(BOOST_NO_RTTI)
   // If this assertion triggers then you have added a new derived class for
