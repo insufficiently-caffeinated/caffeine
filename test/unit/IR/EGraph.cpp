@@ -36,3 +36,20 @@ TEST_F(EGraphTests, constprop_add) {
 
   ASSERT_EQ(egraph.find(id_c), egraph.find(id_d));
 }
+
+TEST_F(EGraphTests, constprop_not) {
+  auto a = add(ConstantInt::Create(false));
+  auto b = add(UnaryOp::CreateNot(a));
+
+  size_t id_a = egraph.add(*a);
+  size_t id_b = egraph.add(*b);
+
+  egraph.constprop();
+  egraph.rebuild();
+
+  size_t id_c = egraph.add(*ConstantInt::Create(true));
+
+  ASSERT_NE(id_a, id_b);
+  ASSERT_NE(id_a, id_c);
+  ASSERT_EQ(egraph.find(id_b), egraph.find(id_c));
+}
