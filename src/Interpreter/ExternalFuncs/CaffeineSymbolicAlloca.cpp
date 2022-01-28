@@ -101,10 +101,14 @@ namespace {
         return std::nullopt;
       }
 
-      uint64_t offset =
-          result.evaluate(*ptr.offset()).apint().getLimitedValue();
-      uint64_t size = result.evaluate(*alloc->size()).apint().getLimitedValue();
-      auto array = std::move(result.evaluate(*alloc->data()).array());
+      uint64_t offset = result.evaluate(*ptr.offset(), ctx.context().egraph)
+                            .apint()
+                            .getLimitedValue();
+      uint64_t size = result.evaluate(*alloc->size(), ctx.context().egraph)
+                          .apint()
+                          .getLimitedValue();
+      auto array = std::move(
+          result.evaluate(*alloc->data(), ctx.context().egraph).array());
 
       CAFFEINE_ASSERT(size >= offset,
                       "resolved pointer offset was outside of the allocation");

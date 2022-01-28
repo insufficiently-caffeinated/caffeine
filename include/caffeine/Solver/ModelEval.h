@@ -1,5 +1,6 @@
 #pragma once
 
+#include "caffeine/IR/EGraph.h"
 #include "caffeine/IR/Value.h"
 #include "caffeine/IR/Visitor.h"
 
@@ -10,9 +11,10 @@ class Model;
 class ModelEvaluator : public ConstOpVisitor<ModelEvaluator, Value> {
 private:
   const Model* model;
+  const EGraph* egraph;
 
 public:
-  ModelEvaluator(const Model* model);
+  ModelEvaluator(const Model* model, const EGraph* egraph);
 
   Value visitOperation(const Operation& O);
 

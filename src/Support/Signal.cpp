@@ -2,6 +2,7 @@
 #include "caffeine/Interpreter/Context.h"
 #include "caffeine/Support/UnsupportedOperation.h"
 #include <initializer_list>
+#include <iostream>
 #include <llvm/Support/Signals.h>
 #include <llvm/Support/raw_os_ostream.h>
 #include <sstream>
@@ -13,6 +14,8 @@
 namespace caffeine {
 namespace {
   void dump_symbolic_backtrace(void*) {
+    std::cout.flush();
+
     try {
       if (const auto* context =
               caffeine::UnsupportedOperation::CurrentContextUnsafe()) {

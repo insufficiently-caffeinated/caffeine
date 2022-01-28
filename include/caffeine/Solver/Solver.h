@@ -21,6 +21,7 @@ class LLVMScalar;
 class LLVMValue;
 class Symbol;
 class ModelEvaluator;
+class EGraph;
 
 /**
  * A set of concrete value assignments to constants that satisfy the set of
@@ -40,7 +41,7 @@ public:
    * Usage: end users should use this method in order to get the value of an
    * expression in the given model.
    */
-  Value evaluate(const Operation& expr) const;
+  Value evaluate(const Operation& expr, const EGraph& egraph) const;
   Value evaluate(const LLVMScalar& expr, Context& ctx) const;
   Value evaluate(const LLVMValue& expr, Context& ctx) const;
 
@@ -108,7 +109,7 @@ public:
    * Usage: end users should use this method in order to get the value of an
    * expression in the given model.
    */
-  Value evaluate(const Operation& expr) const;
+  Value evaluate(const Operation& expr, const EGraph& egraph) const;
   Value evaluate(const LLVMScalar& expr, Context& ctx) const;
   Value evaluate(const LLVMValue& expr, Context& ctx) const;
 

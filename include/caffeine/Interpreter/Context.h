@@ -6,6 +6,7 @@
 #include "caffeine/Interpreter/StackFrame.h"
 #include "caffeine/Memory/MemHeap.h"
 #include "caffeine/Model/AssertionList.h"
+#include "caffeine/Model/GraphAssertionList.h"
 #include "caffeine/Solver/Solver.h"
 #include <immer/map.hpp>
 #include <iosfwd>
@@ -27,7 +28,8 @@ public:
   std::vector<StackFrame> stack;
   std::unordered_map<llvm::GlobalValue*, LLVMValue> globals;
   MemHeapMgr heaps;
-  AssertionList assertions;
+  GraphAssertionList assertions;
+  // AssertionList assertions;
   immer::map<std::string, OpRef> constants;
 
   llvm::Module* mod;
@@ -96,7 +98,6 @@ public:
    * Add a new assertion to this context.
    */
   void add(const Assertion& assertion);
-  void add(Assertion&& assertion);
 
   /**
    * Validate whether the set of assertions combined with the extra assertion is
@@ -132,6 +133,9 @@ public:
    * module to print the source files corresponding to the stack frames.
    */
   void print_backtrace(std::ostream& OS) const;
+
+  AssertionList extract_assertions();
+  AssertionList extract_assertions() const;
 
 private:
   void init_args(llvm::ArrayRef<OpRef> args);

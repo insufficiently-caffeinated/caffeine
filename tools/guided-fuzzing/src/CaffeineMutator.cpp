@@ -167,9 +167,8 @@ CaffeineMutator::model_to_testcase(const Model* model, const Context& ctx,
   if (val == nullptr) {
     return std::nullopt;
   }
-  auto res = std::move(model->evaluate(**val).array());
 
-  return res;
+  return std::move(model->evaluate(**val, ctx.egraph).array());
 }
 
 void CaffeineMutator::terminate() {

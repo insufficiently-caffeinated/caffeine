@@ -27,6 +27,7 @@ void LoggingSolver::log_arguments(const AssertionList& assertions,
     fmt::print(std::cout, FMT_STRING(" - {}\n"), assertion);
   if (!extra.is_constant_value(true))
     fmt::print(std::cout, FMT_STRING(" - {}\n"), extra);
+  std::cout << std::flush;
 }
 
 void LoggingSolver::log_result(const SolverResult& result) {

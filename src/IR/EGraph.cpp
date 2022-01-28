@@ -1,4 +1,5 @@
 #include "caffeine/IR/EGraph.h"
+#include "caffeine/Config.h"
 #include "caffeine/IR/Operation.h"
 #include <cstdint>
 #include <limits>
@@ -164,8 +165,10 @@ size_t EGraph::add_dirty(const ENode& node) {
 
   auto eclass_id = create_eclass(canonical);
   for (size_t child : canonical.operands) {
-    classes.at(child).parents.emplace(canonical, child);
+    classes.at(child).parents.emplace(canonical, eclass_id);
   }
+
+  hashcons.emplace(canonical, eclass_id);
 
   return eclass_id;
 }
@@ -180,7 +183,7 @@ size_t EGraph::add_dirty(const Operation& op) {
     operands.push_back(add_dirty(operand));
   }
 
-  return add_dirty(ENode{op.data(), std::move(operands)});
+  return add_dirty(ENode{op.data(), operands});
 }
 
 size_t EGraph::add(const ENode& node) {
@@ -213,6 +216,8 @@ void EGraph::rebuild() {
         }
       }
     }
+
+    todo.clear();
   }
 
   // Clear out cached values for expressions that have been modified.
@@ -285,6 +290,7 @@ void EGraph::unparent(size_t eclass_id) {
 
 size_t EGraph::create_eclass(const ENode& node) {
   size_t id = union_find.make_set();
+
   classes.emplace(id, EClass{{node}});
   hashcons.emplace(node, id);
   worklist.push_back(id);

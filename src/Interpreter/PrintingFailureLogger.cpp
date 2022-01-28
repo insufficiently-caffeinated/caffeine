@@ -66,7 +66,7 @@ void PrintingFailureLogger::log_failure(const Model* model, const Context& ctx,
   if (model) {
     for (const auto& [name, constant] : ctx.constants) {
       ss << "  " << name << " = ";
-      print_value(ss, model->evaluate(*constant));
+      print_value(ss, model->evaluate(*constant, ctx.egraph));
       ss << '\n';
     }
 
@@ -76,7 +76,7 @@ void PrintingFailureLogger::log_failure(const Model* model, const Context& ctx,
 
   if (!failure.message.empty())
     ss << "Reason:\n  " << failure.message << '\n';
-  ss << "Assertion:\n" << failure.check << '\n';
+  ss << "Assertion:\n" << *ctx.egraph.extract(*failure.check.value()) << '\n';
 
   std::unique_lock lock(mtx);
   sync_ostream_wrapper sync(*os);
