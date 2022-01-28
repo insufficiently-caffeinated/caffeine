@@ -125,11 +125,8 @@ void EGraph::rebuild() {
   while (!worklist.empty()) {
     swap(todo, worklist);
 
-    for (size_t& eclass : todo)
-      eclass = find(eclass);
-
     for (size_t eclass : todo)
-      repair(eclass);
+      repair(find(eclass));
   }
 }
 
