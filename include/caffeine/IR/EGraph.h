@@ -25,6 +25,8 @@ public:
   bool operator==(const ENode& node) const;
   bool operator!=(const ENode& node) const;
 
+  Type type() const;
+
   friend llvm::hash_code hash_value(const ENode& node);
 };
 
@@ -122,6 +124,7 @@ private:
   std::vector<size_t> worklist;
 
   friend class EGraphExtractor;
+  friend class EGraphConstantPropagator;
 };
 
 /**

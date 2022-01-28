@@ -24,6 +24,10 @@ bool ENode::operator!=(const ENode& node) const {
   return !(*this == node);
 }
 
+Type ENode::type() const {
+  return data->type();
+}
+
 llvm::hash_code hash_value(const ENode& node) {
   using llvm::hash_value;
 
@@ -218,123 +222,6 @@ void EGraph::unparent(size_t eclass_id) {
     }
   }
   eclass.nodes.resize(1);
-}
-
-#define CONST_INT_FOLD(expr)                                                   \
-  if (!operands_are_constant)                                                  \
-    continue;                                                                  \
-                                                                               \
-  const_int_fold(                                                              \
-      [&](const llvm::APInt& lhs, const llvm::APInt& rhs) { return (expr); }); \
-                                                                               \
-  break
-#define CONST_ICMP_FOLD(expr)                                                  \
-  CONST_INT_FOLD([&] {                                                         \
-    bool result = expr;                                                        \
-    return llvm::APInt(1, (uint64_t)result);                                   \
-  }())
-
-void EGraph::constprop() {
-
-  tsl::hopscotch_set<size_t> constants;
-  std::deque<size_t> queue;
-
-  for (auto it = classes.begin(); it != classes.end(); ++it) {
-    size_t id = it.key();
-    EClass& eclass = it.value();
-
-    if (eclass.is_constant()) {
-      constants.insert(id);
-    } else {
-      queue.push_back(id);
-    }
-  }
-
-  while (!queue.empty()) {
-    size_t id = queue.front();
-    if (id != find(id))
-      continue;
-
-    EClass& eclass = classes.at(id);
-    queue.pop_front();
-
-    if (constants.contains(id))
-      continue;
-
-    for (ENode& node : eclass.nodes) {
-      bool operands_are_constant = std::all_of(
-          node.operands.begin(), node.operands.end(),
-          [&](size_t operand) { return constants.contains(find(operand)); });
-
-      auto const_int_fold = [&](auto&& func) {
-        CAFFEINE_ASSERT(node.operands.size() == 2);
-
-        const EClass* lclass = get(node.operands[0]);
-        const EClass* rclass = get(node.operands[1]);
-
-        CAFFEINE_ASSERT(lclass);
-        CAFFEINE_ASSERT(rclass);
-        CAFFEINE_ASSERT(lclass->is_constant(),
-                        fmt::format("{} was not constant when merging {}",
-                                    find(node.operands[0]), id));
-        CAFFEINE_ASSERT(rclass->is_constant(),
-                        fmt::format("{} was not constant when merging {}",
-                                    find(node.operands[1]), id));
-
-        const llvm::APInt& lhs =
-            llvm::cast<ConstantIntData>(lclass->nodes.at(0).data.get())
-                ->value();
-        const llvm::APInt& rhs =
-            llvm::cast<ConstantIntData>(rclass->nodes.at(0).data.get())
-                ->value();
-
-        id = merge(
-            add_dirty(ENode{std::make_shared<ConstantIntData>(func(lhs, rhs))}),
-            id);
-        CAFFEINE_ASSERT(get(id)->is_constant());
-      };
-
-      switch (node.data->opcode()) {
-        // clang-format off
-      case Operation::Add:  CONST_INT_FOLD(lhs + rhs);
-      case Operation::Sub:  CONST_INT_FOLD(lhs - rhs);
-      case Operation::Mul:  CONST_INT_FOLD(lhs * rhs);
-      case Operation::UDiv: CONST_INT_FOLD(rhs == 0 ? lhs.udiv(rhs) : rhs);
-      case Operation::SDiv: CONST_INT_FOLD(rhs == 0 ? lhs.sdiv(rhs) : rhs);
-      case Operation::URem: CONST_INT_FOLD(rhs == 0 ? lhs.urem(rhs) : rhs);
-      case Operation::SRem: CONST_INT_FOLD(rhs == 0 ? lhs.srem(rhs) : rhs);
-
-      case Operation::And:  CONST_INT_FOLD(lhs & rhs);
-      case Operation::Or:   CONST_INT_FOLD(lhs | rhs);
-      case Operation::Xor:  CONST_INT_FOLD(lhs ^ rhs);
-      case Operation::Shl:  CONST_INT_FOLD(lhs.shl(rhs));
-      case Operation::LShr: CONST_INT_FOLD(lhs.lshr(rhs));
-      case Operation::AShr: CONST_INT_FOLD(lhs.ashr(rhs));
-
-      case Operation::ICmpEq:  CONST_ICMP_FOLD(lhs == rhs);
-      case Operation::ICmpNe:  CONST_ICMP_FOLD(lhs != rhs);
-      case Operation::ICmpUgt: CONST_ICMP_FOLD(lhs.ugt(rhs));
-      case Operation::ICmpUge: CONST_ICMP_FOLD(lhs.uge(rhs));
-      case Operation::ICmpUlt: CONST_ICMP_FOLD(lhs.ult(rhs));
-      case Operation::ICmpUle: CONST_ICMP_FOLD(lhs.ule(rhs));
-      case Operation::ICmpSgt: CONST_ICMP_FOLD(lhs.sgt(rhs));
-      case Operation::ICmpSge: CONST_ICMP_FOLD(lhs.sge(rhs));
-      case Operation::ICmpSlt: CONST_ICMP_FOLD(lhs.slt(rhs));
-      case Operation::ICmpSle: CONST_ICMP_FOLD(lhs.sle(rhs));
-        // clang-format on
-
-        // TODO: Handle non-binary opcodes
-
-      default:
-        continue;
-      }
-
-      constants.insert(id);
-      this->worklist.push_back(id);
-
-      break;
-    }
-  }
 }
 
 size_t EGraph::create_eclass(const ENode& node) {
