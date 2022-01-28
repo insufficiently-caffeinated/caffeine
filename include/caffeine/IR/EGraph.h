@@ -97,7 +97,7 @@ public:
                     llvm::SmallVectorImpl<OpRef>* exprs);
   void bulk_extract(llvm::ArrayRef<size_t> ids,
                     llvm::SmallVectorImpl<OpRef>* exprs) const;
-  
+
   void constprop();
 
 private:
