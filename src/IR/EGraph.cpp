@@ -236,7 +236,7 @@ uint64_t EGraphExtractor::eval_cost(const ENode& node) {
     cost += eval_cost(operand).first;
   return cost;
 }
-uint64_t eval_cost(Operation::Opcode opcode) {
+uint64_t EGraphExtractor::eval_cost(Operation::Opcode opcode) {
   using Opcode = Operation::Opcode;
 
   switch (opcode) {
