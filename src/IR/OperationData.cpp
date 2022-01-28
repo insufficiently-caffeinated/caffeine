@@ -94,6 +94,9 @@ FunctionObjectData::FunctionObjectData(llvm::Function* func)
     : OperationData(Opcode::FunctionObject, Type::from_llvm(func->getType())),
       func_(func) {}
 
+EGraphNodeData::EGraphNodeData(Type t, size_t id)
+    : OperationData(Opcode::EGraphNode, t), id_(id) {}
+
 llvm::hash_code hash_value(const OperationData& op) {
   return llvm::hash_combine(op.hash(), op.type(), op.opcode());
 }
