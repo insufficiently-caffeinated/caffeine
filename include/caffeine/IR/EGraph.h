@@ -72,6 +72,7 @@ public:
   size_t find(size_t id) const;
   size_t find(size_t id);
 
+  EClass* get(size_t id);
   const EClass* get(size_t id) const;
 
   // Merge two e-classes into one. This makes them equivalent and returns the

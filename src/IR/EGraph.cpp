@@ -89,6 +89,12 @@ size_t EGraph::find(size_t id) {
   return union_find.find(id);
 }
 
+EClass* EGraph::get(size_t id) {
+  auto it = classes.find(find(id));
+  if (it != classes.end())
+    return &it.value();
+  return nullptr;
+}
 const EClass* EGraph::get(size_t id) const {
   auto it = classes.find(id);
   if (it != classes.end())
