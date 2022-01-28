@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <deque>
+#include <fmt/format.h>
 #include <iterator>
 #include <limits>
 
@@ -220,21 +221,12 @@ void EGraph::unparent(size_t eclass_id) {
 }
 
 #define CONST_INT_FOLD(expr)                                                   \
-  do {                                                                         \
-    if (!operands_are_constant)                                                \
-      continue;                                                                \
+  if (!operands_are_constant)                                                  \
+    continue;                                                                  \
                                                                                \
-    const llvm::APInt& lhs =                                                   \
-        llvm::cast<ConstantIntData>(                                           \
-            classes.at(node.operands[0]).nodes[0].data.get())                  \
-            ->value();                                                         \
-    const llvm::APInt& rhs =                                                   \
-        llvm::cast<ConstantIntData>(                                           \
-            classes.at(node.operands[0]).nodes[0].data.get())                  \
-            ->value();                                                         \
+  const_int_fold(                                                              \
+      [&](const llvm::APInt& lhs, const llvm::APInt& rhs) { return (expr); }); \
                                                                                \
-    eclass.nodes.push_back(ENode{std::make_shared<ConstantIntData>(expr)});    \
-  } while (false);                                                             \
   break
 #define CONST_ICMP_FOLD(expr)                                                  \
   CONST_INT_FOLD([&] {                                                         \
@@ -243,30 +235,28 @@ void EGraph::unparent(size_t eclass_id) {
   }())
 
 void EGraph::constprop() {
+
   tsl::hopscotch_set<size_t> constants;
-  std::deque<size_t> worklist;
+  std::deque<size_t> queue;
 
   for (auto it = classes.begin(); it != classes.end(); ++it) {
     size_t id = it.key();
     EClass& eclass = it.value();
 
     if (eclass.is_constant()) {
-      // e-classes with a constant value have all their other expressions
-      // dropped since a single constant value is the simplest form of the
-      // expression.
-      unparent(id);
-      eclass.nodes.resize(1);
-
       constants.insert(id);
     } else {
-      worklist.push_back(id);
+      queue.push_back(id);
     }
   }
 
-  while (!worklist.empty()) {
-    size_t id = worklist.front();
+  while (!queue.empty()) {
+    size_t id = queue.front();
+    if (id != find(id))
+      continue;
+
     EClass& eclass = classes.at(id);
-    worklist.pop_front();
+    queue.pop_front();
 
     if (constants.contains(id))
       continue;
@@ -274,7 +264,35 @@ void EGraph::constprop() {
     for (ENode& node : eclass.nodes) {
       bool operands_are_constant = std::all_of(
           node.operands.begin(), node.operands.end(),
-          [&](size_t operand) { return constants.contains(operand); });
+          [&](size_t operand) { return constants.contains(find(operand)); });
+
+      auto const_int_fold = [&](auto&& func) {
+        CAFFEINE_ASSERT(node.operands.size() == 2);
+
+        const EClass* lclass = get(node.operands[0]);
+        const EClass* rclass = get(node.operands[1]);
+
+        CAFFEINE_ASSERT(lclass);
+        CAFFEINE_ASSERT(rclass);
+        CAFFEINE_ASSERT(lclass->is_constant(),
+                        fmt::format("{} was not constant when merging {}",
+                                    find(node.operands[0]), id));
+        CAFFEINE_ASSERT(rclass->is_constant(),
+                        fmt::format("{} was not constant when merging {}",
+                                    find(node.operands[1]), id));
+
+        const llvm::APInt& lhs =
+            llvm::cast<ConstantIntData>(lclass->nodes.at(0).data.get())
+                ->value();
+        const llvm::APInt& rhs =
+            llvm::cast<ConstantIntData>(rclass->nodes.at(0).data.get())
+                ->value();
+
+        id = merge(
+            add_dirty(ENode{std::make_shared<ConstantIntData>(func(lhs, rhs))}),
+            id);
+        CAFFEINE_ASSERT(get(id)->is_constant());
+      };
 
       switch (node.data->opcode()) {
         // clang-format off
@@ -311,20 +329,8 @@ void EGraph::constprop() {
         continue;
       }
 
-      unparent(id);
-      std::swap(eclass.nodes.front(), eclass.nodes.back());
-      eclass.nodes.resize(1);
       constants.insert(id);
-
-      for (const auto& [pnode, pclass] : eclass.parents) {
-        bool constant = std::all_of(
-            pnode.operands.begin(), pnode.operands.end(),
-            [&](size_t operand) { return constants.contains(operand); });
-
-        if (constant) {
-          worklist.push_back(pclass);
-        }
-      }
+      this->worklist.push_back(id);
 
       break;
     }
