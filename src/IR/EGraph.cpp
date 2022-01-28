@@ -1,10 +1,6 @@
 #include "caffeine/IR/EGraph.h"
 #include "caffeine/IR/Operation.h"
-#include <algorithm>
 #include <cstdint>
-#include <deque>
-#include <fmt/format.h>
-#include <iterator>
 #include <limits>
 
 namespace caffeine {
