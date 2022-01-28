@@ -205,14 +205,18 @@ void EGraph::repair(size_t eclass_id) {
 }
 
 void EGraph::unparent(size_t eclass_id) {
-  const EClass& eclass = classes.at(eclass_id);
+  EClass& eclass = classes.at(eclass_id);
+  CAFFEINE_ASSERT(eclass.is_constant());
+
+  if (eclass.nodes.size() == 1)
+    return;
 
   for (const ENode& node : eclass.nodes) {
     for (size_t operand : node.operands) {
-      EClass& child = classes.at(operand);
-      child.parents.erase(node);
+      get(operand)->parents.erase(node);
     }
   }
+  eclass.nodes.resize(1);
 }
 
 #define CONST_INT_FOLD(expr)                                                   \
