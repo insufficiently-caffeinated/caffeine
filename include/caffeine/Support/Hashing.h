@@ -22,7 +22,7 @@ struct LLVMHasher {
 
 #define CAFFEINE_DECL_LLVM_HASHER(type)                                        \
   template <>                                                                  \
-  struct ::std::hash<type> {                                                   \
+  struct std::hash<type> {                                                     \
   private:                                                                     \
     using value_t = type;                                                      \
                                                                                \
