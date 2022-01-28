@@ -114,6 +114,9 @@ size_t EGraph::merge(size_t id1, size_t id2) {
   classes.at(new_id).merge(classes.at(id2));
   classes.erase(id2);
 
+  if (classes.at(new_id).is_constant())
+    unparent(new_id);
+
   worklist.push_back(new_id);
   return new_id;
 }
