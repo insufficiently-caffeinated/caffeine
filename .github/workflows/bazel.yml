@@ -59,7 +59,8 @@ jobs:
       - name: Run all tests
         run: |
           bazelisk test --config=ci -- //... \
-            $(bazelisk query 'kind(".*_test", //...) intersect attr("tags", "manual", //...)')
+            $(bazelisk query 'kind(".*_test", //...) intersect attr("tags", "manual", //...)') \
+            -//:format
 
       # This is needed to work around a bug in actions/upload-artifact.
       # Specficially, it fails if the directory that contains the artifact
