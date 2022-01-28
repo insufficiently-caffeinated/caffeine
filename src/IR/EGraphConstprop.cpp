@@ -39,7 +39,7 @@ private:
                     [&](llvm::ArrayRef<llvm::APInt> args) { return (expr); })
 
     switch (node.data->opcode()) {
-    // clang-format off
+      // clang-format off
       case Operation::Add:  INT_FOLD(args[0] + args[1]);
       case Operation::Sub:  INT_FOLD(args[0] - args[1]);
       case Operation::Mul:  INT_FOLD(args[0] * args[1]);
