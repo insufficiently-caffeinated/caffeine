@@ -78,6 +78,10 @@ bool EClass::is_constant() const {
   }
 }
 
+Type EClass::type() const {
+  return nodes.front().data->type();
+}
+
 size_t EGraph::find(size_t id) const {
   return union_find.find(id);
 }

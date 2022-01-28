@@ -39,6 +39,7 @@ public:
   void merge(EClass& eclass);
 
   bool is_constant() const;
+  Type type() const;
 
   friend llvm::hash_code hash_value(const EClass& node);
 };
