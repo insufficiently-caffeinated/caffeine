@@ -264,14 +264,12 @@ void Interpreter::visitCallBase(llvm::CallBase& callBase) {
     return visitExternFunc(callBase);
   }
 
-  // In case of a normal function call
-  auto frame_wrapper = StackFrame::RegularFrame(func);
-  auto& callee = frame_wrapper.get_regular();
-  for (auto [arg, val] : llvm::zip(func->args(), callBase.args())) {
-    callee.insert(&arg, interp->load(val.get()));
+  std::vector<LLVMValue> args;
+  args.reserve(callBase.arg_size());
+  for (auto& arg : callBase.args()) {
+    args.push_back(interp->load(arg.get()));
   }
-
-  interp->context().stack.push_back(std::move(frame_wrapper));
+  interp->call_function(func, args);
 }
 void Interpreter::visitCallInst(llvm::CallInst& call) {
   return visitCallBase(call);
