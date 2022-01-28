@@ -18,9 +18,6 @@ endif()
 include(CaffeineTestUtils)
 
 add_subdirectory(unit)
-add_subdirectory(run-pass)
-add_subdirectory(run-fail)
-add_subdirectory(regression)
 
 set(YARPGEN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/yarpgen")
 if (EXISTS "${YARPGEN_DIR}")
