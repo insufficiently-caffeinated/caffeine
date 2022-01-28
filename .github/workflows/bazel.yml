@@ -71,7 +71,7 @@ jobs:
       - name: Upload release tarball
         uses: actions/upload-artifact@v2
         with:
-          name: caffeine-${{ matrix.mode }}
+          name: caffeine-${{ matrix.compiler }}-${{ matrix.mode }}
           path: caffeine.tar.gz
 
   format:
