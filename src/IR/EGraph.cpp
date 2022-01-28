@@ -82,9 +82,7 @@ ENode EGraph::canonicalize(const ENode& node) {
   return ENode{node.data, std::move(operands)};
 }
 
-size_t EGraph::add(const ENode& node) {
-  rebuild();
-
+size_t EGraph::add_dirty(const ENode& node) {
   auto canonical = canonicalize(node);
   auto it = hashcons.find(canonical);
   if (it != hashcons.end())
@@ -97,7 +95,7 @@ size_t EGraph::add(const ENode& node) {
 
   return eclass_id;
 }
-size_t EGraph::add(const Operation& op) {
+size_t EGraph::add_dirty(const Operation& op) {
   if (auto node = llvm::dyn_cast<EGraphNode>(&op))
     return node->id();
 
@@ -105,10 +103,19 @@ size_t EGraph::add(const Operation& op) {
   operands.reserve(op.num_operands());
 
   for (const auto& operand : op.operands()) {
-    operands.push_back(add(operand));
+    operands.push_back(add_dirty(operand));
   }
 
-  return add(ENode{op.data(), std::move(operands)});
+  return add_dirty(ENode{op.data(), std::move(operands)});
+}
+
+size_t EGraph::add(const ENode& node) {
+  rebuild();
+  return add_dirty(node);
+}
+size_t EGraph::add(const Operation& op) {
+  rebuild();
+  return add_dirty(op);
 }
 
 void EGraph::rebuild() {

@@ -97,6 +97,11 @@ public:
                     llvm::SmallVectorImpl<OpRef>* exprs) const;
 
 private:
+  // Add without first doing a rebuild.
+  size_t add_dirty(const ENode& node);
+  size_t add_dirty(const Operation& op);
+
+
   void repair(size_t eclass);
 
   // Remove this eclass from the parent list of all nodes that currently have it
