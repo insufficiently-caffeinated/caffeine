@@ -111,7 +111,32 @@ private:
   tsl::hopscotch_map<size_t, EClass> classes;
   std::vector<size_t> worklist;
 
-  friend struct EGraphExtractor;
+  friend class EGraphExtractor;
+};
+
+/**
+ * A stateful extractor for expressions contained within an E-Graph.
+ *
+ * Actually building the expressions involves a bunch of caching of intermediate
+ * expressions so the more extractions that can be done while reusing the same
+ * extractor the faster things will be.
+ */
+class EGraphExtractor {
+public:
+  EGraphExtractor(const EGraph* egraph);
+
+  OpRef extract(size_t eclass);
+
+private:
+  std::pair<uint64_t, size_t> eval_cost(size_t eclass_id);
+  uint64_t eval_cost(const ENode& node);
+  uint64_t eval_cost(Operation::Opcode opcode);
+
+private:
+  const EGraph* graph;
+  tsl::hopscotch_map<size_t, std::pair<uint64_t, size_t>> costs;
+  tsl::hopscotch_map<size_t, OpRef> expressions;
+  tsl::hopscotch_set<size_t> visited;
 };
 
 } // namespace caffeine
