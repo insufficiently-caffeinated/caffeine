@@ -1,8 +1,6 @@
 #include "caffeine/IR/EGraph.h"
 #include "caffeine/IR/Operation.h"
-#include <caffeine/IR/OperationBase.h>
 #include <cstdint>
-#include <iterator>
 #include <limits>
 
 namespace caffeine {
@@ -20,6 +18,10 @@ bool ENode::operator==(const ENode& node) const {
 }
 bool ENode::operator!=(const ENode& node) const {
   return !(*this == node);
+}
+
+Type ENode::type() const {
+  return data->type();
 }
 
 llvm::hash_code hash_value(const ENode& node) {
@@ -48,17 +50,37 @@ llvm::hash_code hash_value(const EClass& eclass) {
 void EClass::merge(EClass& eclass) {
   CAFFEINE_ASSERT(this != &eclass);
 
+  bool constant = eclass.is_constant();
+  size_t start = nodes.size();
+
   nodes.insert(nodes.end(), std::move_iterator(eclass.nodes.begin()),
                std::move_iterator(eclass.nodes.end()));
-
-  // This e-class will not be used again, free all its memory
-  eclass.nodes.clear();
-  eclass.nodes.shrink_to_fit();
-
   for (auto it = eclass.parents.begin(); it != eclass.parents.end(); ++it) {
     parents.emplace(it.key(), it.value());
   }
-  eclass.parents = decltype(eclass.parents)();
+
+  if (constant) {
+    std::swap(nodes.front(), nodes[start]);
+  }
+}
+
+bool EClass::is_constant() const {
+  using Opcode = Operation::Opcode;
+
+  if (nodes.empty())
+    return false;
+
+  switch (nodes.front().data->opcode()) {
+  case Opcode::ConstantInt:
+  case Opcode::ConstantFloat:
+    return true;
+  default:
+    return false;
+  }
+}
+
+Type EClass::type() const {
+  return nodes.front().data->type();
 }
 
 size_t EGraph::find(size_t id) const {
@@ -68,6 +90,12 @@ size_t EGraph::find(size_t id) {
   return union_find.find(id);
 }
 
+EClass* EGraph::get(size_t id) {
+  auto it = classes.find(find(id));
+  if (it != classes.end())
+    return &it.value();
+  return nullptr;
+}
 const EClass* EGraph::get(size_t id) const {
   auto it = classes.find(id);
   if (it != classes.end())
@@ -85,6 +113,10 @@ size_t EGraph::merge(size_t id1, size_t id2) {
   auto new_id = union_find.do_union(id1, id2);
 
   classes.at(new_id).merge(classes.at(id2));
+  classes.erase(id2);
+
+  if (classes.at(new_id).is_constant())
+    unparent(new_id);
 
   worklist.push_back(new_id);
   return new_id;
@@ -174,14 +206,18 @@ void EGraph::repair(size_t eclass_id) {
 }
 
 void EGraph::unparent(size_t eclass_id) {
-  const EClass& eclass = classes.at(eclass_id);
+  EClass& eclass = classes.at(eclass_id);
+  CAFFEINE_ASSERT(eclass.is_constant());
+
+  if (eclass.nodes.size() == 1)
+    return;
 
   for (const ENode& node : eclass.nodes) {
     for (size_t operand : node.operands) {
-      EClass& child = classes.at(operand);
-      child.parents.erase(node);
+      get(operand)->parents.erase(node);
     }
   }
+  eclass.nodes.resize(1);
 }
 
 size_t EGraph::create_eclass(const ENode& node) {

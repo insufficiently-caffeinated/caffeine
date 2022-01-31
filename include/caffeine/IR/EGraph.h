@@ -25,6 +25,8 @@ public:
   bool operator==(const ENode& node) const;
   bool operator!=(const ENode& node) const;
 
+  Type type() const;
+
   friend llvm::hash_code hash_value(const ENode& node);
 };
 
@@ -37,6 +39,9 @@ public:
   bool operator!=(const EClass& eclass) const;
 
   void merge(EClass& eclass);
+
+  bool is_constant() const;
+  Type type() const;
 
   friend llvm::hash_code hash_value(const EClass& node);
 };
@@ -69,6 +74,7 @@ public:
   size_t find(size_t id) const;
   size_t find(size_t id);
 
+  EClass* get(size_t id);
   const EClass* get(size_t id) const;
 
   // Merge two e-classes into one. This makes them equivalent and returns the
@@ -96,6 +102,8 @@ public:
   void bulk_extract(llvm::ArrayRef<size_t> ids,
                     llvm::SmallVectorImpl<OpRef>* exprs) const;
 
+  void constprop();
+
 private:
   // Add without first doing a rebuild.
   size_t add_dirty(const ENode& node);
@@ -116,6 +124,7 @@ private:
   std::vector<size_t> worklist;
 
   friend class EGraphExtractor;
+  friend class EGraphConstantPropagator;
 };
 
 /**
