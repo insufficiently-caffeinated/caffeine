@@ -33,6 +33,10 @@ llvm::hash_code hash_value(const ENode& node) {
       llvm::hash_combine_range(node.operands.begin(), node.operands.end()));
 }
 
+void EClassCache::clear() {
+  *this = EClassCache();
+}
+
 bool EClass::operator==(const EClass& eclass) const {
   return nodes == eclass.nodes && parents == eclass.parents;
 }
@@ -62,7 +66,20 @@ void EClass::merge(EClass& eclass) {
 
   if (constant) {
     std::swap(nodes.front(), nodes[start]);
-    cached_expr = std::move(eclass.cached_expr);
+    cache = std::move(eclass.cache);
+  } else if (cache.cost.has_value() && eclass.cache.cost.has_value()) {
+    auto [cost1, index1] = *cache.cost;
+    auto [cost2, index2] = *cache.cost;
+
+    if (cost1 < cost2) {
+      cache.cost = {cost1, index1};
+      // keep existing expression
+    } else {
+      cache.cost = {cost2, index2};
+      cache.expr = std::move(eclass.cache.expr);
+    }
+  } else {
+    cache.clear();
   }
 }
 
@@ -201,18 +218,24 @@ void EGraph::rebuild() {
     // If this class doesn't have a cached expression then it's parent classes
     // couldn't either. The one exception is if we've already cleared it here
     // but in that case if would show up in cache_visited.
-    if (std::exchange(eclass->cached_expr, nullptr)) {
+    if (std::exchange(eclass->cache.expr, nullptr)) {
       for (const auto& [node, parent] : eclass->parents) {
         if (!cache_visited.contains(parent))
           cache_stack.push_back(parent);
       }
     }
+
+    eclass->cache.clear();
   }
 }
 
 void EGraph::repair(size_t eclass_id) {
   EClass& eclass = classes.at(eclass_id);
-  eclass.cached_expr = nullptr;
+
+  // Note: merge actually properly handles updating the cache so we don't clear
+  //       the cache here. However, that doesn't apply for parents of this
+  //       eclass so rebuild will handle that by clearing the cache for all
+  //       transitive parents of this eclass.
 
   for (const auto& [p_node, p_eclass] : eclass.parents) {
     auto canonical = canonicalize(p_node);
@@ -290,9 +313,12 @@ EGraphExtractor::EGraphExtractor(const EGraph* graph)
 EGraphExtractor::EGraphExtractor(EGraph* graph)
     : graph(graph), is_const(false) {}
 
-std::pair<uint64_t, size_t> EGraphExtractor::eval_cost(size_t eclass_id) {
-  eclass_id = graph->find(eclass_id);
+EClassCost EGraphExtractor::eval_cost(size_t eclass_id) {
+  const EClass& eclass = *graph->get(eclass_id);
+  if (eclass.cache.cost)
+    return eclass.cache.cost.value();
 
+  eclass_id = graph->find(eclass_id);
   auto it = costs.find(eclass_id);
   if (it != costs.end())
     return it->second;
@@ -307,7 +333,6 @@ std::pair<uint64_t, size_t> EGraphExtractor::eval_cost(size_t eclass_id) {
     return {UINT32_MAX, SIZE_MAX};
   }
 
-  const EClass& eclass = graph->classes.at(eclass_id);
   uint64_t cost = UINT64_MAX;
   size_t index = SIZE_MAX;
   for (size_t i = 0; i < eclass.nodes.size(); ++i) {
@@ -319,13 +344,13 @@ std::pair<uint64_t, size_t> EGraphExtractor::eval_cost(size_t eclass_id) {
   }
 
   CAFFEINE_ASSERT(index != SIZE_MAX);
-  costs.insert({eclass_id, {cost, index}});
+  update_cached(eclass_id, {cost, index});
   return {cost, index};
 }
 uint64_t EGraphExtractor::eval_cost(const ENode& node) {
   uint64_t cost = eval_cost(node.data->opcode());
   for (size_t operand : node.operands)
-    cost += eval_cost(operand).first;
+    cost += eval_cost(operand).cost;
   return cost;
 }
 uint64_t EGraphExtractor::eval_cost(Operation::Opcode opcode) {
@@ -355,15 +380,28 @@ void EGraphExtractor::update_cached(size_t eclass_id, const OpRef& expr) {
   if (!eclass)
     return;
 
-  eclass->cached_expr = expr;
+  eclass->cache.expr = expr;
+}
+void EGraphExtractor::update_cached(size_t eclass_id, EClassCost cost) {
+  costs.emplace(eclass_id, cost);
+
+  if (is_const)
+    return;
+
+  EGraph* egraph = const_cast<EGraph*>(graph);
+  EClass* eclass = egraph->get(eclass_id);
+  if (!eclass)
+    return;
+
+  eclass->cache.cost = cost;
 }
 
 OpRef EGraphExtractor::extract(size_t id) {
   id = graph->find(id);
 
   const EClass& eclass = *graph->get(id);
-  if (eclass.cached_expr)
-    return eclass.cached_expr;
+  if (eclass.cache.expr)
+    return eclass.cache.expr;
 
   auto it = expressions.find(id);
   if (it != expressions.end())
