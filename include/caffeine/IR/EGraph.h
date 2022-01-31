@@ -34,6 +34,7 @@ class EClass {
 public:
   std::vector<ENode> nodes;
   tsl::hopscotch_map<ENode, size_t> parents = {};
+  OpRef cached_expr = nullptr;
 
   bool operator==(const EClass& eclass) const;
   bool operator!=(const EClass& eclass) const;
@@ -137,6 +138,7 @@ private:
 class EGraphExtractor {
 public:
   EGraphExtractor(const EGraph* egraph);
+  EGraphExtractor(EGraph* egraph);
 
   OpRef extract(size_t eclass);
 
@@ -145,8 +147,11 @@ private:
   uint64_t eval_cost(const ENode& node);
   uint64_t eval_cost(Operation::Opcode opcode);
 
+  void update_cached(size_t eclass, const OpRef& expr);
+
 private:
   const EGraph* graph;
+  bool is_const;
   tsl::hopscotch_map<size_t, std::pair<uint64_t, size_t>> costs;
   tsl::hopscotch_map<size_t, OpRef> expressions;
   tsl::hopscotch_set<size_t> visited;

@@ -2,6 +2,7 @@
 #include "caffeine/IR/Operation.h"
 #include <cstdint>
 #include <limits>
+#include <regex.h>
 
 namespace caffeine {
 
@@ -61,6 +62,7 @@ void EClass::merge(EClass& eclass) {
 
   if (constant) {
     std::swap(nodes.front(), nodes[start]);
+    cached_expr = std::move(eclass.cached_expr);
   }
 }
 
@@ -169,17 +171,48 @@ size_t EGraph::add(const Operation& op) {
 void EGraph::rebuild() {
   using std::swap;
 
+  tsl::hopscotch_set<size_t> cache_visited;
+  llvm::SmallVector<size_t> cache_stack;
+
   std::vector<size_t> todo;
   while (!worklist.empty()) {
     swap(todo, worklist);
 
-    for (size_t eclass : todo)
-      repair(find(eclass));
+    for (size_t eclass : todo) {
+      eclass = find(eclass);
+      repair(eclass);
+
+      if (cache_visited.insert(eclass).second) {
+        for (const auto& [node, parent] : classes.at(eclass).parents) {
+          if (!cache_visited.contains(parent))
+            cache_stack.push_back(parent);
+        }
+      }
+    }
+  }
+
+  // Clear out cached values for expressions that have been modified.
+  while (!cache_stack.empty()) {
+    size_t id = cache_stack.pop_back_val();
+    if (!cache_visited.insert(id).second)
+      continue;
+
+    EClass* eclass = get(id);
+    // If this class doesn't have a cached expression then it's parent classes
+    // couldn't either. The one exception is if we've already cleared it here
+    // but in that case if would show up in cache_visited.
+    if (std::exchange(eclass->cached_expr, nullptr)) {
+      for (const auto& [node, parent] : eclass->parents) {
+        if (!cache_visited.contains(parent))
+          cache_stack.push_back(parent);
+      }
+    }
   }
 }
 
 void EGraph::repair(size_t eclass_id) {
   EClass& eclass = classes.at(eclass_id);
+  eclass.cached_expr = nullptr;
 
   for (const auto& [p_node, p_eclass] : eclass.parents) {
     auto canonical = canonicalize(p_node);
@@ -252,7 +285,10 @@ void EGraph::bulk_extract(llvm::ArrayRef<size_t> ids,
     exprs->push_back(extractor.extract(id));
 }
 
-EGraphExtractor::EGraphExtractor(const EGraph* graph) : graph(graph) {}
+EGraphExtractor::EGraphExtractor(const EGraph* graph)
+    : graph(graph), is_const(true) {}
+EGraphExtractor::EGraphExtractor(EGraph* graph)
+    : graph(graph), is_const(false) {}
 
 std::pair<uint64_t, size_t> EGraphExtractor::eval_cost(size_t eclass_id) {
   eclass_id = graph->find(eclass_id);
@@ -308,14 +344,32 @@ uint64_t EGraphExtractor::eval_cost(Operation::Opcode opcode) {
   }
 }
 
+void EGraphExtractor::update_cached(size_t eclass_id, const OpRef& expr) {
+  expressions.emplace(eclass_id, expr);
+
+  if (is_const)
+    return;
+
+  EGraph* egraph = const_cast<EGraph*>(graph);
+  EClass* eclass = egraph->get(eclass_id);
+  if (!eclass)
+    return;
+
+  eclass->cached_expr = expr;
+}
+
 OpRef EGraphExtractor::extract(size_t id) {
   id = graph->find(id);
+
+  const EClass& eclass = *graph->get(id);
+  if (eclass.cached_expr)
+    return eclass.cached_expr;
+
   auto it = expressions.find(id);
   if (it != expressions.end())
     return it->second;
 
   auto [cost, index] = eval_cost(id);
-  const EClass& eclass = graph->classes.at(id);
   const ENode& node = eclass.nodes.at(index);
 
   llvm::SmallVector<OpRef, 4> operands;
@@ -325,7 +379,7 @@ OpRef EGraphExtractor::extract(size_t id) {
     operands.push_back(extract(opid));
 
   OpRef expr = Operation::CreateRaw(node.data, operands);
-  expressions.emplace(id, expr);
+  update_cached(id, expr);
   return expr;
 }
 
