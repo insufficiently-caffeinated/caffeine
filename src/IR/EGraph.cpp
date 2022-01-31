@@ -22,11 +22,27 @@ bool ENode::operator!=(const ENode& node) const {
   return !(*this == node);
 }
 
+llvm::hash_code hash_value(const ENode& node) {
+  using llvm::hash_value;
+
+  return llvm::hash_combine(
+      node.data ? hash_value(*node.data) : hash_value(node.data.get()),
+      llvm::hash_combine_range(node.operands.begin(), node.operands.end()));
+}
+
 bool EClass::operator==(const EClass& eclass) const {
   return nodes == eclass.nodes && parents == eclass.parents;
 }
 bool EClass::operator!=(const EClass& eclass) const {
   return !(*this == eclass);
+}
+
+llvm::hash_code hash_value(const EClass& eclass) {
+  using llvm::hash_value;
+
+  return llvm::hash_combine(
+      llvm::hash_combine_range(eclass.nodes.begin(), eclass.nodes.end()),
+      llvm::hash_combine_range(eclass.parents.begin(), eclass.parents.end()));
 }
 
 void EClass::merge(EClass& eclass) {
@@ -82,9 +98,7 @@ ENode EGraph::canonicalize(const ENode& node) {
   return ENode{node.data, std::move(operands)};
 }
 
-size_t EGraph::add(const ENode& node) {
-  rebuild();
-
+size_t EGraph::add_dirty(const ENode& node) {
   auto canonical = canonicalize(node);
   auto it = hashcons.find(canonical);
   if (it != hashcons.end())
@@ -97,7 +111,7 @@ size_t EGraph::add(const ENode& node) {
 
   return eclass_id;
 }
-size_t EGraph::add(const Operation& op) {
+size_t EGraph::add_dirty(const Operation& op) {
   if (auto node = llvm::dyn_cast<EGraphNode>(&op))
     return node->id();
 
@@ -105,10 +119,19 @@ size_t EGraph::add(const Operation& op) {
   operands.reserve(op.num_operands());
 
   for (const auto& operand : op.operands()) {
-    operands.push_back(add(operand));
+    operands.push_back(add_dirty(operand));
   }
 
-  return add(ENode{op.data(), std::move(operands)});
+  return add_dirty(ENode{op.data(), std::move(operands)});
+}
+
+size_t EGraph::add(const ENode& node) {
+  rebuild();
+  return add_dirty(node);
+}
+size_t EGraph::add(const Operation& op) {
+  rebuild();
+  return add_dirty(op);
 }
 
 void EGraph::rebuild() {
@@ -118,11 +141,8 @@ void EGraph::rebuild() {
   while (!worklist.empty()) {
     swap(todo, worklist);
 
-    for (size_t& eclass : todo)
-      eclass = find(eclass);
-
     for (size_t eclass : todo)
-      repair(eclass);
+      repair(find(eclass));
   }
 }
 
