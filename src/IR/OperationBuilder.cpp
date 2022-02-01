@@ -250,6 +250,16 @@ OpRef OperationBuilder::to_expr(const Pointer& ptr) {
 }
 
 OpRef OperationBuilder::to_egraph(const OpRef& op) {
+  static constexpr Operation::Opcode passthrough[] = {
+      Operation::ConstantInt, Operation::ConstantFloat, Operation::FixedArray,
+      Operation::FunctionObject};
+
+  // To help with constant propagation, we explicitly don't insert certain
+  // operations into the egraph.
+  if (std::find(std::begin(passthrough), std::end(passthrough), op->opcode()) !=
+      std::end(passthrough))
+    return op;
+
   return EGraphNode::Create(op->type(), ctx->egraph.add(*op));
 }
 
