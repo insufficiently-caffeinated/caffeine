@@ -110,6 +110,16 @@ public:
   OpRef extract(size_t id);
   OpRef extract(size_t id) const;
 
+  // Extract an optimal represent for an expression that contains references to
+  // egraph nodes. This will return the same expression with all instances of
+  // EGraphNode replaced with their corresponding minimal expression.
+  //
+  // It is preferrable to use this method instead of first adding the expression
+  // and then extracting it from the resulting eclass id as this will help
+  // minimize the e-graph.
+  OpRef extract(const Operation& op);
+  OpRef extract(const Operation& op) const;
+
   // Build expressions for a bunch of e-classes at once. This is more efficient
   // than calling extract for each expression since some internal caches can be
   // reused.

@@ -295,6 +295,29 @@ OpRef EGraph::extract(size_t id) const {
   return std::move(exprs[0]);
 }
 
+OpRef EGraph::extract(const Operation& op) {
+  if (auto node = llvm::dyn_cast<EGraphNode>(&op))
+    return extract(node->id());
+
+  llvm::SmallVector<OpRef> operands;
+  operands.reserve(op.num_operands());
+  for (const auto& operand : op.operands())
+    operands.push_back(extract(operand));
+
+  return op.with_new_operands(operands);
+}
+OpRef EGraph::extract(const Operation& op) const {
+  if (auto node = llvm::dyn_cast<EGraphNode>(&op))
+    return extract(node->id());
+
+  llvm::SmallVector<OpRef> operands;
+  operands.reserve(op.num_operands());
+  for (const auto& operand : op.operands())
+    operands.push_back(extract(operand));
+
+  return op.with_new_operands(operands);
+}
+
 void EGraph::bulk_extract(llvm::ArrayRef<size_t> ids,
                           llvm::SmallVectorImpl<OpRef>* exprs) {
   rebuild();
