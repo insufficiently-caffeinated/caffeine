@@ -1,5 +1,8 @@
 #include "caffeine/Interpreter/ContextEvent.h"
 
+#include "caffeine/Support/SyncOStream.h"
+
+#include <ostream>
 #include <sstream>
 #include <sys/ioctl.h>
 
@@ -41,9 +44,10 @@ ContextEventLogger::ContextEventLogger(std::ostream& o, bool no_output)
     ioctl(0, TIOCGWINSZ, &w);
 
     size_t lines = w.ws_row;
-    *os << "\n"
-        << "\0337"
-        << "\033[0;" << lines << "r\0338\033[1A";
+    sync_ostream_wrapper sync(*os);
+    sync << "\n"
+         << "\0337"
+         << "\033[0;" << lines << "r\0338\033[1A";
   }
 };
 
@@ -58,7 +62,8 @@ void ContextEventLogger::update() {
   ss << "Currently processed " << completed_contexts << " contexts."
      << "\0338";
 
-  *os << ss.str() << std::flush;
+  sync_ostream_wrapper sync(*os);
+  sync << ss.str();
 }
 
 } // namespace caffeine

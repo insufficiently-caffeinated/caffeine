@@ -12,6 +12,7 @@
 #include "caffeine/Support/Coverage.h"
 #include "caffeine/Support/DiagnosticHandler.h"
 #include "caffeine/Support/Signal.h"
+#include "caffeine/Support/SyncOStream.h"
 #include "caffeine/Support/Tracing.h"
 #include <atomic>
 #include <csignal>
