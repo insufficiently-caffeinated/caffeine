@@ -426,5 +426,18 @@ OpRef EGraphExtractor::extract(size_t id) {
   update_cached(id, expr);
   return expr;
 }
+OpRef EGraphExtractor::extract(const Operation& expr) {
+  if (auto node = llvm::dyn_cast<EGraphNode>(&expr))
+    return extract(node->id());
+
+  llvm::SmallVector<OpRef, 3> operands;
+  operands.reserve(expr.num_operands());
+
+  for (const auto& operand : expr.operands()) {
+    operands.push_back(extract(operand));
+  }
+
+  return expr.with_new_operands(operands);
+}
 
 } // namespace caffeine

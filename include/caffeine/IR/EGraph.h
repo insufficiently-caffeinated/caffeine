@@ -161,6 +161,7 @@ public:
   EGraphExtractor(EGraph* egraph);
 
   OpRef extract(size_t eclass);
+  OpRef extract(const Operation& expr);
 
 private:
   EClassCost eval_cost(size_t eclass_id);
