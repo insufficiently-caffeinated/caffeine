@@ -53,3 +53,15 @@ TEST_F(EGraphTests, constprop_not) {
   ASSERT_NE(id_a, id_c);
   ASSERT_EQ(egraph.find(id_b), egraph.find(id_c));
 }
+
+TEST_F(EGraphTests, get_non_canonical) {
+  size_t a = egraph.add(*Constant::Create(Type::int_ty(32), "a"));
+  size_t b = egraph.add(*Constant::Create(Type::int_ty(32), "b"));
+
+  egraph.merge(a, b);
+  egraph.rebuild();
+
+  ASSERT_NE(egraph.get(a), nullptr);
+  ASSERT_NE(egraph.get(b), nullptr);
+  ASSERT_EQ(egraph.get(a), egraph.get(b));
+}

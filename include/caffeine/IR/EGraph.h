@@ -26,6 +26,7 @@ public:
   bool operator!=(const ENode& node) const;
 
   Type type() const;
+  Operation::Opcode opcode() const;
 
   friend llvm::hash_code hash_value(const ENode& node);
 };
@@ -107,16 +108,21 @@ public:
   // Extract an optimal representation for the given expression. This will try
   // to minimize both the size of the generated expression as well as the cost
   // it would involve in a solver.
+  //
+  // Note that if you are going to perform lots of extractions without modifying
+  // the e-graph then it is preferable to use EGraphExtractor instead.
   OpRef extract(size_t id);
   OpRef extract(size_t id) const;
 
-  // Build expressions for a bunch of e-classes at once. This is more efficient
-  // than calling extract for each expression since some internal caches can be
-  // reused.
-  void bulk_extract(llvm::ArrayRef<size_t> ids,
-                    llvm::SmallVectorImpl<OpRef>* exprs);
-  void bulk_extract(llvm::ArrayRef<size_t> ids,
-                    llvm::SmallVectorImpl<OpRef>* exprs) const;
+  // Extract an optimal represent for an expression that contains references to
+  // egraph nodes. This will return the same expression with all instances of
+  // EGraphNode replaced with their corresponding minimal expression.
+  //
+  // It is preferrable to use this method instead of first adding the expression
+  // and then extracting it from the resulting eclass id as this will help
+  // minimize the e-graph.
+  OpRef extract(const Operation& op);
+  OpRef extract(const Operation& op) const;
 
   void constprop();
 
@@ -156,6 +162,7 @@ public:
   EGraphExtractor(EGraph* egraph);
 
   OpRef extract(size_t eclass);
+  OpRef extract(const Operation& expr);
 
 private:
   EClassCost eval_cost(size_t eclass_id);

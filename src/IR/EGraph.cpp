@@ -22,7 +22,10 @@ bool ENode::operator!=(const ENode& node) const {
 }
 
 Type ENode::type() const {
-  return data->type();
+  return data ? data->type() : Type::void_ty();
+}
+Operation::Opcode ENode::opcode() const {
+  return data ? data->opcode() : Operation::Invalid;
 }
 
 llvm::hash_code hash_value(const ENode& node) {
@@ -116,7 +119,7 @@ EClass* EGraph::get(size_t id) {
   return nullptr;
 }
 const EClass* EGraph::get(size_t id) const {
-  auto it = classes.find(id);
+  auto it = classes.find(find(id));
   if (it != classes.end())
     return &it.value();
   return nullptr;
@@ -285,27 +288,17 @@ size_t EGraph::create_eclass(const ENode& node) {
 }
 
 OpRef EGraph::extract(size_t id) {
-  llvm::SmallVector<OpRef, 1> exprs;
-  bulk_extract({id}, &exprs);
-  return std::move(exprs[0]);
+  return EGraphExtractor(this).extract(id);
 }
 OpRef EGraph::extract(size_t id) const {
-  llvm::SmallVector<OpRef, 1> exprs;
-  bulk_extract({id}, &exprs);
-  return std::move(exprs[0]);
+  return EGraphExtractor(this).extract(id);
 }
 
-void EGraph::bulk_extract(llvm::ArrayRef<size_t> ids,
-                          llvm::SmallVectorImpl<OpRef>* exprs) {
-  rebuild();
-  const_cast<const EGraph*>(this)->bulk_extract(ids, exprs);
+OpRef EGraph::extract(const Operation& op) {
+  return EGraphExtractor(this).extract(op);
 }
-void EGraph::bulk_extract(llvm::ArrayRef<size_t> ids,
-                          llvm::SmallVectorImpl<OpRef>* exprs) const {
-  auto extractor = EGraphExtractor{this};
-
-  for (size_t id : ids)
-    exprs->push_back(extractor.extract(id));
+OpRef EGraph::extract(const Operation& op) const {
+  return EGraphExtractor(this).extract(op);
 }
 
 EGraphExtractor::EGraphExtractor(const EGraph* graph)
@@ -419,6 +412,19 @@ OpRef EGraphExtractor::extract(size_t id) {
   OpRef expr = Operation::CreateRaw(node.data, operands);
   update_cached(id, expr);
   return expr;
+}
+OpRef EGraphExtractor::extract(const Operation& expr) {
+  if (auto node = llvm::dyn_cast<EGraphNode>(&expr))
+    return extract(node->id());
+
+  llvm::SmallVector<OpRef, 3> operands;
+  operands.reserve(expr.num_operands());
+
+  for (const auto& operand : expr.operands()) {
+    operands.push_back(extract(operand));
+  }
+
+  return expr.with_new_operands(operands);
 }
 
 } // namespace caffeine
