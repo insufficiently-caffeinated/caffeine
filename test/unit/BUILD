@@ -27,6 +27,7 @@ cc_test(
     name = "unit",
     srcs = ["main.cpp"],
     linkstatic = True,
+    shard_count = 8,
     deps = [
         ":unit-lib",
     ],
