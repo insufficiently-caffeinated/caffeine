@@ -22,7 +22,7 @@ bool ENode::operator!=(const ENode& node) const {
 }
 
 Type ENode::type() const {
-  return data->type();
+  return data ? data->type() : Type::void_ty();
 }
 Operation::Opcode ENode::opcode() const {
   return data ? data->opcode() : Operation::Invalid;
