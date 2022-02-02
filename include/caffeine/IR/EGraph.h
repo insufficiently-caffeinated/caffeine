@@ -113,7 +113,6 @@ public:
   // the e-graph then it is preferable to use EGraphExtractor instead.
   OpRef extract(size_t id);
   OpRef extract(size_t id) const;
-  OpRef extract(const Operation& op) const;
 
   // Extract an optimal represent for an expression that contains references to
   // egraph nodes. This will return the same expression with all instances of
