@@ -10,6 +10,7 @@ bitcode_library_standalone(
     defines = [
         "CAFFEINE_BAZEL",
     ],
+    copts = ["-O3"],
     strip_include_prefix = "/libraries/builtins",
     # Notice the order of libcxx vs libc. libcxx comes
     # first, because it uses `#include_next` directives
