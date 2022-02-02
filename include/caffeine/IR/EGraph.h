@@ -126,17 +126,6 @@ public:
 
   void constprop();
 
-  /**
-   * Mark that all the assertions have been discovered to be satisfiable and
-   * simplify based on any info given by those assertions.
-   *
-   * Note that this is not the same as making these assertions equivalent to
-   * true since they are still needed as constraints so that the underlying
-   * solver can still produce correct models. However, if, e.g., an assertion
-   * such as x == 5 is part of the list then it would be valid to unify x and 5.
-   */
-  void mark_sat(llvm::ArrayRef<size_t> assertions);
-
 private:
   // Add without first doing a rebuild.
   size_t add_dirty(const ENode& node);
