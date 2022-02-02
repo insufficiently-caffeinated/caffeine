@@ -4,6 +4,7 @@
 #include "caffeine/Interpreter/ExprEval.h"
 #include "caffeine/Interpreter/StackFrame.h"
 #include "caffeine/Support/LLVMFmt.h"
+#include "include/caffeine/IR/EGraph.h"
 #include "include/caffeine/Model/AssertionList.h"
 
 #include <boost/algorithm/string.hpp>
@@ -136,34 +137,28 @@ AssertionList Context::extract_assertions() {
   egraph.constprop();
   egraph.rebuild();
 
-  llvm::SmallVector<OpRef> extracted;
+  EGraphExtractor extractor{&egraph};
   AssertionList list;
 
-  egraph.bulk_extract(assertions.proven(), &extracted);
-  for (auto& expr : extracted)
-    list.insert(expr);
+  for (size_t assertion : assertions.proven())
+    list.insert(extractor.extract(assertion));
   list.mark_sat();
 
-  extracted.clear();
-  egraph.bulk_extract(assertions.unproven(), &extracted);
-  for (auto& expr : extracted)
-    list.insert(expr);
+  for (size_t assertion : assertions.unproven())
+    list.insert(extractor.extract(assertion));
 
   return list;
 }
 AssertionList Context::extract_assertions() const {
-  llvm::SmallVector<OpRef> extracted;
+  EGraphExtractor extractor{&egraph};
   AssertionList list;
 
-  egraph.bulk_extract(assertions.proven(), &extracted);
-  for (auto& expr : extracted)
-    list.insert(expr);
+  for (size_t assertion : assertions.proven())
+    list.insert(extractor.extract(assertion));
   list.mark_sat();
 
-  extracted.clear();
-  egraph.bulk_extract(assertions.unproven(), &extracted);
-  for (auto& expr : extracted)
-    list.insert(expr);
+  for (size_t assertion : assertions.unproven())
+    list.insert(extractor.extract(assertion));
 
   return list;
 }
