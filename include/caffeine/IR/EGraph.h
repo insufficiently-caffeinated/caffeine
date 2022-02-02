@@ -30,10 +30,26 @@ public:
   friend llvm::hash_code hash_value(const ENode& node);
 };
 
+struct EClassCost {
+  uint64_t cost;
+  size_t index;
+};
+
+class EClassCache {
+public:
+  OpRef expr;
+  std::optional<EClassCost> cost;
+
+  EClassCache() = default;
+
+  void clear();
+};
+
 class EClass {
 public:
   std::vector<ENode> nodes;
   tsl::hopscotch_map<ENode, size_t> parents = {};
+  EClassCache cache{};
 
   bool operator==(const EClass& eclass) const;
   bool operator!=(const EClass& eclass) const;
@@ -137,17 +153,22 @@ private:
 class EGraphExtractor {
 public:
   EGraphExtractor(const EGraph* egraph);
+  EGraphExtractor(EGraph* egraph);
 
   OpRef extract(size_t eclass);
 
 private:
-  std::pair<uint64_t, size_t> eval_cost(size_t eclass_id);
+  EClassCost eval_cost(size_t eclass_id);
   uint64_t eval_cost(const ENode& node);
   uint64_t eval_cost(Operation::Opcode opcode);
 
+  void update_cached(size_t eclass, const OpRef& expr);
+  void update_cached(size_t eclass, EClassCost cost);
+
 private:
   const EGraph* graph;
-  tsl::hopscotch_map<size_t, std::pair<uint64_t, size_t>> costs;
+  bool is_const;
+  tsl::hopscotch_map<size_t, EClassCost> costs;
   tsl::hopscotch_map<size_t, OpRef> expressions;
   tsl::hopscotch_set<size_t> visited;
 };
