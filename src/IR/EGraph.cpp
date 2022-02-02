@@ -285,14 +285,10 @@ size_t EGraph::create_eclass(const ENode& node) {
 }
 
 OpRef EGraph::extract(size_t id) {
-  llvm::SmallVector<OpRef, 1> exprs;
-  bulk_extract({id}, &exprs);
-  return std::move(exprs[0]);
+  return EGraphExtractor(this).extract(id);
 }
 OpRef EGraph::extract(size_t id) const {
-  llvm::SmallVector<OpRef, 1> exprs;
-  bulk_extract({id}, &exprs);
-  return std::move(exprs[0]);
+  return EGraphExtractor(this).extract(id);
 }
 
 OpRef EGraph::extract(const Operation& op) {
@@ -316,19 +312,6 @@ OpRef EGraph::extract(const Operation& op) const {
     operands.push_back(extract(operand));
 
   return op.with_new_operands(operands);
-}
-
-void EGraph::bulk_extract(llvm::ArrayRef<size_t> ids,
-                          llvm::SmallVectorImpl<OpRef>* exprs) {
-  rebuild();
-  const_cast<const EGraph*>(this)->bulk_extract(ids, exprs);
-}
-void EGraph::bulk_extract(llvm::ArrayRef<size_t> ids,
-                          llvm::SmallVectorImpl<OpRef>* exprs) const {
-  auto extractor = EGraphExtractor{this};
-
-  for (size_t id : ids)
-    exprs->push_back(extractor.extract(id));
 }
 
 EGraphExtractor::EGraphExtractor(const EGraph* graph)

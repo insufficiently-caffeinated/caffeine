@@ -107,6 +107,9 @@ public:
   // Extract an optimal representation for the given expression. This will try
   // to minimize both the size of the generated expression as well as the cost
   // it would involve in a solver.
+  //
+  // Note that if you are going to perform lots of extractions without modifying
+  // the e-graph then it is preferable to use EGraphExtractor instead.
   OpRef extract(size_t id);
   OpRef extract(size_t id) const;
 
@@ -119,14 +122,6 @@ public:
   // minimize the e-graph.
   OpRef extract(const Operation& op);
   OpRef extract(const Operation& op) const;
-
-  // Build expressions for a bunch of e-classes at once. This is more efficient
-  // than calling extract for each expression since some internal caches can be
-  // reused.
-  void bulk_extract(llvm::ArrayRef<size_t> ids,
-                    llvm::SmallVectorImpl<OpRef>* exprs);
-  void bulk_extract(llvm::ArrayRef<size_t> ids,
-                    llvm::SmallVectorImpl<OpRef>* exprs) const;
 
   void constprop();
 
