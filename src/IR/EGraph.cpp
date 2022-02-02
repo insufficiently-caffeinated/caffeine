@@ -24,6 +24,9 @@ bool ENode::operator!=(const ENode& node) const {
 Type ENode::type() const {
   return data->type();
 }
+Operation::Opcode ENode::opcode() const {
+  return data ? data->opcode() : Operation::Invalid;
+}
 
 llvm::hash_code hash_value(const ENode& node) {
   using llvm::hash_value;

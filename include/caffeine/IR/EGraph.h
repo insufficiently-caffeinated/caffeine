@@ -26,6 +26,7 @@ public:
   bool operator!=(const ENode& node) const;
 
   Type type() const;
+  Operation::Opcode opcode() const;
 
   friend llvm::hash_code hash_value(const ENode& node);
 };
