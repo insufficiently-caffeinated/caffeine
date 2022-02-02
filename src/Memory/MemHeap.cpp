@@ -1,14 +1,13 @@
 #include "caffeine/Memory/MemHeap.h"
 #include "caffeine/IR/Assertion.h"
+#include "caffeine/IR/EGraph.h"
 #include "caffeine/Interpreter/Context.h"
 #include "caffeine/Model/Value.h"
 #include "caffeine/Solver/Solver.h"
 #include "caffeine/Support/Assert.h"
 #include "caffeine/Support/UnsupportedOperation.h"
-
-#include <llvm/ADT/SmallVector.h>
-
 #include <algorithm>
+#include <llvm/ADT/SmallVector.h>
 
 namespace caffeine {
 
@@ -506,22 +505,25 @@ llvm::SmallVector<Pointer, 1> MemHeap::resolve(std::shared_ptr<Solver> solver,
 
   return results;
 }
-OpRef MemHeap::alloc_addr(const OpRef& size, const OpRef& align, Context& ctx) {
-  if (allocator_.index() == Symbolic)
-    goto symbolic;
+OpRef MemHeap::alloc_addr(const OpRef& size_, const OpRef& align_,
+                          Context& ctx) {
+  if (allocator_.index() != Symbolic) {
+    ctx.egraph.rebuild();
+    EGraphExtractor extractor{&ctx.egraph};
+    OpRef size = extractor.extract(*size_);
+    OpRef align = extractor.extract(*align_);
 
-  if (!llvm::isa<ConstantInt>(*size) || !llvm::isa<ConstantInt>(*align)) {
-    allocator_.emplace<Symbolic>();
-    goto symbolic;
-  }
+    if (!llvm::isa<ConstantInt>(*size) || !llvm::isa<ConstantInt>(*align)) {
+      allocator_.emplace<Symbolic>();
+      goto symbolic;
+    }
 
-  if (allocator_.index() == Uninit) {
-    unsigned bitwidth = size->type().bitwidth();
-    allocator_.emplace<Init>(llvm::APInt::getSignedMinValue(bitwidth),
-                             llvm::APInt::getSignedMinValue(bitwidth));
-  }
+    if (allocator_.index() == Uninit) {
+      unsigned bitwidth = size->type().bitwidth();
+      allocator_.emplace<Init>(llvm::APInt::getSignedMinValue(bitwidth),
+                               llvm::APInt::getSignedMinValue(bitwidth));
+    }
 
-  {
     auto addr = std::get<Init>(allocator_)
                     .allocate(llvm::cast<ConstantInt>(*size).value(),
                               llvm::cast<ConstantInt>(*align).value());
@@ -531,7 +533,7 @@ OpRef MemHeap::alloc_addr(const OpRef& size, const OpRef& align, Context& ctx) {
   }
 
 symbolic:
-  return Constant::Create(size->type(), ctx.next_constant());
+  return Constant::Create(size_->type(), ctx.next_constant());
 }
 
 /***************************************************
