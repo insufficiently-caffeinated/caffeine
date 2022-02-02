@@ -382,4 +382,19 @@ InterpreterContext::InterpreterContext(BackingList* queue, size_t entry_index,
   CAFFEINE_ASSERT(!queue_->empty());
 }
 
+void InterpreterContext::call_function(llvm::Function* func,
+                                       Span<LLVMValue> args) {
+  CAFFEINE_ASSERT(!func->empty());
+  CAFFEINE_ASSERT(args.size() == func->arg_size());
+
+  // In case of a normal function call
+  auto frame_wrapper = StackFrame::RegularFrame(func);
+  auto& callee = frame_wrapper.get_regular();
+  for (auto [arg, val] : llvm::zip(func->args(), args)) {
+    callee.insert(&arg, val);
+  }
+
+  context().stack.push_back(std::move(frame_wrapper));
+}
+
 } // namespace caffeine

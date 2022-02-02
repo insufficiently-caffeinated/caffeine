@@ -1,0 +1,35 @@
+
+set(CAFFEINE_VERSION @CAFFEINE_VERSION@)
+
+# Compute the installation prefix relative to this file
+get_filename_component(_IMPORT_PREFIX "${CMAKE_CURRENT_LIST_FILE}" PATH)
+get_filename_component(_IMPORT_PREFIX "${_IMPORT_PREFIX}" PATH)
+get_filename_component(_IMPORT_PREFIX "${_IMPORT_PREFIX}" PATH)
+get_filename_component(_IMPORT_PREFIX "${_IMPORT_PREFIX}" PATH)
+if(_IMPORT_PREFIX STREQUAL "/")
+  set(_IMPORT_PREFIX "")
+endif()
+
+add_executable(caffeine::caffeine-bin               IMPORTED)
+
+add_library(caffeine::caffeine            SHARED    IMPORTED)
+add_library(caffeine::caffeine-opt-plugin SHARED    IMPORTED)
+add_library(caffeine::interface           INTERFACE IMPORTED)
+
+set_target_properties(caffeine::caffeine-bin PROPERTIES
+  IMPORTED_LOCATION "${_IMPORT_PREFIX}/bin/caffeine"
+)
+set_target_properties(caffeine::caffeine PROPERTIES
+  INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/include/"
+  IMPORTED_SONAME               "${_IMPORT_PREFIX}/lib/libcaffeine.so"
+)
+set_target_properties(caffeine::caffeine-opt-plugin PROPERTIES
+  IMPORTED_SONAME              "${_IMPORT_PREFIX}/lib/libcaffeine-opt-plugin.so"
+)
+set_target_properties(caffeine::interface PROPERTIES
+  INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/include/caffeine/interface/"
+)
+
+set(CAFFEINE_BUILTINS "${_IMPORT_PREFIX}/lib/caffeine/caffeine-builtins.bc")
+set(CAFFEINE_LIBC     "${_IMPORT_PREFIX}/lib/caffeine/libc.bc")
+set(CAFFEINE_LIBCXX   "${_IMPORT_PREFIX}/lib/caffeine/libcxx.bc")

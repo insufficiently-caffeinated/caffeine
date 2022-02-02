@@ -87,7 +87,7 @@ BITCODE_LIB_ATTRS = {
     "_cc_toolchain": attr.label(
         default = Label("@caffeine_toolchain//:bitcode"),
         providers = [cc_common.CcToolchainInfo],
-        cfg = "host"
+        cfg = "host",
     ),
     "_rule": attr.string(default = "bitcode_library_standalone"),
 }
@@ -321,6 +321,7 @@ def _bitcode_import(ctx):
             cc_info = ctx.attr.dep[CcInfo],
             bitcode = depset(ctx.files.bitcode),
         ),
+        DefaultInfo(files = depset(ctx.files.bitcode)),
     ]
 
 bitcode_import = rule(

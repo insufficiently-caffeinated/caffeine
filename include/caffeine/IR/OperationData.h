@@ -83,4 +83,22 @@ private:
   llvm::Function* func_;
 };
 
+class EGraphNodeData : public OperationData {
+public:
+  EGraphNodeData(Type t, size_t id);
+
+  size_t id() const {
+    return id_;
+  }
+
+  static bool classof(const OperationData* op) {
+    return op->opcode() == Opcode::EGraphNode;
+  }
+
+  llvm::hash_code hash() const override;
+
+private:
+  size_t id_;
+};
+
 } // namespace caffeine

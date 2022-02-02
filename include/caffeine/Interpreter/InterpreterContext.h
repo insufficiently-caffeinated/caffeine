@@ -364,6 +364,11 @@ public:
    */
   void call_external_function(std::unique_ptr<ExternalStackFrame>&& frame);
 
+  /**
+   * Used for calling IR functions in the module
+   */
+  void call_function(llvm::Function* func, Span<LLVMValue> args);
+
 private:
   // Set the current context as dead and emit the appropriate notifications.
   void set_dead(ExecutionPolicy::ExitStatus status,

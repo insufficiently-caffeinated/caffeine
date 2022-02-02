@@ -15,23 +15,21 @@
 #include "caffeine/Support/SyncOStream.h"
 #include "caffeine/Support/Tracing.h"
 #include <atomic>
+#include <csignal>
 #include <cstdlib>
-#include <divine/Passes/CppLsda.h>
 #include <exception>
 #include <iostream>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/PassManager.h>
 #include <llvm/IRReader/IRReader.h>
-#include <llvm/Passes/PassBuilder.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/InitLLVM.h>
+#include <llvm/Support/SourceMgr.h>
 #include <llvm/Support/WithColor.h>
 #include <llvm/Support/raw_os_ostream.h>
 #include <memory>
-#include <signal.h>
 #include <string>
 #include <thread>
-#include <z3++.h>
 
 using namespace llvm;
 using namespace caffeine;
@@ -158,14 +156,6 @@ int main(int argc, char** argv) {
                        << "'\n";
     return 2;
   }
-
-  llvm::ModulePassManager mpm;
-  llvm::ModuleAnalysisManager mam;
-  mpm.addPass(divine::AddCppLSDA());
-
-  llvm::PassBuilder passBuilder;
-  passBuilder.registerModuleAnalyses(mam);
-  mpm.run(*module, mam);
 
   auto function = module->getFunction(entry.getValue());
   if (!function) {

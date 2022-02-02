@@ -3,6 +3,7 @@ cc_library(
     srcs = glob(["src/**/*.cpp"]),
     hdrs = glob(["include/**/*"]),
     strip_include_prefix = "/third_party/divine/include",
+    tags = ["manual"],
     visibility = ["//visibility:public"],
     deps = [
         "//third_party:fmt",

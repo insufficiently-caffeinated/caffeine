@@ -33,6 +33,8 @@ bool OperationData::operator==(const OperationData& op) const {
     return data->value() == llvm::cast<ConstantFloatData>(op).value();
   if (auto data = llvm::dyn_cast<FunctionObjectData>(this))
     return data->function() == llvm::cast<FunctionObjectData>(op).function();
+  if (auto data = llvm::dyn_cast<EGraphNodeData>(this))
+    return data->id() == llvm::cast<EGraphNodeData>(op).id();
 
 #if !defined(BOOST_NO_RTTI)
   // If this assertion triggers then you have added a new derived class for
@@ -56,6 +58,8 @@ std::unique_ptr<OperationData> OperationData::clone() const {
     return std::make_unique<ConstantFloatData>(data->value());
   if (auto data = llvm::dyn_cast<FunctionObjectData>(this))
     return std::make_unique<FunctionObjectData>(data->function());
+  if (auto data = llvm::dyn_cast<EGraphNodeData>(this))
+    return std::make_unique<EGraphNodeData>(data->type(), data->id());
 
 #if !defined(BOOST_NO_RTTI)
   // If this assertion triggers then you have added a new derived class for
@@ -94,6 +98,9 @@ FunctionObjectData::FunctionObjectData(llvm::Function* func)
     : OperationData(Opcode::FunctionObject, Type::from_llvm(func->getType())),
       func_(func) {}
 
+EGraphNodeData::EGraphNodeData(Type t, size_t id)
+    : OperationData(Opcode::EGraphNode, t), id_(id) {}
+
 llvm::hash_code hash_value(const OperationData& op) {
   return llvm::hash_combine(op.hash(), op.type(), op.opcode());
 }
@@ -114,6 +121,10 @@ llvm::hash_code ConstantFloatData::hash() const {
 
 llvm::hash_code FunctionObjectData::hash() const {
   return hash_value(func_);
+}
+
+llvm::hash_code EGraphNodeData::hash() const {
+  return hash_value(id_);
 }
 
 } // namespace caffeine

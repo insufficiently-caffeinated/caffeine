@@ -136,10 +136,6 @@ public:
   static OpRef Create(const Symbol& symbol, const OpRef& size);
   static OpRef Create(Symbol&& symbol, const OpRef& size);
 
-  OpRef with_new_operands(llvm::ArrayRef<OpRef> operands) const override;
-
-  const OpRef& operand_at(size_t idx) const override;
-
   static bool classof(const Operation* op);
 };
 
@@ -447,6 +443,22 @@ public:
   llvm::Function* function() const;
 
   static OpRef Create(llvm::Function* function);
+
+  static bool classof(const Operation* op);
+};
+
+/**
+ * Represents a node within the E-Graph. The rest of the expression can then be
+ * retrieved by querying the E-Graph.
+ */
+class EGraphNode final : public Operation {
+private:
+  EGraphNode(Type t, size_t id);
+
+public:
+  size_t id() const;
+
+  static OpRef Create(Type t, size_t id);
 
   static bool classof(const Operation* op);
 };

@@ -17,6 +17,7 @@ jobs:
     strategy:
       matrix:
         mode: [opt, fastbuild]
+        compiler: [gcc, clang]
       fail-fast: false
 
     steps:
@@ -26,7 +27,6 @@ jobs:
         id: bazel_info
         shell: bash
         run: |
-          echo last_downstream_green > .bazelversion 
           echo "::set-output name=output_base::$(bazel info output_base)"
 
       - uses: actions/cache@v2
@@ -40,6 +40,7 @@ jobs:
         run: |
           cat >> local.bazelrc <<- EOF
           build --compilation_mode=${{ matrix.mode }}
+          build --config=${{ matrix.compiler }}
           EOF
 
       - name: Avoid uploading if we don't have credentials
@@ -58,7 +59,21 @@ jobs:
       - name: Run all tests
         run: |
           bazelisk test --config=ci -- //... \
-            $(bazelisk query 'kind(".*_test", //...) intersect attr("tags", "manual", //...)')
+            $(bazelisk query 'kind(".*_test", //...) intersect attr("tags", "manual", //...)') \
+            -//:format
+
+      # This is needed to work around a bug in actions/upload-artifact.
+      # Specficially, it fails if the directory that contains the artifact
+      # is actually a symlink to a directory (as happens with bazel-bin).
+      - name: Move tarball to a different directory
+        run: |
+          mv bazel-bin/caffeine-${{ matrix.mode }}.tar.gz caffeine.tar.gz
+
+      - name: Upload release tarball
+        uses: actions/upload-artifact@v2
+        with:
+          name: caffeine-${{ matrix.compiler }}-${{ matrix.mode }}
+          path: caffeine.tar.gz
 
   format:
     runs-on: ubuntu-latest
@@ -74,7 +89,6 @@ jobs:
         id: bazel_info
         shell: bash
         run: |
-          echo last_downstream_green > .bazelversion 
           echo "::set-output name=output_base::$(bazel info output_base)"
 
       - name: Configure bazel flags
@@ -99,4 +113,14 @@ jobs:
 
       - name: Check formatting of all targets
         run: bazelisk run --config=ci -- //:check-format
+
+  all-test-pass:
+    name: Verify all tests pass
+    needs: [build, format]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: No-op
+        run: |
+          echo "All checks passed!"
 
