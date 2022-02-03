@@ -1,7 +1,7 @@
 #include "caffeine/Solver/ModelEval.h"
 #include "caffeine/Solver/Solver.h"
 #include "caffeine/Support/Assert.h"
-#include "include/caffeine/IR/EGraph.h"
+#include "caffeine/IR/EGraph.h"
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
