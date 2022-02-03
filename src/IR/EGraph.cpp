@@ -206,11 +206,8 @@ void EGraph::rebuild() {
       eclass = find(eclass);
       repair(eclass);
 
-      if (cache_visited.insert(eclass).second) {
-        for (const auto& [node, parent] : classes.at(eclass).parents) {
-          if (!cache_visited.contains(parent))
-            cache_stack.push_back(parent);
-        }
+      for (const auto& [node, parent] : classes.at(eclass).parents) {
+        cache_stack.push_back(parent);
       }
     }
 
@@ -226,7 +223,7 @@ void EGraph::rebuild() {
     EClass* eclass = get(id);
     // If this class doesn't have a cached expression then it's parent classes
     // couldn't either. The one exception is if we've already cleared it here
-    // but in that case if would show up in cache_visited.
+    // but in that case it would show up in cache_visited.
     if (std::exchange(eclass->cache.expr, nullptr)) {
       for (const auto& [node, parent] : eclass->parents) {
         if (!cache_visited.contains(parent))
