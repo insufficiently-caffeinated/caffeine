@@ -29,7 +29,6 @@ public:
   std::unordered_map<llvm::GlobalValue*, LLVMValue> globals;
   MemHeapMgr heaps;
   GraphAssertionList assertions;
-  // AssertionList assertions;
   immer::map<std::string, OpRef> constants;
 
   llvm::Module* mod;
