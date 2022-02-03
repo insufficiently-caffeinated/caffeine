@@ -137,6 +137,8 @@ AssertionList Context::extract_assertions() {
   egraph.constprop();
   egraph.rebuild();
 
+  assertions.canonicalize(egraph);
+
   EGraphExtractor extractor{&egraph};
   AssertionList list;
 
