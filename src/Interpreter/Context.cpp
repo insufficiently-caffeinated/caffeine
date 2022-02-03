@@ -114,20 +114,18 @@ void Context::add(const Assertion& assertion) {
 
 SolverResult Context::check(std::shared_ptr<Solver> solver,
                             const Assertion& extra) {
-  auto extra_id = egraph.add(*extra.value());
   AssertionList assertions = extract_assertions();
 
-  auto result = solver->check(assertions, egraph.extract(extra_id));
+  auto result = solver->check(assertions, egraph.extract(*extra.value()));
   if (result == SolverResult::SAT)
     assertions.mark_sat();
   return result;
 }
 SolverResult Context::resolve(std::shared_ptr<Solver> solver,
                               const Assertion& extra) {
-  auto extra_id = egraph.add(*extra.value());
   AssertionList assertions = extract_assertions();
 
-  auto result = solver->resolve(assertions, egraph.extract(extra_id));
+  auto result = solver->resolve(assertions, egraph.extract(*extra.value()));
   if (result == SolverResult::SAT)
     assertions.mark_sat();
   return result;
