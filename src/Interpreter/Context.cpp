@@ -1,11 +1,11 @@
 #include "caffeine/Interpreter/Context.h"
+#include "caffeine/IR/EGraph.h"
 #include "caffeine/IR/Operation.h"
 #include "caffeine/IR/Type.h"
 #include "caffeine/Interpreter/ExprEval.h"
 #include "caffeine/Interpreter/StackFrame.h"
+#include "caffeine/Model/AssertionList.h"
 #include "caffeine/Support/LLVMFmt.h"
-#include "include/caffeine/IR/EGraph.h"
-#include "include/caffeine/Model/AssertionList.h"
 
 #include <boost/algorithm/string.hpp>
 #include <fmt/format.h>
