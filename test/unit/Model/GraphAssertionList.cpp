@@ -49,4 +49,3 @@ TEST_F(GraphAssertionListTests, canonicalize_decompose) {
 
   ASSERT_EQ(list.size(), 2);
 }
-
