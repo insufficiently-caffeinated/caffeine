@@ -275,7 +275,6 @@ void EGraph::unparent(size_t eclass_id) {
 
 size_t EGraph::create_eclass(const ENode& node) {
   size_t id = union_find.make_set();
-
   classes.emplace(id, EClass{{node}});
   hashcons.emplace(node, id);
   worklist.push_back(id);
