@@ -28,9 +28,6 @@ Type ENode::type() const {
 Operation::Opcode ENode::opcode() const {
   return data ? data->opcode() : Operation::Invalid;
 }
-Operation::Opcode ENode::opcode() const {
-  return data ? data->opcode() : Operation::Invalid;
-}
 
 llvm::hash_code hash_value(const ENode& node) {
   using llvm::hash_value;
