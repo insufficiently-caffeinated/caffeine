@@ -94,7 +94,7 @@ private:
     if (!folded)
       return std::nullopt;
 
-    return egraph->add_dirty(ENode{std::make_shared<ConstantIntData>(*folded)});
+    return egraph->add(ENode{std::make_shared<ConstantIntData>(*folded)});
   }
   template <typename F>
   std::optional<size_t> foldBoolOp(const ENode& node, F&& func) {
@@ -102,7 +102,7 @@ private:
     if (!folded)
       return std::nullopt;
 
-    return egraph->add_dirty(ENode{
+    return egraph->add(ENode{
         std::make_shared<ConstantIntData>(llvm::APInt(1, (uint64_t)*folded))});
   }
 
