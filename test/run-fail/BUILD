@@ -4,7 +4,7 @@ load("//bazel:bitcode.bzl", "caffeine_bitcode_test")
 generate_tests(
     exclude = [
         "collatz.c",
-        "murmurhash3.c"
+        "murmurhash3.c",
     ],
     should_fail = True,
 )
@@ -12,13 +12,15 @@ generate_tests(
 caffeine_bitcode_test(
     name = "collatz",
     srcs = ["collatz.c"],
+    copts = ["-O3"],
     should_fail = True,
-    tags = ["manual"]
+    tags = ["manual"],
 )
 
 caffeine_bitcode_test(
     name = "murmurhash3",
     srcs = ["murmurhash3.c"],
+    copts = ["-O3"],
     should_fail = True,
-    tags = ["manual"]
+    tags = ["manual"],
 )
