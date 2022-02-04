@@ -1,5 +1,5 @@
 const int global = 0;
 
-void test() {
+void test() __attribute__((optnone)) {
   *(int*)&global = 3;
 }
