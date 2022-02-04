@@ -28,6 +28,7 @@ def generate_tests(
             srcs = [file],
             skip = file in skip_files,
             should_fail = should_fail,
+            copts = ["-O3"],
         )
 
 # buildifier: disable=function-docstring
@@ -55,4 +56,5 @@ def generate_regression_tests():
             name = _strip_ext(file),
             srcs = [file],
             should_fail = should_fail,
+            copts = ["-O3"],
         )
