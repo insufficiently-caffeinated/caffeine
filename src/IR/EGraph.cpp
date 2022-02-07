@@ -28,6 +28,15 @@ Type ENode::type() const {
 Operation::Opcode ENode::opcode() const {
   return data ? data->opcode() : Operation::Invalid;
 }
+bool ENode::is_constant() const {
+  switch (opcode()) {
+  case Operation::ConstantInt:
+  case Operation::ConstantFloat:
+    return true;
+  default:
+    return false;
+  }
+}
 
 llvm::hash_code hash_value(const ENode& node) {
   using llvm::hash_value;
@@ -93,14 +102,7 @@ bool EClass::is_constant() const {
 
   if (nodes.empty())
     return false;
-
-  switch (nodes.front().data->opcode()) {
-  case Opcode::ConstantInt:
-  case Opcode::ConstantFloat:
-    return true;
-  default:
-    return false;
-  }
+  return nodes.front().is_constant();
 }
 
 Type EClass::type() const {

@@ -27,6 +27,7 @@ public:
 
   Type type() const;
   Operation::Opcode opcode() const;
+  bool is_constant() const;
 
   friend llvm::hash_code hash_value(const ENode& node);
 };
