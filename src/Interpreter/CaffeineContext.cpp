@@ -170,6 +170,7 @@ Builder& Builder::with_default_intrinsics() {
                  Intrinsics::smul_with_overflow());
   with_intrinsic(llvm::Intrinsic::memset, Intrinsics::memset());
   with_intrinsic(llvm::Intrinsic::bswap, Intrinsics::bswap());
+  with_intrinsic(llvm::Intrinsic::eh_typeid_for, Intrinsics::typeidFor());
 
   return *this;
 }
