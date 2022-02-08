@@ -2,9 +2,11 @@
 #define CAFFEINE_INTERP_CONTEXT_H
 
 #include "caffeine/IR/Assertion.h"
+#include "caffeine/IR/EGraph.h"
 #include "caffeine/Interpreter/StackFrame.h"
 #include "caffeine/Memory/MemHeap.h"
 #include "caffeine/Model/AssertionList.h"
+#include "caffeine/Model/GraphAssertionList.h"
 #include "caffeine/Solver/Solver.h"
 #include <immer/map.hpp>
 #include <iosfwd>
@@ -26,11 +28,13 @@ public:
   std::vector<StackFrame> stack;
   std::unordered_map<llvm::GlobalValue*, LLVMValue> globals;
   MemHeapMgr heaps;
-  AssertionList assertions;
+  GraphAssertionList assertions;
   immer::map<std::string, OpRef> constants;
 
   llvm::Module* mod;
   bool global_ctors_ran = false;
+
+  EGraph egraph;
 
 private:
   uint64_t constant_num_ = 0;
@@ -93,7 +97,6 @@ public:
    * Add a new assertion to this context.
    */
   void add(const Assertion& assertion);
-  void add(Assertion&& assertion);
 
   /**
    * Validate whether the set of assertions combined with the extra assertion is
@@ -129,6 +132,9 @@ public:
    * module to print the source files corresponding to the stack frames.
    */
   void print_backtrace(std::ostream& OS) const;
+
+  AssertionList extract_assertions();
+  AssertionList extract_assertions() const;
 
 private:
   void init_args(llvm::ArrayRef<OpRef> args);

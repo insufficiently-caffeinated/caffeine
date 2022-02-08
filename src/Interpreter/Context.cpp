@@ -1,8 +1,10 @@
 #include "caffeine/Interpreter/Context.h"
+#include "caffeine/IR/EGraph.h"
 #include "caffeine/IR/Operation.h"
 #include "caffeine/IR/Type.h"
 #include "caffeine/Interpreter/ExprEval.h"
 #include "caffeine/Interpreter/StackFrame.h"
+#include "caffeine/Model/AssertionList.h"
 #include "caffeine/Support/LLVMFmt.h"
 
 #include <boost/algorithm/string.hpp>
@@ -107,25 +109,58 @@ bool Context::empty() const {
 }
 
 void Context::add(const Assertion& assertion) {
-  assertions.insert(assertion);
-}
-void Context::add(Assertion&& assertion) {
-  assertions.insert(std::move(assertion));
+  assertions.insert(egraph.add(*assertion.value()));
 }
 
 SolverResult Context::check(std::shared_ptr<Solver> solver,
                             const Assertion& extra) {
-  auto result = solver->check(assertions, extra);
+  AssertionList assertions = extract_assertions();
+
+  auto result = solver->check(assertions, egraph.extract(*extra.value()));
   if (result == SolverResult::SAT)
     assertions.mark_sat();
   return result;
 }
 SolverResult Context::resolve(std::shared_ptr<Solver> solver,
                               const Assertion& extra) {
-  auto result = solver->resolve(assertions, extra);
+  AssertionList assertions = extract_assertions();
+
+  auto result = solver->resolve(assertions, egraph.extract(*extra.value()));
   if (result == SolverResult::SAT)
     assertions.mark_sat();
   return result;
+}
+
+AssertionList Context::extract_assertions() {
+  egraph.constprop();
+  egraph.rebuild();
+
+  assertions.canonicalize(egraph);
+
+  EGraphExtractor extractor{&egraph};
+  AssertionList list;
+
+  for (size_t assertion : assertions.proven())
+    list.insert(extractor.extract(assertion));
+  list.mark_sat();
+
+  for (size_t assertion : assertions.unproven())
+    list.insert(extractor.extract(assertion));
+
+  return list;
+}
+AssertionList Context::extract_assertions() const {
+  EGraphExtractor extractor{&egraph};
+  AssertionList list;
+
+  for (size_t assertion : assertions.proven())
+    list.insert(extractor.extract(assertion));
+  list.mark_sat();
+
+  for (size_t assertion : assertions.unproven())
+    list.insert(extractor.extract(assertion));
+
+  return list;
 }
 
 uint64_t Context::next_constant() {

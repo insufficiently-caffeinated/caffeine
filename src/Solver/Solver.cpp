@@ -36,8 +36,9 @@ const Model* SolverResult::model() const {
   return model_.get();
 }
 
-Value SolverResult::evaluate(const Operation& expr) const {
-  return model()->evaluate(expr);
+Value SolverResult::evaluate(const Operation& expr,
+                             const EGraph& egraph) const {
+  return model()->evaluate(expr, egraph);
 }
 Value SolverResult::evaluate(const LLVMScalar& expr, Context& ctx) const {
   return model()->evaluate(expr, ctx);
@@ -46,12 +47,12 @@ Value SolverResult::evaluate(const LLVMValue& expr, Context& ctx) const {
   return model()->evaluate(expr, ctx);
 }
 
-Value Model::evaluate(const Operation& expr) const {
-  return ModelEvaluator(this).visit(expr);
+Value Model::evaluate(const Operation& expr, const EGraph& egraph) const {
+  return ModelEvaluator(this, &egraph).visit(expr);
 }
 
 Value Model::evaluate(const LLVMScalar& scalar, Context& ctx) const {
-  ModelEvaluator evaluator{this};
+  ModelEvaluator evaluator{this, &ctx.egraph};
 
   if (scalar.is_pointer())
     return evaluator.visit(*scalar.pointer().value(ctx.heaps));
@@ -59,7 +60,7 @@ Value Model::evaluate(const LLVMScalar& scalar, Context& ctx) const {
 }
 
 Value Model::evaluate(const LLVMValue& expr, Context& ctx) const {
-  ModelEvaluator evaluator{this};
+  ModelEvaluator evaluator{this, &ctx.egraph};
 
   if (expr.is_scalar())
     return evaluate(expr.scalar(), ctx);

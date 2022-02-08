@@ -157,6 +157,11 @@ OpRef Operation::CreateRaw(const std::shared_ptr<OperationData>& data,
 }
 OpRef Operation::CreateRaw(const std::shared_ptr<OperationData>& data,
                            llvm::SmallVector<OpRef, 4>&& operands) {
+  if (BinaryOpFirst <= data->opcode() && data->opcode() <= BinaryOpLast)
+    CAFFEINE_ASSERT(
+        operands[0]->type() == operands[1]->type(),
+        fmt::format("{} != {}", operands[0]->type(), operands[1]->type()));
+
   return constant_fold(Operation(data, std::move(operands)));
 }
 
@@ -203,6 +208,11 @@ std::ostream& operator<<(std::ostream& os, const Operation& op) {
 
   if (const auto* function = llvm::dyn_cast<FunctionObject>(&op)) {
     return print_cons(os, "function", function->function()->getName().str());
+  }
+
+  if (const auto* egraph = llvm::dyn_cast<EGraphNode>(&op)) {
+    return print_cons(os, fmt::format("egraphnode.{}", egraph->type()),
+                      fmt::format("{}", egraph->id()));
   }
 
   std::string name(op.opcode_name());

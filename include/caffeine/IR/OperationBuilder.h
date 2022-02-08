@@ -134,6 +134,8 @@ private:
   OpRef to_expr(const LLVMScalar& scalar);
   OpRef to_expr(const Pointer& ptr);
 
+  OpRef to_egraph(const OpRef& op);
+
   Context* ctx;
 };
 

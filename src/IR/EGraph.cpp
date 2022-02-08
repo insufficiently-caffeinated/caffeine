@@ -1,4 +1,5 @@
 #include "caffeine/IR/EGraph.h"
+#include "caffeine/Config.h"
 #include "caffeine/IR/Operation.h"
 #include <cstdint>
 #include <limits>
@@ -57,6 +58,7 @@ llvm::hash_code hash_value(const EClass& eclass) {
 
 void EClass::merge(EClass& eclass) {
   CAFFEINE_ASSERT(this != &eclass);
+  CAFFEINE_ASSERT(type() == eclass.type());
 
   bool constant = eclass.is_constant();
   size_t start = nodes.size();
@@ -152,7 +154,7 @@ ENode EGraph::canonicalize(const ENode& node) {
   return ENode{node.data, std::move(operands)};
 }
 
-size_t EGraph::add_dirty(const ENode& node) {
+size_t EGraph::add(const ENode& node) {
   auto canonical = canonicalize(node);
   auto it = hashcons.find(canonical);
   if (it != hashcons.end())
@@ -160,12 +162,14 @@ size_t EGraph::add_dirty(const ENode& node) {
 
   auto eclass_id = create_eclass(canonical);
   for (size_t child : canonical.operands) {
-    classes.at(child).parents.emplace(canonical, child);
+    classes.at(child).parents.emplace(canonical, eclass_id);
   }
+
+  hashcons.emplace(canonical, eclass_id);
 
   return eclass_id;
 }
-size_t EGraph::add_dirty(const Operation& op) {
+size_t EGraph::add(const Operation& op) {
   if (auto node = llvm::dyn_cast<EGraphNode>(&op))
     return node->id();
 
@@ -173,19 +177,10 @@ size_t EGraph::add_dirty(const Operation& op) {
   operands.reserve(op.num_operands());
 
   for (const auto& operand : op.operands()) {
-    operands.push_back(add_dirty(operand));
+    operands.push_back(add(operand));
   }
 
-  return add_dirty(ENode{op.data(), std::move(operands)});
-}
-
-size_t EGraph::add(const ENode& node) {
-  rebuild();
-  return add_dirty(node);
-}
-size_t EGraph::add(const Operation& op) {
-  rebuild();
-  return add_dirty(op);
+  return add(ENode{op.data(), std::move(operands)});
 }
 
 void EGraph::rebuild() {
@@ -202,13 +197,12 @@ void EGraph::rebuild() {
       eclass = find(eclass);
       repair(eclass);
 
-      if (cache_visited.insert(eclass).second) {
-        for (const auto& [node, parent] : classes.at(eclass).parents) {
-          if (!cache_visited.contains(parent))
-            cache_stack.push_back(parent);
-        }
+      for (const auto& [node, parent] : classes.at(eclass).parents) {
+        cache_stack.push_back(parent);
       }
     }
+
+    todo.clear();
   }
 
   // Clear out cached values for expressions that have been modified.
@@ -220,7 +214,7 @@ void EGraph::rebuild() {
     EClass* eclass = get(id);
     // If this class doesn't have a cached expression then it's parent classes
     // couldn't either. The one exception is if we've already cleared it here
-    // but in that case if would show up in cache_visited.
+    // but in that case it would show up in cache_visited.
     if (std::exchange(eclass->cache.expr, nullptr)) {
       for (const auto& [node, parent] : eclass->parents) {
         if (!cache_visited.contains(parent))

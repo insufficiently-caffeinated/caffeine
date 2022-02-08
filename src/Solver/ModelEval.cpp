@@ -1,4 +1,5 @@
 #include "caffeine/Solver/ModelEval.h"
+#include "caffeine/IR/EGraph.h"
 #include "caffeine/Solver/Solver.h"
 #include "caffeine/Support/Assert.h"
 #include <fmt/format.h>
@@ -6,8 +7,10 @@
 
 namespace caffeine {
 
-ModelEvaluator::ModelEvaluator(const Model* model) : model(model) {
+ModelEvaluator::ModelEvaluator(const Model* model, const EGraph* egraph)
+    : model(model), egraph(egraph) {
   CAFFEINE_ASSERT(model);
+  CAFFEINE_ASSERT(egraph);
 }
 
 Value ModelEvaluator::visitOperation(const Operation& op) {
@@ -146,8 +149,8 @@ Value ModelEvaluator::visitSIToFp(const UnaryOp&) {
   CAFFEINE_UNIMPLEMENTED();
 }
 
-Value ModelEvaluator::visitEGraphNode(const EGraphNode&) {
-  CAFFEINE_ABORT("Attempted to evaluate EGraphNode");
+Value ModelEvaluator::visitEGraphNode(const EGraphNode& op) {
+  return visit(*egraph->extract(op));
 }
 
 Value ModelEvaluator::visitAlloc(const AllocOp& op) {

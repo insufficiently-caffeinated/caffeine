@@ -13,7 +13,9 @@ class EGraph;
  * A list of assertions which are stored as e-class IDs.
  *
  * This class follows much the same design as AssertionList except that the
- * assertions are stored as e-class IDs. This also means that
+ * assertions are stored as e-class IDs. This also means that we are unable to
+ * automatically reduce assertions with top level and nodes to multiple
+ * assertions except during canonicalization.
  */
 class GraphAssertionList {
 private:

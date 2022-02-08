@@ -35,7 +35,7 @@ bool GuidedExecutionPolicy::should_queue_path(const Context& ctx) {
     return true;
   }
 
-  AssertionList combined = ctx.assertions;
+  AssertionList combined = ctx.extract_assertions();
   combined.insert(create_size_assertion(*symbolic_buffer, data.size()));
 
   const llvm::DataLayout& layout = ctx.mod->getDataLayout();
@@ -53,7 +53,7 @@ bool GuidedExecutionPolicy::should_queue_path(const Context& ctx) {
 
 void GuidedExecutionPolicy::on_path_complete(const Context& ctx, ExitStatus,
                                              const Assertion& assertion) {
-  auto assertions = ctx.assertions;
+  auto assertions = ctx.extract_assertions();
   auto result = mutator->solver->resolve(assertions, assertion);
   notify_context_finished();
 

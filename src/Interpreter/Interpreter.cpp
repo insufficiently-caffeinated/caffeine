@@ -460,9 +460,11 @@ std::optional<std::string> readSymbolicName(std::shared_ptr<Solver> solver,
     return std::nullopt;
   }
 
-  uint64_t offset = result.evaluate(*ptr.offset()).apint().getLimitedValue();
-  uint64_t size = result.evaluate(*alloc.size()).apint().getLimitedValue();
-  auto array = std::move(result.evaluate(*alloc.data()).array());
+  uint64_t offset =
+      result.evaluate(*ptr.offset(), ctx->egraph).apint().getLimitedValue();
+  uint64_t size =
+      result.evaluate(*alloc.size(), ctx->egraph).apint().getLimitedValue();
+  auto array = std::move(result.evaluate(*alloc.data(), ctx->egraph).array());
 
   std::string name;
   name.reserve(size - offset);
