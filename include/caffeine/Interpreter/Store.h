@@ -8,6 +8,8 @@
 #include <mutex>
 #include <optional>
 #include <queue>
+#include <random>
+#include <vector>
 
 namespace caffeine {
 
@@ -94,6 +96,29 @@ public:
 
   void add_context(Context&& ctx) override final;
   void add_context_multi(Span<Context> ctxs) override final;
+};
+
+class RandomizedContextStore : public ExecutionContextStore {
+public:
+  explicit RandomizedContextStore(size_t num_readers);
+
+  std::optional<Context> next_context() override;
+
+  void add_context(Context&& ctx) override;
+
+private:
+  Context removeRandom();
+
+  std::mutex mutex;
+  std::condition_variable condvar;
+
+  size_t num_readers;
+  std::random_device dev;
+
+  size_t blocked = 0;
+
+  bool done = false;
+  std::vector<Context> contexts;
 };
 
 } // namespace caffeine
