@@ -106,8 +106,6 @@ public:
 
   void add_context(Context&& ctx) override;
 
-  void shutdown();
-
 private:
   Context removeRandom();
 
