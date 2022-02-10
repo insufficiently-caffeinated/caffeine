@@ -56,7 +56,7 @@ public:
   bool operator==(const EClass& eclass) const;
   bool operator!=(const EClass& eclass) const;
 
-  void merge(EClass& eclass);
+  void merge(EClass&& eclass);
 
   bool is_constant() const;
   Type type() const;
@@ -103,6 +103,8 @@ public:
 
   size_t add(const ENode& node);
   size_t add(const Operation& op);
+
+  size_t add_merge(size_t eclass, const ENode& node);
 
   void rebuild();
 
