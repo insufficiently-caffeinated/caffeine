@@ -3,6 +3,9 @@
 #include "caffeine/IR/OperationBase.h"
 #include "caffeine/Support/Hashing.h"
 #include <functional>
+#include <optional>
+#include <unordered_map>
+#include <vector>
 
 namespace caffeine {
 
