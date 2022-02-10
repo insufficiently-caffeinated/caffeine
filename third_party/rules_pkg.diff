@@ -1,0 +1,14 @@
+--- pkg/private/install.py.tpl	2022-02-10 20:26:20.912417171 +0000
++++ pkg/private/install.py.tpl	2022-02-10 20:26:29.712525952 +0000
+@@ -77,7 +77,10 @@
+ 
+     def _do_file_copy(self, src, dest, mode, user, group):
+         logging.info("COPY %s <- %s", dest, src)
+-        shutil.copyfile(src, dest)
++        try:
++            shutil.copyfile(src, dest)
++        except shutil.SameFileError:
++            pass
+ 
+     def _do_mkdir(self, dirname, mode, user, group):
+         logging.info("MKDIR %s %s", mode, dirname)

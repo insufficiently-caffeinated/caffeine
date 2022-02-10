@@ -1,7 +1,6 @@
 workspace(name = "caffeine")
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-
 load("@caffeine//third_party/llvm:setup.bzl", "setup_llvm")
 load("@caffeine//third_party/capnp:setup.bzl", "setup_capnproto")
 load("@caffeine//third_party/boost:setup.bzl", "setup_boost")
@@ -29,18 +28,25 @@ http_archive(
 # We use the latest head for rules_pkg since v0.5.1 doesn't have the macros
 # we would like to use.
 RULES_PKG_COMMIT = "5a976bc14fb28fca13abf23d488a88501221c55e"
+
 http_archive(
     name = "rules_pkg",
-    url = "https://github.com/bazelbuild/rules_pkg/archive/{}.zip".format(RULES_PKG_COMMIT),
-    strip_prefix = "rules_pkg-{}".format(RULES_PKG_COMMIT),
+    patches = ["//third_party:rules_pkg.diff"],
     sha256 = "da090edc17c54befb67c5630e1d1781a1319800df3d8c620e78c78742bfea0c9",
+    strip_prefix = "rules_pkg-{}".format(RULES_PKG_COMMIT),
+    url = "https://github.com/bazelbuild/rules_pkg/archive/{}.zip".format(RULES_PKG_COMMIT),
 )
 
 setup_capnproto(name = "capnproto")
+
 setup_llvm(name = "llvm-raw")
+
 setup_boost(name = "com_github_nelhage_rules_boost")
+
 setup_musl(name = "musl")
+
 setup_libcxx(name = "libcxx")
+
 setup_afl(name = "afl")
 
 # Some dependencies require multiple setup stages. These are added here.
@@ -76,9 +82,11 @@ llvm_disable_optional_support_deps()
 # https://github.com/hedronvision/bazel-compile-commands-extractor
 http_archive(
     name = "hedron_compile_commands",
-    url = "https://github.com/hedronvision/bazel-compile-commands-extractor/archive/084957eaa1bf6e2bd031f50b1f5d04c89273103a.tar.gz",
     sha256 = "39e7607efcaca5abb34314744491492d82d30fcb6f6592d88ae15772da588b42",
     strip_prefix = "bazel-compile-commands-extractor-084957eaa1bf6e2bd031f50b1f5d04c89273103a",
+    url = "https://github.com/hedronvision/bazel-compile-commands-extractor/archive/084957eaa1bf6e2bd031f50b1f5d04c89273103a.tar.gz",
 )
+
 load("@hedron_compile_commands//:workspace_setup.bzl", "hedron_compile_commands_setup")
+
 hedron_compile_commands_setup()
