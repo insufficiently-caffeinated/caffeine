@@ -10,11 +10,11 @@ if(_IMPORT_PREFIX STREQUAL "/")
   set(_IMPORT_PREFIX "")
 endif()
 
-add_executable(caffeine::caffeine-bin               IMPORTED)
+add_executable(caffeine::caffeine-bin               IMPORTED GLOBAL)
 
-add_library(caffeine::caffeine            SHARED    IMPORTED)
-add_library(caffeine::caffeine-opt-plugin SHARED    IMPORTED)
-add_library(caffeine::interface           INTERFACE IMPORTED)
+add_library(caffeine::caffeine            SHARED    IMPORTED GLOBAL)
+add_library(caffeine::caffeine-opt-plugin SHARED    IMPORTED GLOBAL)
+add_library(caffeine::interface           INTERFACE IMPORTED GLOBAL)
 
 set_target_properties(caffeine::caffeine-bin PROPERTIES
   IMPORTED_LOCATION "${_IMPORT_PREFIX}/bin/caffeine"
