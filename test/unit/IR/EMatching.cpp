@@ -58,7 +58,7 @@ TEST_F(EMatchingTests, associativity) {
 }
 
 TEST_F(EMatchingTests, sub_elimination) {
-  r::sub_elimination(builder, Operation::Add);
+  r::sub_elimination(builder);
   auto matcher = builder.build();
 
   auto a = add(Constant::Create(Type::int_ty(32), "a"));
@@ -78,6 +78,9 @@ TEST_F(EMatchingTests, sub_elimination) {
 }
 
 TEST_F(EMatchingTests, commutativity) {
+  r::commutativity(builder, Operation::Add);
+  auto matcher = builder.build();
+
   auto a = add(Constant::Create(Type::int_ty(32), "a"));
   auto b = add(Constant::Create(Type::int_ty(32), "b"));
   auto c = add(BinaryOp::CreateAdd(a, b));
@@ -92,4 +95,23 @@ TEST_F(EMatchingTests, commutativity) {
 
   ASSERT_EQ(egraph.find(cid), egraph.find(did));
   ASSERT_NE(egraph.find(aid), egraph.find(bid));
+}
+
+TEST_F(EMatchingTests, associativity) {
+  r::associativity(builder, Operation::Add);
+  auto matcher = builder.build();
+
+  auto a = add(Constant::Create(Type::int_ty(32), "a"));
+  auto b = add(Constant::Create(Type::int_ty(32), "b"));
+  auto c = add(Constant::Create(Type::int_ty(32), "c"));
+
+  auto t1 = add(BinaryOp::CreateAdd(a, BinaryOp::CreateAdd(b, c)));
+  auto t2 = add(BinaryOp::CreateAdd(BinaryOp::CreateAdd(a, b), c));
+  
+  size_t id1 = egraph.add(*t1);
+  size_t id2 = egraph.add(*t2);
+
+  egraph.simplify(matcher);
+
+  ASSERT_EQ(egraph.find(id1), egraph.find(id2));
 }
