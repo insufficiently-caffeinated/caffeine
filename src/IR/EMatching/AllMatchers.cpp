@@ -2,6 +2,11 @@
 #include "caffeine/IR/EMatching/Filters.h"
 #include "caffeine/IR/OperationData.h"
 
+namespace caffeine::ematching::reductions {
+
+
+} // namespace caffeine::ematching::reductions
+
 namespace caffeine::ematching {
 
 void EMatcherBuilder::add_defaults() {
@@ -18,25 +23,7 @@ void EMatcherBuilder::add_defaults() {
         });
   }
 
-  { // commutativity: (#binop ?x ?y) -> (#binop ?y ?x)
-    Operation::Opcode valid[] = {
-        Operation::Add,    Operation::Mul,    Operation::And,
-        Operation::Or,     Operation::Xor,    Operation::FAdd,
-        Operation::FSub,   Operation::FMul,   Operation::ICmpEq,
-        Operation::ICmpNe, Operation::FCmpEq, Operation::FCmpNe};
-
-    for (auto opcode : valid) {
-      size_t clause = add_clause(opcode);
-      add_matcher(clause, [](const MatchData&, EGraph& egraph, size_t eclass_id,
-                             size_t node_id) {
-        const EClass* eclass = egraph.get(eclass_id);
-        const ENode& node = eclass->nodes[node_id];
-
-        egraph.add_merge(
-            eclass_id, ENode{node.data, {node.operands[1], node.operands[0]}});
-      });
-    }
-  }
+  reductions::commutativity(*this);
 
   { // associativity: (#op ?x (#op ?y ?z)) -> (#op (#op ?x ?y) ?z)
     Operation::Opcode valid[] = {
