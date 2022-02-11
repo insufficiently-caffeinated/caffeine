@@ -213,6 +213,9 @@ namespace ematching {
 
     // (xor ?x ?x) -> (ixx 0)
     void xor_elimination(EMatcherBuilder& builder);
+
+    // (and ?x 0) -> (ixx 0)
+    void and_zero_elimination(EMatcherBuilder& builder);
   } // namespace reductions
 
   class EMatcher {

@@ -75,6 +75,23 @@ void or_elimination(EMatcherBuilder& builder) {
   eliminate_to_operand(builder, Operation::Or);
 }
 
+void and_zero_elimination(EMatcherBuilder& builder) {
+  size_t lhs = builder.add_any();
+  size_t rhs = builder.add_clause(
+      Operation::ConstantInt, {},
+      std::make_unique<ConstantOperandFilter>(llvm::APInt::getNullValue(1)));
+
+  size_t clause = builder.add_clause(Operation::And, {lhs, rhs});
+
+  builder.add_matcher(clause, [](const MatchData&, EGraph& egraph,
+                                 size_t eclass_id, size_t enode_id) {
+    const EClass* eclass = egraph.get(eclass_id);
+    const ENode& enode = eclass->nodes.at(enode_id);
+
+    egraph.merge(eclass_id, enode.operands[1]);
+  });
+}
+
 } // namespace caffeine::ematching::reductions
 
 namespace caffeine::ematching {
@@ -87,6 +104,8 @@ void EMatcherBuilder::add_defaults() {
   reductions::and_elimination(*this);
   reductions::xor_elimination(*this);
   reductions::or_elimination(*this);
+
+  reductions::and_zero_elimination(*this);
 }
 
 } // namespace caffeine::ematching

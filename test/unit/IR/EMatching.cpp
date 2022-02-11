@@ -133,3 +133,21 @@ TEST_F(EMatchingTests, and_elimination) {
 
   ASSERT_EQ(egraph.find(cid), egraph.find(aid));
 }
+
+TEST_F(EMatchingTests, and_zero_elimination) {
+  r::and_zero_elimination(builder);
+  auto matcher = builder.build();
+
+  auto a = add(Constant::Create(Type::int_ty(32), "a"));
+  auto b = add(ConstantInt::CreateZero(32));
+  auto c = add(BinaryOp::CreateAnd(a, b));
+
+  size_t aid = egraph.add(*a);
+  size_t bid = egraph.add(*b);
+  size_t cid = egraph.add(*c);
+
+  egraph.simplify(matcher);
+
+  ASSERT_EQ(egraph.find(cid), egraph.find(bid));
+  ASSERT_NE(egraph.find(aid), egraph.find(cid));
+}
