@@ -145,9 +145,6 @@ size_t EGraph::merge(size_t id1, size_t id2) {
   classes.at(new_id).merge(std::move(classes.at(id2)));
   classes.erase(id2);
 
-  if (classes.at(new_id).is_constant())
-    unparent(new_id);
-
   worklist.push_back(new_id);
   return new_id;
 }
@@ -196,9 +193,6 @@ size_t EGraph::add_merge(size_t eclass_id, const ENode& node) {
 
   EClass& eclass = classes.at(eclass_id);
   eclass.merge(EClass{{node}});
-
-  if (eclass.is_constant())
-    unparent(eclass_id);
 
   worklist.push_back(eclass_id);
   return eclass_id;
@@ -249,6 +243,9 @@ void EGraph::rebuild() {
 
 void EGraph::repair(size_t eclass_id) {
   EClass& eclass = classes.at(eclass_id);
+
+  if (eclass.is_constant())
+    unparent(eclass_id);
 
   // Note: merge actually properly handles updating the cache so we don't clear
   //       the cache here. However, that doesn't apply for parents of this
