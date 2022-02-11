@@ -50,6 +50,13 @@ void EClassCache::clear() {
   *this = EClassCache();
 }
 
+EClass::EClass(std::vector<ENode>&& nodes) : nodes(nodes) {
+  auto it = std::find_if(nodes.begin(), nodes.end(),
+                         [](const ENode& node) { return node.is_constant(); });
+  if (it != nodes.end())
+    constant_index = it - nodes.begin();
+}
+
 bool EClass::operator==(const EClass& eclass) const {
   return nodes == eclass.nodes && parents == eclass.parents;
 }
@@ -69,7 +76,6 @@ void EClass::merge(EClass&& eclass) {
   CAFFEINE_ASSERT(this != &eclass);
   CAFFEINE_ASSERT(type() == eclass.type());
 
-  bool constant = eclass.is_constant();
   size_t start = nodes.size();
 
   nodes.insert(nodes.end(), std::move_iterator(eclass.nodes.begin()),
@@ -78,9 +84,11 @@ void EClass::merge(EClass&& eclass) {
     parents.emplace(it.key(), it.value());
   }
 
-  if (constant) {
-    std::swap(nodes.front(), nodes[start]);
-    cache = std::move(eclass.cache);
+  if (eclass.constant_index.has_value()) {
+    if (!constant_index.has_value()) {
+      constant_index = start + *eclass.constant_index;
+      cache = std::move(eclass.cache);
+    }
   } else if (cache.cost.has_value() && eclass.cache.cost.has_value()) {
     auto [cost1, index1] = *cache.cost;
     auto [cost2, index2] = *cache.cost;
@@ -98,9 +106,7 @@ void EClass::merge(EClass&& eclass) {
 }
 
 bool EClass::is_constant() const {
-  if (nodes.empty())
-    return false;
-  return nodes.front().is_constant();
+  return constant_index.has_value();
 }
 
 Type EClass::type() const {
@@ -285,7 +291,10 @@ void EGraph::unparent(size_t eclass_id) {
       get(operand)->parents.erase(node);
     }
   }
+
+  std::swap(eclass.nodes.front(), eclass.nodes[*eclass.constant_index]);
   eclass.nodes.resize(1);
+  eclass.constant_index = 0;
 }
 
 size_t EGraph::create_eclass(const ENode& node) {

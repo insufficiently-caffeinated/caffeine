@@ -50,8 +50,12 @@ public:
 class EClass {
 public:
   std::vector<ENode> nodes;
-  tsl::hopscotch_map<ENode, size_t> parents = {};
-  EClassCache cache{};
+  tsl::hopscotch_map<ENode, size_t> parents;
+  EClassCache cache;
+  // Gives the index of the constant value
+  std::optional<size_t> constant_index = std::nullopt;
+
+  EClass(std::vector<ENode>&& nodes);
 
   bool operator==(const EClass& eclass) const;
   bool operator!=(const EClass& eclass) const;
@@ -60,6 +64,9 @@ public:
 
   bool is_constant() const;
   Type type() const;
+
+  ENode* constant();
+  const ENode* constant() const;
 
   friend llvm::hash_code hash_value(const EClass& node);
 };
