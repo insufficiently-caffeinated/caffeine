@@ -18,6 +18,25 @@ public:
   }
 };
 
+TEST_F(EMatchingTests, concurrent_changes) {
+  r::and_zero_elimination(builder);
+  r::commutativity(builder, Operation::And);
+  auto matcher = builder.build();
+
+  auto a = add(Constant::Create(Type::int_ty(32), "a"));
+  auto b = add(ConstantInt::CreateZero(32));
+  auto c = add(BinaryOp::CreateAnd(a, b));
+
+  auto aid = egraph.add(*a);
+  auto bid = egraph.add(*b);
+  auto cid = egraph.add(*c);
+
+  egraph.simplify(matcher);
+
+  ASSERT_EQ(egraph.find(cid), egraph.find(bid));
+  ASSERT_NE(egraph.find(aid), egraph.find(bid));
+}
+
 TEST_F(EMatchingTests, commutativity) {
   r::commutativity(builder, Operation::Add);
   auto matcher = builder.build();
