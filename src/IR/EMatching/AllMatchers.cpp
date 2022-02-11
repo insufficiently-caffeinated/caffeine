@@ -36,26 +36,27 @@ void associativity(EMatcherBuilder& builder, Operation::Opcode opcode) {
   });
 }
 
+void sub_elimination(EMatcherBuilder& builder) {
+  size_t clause = builder.add_clause(Operation::Sub, {},
+                             std::make_unique<IdenticalOperandsFilter>());
+  builder.add_matcher(clause, [](const MatchData&, EGraph& egraph, size_t eclass,
+                         size_t) {
+    egraph.add_merge(
+        eclass,
+        ENode{std::make_unique<ConstantIntData>(
+            llvm::APInt::getNullValue(egraph.get(eclass)->type().bitwidth()))});
+  });
+}
+
 } // namespace caffeine::ematching::reductions
 
 namespace caffeine::ematching {
 
 void EMatcherBuilder::add_defaults() {
-
-  { // (sub ?x ?x) -> (ixx 0)
-    size_t clause = add_clause(Operation::Sub, {},
-                               std::make_unique<IdenticalOperandsFilter>());
-    add_matcher(
-        clause, [](const MatchData&, EGraph& egraph, size_t eclass, size_t) {
-          egraph.add_merge(
-              eclass,
-              ENode{std::make_unique<ConstantIntData>(llvm::APInt::getNullValue(
-                  egraph.get(eclass)->type().bitwidth()))});
-        });
-  }
-
   reductions::commutativity(*this);
   reductions::associativity(*this);
+
+  reductions::sub_elimination(*this);
 }
 
 } // namespace caffeine::ematching

@@ -201,6 +201,9 @@ namespace ematching {
     // (#op ?x (#op ?y ?z)) -> (#op (#op ?x ?y) ?z)
     void associativity(EMatcherBuilder& builder);
     void associativity(EMatcherBuilder& builder, Operation::Opcode opcode);
+
+    // (sub ?x ?x) -> (ixx 0)
+    void sub_elimination(EMatcherBuilder& builder);
   } // namespace reductions
 
   class EMatcher {
