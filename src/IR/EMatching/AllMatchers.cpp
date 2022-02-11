@@ -18,7 +18,7 @@ void EMatcherBuilder::add_defaults() {
         });
   }
 
-  { // (#binop ?x ?y) -> (#binop ?y ?x) for commutative operations
+  { // commutativity: (#binop ?x ?y) -> (#binop ?y ?x)
     Operation::Opcode valid[] = {
         Operation::Add,    Operation::Mul,    Operation::And,
         Operation::Or,     Operation::Xor,    Operation::FAdd,
@@ -34,6 +34,35 @@ void EMatcherBuilder::add_defaults() {
 
         egraph.add_merge(
             eclass_id, ENode{node.data, {node.operands[1], node.operands[0]}});
+      });
+    }
+  }
+
+  { // associativity: (#op ?x (#op ?y ?z)) -> (#op (#op ?x ?y) ?z)
+    Operation::Opcode valid[] = {
+        Operation::Add, Operation::Mul,  Operation::And,  Operation::Or,
+        Operation::Xor, Operation::FAdd, Operation::FSub, Operation::FMul};
+
+    for (auto opcode : valid) {
+      size_t any = add_clause(Operation::Invalid);
+      size_t subclause = add_clause(opcode);
+      size_t parent = add_clause(opcode, {any, subclause});
+
+      add_matcher(parent, [=](const MatchData& data, EGraph& egraph,
+                              size_t eclass_id, size_t node_id) {
+        const EClass* parent = egraph.get(eclass_id);
+        const ENode& pnode = parent->nodes[node_id];
+
+        const EClass* child = egraph.get(pnode.operands[1]);
+        for (size_t cnode_id : data.matches(subclause, pnode.operands[1])) {
+          const ENode& cnode = child->nodes[cnode_id];
+
+          size_t child = egraph.add(
+              ENode{cnode.data, {pnode.operands[0], cnode.operands[0]}});
+
+          egraph.add_merge(eclass_id,
+                           ENode{pnode.data, {child, cnode.operands[1]}});
+        }
       });
     }
   }
