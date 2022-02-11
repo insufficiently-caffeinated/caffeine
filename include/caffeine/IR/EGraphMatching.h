@@ -204,6 +204,15 @@ namespace ematching {
 
     // (sub ?x ?x) -> (ixx 0)
     void sub_elimination(EMatcherBuilder& builder);
+
+    // (and ?x ?x) -> ?x
+    void and_elimination(EMatcherBuilder& builder);
+
+    // (or ?x ?x) -> ?x
+    void or_elimination(EMatcherBuilder& builder);
+
+    // (xor ?x ?x) -> (ixx 0)
+    void xor_elimination(EMatcherBuilder& builder);
   } // namespace reductions
 
   class EMatcher {
