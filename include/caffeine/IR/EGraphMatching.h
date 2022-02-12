@@ -91,6 +91,24 @@ namespace ematching {
     EMatcherUpdater update;
   };
 
+  class MatchData {
+  public:
+    using ClauseData = std::unordered_map<size_t, std::vector<size_t>>;
+    using MapData = std::vector<ClauseData>;
+
+  private:
+    // Map of subclause -> eclass -> node index
+    MapData matches_;
+
+  public:
+    MatchData(MapData&& matches) : matches_(std::move(matches)) {}
+
+    bool contains_match(size_t subclause, size_t eclass) const;
+
+    const ClauseData& matches(size_t subclause) const;
+    llvm::ArrayRef<size_t> matches(size_t subclause, size_t eclass) const;
+  };
+
 } // namespace ematching
 
 } // namespace caffeine

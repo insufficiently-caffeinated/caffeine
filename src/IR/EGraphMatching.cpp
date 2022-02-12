@@ -50,4 +50,23 @@ llvm::hash_code hash_value(const SubClause& subclause) {
                             filter_hash);
 }
 
+bool MatchData::contains_match(size_t subclause, size_t eclass) const {
+  if (subclause >= matches_.size())
+    return false;
+
+  return matches_[subclause].find(eclass) != matches_[subclause].end();
+}
+
+const MatchData::ClauseData& MatchData::matches(size_t subclause) const {
+  return matches_.at(subclause);
+}
+llvm::ArrayRef<size_t> MatchData::matches(size_t subclause,
+                                          size_t eclass) const {
+  const auto& cdata = matches_.at(subclause);
+  auto it = cdata.find(eclass);
+  if (it == cdata.end())
+    return {};
+  return it->second;
+}
+
 } // namespace caffeine::ematching
