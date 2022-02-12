@@ -37,6 +37,30 @@ TEST_F(EMatchingTests, concurrent_changes) {
   ASSERT_NE(egraph.find(aid), egraph.find(bid));
 }
 
+// In this case, both
+//   (1) (and ?x ?x) -> ?x, and
+//   (2) (add ?x ?y) -> (add ?y ?x)
+// apply to different e-classes. However (1) gets applied first and merges the
+// e-class that (2) matched against into the one that (1) did, meaning that the
+// e-class and e-node references are no longer valid.
+TEST_F(EMatchingTests, sequential_changes) {
+  r::and_elimination(builder);
+  r::commutativity(builder, Operation::Add);
+  auto matcher = builder.build();
+
+  auto a = add(Constant::Create(Type::int_ty(32), "a"));
+  auto b = add(Constant::Create(Type::int_ty(32), "b"));
+  auto c = add(BinaryOp::CreateAdd(a, b));
+  auto d = add(BinaryOp::CreateAnd(c, c));
+
+  auto cid = egraph.add(*c);
+  auto did = egraph.add(*d);
+
+  egraph.simplify(matcher);
+
+  ASSERT_EQ(egraph.find(cid), egraph.find(did));
+}
+
 TEST_F(EMatchingTests, commutativity) {
   r::commutativity(builder, Operation::Add);
   auto matcher = builder.build();
