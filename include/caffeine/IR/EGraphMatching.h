@@ -1,16 +1,19 @@
 #pragma once
 
 #include "caffeine/IR/OperationBase.h"
+#include "caffeine/Support/Hashing.h"
 #include <functional>
 
 namespace caffeine {
 
 namespace ematching {
+  class EMatcher;
   class GraphAccessor;
-}
+} // namespace ematching
 
 class ENode;
 class EGraph;
+class EGraphMatcher;
 
 using EMatcherFilter = std::function<bool(
     const ematching::GraphAccessor& egraph, const ENode& node)>;
@@ -107,6 +110,47 @@ namespace ematching {
 
     const ClauseData& matches(size_t subclause) const;
     llvm::ArrayRef<size_t> matches(size_t subclause, size_t eclass) const;
+  };
+
+  class EMatcherBuilder {
+  public:
+    EMatcherBuilder() = default;
+
+    // Add a clause that matches any expression.
+    size_t add_any() {
+      return add_clause(Operation::Invalid);
+    }
+
+    size_t add_clause(Operation::Opcode opcode,
+                      llvm::ArrayRef<size_t> submatchers = {},
+                      std::unique_ptr<SubClauseFilter>&& filters = nullptr);
+
+    void add_matcher(size_t clause, EMatcherUpdater update,
+                     std::optional<EMatcherFilter> filter = std::nullopt);
+
+    void add_defaults();
+
+    EMatcher build();
+
+  private:
+    size_t subclause_id = 0;
+
+    std::vector<Clause> clauses;
+    std::unordered_map<SubClause, size_t, LLVMHasher> subclauses;
+  };
+
+  class EMatcher {
+  public:
+    static EMatcherBuilder builder();
+
+  private:
+    std::vector<Clause> clauses;
+    std::vector<SubClause> subclauses;
+
+    std::unordered_map<Operation::Opcode, std::vector<size_t>> subindex;
+
+    friend class EMatcherBuilder;
+    friend class caffeine::EGraphMatcher;
   };
 
 } // namespace ematching
