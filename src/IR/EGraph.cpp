@@ -198,6 +198,13 @@ size_t EGraph::add_merge(size_t eclass_id, const ENode& node) {
   return eclass_id;
 }
 
+std::optional<size_t> EGraph::classof(const ENode& node) const {
+  auto it = hashcons.find(node);
+  if (it == hashcons.end())
+    return std::nullopt;
+  return find(it->second);
+}
+
 void EGraph::rebuild() {
   using std::swap;
 
