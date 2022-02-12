@@ -1,3 +1,4 @@
+#include "caffeine/IR/EGraph.h"
 #include "caffeine/IR/EGraphMatching.h"
 #include "caffeine/IR/EMatching/Filters.h"
 #include "caffeine/IR/OperationData.h"
