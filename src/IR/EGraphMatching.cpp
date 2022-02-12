@@ -107,6 +107,14 @@ bool GraphAccessor::contains_match(size_t subclause, size_t eclass) const {
   return data->contains_match(subclause, eclass);
 }
 
+const MatchData::ClauseData& GraphAccessor::matches(size_t subclause) const {
+  return data->matches(subclause);
+}
+llvm::ArrayRef<size_t> GraphAccessor::matches(size_t subclause,
+                                              size_t eclass) const {
+  return data->matches(subclause, eclass);
+}
+
 size_t EMatcherBuilder::add_clause(Operation::Opcode opcode,
                                    llvm::ArrayRef<size_t> submatchers,
                                    std::unique_ptr<SubClauseFilter>&& filter) {
