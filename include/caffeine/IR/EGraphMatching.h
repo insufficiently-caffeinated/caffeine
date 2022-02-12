@@ -121,7 +121,7 @@ namespace ematching {
   // applied.
   class GraphAccessor {
   public:
-    GraphAccessor(EGraph* egraph, MatchData* data);
+    GraphAccessor(EGraph* egraph, const MatchData* data);
 
     // Create a new e-class with the given e-node.
     size_t add(const ENode& enode);
@@ -154,7 +154,7 @@ namespace ematching {
 
   private:
     EGraph* egraph;
-    MatchData* data;
+    const MatchData* data;
 
     std::vector<std::pair<size_t, size_t>> merges;
 

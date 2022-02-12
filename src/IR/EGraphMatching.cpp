@@ -69,7 +69,7 @@ llvm::ArrayRef<size_t> MatchData::matches(size_t subclause,
   return it->second;
 }
 
-GraphAccessor::GraphAccessor(EGraph* egraph, MatchData* data)
+GraphAccessor::GraphAccessor(EGraph* egraph, const MatchData* data)
     : egraph(egraph), data(data) {}
 
 void GraphAccessor::persist() {
