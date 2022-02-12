@@ -15,6 +15,10 @@ class SolverBuilder;
 class FailureLogger;
 class CoverageTracker;
 
+namespace ematching {
+  class EMatcher;
+}
+
 /**
  * @brief Options controlling various behaviours of the caffeine interpreter.
  *
@@ -61,6 +65,7 @@ private:
   std::unique_ptr<SolverBuilder> builder_;
   std::unique_ptr<FailureLogger> logger_;
   std::unique_ptr<CoverageTracker> cov_;
+  std::unique_ptr<ematching::EMatcher> matcher_;
   CaffeineOptions options_;
   std::shared_ptr<TypeidDb> typeid_db_;
 
@@ -73,6 +78,7 @@ public:
   FailureLogger* logger() const;
   CoverageTracker* coverage() const;
   const CaffeineOptions& options() const;
+  const ematching::EMatcher& matcher() const;
 
   std::shared_ptr<Solver> build_solver() const;
 
