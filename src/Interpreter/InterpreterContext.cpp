@@ -235,10 +235,14 @@ void InterpreterContext::add_assertion(Assertion&& assertion) {
 }
 
 SolverResult InterpreterContext::check(const Assertion& extra) {
+  context().egraph.simplify(caffeine().matcher());
+
   return context().check(solver_, extra);
 }
 
 SolverResult InterpreterContext::resolve(const Assertion& extra) {
+  context().egraph.simplify(caffeine().matcher());
+
   return context().resolve(solver_, extra);
 }
 
