@@ -1,8 +1,21 @@
 #pragma once
 
-#include "caffeine/IR/EGraph.h"
+#include "caffeine/IR/OperationBase.h"
+#include <functional>
 
 namespace caffeine {
+
+namespace ematching {
+  class GraphAccessor;
+}
+
+class ENode;
+class EGraph;
+
+using EMatcherFilter = std::function<bool(
+    const ematching::GraphAccessor& egraph, const ENode& node)>;
+using EMatcherUpdater = std::function<void(ematching::GraphAccessor& egraph,
+                                           size_t eclass, size_t node_index)>;
 
 namespace ematching {
 
@@ -39,6 +52,43 @@ namespace ematching {
 
   private:
     const void* type;
+  };
+
+  class SubClause {
+  public:
+    // Note: If this is Operation::Invalid then this will match against any
+    //       possible opcode.
+    Operation::Opcode opcode;
+
+    // If this is empty, then it will match against any set of operands,
+    // otherwise it needs to be the same number of operands and all sub-matchers
+    // must match.
+    llvm::SmallVector<size_t> submatchers;
+
+    // A filter that only checks the current enode and doesn't look at larger
+    // graph structure.
+    //
+    // This is a function pointer so that subclauses can be deduplicated.
+    std::unique_ptr<SubClauseFilter> filter = nullptr;
+
+  public:
+    bool is_potential_match(const ENode& node) const;
+
+    bool operator==(const SubClause& clause) const;
+    bool operator!=(const SubClause& clause) const;
+
+    friend llvm::hash_code hash_value(const SubClause& subclause);
+  };
+
+  class Clause {
+  public:
+    // ID for the top-level submatcher for this clause.
+    size_t matcher;
+
+    // Function to perform non-structural filtering.
+    std::optional<EMatcherFilter> filter;
+    // Function to actually do the updates once this clause is matched.
+    EMatcherUpdater update;
   };
 
 } // namespace ematching
