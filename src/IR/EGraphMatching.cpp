@@ -69,6 +69,47 @@ llvm::ArrayRef<size_t> MatchData::matches(size_t subclause,
   return it->second;
 }
 
+GraphAccessor::GraphAccessor(EGraph* egraph, MatchData* data)
+    : egraph(egraph), data(data) {}
+GraphAccessor::~GraphAccessor() {
+  persist();
+}
+
+void GraphAccessor::persist() {
+  for (auto [lhs, rhs] : merges)
+    egraph->merge(lhs, rhs);
+  merges.clear();
+}
+
+size_t GraphAccessor::add(const ENode& enode) {
+  return egraph->add(enode);
+}
+size_t GraphAccessor::add_merge(size_t eclass, const ENode& node) {
+  auto canonical = egraph->canonicalize(node);
+  if (auto existing = egraph->classof(node))
+    return merge(eclass, *existing);
+
+  // Safe since this will only add the node to the existing class. It won't
+  // result in any existing indices used in matches becoming invalid.
+  return egraph->add_merge(eclass, node);
+}
+
+size_t GraphAccessor::merge(size_t id1, size_t id2) {
+  if (id1 == id2)
+    return id1;
+
+  merges.push_back({id1, id2});
+  return id1;
+}
+
+const EClass* GraphAccessor::get(size_t eclass) const {
+  return egraph->get(eclass);
+}
+
+bool GraphAccessor::contains_match(size_t subclause, size_t eclass) const {
+  return data->contains_match(subclause, eclass);
+}
+
 size_t EMatcherBuilder::add_clause(Operation::Opcode opcode,
                                    llvm::ArrayRef<size_t> submatchers,
                                    std::unique_ptr<SubClauseFilter>&& filter) {
