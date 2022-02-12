@@ -112,11 +112,16 @@ namespace ematching {
     const ClauseData& matches(size_t subclause) const;
     llvm::ArrayRef<size_t> matches(size_t subclause, size_t eclass) const;
   };
-  
+
+  // Wrapper around EGraph and MatchData that only allows changes that will not
+  // invalidate the indices of elements within the e-graph.
+  //
+  // Basically, it allows you to inspect the e-graph and add new e-classes to
+  // it, but will delay merges until all current rewrite rules have been
+  // applied.
   class GraphAccessor {
   public:
     GraphAccessor(EGraph* egraph, MatchData* data);
-    ~GraphAccessor();
 
     // Create a new e-class with the given e-node.
     size_t add(const ENode& enode);
@@ -143,6 +148,8 @@ namespace ematching {
 
   private:
     // Actually write out the changes to the underlying e-graph.
+    //
+    // If this method is not called then no changes will be made to the e-graph.
     void persist();
 
   private:

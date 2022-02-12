@@ -71,9 +71,6 @@ llvm::ArrayRef<size_t> MatchData::matches(size_t subclause,
 
 GraphAccessor::GraphAccessor(EGraph* egraph, MatchData* data)
     : egraph(egraph), data(data) {}
-GraphAccessor::~GraphAccessor() {
-  persist();
-}
 
 void GraphAccessor::persist() {
   for (auto [lhs, rhs] : merges)
