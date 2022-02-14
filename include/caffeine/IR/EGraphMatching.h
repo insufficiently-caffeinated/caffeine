@@ -12,6 +12,7 @@ namespace ematching {
 } // namespace ematching
 
 class ENode;
+class EClass;
 class EGraph;
 class EGraphMatcher;
 
@@ -110,6 +111,54 @@ namespace ematching {
 
     const ClauseData& matches(size_t subclause) const;
     llvm::ArrayRef<size_t> matches(size_t subclause, size_t eclass) const;
+  };
+
+  // Wrapper around EGraph and MatchData that only allows changes that will not
+  // invalidate the indices of elements within the e-graph.
+  //
+  // Basically, it allows you to inspect the e-graph and add new e-classes to
+  // it, but will delay merges until all current rewrite rules have been
+  // applied.
+  class GraphAccessor {
+  public:
+    GraphAccessor(EGraph* egraph, const MatchData* data);
+
+    // Create a new e-class with the given e-node.
+    size_t add(const ENode& enode);
+    size_t add_merge(size_t eclass, const ENode& enode);
+
+    // Merge two e-classes together.
+    //
+    // The actual act of merging is delayed until all e-graph updates have gone
+    // through.
+    size_t merge(size_t id1, size_t id2);
+
+    const EClass* get(size_t eclass) const;
+
+    bool contains_match(size_t subclause, size_t eclass) const;
+
+    const MatchData::ClauseData& matches(size_t subclause) const;
+    llvm::ArrayRef<size_t> matches(size_t subclause, size_t eclass) const;
+
+    GraphAccessor(const GraphAccessor&) = delete;
+    GraphAccessor(GraphAccessor&&) = delete;
+
+    GraphAccessor& operator=(const GraphAccessor&) = delete;
+    GraphAccessor& operator=(GraphAccessor&&) = delete;
+
+  private:
+    // Actually write out the changes to the underlying e-graph.
+    //
+    // If this method is not called then no changes will be made to the e-graph.
+    void persist();
+
+  private:
+    EGraph* egraph;
+    const MatchData* data;
+
+    std::vector<std::pair<size_t, size_t>> merges;
+
+    friend class caffeine::EGraphMatcher;
   };
 
   class EMatcherBuilder {

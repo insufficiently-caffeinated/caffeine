@@ -113,6 +113,12 @@ public:
 
   size_t add_merge(size_t eclass, const ENode& node);
 
+  // Checks whether the e-node is contained within the graph, and, if so,
+  // returns the corresponding e-class.
+  //
+  // The passed-in enode must be in canonical form.
+  std::optional<size_t> classof(const ENode& node) const;
+
   void rebuild();
 
   // Extract an optimal representation for the given expression. This will try
