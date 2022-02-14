@@ -10,6 +10,10 @@ namespace caffeine {
 class ENode;
 class EClass;
 class Operation;
+
+namespace ematching {
+  class EMatcher;
+}
 } // namespace caffeine
 
 CAFFEINE_DECL_LLVM_HASHER(caffeine::ENode);
@@ -140,6 +144,13 @@ public:
   OpRef extract(const Operation& op);
   OpRef extract(const Operation& op) const;
 
+  // Simplify the e-graph using all the rewrite rules within matcher.
+  //
+  // The implementation of the e-graph assumes that it keep being called
+  // repeatedly with the same EMatcher instance. Calling it with different
+  // EMatcher instances will likely result in some rewrites being missed.
+  void simplify(const ematching::EMatcher& matcher);
+
   void constprop();
 
 private:
@@ -158,6 +169,7 @@ private:
   tsl::hopscotch_set<size_t> updated;
   std::vector<size_t> worklist;
 
+  friend class EGraphMatcher;
   friend class EGraphExtractor;
   friend class EGraphConstantPropagator;
 };
