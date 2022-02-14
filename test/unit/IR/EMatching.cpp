@@ -30,6 +30,7 @@ public:
       {                                                                        \
         alarm(secs);                                                           \
         stmt;                                                                  \
+        exit(0);                                                               \
       },                                                                       \
       ::testing::ExitedWithCode(0), "")
 
