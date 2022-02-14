@@ -146,6 +146,7 @@ size_t EGraph::merge(size_t id1, size_t id2) {
   classes.erase(id2);
 
   worklist.push_back(new_id);
+  updated.insert(new_id);
   return new_id;
 }
 
@@ -169,6 +170,7 @@ size_t EGraph::add(const ENode& node) {
   }
 
   hashcons.emplace(canonical, eclass_id);
+  updated.insert(eclass_id);
 
   return eclass_id;
 }
@@ -195,6 +197,7 @@ size_t EGraph::add_merge(size_t eclass_id, const ENode& node) {
   eclass.merge(EClass{{node}});
 
   worklist.push_back(eclass_id);
+  updated.insert(eclass_id);
   return eclass_id;
 }
 
@@ -234,17 +237,14 @@ void EGraph::rebuild() {
       continue;
 
     EClass* eclass = get(id);
-    // If this class doesn't have a cached expression then it's parent classes
-    // couldn't either. The one exception is if we've already cleared it here
-    // but in that case it would show up in cache_visited.
-    if (std::exchange(eclass->cache.expr, nullptr)) {
-      for (const auto& [node, parent] : eclass->parents) {
-        if (!cache_visited.contains(parent))
-          cache_stack.push_back(parent);
-      }
-    }
 
     eclass->cache.clear();
+    updated.insert(id);
+
+    for (const auto& [node, parent] : eclass->parents) {
+      if (!cache_visited.contains(parent))
+        cache_stack.push_back(parent);
+    }
   }
 }
 
