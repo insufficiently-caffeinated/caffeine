@@ -50,6 +50,13 @@ void EClassCache::clear() {
   *this = EClassCache();
 }
 
+EClass::EClass(std::vector<ENode>&& nodes) : nodes(nodes) {
+  auto it = std::find_if(nodes.begin(), nodes.end(),
+                         [](const ENode& node) { return node.is_constant(); });
+  if (it != nodes.end())
+    constant_index = it - nodes.begin();
+}
+
 bool EClass::operator==(const EClass& eclass) const {
   return nodes == eclass.nodes && parents == eclass.parents;
 }
@@ -69,7 +76,6 @@ void EClass::merge(EClass&& eclass) {
   CAFFEINE_ASSERT(this != &eclass);
   CAFFEINE_ASSERT(type() == eclass.type());
 
-  bool constant = eclass.is_constant();
   size_t start = nodes.size();
 
   nodes.insert(nodes.end(), std::move_iterator(eclass.nodes.begin()),
@@ -78,9 +84,11 @@ void EClass::merge(EClass&& eclass) {
     parents.emplace(it.key(), it.value());
   }
 
-  if (constant) {
-    std::swap(nodes.front(), nodes[start]);
-    cache = std::move(eclass.cache);
+  if (eclass.constant_index.has_value()) {
+    if (!constant_index.has_value()) {
+      constant_index = start + *eclass.constant_index;
+      cache = std::move(eclass.cache);
+    }
   } else if (cache.cost.has_value() && eclass.cache.cost.has_value()) {
     auto [cost1, index1] = *cache.cost;
     auto [cost2, index2] = *cache.cost;
@@ -98,9 +106,7 @@ void EClass::merge(EClass&& eclass) {
 }
 
 bool EClass::is_constant() const {
-  if (nodes.empty())
-    return false;
-  return nodes.front().is_constant();
+  return constant_index.has_value();
 }
 
 Type EClass::type() const {
@@ -138,9 +144,6 @@ size_t EGraph::merge(size_t id1, size_t id2) {
 
   classes.at(new_id).merge(std::move(classes.at(id2)));
   classes.erase(id2);
-
-  if (classes.at(new_id).is_constant())
-    unparent(new_id);
 
   worklist.push_back(new_id);
   return new_id;
@@ -190,9 +193,6 @@ size_t EGraph::add_merge(size_t eclass_id, const ENode& node) {
 
   EClass& eclass = classes.at(eclass_id);
   eclass.merge(EClass{{node}});
-
-  if (eclass.is_constant())
-    unparent(eclass_id);
 
   worklist.push_back(eclass_id);
   return eclass_id;
@@ -244,6 +244,9 @@ void EGraph::rebuild() {
 void EGraph::repair(size_t eclass_id) {
   EClass& eclass = classes.at(eclass_id);
 
+  if (eclass.is_constant())
+    unparent(eclass_id);
+
   // Note: merge actually properly handles updating the cache so we don't clear
   //       the cache here. However, that doesn't apply for parents of this
   //       eclass so rebuild will handle that by clearing the cache for all
@@ -285,7 +288,10 @@ void EGraph::unparent(size_t eclass_id) {
       get(operand)->parents.erase(node);
     }
   }
+
+  std::swap(eclass.nodes.front(), eclass.nodes[*eclass.constant_index]);
   eclass.nodes.resize(1);
+  eclass.constant_index = 0;
 }
 
 size_t EGraph::create_eclass(const ENode& node) {
