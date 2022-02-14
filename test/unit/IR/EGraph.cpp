@@ -1,5 +1,6 @@
 #include "caffeine/IR/EGraph.h"
 #include "caffeine/IR/Operation.h"
+#include "caffeine/IR/OperationData.h"
 #include <gtest/gtest.h>
 
 using namespace caffeine;
@@ -64,4 +65,21 @@ TEST_F(EGraphTests, get_non_canonical) {
   ASSERT_NE(egraph.get(a), nullptr);
   ASSERT_NE(egraph.get(b), nullptr);
   ASSERT_EQ(egraph.get(a), egraph.get(b));
+}
+
+TEST_F(EGraphTests, add_merge) {
+  size_t a = egraph.add(*Constant::Create(Type::int_ty(32), "a"));
+  size_t b = egraph.add(*Constant::Create(Type::int_ty(32), "b"));
+  size_t c = egraph.add_merge(a, ENode{std::make_shared<ConstantIntData>(
+                                     llvm::APInt::getNullValue(32))});
+  size_t d = egraph.merge(b, egraph.add(ENode{std::make_shared<ConstantIntData>(
+                                 llvm::APInt::getAllOnesValue(32))}));
+
+  ASSERT_EQ(egraph.find(a), egraph.find(c));
+  ASSERT_EQ(egraph.find(b), egraph.find(d));
+
+  size_t e = egraph.add_merge(d, ENode{std::make_shared<ConstantIntData>(
+                                     llvm::APInt::getNullValue(32))});
+  ASSERT_EQ(egraph.find(a), egraph.find(b));
+  ASSERT_EQ(egraph.find(e), egraph.find(b));
 }

@@ -28,6 +28,15 @@ Type ENode::type() const {
 Operation::Opcode ENode::opcode() const {
   return data ? data->opcode() : Operation::Invalid;
 }
+bool ENode::is_constant() const {
+  switch (opcode()) {
+  case Operation::ConstantInt:
+  case Operation::ConstantFloat:
+    return true;
+  default:
+    return false;
+  }
+}
 
 llvm::hash_code hash_value(const ENode& node) {
   using llvm::hash_value;
@@ -56,7 +65,7 @@ llvm::hash_code hash_value(const EClass& eclass) {
       llvm::hash_combine_range(eclass.parents.begin(), eclass.parents.end()));
 }
 
-void EClass::merge(EClass& eclass) {
+void EClass::merge(EClass&& eclass) {
   CAFFEINE_ASSERT(this != &eclass);
   CAFFEINE_ASSERT(type() == eclass.type());
 
@@ -89,18 +98,9 @@ void EClass::merge(EClass& eclass) {
 }
 
 bool EClass::is_constant() const {
-  using Opcode = Operation::Opcode;
-
   if (nodes.empty())
     return false;
-
-  switch (nodes.front().data->opcode()) {
-  case Opcode::ConstantInt:
-  case Opcode::ConstantFloat:
-    return true;
-  default:
-    return false;
-  }
+  return nodes.front().is_constant();
 }
 
 Type EClass::type() const {
@@ -136,7 +136,7 @@ size_t EGraph::merge(size_t id1, size_t id2) {
 
   auto new_id = union_find.do_union(id1, id2);
 
-  classes.at(new_id).merge(classes.at(id2));
+  classes.at(new_id).merge(std::move(classes.at(id2)));
   classes.erase(id2);
 
   if (classes.at(new_id).is_constant())
@@ -181,6 +181,21 @@ size_t EGraph::add(const Operation& op) {
   }
 
   return add(ENode{op.data(), std::move(operands)});
+}
+
+size_t EGraph::add_merge(size_t eclass_id, const ENode& node) {
+  auto [it, inserted] = hashcons.emplace(node, eclass_id);
+  if (!inserted)
+    return merge(eclass_id, it->second);
+
+  EClass& eclass = classes.at(eclass_id);
+  eclass.merge(EClass{{node}});
+
+  if (eclass.is_constant())
+    unparent(eclass_id);
+
+  worklist.push_back(eclass_id);
+  return eclass_id;
 }
 
 void EGraph::rebuild() {
