@@ -67,6 +67,10 @@ public:
       potentials[clause_id].erase(eclass_id);
     }
 
+    // Don't calculate any potential matches for e-classes which have expired.
+    if (egraph->find(eclass_id) != eclass_id)
+      return;
+
     for (size_t node_id = 0; node_id < eclass.nodes.size(); ++node_id) {
       const ENode& node = eclass.nodes[node_id];
 
@@ -158,6 +162,11 @@ public:
 
       const auto& matches = data.matches(clause.matcher);
       for (const auto& [eclass_id, enodes] : matches) {
+        if (egraph->find(eclass_id) != eclass_id)
+          continue;
+        if (!egraph->updated.contains(eclass_id))
+          continue;
+
         for (size_t enode_id : enodes) {
           const EClass* eclass = egraph->get(eclass_id);
           const ENode& enode = eclass->nodes[enode_id];
