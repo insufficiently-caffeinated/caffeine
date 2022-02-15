@@ -328,10 +328,7 @@ OpRef EGraph::extract(const Operation& op) const {
 }
 
 std::string EGraph::DebugString() const {
-  std::string result;
-
-  fmt::format_to(std::back_inserter(result), "EGraph {{\n");
-
+  std::string result = "EGraph {\n";
   for (const auto& [eclass_id, eclass] : classes) {
     fmt::format_to(std::back_inserter(result), "  eclass {}:\n", eclass_id);
 
