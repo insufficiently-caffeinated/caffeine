@@ -140,6 +140,8 @@ namespace ematching {
     const MatchData::ClauseData& matches(size_t subclause) const;
     llvm::ArrayRef<size_t> matches(size_t subclause, size_t eclass) const;
 
+    EGraph* graph();
+
     GraphAccessor(const GraphAccessor&) = delete;
     GraphAccessor(GraphAccessor&&) = delete;
 
