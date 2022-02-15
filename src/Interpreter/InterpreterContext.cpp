@@ -21,7 +21,7 @@ const Context& InterpreterContext::context() const {
   return entry_->context;
 }
 
-const CaffeineContext& InterpreterContext::caffeine() const {
+CaffeineContext& InterpreterContext::caffeine() const {
   return *shared_;
 }
 
@@ -395,10 +395,6 @@ void InterpreterContext::call_function(llvm::Function* func,
   }
 
   context().stack.push_back(std::move(frame_wrapper));
-}
-
-TypeidDb& InterpreterContext::typeid_db() {
-  return typeid_db_;
 }
 
 } // namespace caffeine

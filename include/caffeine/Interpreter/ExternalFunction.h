@@ -102,7 +102,7 @@ public:
   static std::unique_ptr<ExternalFunction> umul_with_overflow();
   static std::unique_ptr<ExternalFunction> memset();
   static std::unique_ptr<ExternalFunction> bswap();
-  static std::unique_ptr<ExternalFunction> typeidFor();
+  static std::unique_ptr<ExternalFunction> eh_typeid_for();
 
 private:
   Intrinsics() = delete;

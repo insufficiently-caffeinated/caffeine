@@ -3,7 +3,6 @@
 #include "caffeine/IR/OperationBuilder.h"
 #include "caffeine/Interpreter/Context.h"
 #include "caffeine/Interpreter/Policy.h"
-#include "caffeine/Interpreter/TypeidDb.h"
 #include "caffeine/Solver/Solver.h"
 #include "caffeine/Support/Casting.h"
 #include <functional>
@@ -38,7 +37,7 @@ public:
   /**
    * Get the CaffeineContext instance associated with this InterpreterContext.
    */
-  const CaffeineContext& caffeine() const;
+  CaffeineContext& caffeine() const;
 
   // Accessors for LLVM data. These use the LLVM syntax for consistency with
   // existing code.
@@ -370,11 +369,6 @@ public:
    */
   void call_function(llvm::Function* func, Span<LLVMValue> args);
 
-  /**
-   * Returns the Typeid DB for the InterpreterContext
-   */
-  TypeidDb& typeid_db();
-
 private:
   // Set the current context as dead and emit the appropriate notifications.
   void set_dead(ExecutionPolicy::ExitStatus status,
@@ -403,7 +397,6 @@ private:
   ContextQueueEntry* entry_;
   CaffeineContext* shared_;
   std::shared_ptr<Solver> solver_;
-  TypeidDb typeid_db_;
 };
 
 template <typename Frame, typename C, typename Func>
