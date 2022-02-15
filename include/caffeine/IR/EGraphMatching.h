@@ -192,6 +192,10 @@ namespace ematching {
     // (#binop ?x ?y) -> (#binop ?y ?x)
     void commutativity(EMatcherBuilder& builder);
     void commutativity(EMatcherBuilder& builder, Operation::Opcode opcode);
+
+    // (#op ?x (#op ?y ?z)) -> (#op (#op ?x ?y) ?z)
+    void associativity(EMatcherBuilder& builder);
+    void associativity(EMatcherBuilder& builder, Operation::Opcode opcode);
   } // namespace reductions
 
   class EMatcher {
