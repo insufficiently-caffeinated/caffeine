@@ -207,5 +207,6 @@ namespace ematching {
 using EMatchSubClause = ematching::SubClause;
 using EMatchClause = ematching::Clause;
 using EMatcherData = ematching::MatchData;
+using EMatcher = ematching::EMatcher;
 
 } // namespace caffeine
