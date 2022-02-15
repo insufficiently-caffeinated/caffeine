@@ -192,6 +192,9 @@ public:
   OpRef extract(size_t eclass);
   OpRef extract(const Operation& expr);
 
+  // Update the cached costs for the eclass and all those it depends upon.
+  void update_cost(size_t eclass_id);
+
 private:
   EClassCost eval_cost(size_t eclass_id);
   uint64_t eval_cost(const ENode& node);
