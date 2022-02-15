@@ -11,6 +11,7 @@ if(_IMPORT_PREFIX STREQUAL "/")
 endif()
 
 add_executable(caffeine::caffeine-bin               IMPORTED GLOBAL)
+add_executable(caffeine::caffeine-opt               IMPORTED GLOBAL)
 
 add_library(caffeine::caffeine            SHARED    IMPORTED GLOBAL)
 add_library(caffeine::caffeine-opt-plugin SHARED    IMPORTED GLOBAL)
@@ -19,12 +20,18 @@ add_library(caffeine::interface           INTERFACE IMPORTED GLOBAL)
 set_target_properties(caffeine::caffeine-bin PROPERTIES
   IMPORTED_LOCATION "${_IMPORT_PREFIX}/bin/caffeine"
 )
+set_target_properties(caffeine::caffeine-opt PROPERTIES
+  IMPORTED_LOCATION "${_IMPORT_PREFIX}/bin/caffeine-opt"
+)
+
 set_target_properties(caffeine::caffeine PROPERTIES
   INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/include/"
   IMPORTED_SONAME               "${_IMPORT_PREFIX}/lib/libcaffeine.so"
+  IMPORTED_LOCATION             "${_IMPORT_PREFIX}/lib/libcaffeine.so"
 )
 set_target_properties(caffeine::caffeine-opt-plugin PROPERTIES
   IMPORTED_SONAME              "${_IMPORT_PREFIX}/lib/libcaffeine-opt-plugin.so"
+  IMPORTED_LOCATION            "${_IMPORT_PREFIX}/lib/libcaffeine-opt-plugin.so"
 )
 set_target_properties(caffeine::interface PROPERTIES
   INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/include/caffeine/interface/"

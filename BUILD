@@ -5,7 +5,7 @@ load("//bazel:packaging.bzl", "caffeine_naming", "pkg_headers")
 load("//bazel:clang-format.bzl", "do_format", "format_test")
 load("@hedron_compile_commands//:refresh_compile_commands.bzl", "refresh_compile_commands")
 load("@rules_pkg//:pkg.bzl", "pkg_tar")
-load("@rules_pkg//:mappings.bzl", "pkg_filegroup", "pkg_files")
+load("@rules_pkg//:mappings.bzl", "pkg_attributes", "pkg_filegroup", "pkg_files")
 load("@rules_pkg//:install.bzl", "pkg_install")
 
 package(default_visibility = ["//visibility:public"])
@@ -132,7 +132,6 @@ caffeine_naming(
 )
 
 FILE_RENAMES = {
-    "//tools/caffeine": "bin/caffeine",
     "//:caffeine-shared": "lib/libcaffeine.so",
     "//tools/opt-plugin": "lib/libcaffeine-opt-plugin.so",
     "//libraries/builtins": "lib/caffeine/caffeine-builtins.bc",
@@ -141,8 +140,21 @@ FILE_RENAMES = {
     "//:cmake-config": "lib/cmake/caffeine/caffeine-config.cmake",
     "//interface:caffeine.h": "include/caffeine/interface/caffeine.h",
     "scripts/vcpkg/gllvm-toolchain.cmake": "share/vcpkg/gllvm-toolchain.cmake",
-    "scripts/vcpkg/x64-linux-gllvm.cmake": "share/vcpkg/x64-linux-gllvm",
+    "scripts/vcpkg/x64-linux-gllvm.cmake": "share/vcpkg/x64-linux-gllvm.cmake",
 }
+
+BINARY_RENAMES = {
+    "//tools/caffeine": "bin/caffeine",
+    "@llvm//llvm:opt": "bin/caffeine-opt",
+}
+
+pkg_files(
+    name = "caffeine-executables",
+    srcs = BINARY_RENAMES.keys(),
+    attributes = pkg_attributes(mode = "755"),
+    renames = BINARY_RENAMES,
+    visibility = ["//visibility:private"],
+)
 
 pkg_files(
     name = "caffeine-files",
@@ -154,6 +166,7 @@ pkg_files(
 pkg_filegroup(
     name = "caffeine-package",
     srcs = [
+        ":caffeine-executables",
         ":caffeine-files",
         ":caffeine-headers",
     ],
