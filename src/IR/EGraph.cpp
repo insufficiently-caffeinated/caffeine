@@ -277,14 +277,16 @@ void EGraph::repair(size_t eclass_id) {
 
     auto it = new_parents.find(canonical);
     if (it != new_parents.end()) {
-      merge(p_eclass, it->second);
-      it.value() = find(p_eclass);
+      it.value() = merge(p_eclass, it->second);
     } else {
       new_parents.insert({canonical, find(p_eclass)});
     }
   }
 
   eclass.parents = new_parents;
+
+  for (ENode& node : eclass.nodes)
+    node = canonicalize(node);
 }
 
 void EGraph::unparent(size_t eclass_id) {
