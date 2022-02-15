@@ -2,11 +2,12 @@
 #include "caffeine/Config.h"
 #include "caffeine/IR/Operation.h"
 #include "caffeine/IR/OperationData.h"
+#include "caffeine/Support/LLVMFmt.h"
 #include <cstdint>
 #include <fmt/format.h>
+#include <fmt/ostream.h>
 #include <limits>
 #include <llvm/IR/Function.h>
-#include <sstream>
 
 namespace caffeine {
 
