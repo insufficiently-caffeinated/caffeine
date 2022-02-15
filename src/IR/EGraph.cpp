@@ -127,13 +127,13 @@ size_t EGraph::find(size_t id) {
 EClass* EGraph::get(size_t id) {
   auto it = classes.find(find(id));
   if (it != classes.end())
-    return &it.value();
+    return &it->second;
   return nullptr;
 }
 const EClass* EGraph::get(size_t id) const {
   auto it = classes.find(find(id));
   if (it != classes.end())
-    return &it.value();
+    return &it->second;
   return nullptr;
 }
 

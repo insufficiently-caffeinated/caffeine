@@ -144,8 +144,7 @@ void EGraph::constprop() {
   std::queue<size_t> queue;
 
   for (auto it = classes.begin(); it != classes.end(); ++it) {
-    size_t id = it.key();
-    EClass& eclass = it.value();
+    auto& [id, eclass] = *it;
 
     if (eclass.is_constant()) {
       propagator.constants.insert(id);
