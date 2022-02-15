@@ -5,37 +5,6 @@
 
 namespace caffeine::ematching::reductions {
 
-void associativity(EMatcherBuilder& builder) {
-  Operation::Opcode valid[] = {Operation::Add,  Operation::Mul, Operation::And,
-                               Operation::Or,   Operation::Xor, Operation::FAdd,
-                               Operation::FSub, Operation::FMul};
-
-  for (auto opcode : valid)
-    associativity(builder, opcode);
-}
-void associativity(EMatcherBuilder& builder, Operation::Opcode opcode) {
-  size_t any = builder.add_clause(Operation::Invalid);
-  size_t subclause = builder.add_clause(opcode);
-  size_t parent = builder.add_clause(opcode, {any, subclause});
-
-  builder.add_matcher(parent, [=](GraphAccessor& egraph, size_t eclass_id,
-                                  size_t node_id) {
-    const EClass* parent = egraph.get(eclass_id);
-    const ENode& pnode = parent->nodes[node_id];
-
-    const EClass* child = egraph.get(pnode.operands[1]);
-    for (size_t cnode_id : egraph.matches(subclause, pnode.operands[1])) {
-      const ENode& cnode = child->nodes[cnode_id];
-
-      size_t child =
-          egraph.add(ENode{cnode.data, {pnode.operands[0], cnode.operands[0]}});
-
-      egraph.add_merge(eclass_id,
-                       ENode{pnode.data, {child, cnode.operands[1]}});
-    }
-  });
-}
-
 static void eliminate_to_zero(EMatcherBuilder& builder,
                               Operation::Opcode opcode) {
   size_t clause = builder.add_clause(
