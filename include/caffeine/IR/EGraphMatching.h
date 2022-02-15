@@ -188,6 +188,12 @@ namespace ematching {
     std::unordered_map<SubClause, size_t, LLVMHasher> subclauses;
   };
 
+  namespace reductions {
+    // (#binop ?x ?y) -> (#binop ?y ?x)
+    void commutativity(EMatcherBuilder& builder);
+    void commutativity(EMatcherBuilder& builder, Operation::Opcode opcode);
+  } // namespace reductions
+
   class EMatcher {
   public:
     static EMatcherBuilder builder();
