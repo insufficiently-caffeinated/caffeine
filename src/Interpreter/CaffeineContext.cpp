@@ -68,6 +68,10 @@ CoverageTracker* CaffeineContext::coverage() const {
   return cov_.get();
 }
 
+std::shared_ptr<TypeidDb> CaffeineContext::typeid_db() {
+  return typeid_db_;
+}
+
 // All builder functions
 
 CaffeineContext Builder::build() {
@@ -75,6 +79,7 @@ CaffeineContext Builder::build() {
   ctx.functions_ = std::move(functions_);
   ctx.intrinsics_ = std::move(intrinsics_);
   ctx.options_ = std::move(options_);
+  ctx.typeid_db_ = std::make_shared<TypeidDb>();
 
   if (policy_) {
     ctx.policy_ = std::move(policy_);
@@ -170,6 +175,7 @@ Builder& Builder::with_default_intrinsics() {
                  Intrinsics::smul_with_overflow());
   with_intrinsic(llvm::Intrinsic::memset, Intrinsics::memset());
   with_intrinsic(llvm::Intrinsic::bswap, Intrinsics::bswap());
+  with_intrinsic(llvm::Intrinsic::eh_typeid_for, Intrinsics::eh_typeid_for());
 
   return *this;
 }

@@ -37,7 +37,7 @@ public:
   /**
    * Get the CaffeineContext instance associated with this InterpreterContext.
    */
-  const CaffeineContext& caffeine() const;
+  CaffeineContext& caffeine() const;
 
   // Accessors for LLVM data. These use the LLVM syntax for consistency with
   // existing code.

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "caffeine/ADT/StringMap.h"
+#include "caffeine/Interpreter/TypeidDb.h"
 #include <llvm/IR/Intrinsics.h>
 #include <memory>
 
@@ -61,6 +62,7 @@ private:
   std::unique_ptr<FailureLogger> logger_;
   std::unique_ptr<CoverageTracker> cov_;
   CaffeineOptions options_;
+  std::shared_ptr<TypeidDb> typeid_db_;
 
 public:
   const ExternalFunction* function(std::string_view name) const;
@@ -73,6 +75,9 @@ public:
   const CaffeineOptions& options() const;
 
   std::shared_ptr<Solver> build_solver() const;
+
+  // Returns the Typeid DB for the InterpreterContext
+  std::shared_ptr<TypeidDb> typeid_db();
 
 public:
   // Builder class for CaffeineContext.

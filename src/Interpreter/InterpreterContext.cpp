@@ -21,7 +21,7 @@ const Context& InterpreterContext::context() const {
   return entry_->context;
 }
 
-const CaffeineContext& InterpreterContext::caffeine() const {
+CaffeineContext& InterpreterContext::caffeine() const {
   return *shared_;
 }
 
