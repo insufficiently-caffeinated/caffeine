@@ -82,13 +82,7 @@ size_t GraphAccessor::add(const ENode& enode) {
   return egraph->add(enode);
 }
 size_t GraphAccessor::add_merge(size_t eclass, const ENode& node) {
-  auto canonical = egraph->canonicalize(node);
-  if (auto existing = egraph->classof(node))
-    return merge(eclass, *existing);
-
-  // Safe since this will only add the node to the existing class. It won't
-  // result in any existing indices used in matches becoming invalid.
-  return egraph->add_merge(eclass, node);
+  return merge(eclass, add(node));
 }
 
 size_t GraphAccessor::merge(size_t id1, size_t id2) {
