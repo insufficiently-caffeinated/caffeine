@@ -153,6 +153,9 @@ public:
 
   void constprop();
 
+  std::string DebugString() const;
+  void DebugPrint() const;
+
 private:
   void repair(size_t eclass);
 
