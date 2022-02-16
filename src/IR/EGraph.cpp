@@ -1,9 +1,13 @@
 #include "caffeine/IR/EGraph.h"
 #include "caffeine/Config.h"
 #include "caffeine/IR/Operation.h"
+#include "caffeine/IR/OperationData.h"
+#include "caffeine/Support/LLVMFmt.h"
 #include <cstdint>
+#include <fmt/format.h>
+#include <fmt/ostream.h>
 #include <limits>
-#include <regex.h>
+#include <llvm/IR/Function.h>
 
 namespace caffeine {
 
@@ -321,6 +325,44 @@ OpRef EGraph::extract(const Operation& op) {
 }
 OpRef EGraph::extract(const Operation& op) const {
   return EGraphExtractor(this).extract(op);
+}
+
+std::string EGraph::DebugString() const {
+  std::string result = "EGraph {\n";
+  for (const auto& [eclass_id, eclass] : classes) {
+    fmt::format_to(std::back_inserter(result), "  eclass {}:\n", eclass_id);
+
+    for (const ENode& enode : eclass.nodes) {
+      std::string opcode{Operation::opcode_name(enode.opcode())};
+      std::transform(opcode.begin(), opcode.end(), opcode.begin(),
+                     [](unsigned char c) { return std::tolower(c); });
+
+      if (auto data = llvm::dyn_cast<ConstantIntData>(enode.data.get())) {
+        fmt::format_to(std::back_inserter(result), "    ({} {})\n",
+                       enode.type(), data->value());
+      } else if (auto data =
+                     llvm::dyn_cast<ConstantFloatData>(enode.data.get())) {
+        fmt::format_to(std::back_inserter(result), "    ({} {})\n",
+                       enode.type(), data->value());
+      } else if (auto data = llvm::dyn_cast<ConstantData>(enode.data.get())) {
+        fmt::format_to(std::back_inserter(result), "    (const.{} {})\n",
+                       enode.type(), data->symbol());
+      } else if (auto data =
+                     llvm::dyn_cast<FunctionObjectData>(enode.data.get())) {
+        fmt::format_to(std::back_inserter(result), "    (function {})\n",
+                       data->function()->getName().str());
+      } else {
+        fmt::format_to(std::back_inserter(result), "    ({} {})\n", opcode,
+                       fmt::join(enode.operands, " "));
+      }
+    }
+  }
+
+  fmt::format_to(std::back_inserter(result), "}}\n");
+  return result;
+}
+void EGraph::DebugPrint() const {
+  fmt::print("{}", DebugString());
 }
 
 EGraphExtractor::EGraphExtractor(const EGraph* graph)
