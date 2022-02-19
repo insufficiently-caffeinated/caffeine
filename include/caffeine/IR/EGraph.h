@@ -168,7 +168,7 @@ private:
 private:
   UnionFind<size_t> union_find;
   tsl::hopscotch_map<ENode, size_t, LLVMHasher> hashcons;
-  tsl::hopscotch_map<size_t, EClass> classes;
+  std::unordered_map<size_t, EClass> classes;
   tsl::hopscotch_set<size_t> updated;
   std::vector<size_t> worklist;
 

@@ -127,13 +127,13 @@ size_t EGraph::find(size_t id) {
 EClass* EGraph::get(size_t id) {
   auto it = classes.find(find(id));
   if (it != classes.end())
-    return &it.value();
+    return &it->second;
   return nullptr;
 }
 const EClass* EGraph::get(size_t id) const {
   auto it = classes.find(find(id));
   if (it != classes.end())
-    return &it.value();
+    return &it->second;
   return nullptr;
 }
 
@@ -277,14 +277,16 @@ void EGraph::repair(size_t eclass_id) {
 
     auto it = new_parents.find(canonical);
     if (it != new_parents.end()) {
-      merge(p_eclass, it->second);
-      it.value() = find(p_eclass);
+      it.value() = merge(p_eclass, it->second);
     } else {
       new_parents.insert({canonical, find(p_eclass)});
     }
   }
 
   eclass.parents = new_parents;
+
+  for (ENode& node : eclass.nodes)
+    node = canonicalize(node);
 }
 
 void EGraph::unparent(size_t eclass_id) {
