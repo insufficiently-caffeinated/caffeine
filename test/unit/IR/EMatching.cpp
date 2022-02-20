@@ -190,6 +190,8 @@ TEST_F(EMatchingTests, icmp_elimination) {
 
 TEST_F(EMatchingTests, load_store_elimination_elim_array) {
   r::load_store_elimination(builder);
+  r::icmp_eliminations(builder);
+  r::select_constprop(builder);
   auto matcher = builder.build();
 
   // clang-format off
