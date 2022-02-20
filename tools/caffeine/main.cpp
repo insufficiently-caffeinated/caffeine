@@ -34,23 +34,20 @@
 using namespace llvm;
 using namespace caffeine;
 
-class CountingFailureLogger : public caffeine::PrintingFailureLogger {
+class CountingFailureLogger : public caffeine::FailureLogger {
 public:
   std::atomic<uint64_t> num_failures = 0;
   std::atomic<bool> any_unsupported = false;
-  llvm::Function* func;
 
-  CountingFailureLogger(std::ostream& os, llvm::Function* func)
-      : PrintingFailureLogger(os), func{func} {}
+  CountingFailureLogger() = default;
 
-  void log_failure(const caffeine::Model* model, const caffeine::Context& ctx,
+  void log_failure(const caffeine::Model*, const caffeine::Context&,
                    const caffeine::Failure& failure) override {
     if (failure.message == "internal error: unsupported operation") {
       any_unsupported.store(true);
     }
 
     num_failures += 1;
-    caffeine::PrintingFailureLogger::log_failure(model, ctx, failure);
   }
 };
 
@@ -197,10 +194,17 @@ int main(int argc, char** argv) {
   if (log_queries)
     solver_builder.with<LoggingSolver>();
 
+  auto counter = std::make_unique<CountingFailureLogger>();
+  auto logger = counter.get();
+
+  std::vector<std::unique_ptr<FailureLogger>> loggers;
+  loggers.push_back(std::move(counter));
+  loggers.push_back(std::make_unique<PrintingFailureLogger>(std::cout));
+
   auto caffeine = CaffeineContext::builder()
                       .with_store(std::move(store))
-                      .with_logger(std::make_unique<CountingFailureLogger>(
-                          std::cout, function))
+                      .with_logger(std::make_unique<CombinedFailureLogger>(
+                          std::move(loggers)))
                       .with_coverage(std::move(cov))
                       .with_solver_builder(std::move(solver_builder))
                       .build();
@@ -219,7 +223,6 @@ int main(int argc, char** argv) {
 
   exec.run();
 
-  auto logger = static_cast<CountingFailureLogger*>(caffeine.logger());
   int exitcode = logger->num_failures == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 
   if (caffeine.coverage()) {
