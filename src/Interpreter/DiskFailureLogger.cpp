@@ -78,9 +78,11 @@ FILE* DiskFailureLogger::create_file() {
 
   do {
     uint64_t value = counter.fetch_add(1);
-    fs::path fpath = path.concat(fmt::format(FMT_STRING("{:06}.tc"), value));
+    fs::path fpath = path;
+    fpath.append(fmt::format(FMT_STRING("/{:06}.tc"), value));
 
     file = std::fopen(fpath.c_str(), "wxb");
+    fmt::print("{}\n", fpath.native());
 
     // We only keep going around if we failed to create the file due to another
     // one with the same name already exists.
