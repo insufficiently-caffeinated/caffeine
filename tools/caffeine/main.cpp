@@ -1,6 +1,7 @@
 
 #include "caffeine/Interpreter/CaffeineContext.h"
 #include "caffeine/Interpreter/Context.h"
+#include "caffeine/Interpreter/DiskFailureLogger.h"
 #include "caffeine/Interpreter/Interpreter.h"
 #include "caffeine/Interpreter/Policy.h"
 #include "caffeine/Interpreter/Store.h"
@@ -109,6 +110,9 @@ cl::opt<uint64_t> limit_time_seconds{
     cl::desc("Instructs caffeine to stop symbolic execution after the given "
              "number of seconds have elapsed."),
     cl::value_desc("seconds"), cl::cat(caffeine_options), cl::init(0)};
+cl::opt<std::string> test_output_dir{
+    "test-output-dir", cl::desc("The directory to output test case files to."),
+    cl::cat(caffeine_options)};
 
 static ExitOnError exit_on_err;
 
@@ -200,6 +204,10 @@ int main(int argc, char** argv) {
   std::vector<std::unique_ptr<FailureLogger>> loggers;
   loggers.push_back(std::move(counter));
   loggers.push_back(std::make_unique<PrintingFailureLogger>(std::cout));
+
+  if (test_output_dir != "") {
+    loggers.push_back(std::make_unique<DiskFailureLogger>(test_output_dir));
+  }
 
   auto caffeine = CaffeineContext::builder()
                       .with_store(std::move(store))
