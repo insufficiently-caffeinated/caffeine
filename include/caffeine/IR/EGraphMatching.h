@@ -226,6 +226,9 @@ namespace ematching {
 
     // (zext.ixx (trunc.iyy ?z)) -> (and v (ixx (2^yy - 1)))
     void zext_trunc_elimination(EMatcherBuilder& builder);
+    
+    // (load (store ?a ?b ?c) ?d) -> (select (icmp.eq ?b ?d) ?c (load ?a ?d))
+    void load_store_elimination(EMatcherBuilder& builder);
   } // namespace reductions
 
   class EMatcher {
