@@ -113,6 +113,15 @@ bool EClass::is_constant() const {
   return constant_index.has_value();
 }
 
+ENode* EClass::constant() {
+  return const_cast<ENode*>(const_cast<const EClass*>(this)->constant());
+}
+const ENode* EClass::constant() const {
+  if (!constant_index)
+    return nullptr;
+  return &nodes[*constant_index];
+}
+
 Type EClass::type() const {
   return nodes.front().data->type();
 }
