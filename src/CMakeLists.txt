@@ -62,6 +62,7 @@ target_link_libraries(caffeine PUBLIC
   magic_enum::magic_enum
   CapnProto::capnp-rpc
   Boost::thread
+  Boost::filesystem
   tsl::hopscotch_map
   divine
 )
