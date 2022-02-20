@@ -109,6 +109,10 @@ llvm::ArrayRef<size_t> GraphAccessor::matches(size_t subclause,
   return data->matches(subclause, eclass);
 }
 
+EGraph* GraphAccessor::graph() {
+  return egraph;
+}
+
 size_t EMatcherBuilder::add_clause(Operation::Opcode opcode,
                                    llvm::ArrayRef<size_t> submatchers,
                                    std::unique_ptr<SubClauseFilter>&& filter) {

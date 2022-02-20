@@ -140,6 +140,8 @@ namespace ematching {
     const MatchData::ClauseData& matches(size_t subclause) const;
     llvm::ArrayRef<size_t> matches(size_t subclause, size_t eclass) const;
 
+    EGraph* graph();
+
     GraphAccessor(const GraphAccessor&) = delete;
     GraphAccessor(GraphAccessor&&) = delete;
 
@@ -192,6 +194,10 @@ namespace ematching {
     // (#binop ?x ?y) -> (#binop ?y ?x)
     void commutativity(EMatcherBuilder& builder);
     void commutativity(EMatcherBuilder& builder, Operation::Opcode opcode);
+
+    // (#op ?x (#op ?y ?z)) -> (#op (#op ?x ?y) ?z)
+    void associativity(EMatcherBuilder& builder);
+    void associativity(EMatcherBuilder& builder, Operation::Opcode opcode);
   } // namespace reductions
 
   class EMatcher {

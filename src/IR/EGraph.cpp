@@ -493,4 +493,8 @@ OpRef EGraphExtractor::extract(const Operation& expr) {
   return expr.with_new_operands(operands);
 }
 
+void EGraphExtractor::update_cost(size_t eclass_id) {
+  eval_cost(eclass_id);
+}
+
 } // namespace caffeine
