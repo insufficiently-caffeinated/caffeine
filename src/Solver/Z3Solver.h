@@ -28,8 +28,6 @@ public:
     ctx.set("model", true);
     // Automatically select and configure the solver
     ctx.set("auto_config", true);
-    // Z3 will set a SIGINT handler unless we tell it not to
-    ctx.set("ctrl_c", false);
   }
 };
 
