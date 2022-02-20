@@ -75,10 +75,10 @@ TEST_F(EMatchingTests, commutativity) {
   size_t cid = egraph.add(*c);
   size_t did = egraph.add(*d);
 
+  egraph.merge(aid, bid);
   egraph.simplify(matcher);
 
   ASSERT_EQ(egraph.find(cid), egraph.find(did));
-  ASSERT_NE(egraph.find(aid), egraph.find(bid));
 }
 
 TEST_F(EMatchingTests, and_elimination) {
