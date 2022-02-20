@@ -34,6 +34,17 @@ protected:
   FailureLogger& operator=(FailureLogger&&) = default;
 };
 
+class CombinedFailureLogger : public FailureLogger {
+public:
+  CombinedFailureLogger(std::vector<std::unique_ptr<FailureLogger>>&& loggers);
+
+  virtual void log_failure(const Model* model, const Context& context,
+                           const Failure& failure) override;
+
+private:
+  std::vector<std::unique_ptr<FailureLogger>> loggers;
+};
+
 class PrintingFailureLogger : public FailureLogger {
 private:
   std::ostream* os;
