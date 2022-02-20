@@ -1,6 +1,8 @@
 #ifndef CAFFEINE_ADT_SHAREDARRAY_H
 #define CAFFEINE_ADT_SHAREDARRAY_H
 
+#include <cstddef>
+#include <iterator>
 #include <memory>
 #include <unordered_map>
 #include <variant>
@@ -169,6 +171,12 @@ public:
     size_t idx;
 
   public:
+    using value_type = char;
+    using reference = const char&;
+    using pointer = const char*;
+    using iterator_category = std::bidirectional_iterator_tag;
+    using difference_type = std::ptrdiff_t;
+
     const_iterator(const SharedArray* array, size_t idx)
         : array(array), idx(idx) {}
 

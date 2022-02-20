@@ -1,17 +1,15 @@
 @0xa5a2c19ddf8b8759;
 
 using Cxx = import "/capnp/c++.capnp";
-$Cxx.namespace("caffeine::serialize::protos");
+$Cxx.namespace("caffeine::protos");
 
-struct Value {
-  array @0 :Data;
-}
-
-struct Symbol {
-  name @0 :Text;
-  symbol @1 :Value;
+struct Constant {
+  name  @0 :Text;
+  value @1 :Data;
 }
 
 struct TestCase {
-  symbols @0 :List(Symbol);
+  constants @0 :List(Constant);
+  message   @1 :Text;
+  backtrace @2 :Text;
 }
