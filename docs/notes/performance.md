@@ -1,27 +1,3 @@
-<div style="display: none">
-    <!-- Initial setup for latex expressions -->
-    <link 
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/katex@0.15.2/dist/katex.min.css"
-      integrity="sha384-MlJdn/WNKDGXveldHDdyRP1R4CTHr3FeuDNfhsLPYrq2t0UBkUdK2jyTnXPEK1NQ"
-      crossorigin="anonymous"
-    />
-    <!-- The loading of KaTeX is deferred to speed up page rendering -->
-    <script
-      defer
-      src="https://cdn.jsdelivr.net/npm/katex@0.15.2/dist/katex.min.js"
-      integrity="sha384-VQ8d8WVFw0yHhCk5E8I86oOhv48xLpnDZx5T9GogA/Y84DcCKWXDmSDfn13bzFZY"
-      crossorigin="anonymous"
-    ></script>
-    <!-- To automatically render math in text elements, include the auto-render extension: -->
-    <script
-      defer
-      src="https://cdn.jsdelivr.net/npm/katex@0.15.2/dist/contrib/auto-render.min.js" integrity="sha384-+XBljXPPiv+OzfbB3cVmLHf4hdUFHlWNZN5spNQ7rmHTXpd7WvJum6fIACpNNfIR"
-      crossorigin="anonymous"
-      onload="renderMathInElement(document.body);"
-    ></script>
-</div>
-
 # Performance Optimization Within Caffeine
 
 The performance situation of a symbolic execution engine such as caffeine is
@@ -95,10 +71,10 @@ This section covers optimizations that have been implemented within caffeine:
 ## Potential Optimizations
 
 - A fast path for resolving pointers. Lots of expressions for pointers end up
-  having the form $a + c$ where $a$ is symbolic constant and $c$ is a constant
+  having the form `a + c` where `a` is symbolic constant and `c` is a constant
   integer. In that case, we can quickly find the relevant allocation by just
   looking for ones whose address is $a$ and then checking whether an offset of
-  $c$ is within the allocation.
+  `c` is within the allocation.
 
 - Query caching. Different paths of execution can make result in making the
   same query. We should be able to reuse results of these queries in such a
