@@ -192,6 +192,9 @@ SolverResult Z3Solver::resolve(AssertionList& assertions,
   auto block = CAFFEINE_TRACE_SPAN("Z3Solver::resolve");
 
   z3::solver solver = impl->tactic.mk_solver();
+  // We need to disable Ctrl^C at the solver level in order to prevent Z3 from
+  // catching SIGINT when we don't want it to.
+  solver.set("ctrl_c", false);
   Z3Model::ConstMap constMap;
 
   Z3OpVisitor visitor{&solver, constMap};
