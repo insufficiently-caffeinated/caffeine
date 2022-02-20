@@ -119,7 +119,7 @@ find_package(LLVM 12.0.0 REQUIRED)
 # TODO: We should have an option to download and build these locally if needed.
 find_package(GTest REQUIRED)
 find_package(Z3 4.8.7 REQUIRED)
-find_package(Boost COMPONENTS thread REQUIRED)
+find_package(Boost COMPONENTS thread filesystem REQUIRED)
 find_package(fmt REQUIRED)
 find_package(CapnProto REQUIRED)
 
