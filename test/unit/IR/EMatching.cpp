@@ -208,7 +208,31 @@ TEST_F(EMatchingTests, load_store_elimination_elim_array) {
 
   egraph.simplify(matcher);
 
-  ASSERT_EQ(value_id, load_id);
+  ASSERT_EQ(egraph.find(value_id), egraph.find(load_id));
+}
+
+TEST_F(EMatchingTests, load_store_elimination_elim_store) {
+  r::load_store_elimination(builder);
+  r::icmp_eliminations(builder);
+  r::select_constprop(builder);
+  auto matcher = builder.build();
+
+  // clang-format off
+  auto value  = add(Constant::Create(Type::int_ty(8), "value"));
+  auto size   = add(Constant::Create(Type::int_ty(32), "size"));
+  auto offset = add(ConstantInt::Create(llvm::APInt(32, 5)));
+  auto array  = add(ConstantArray::Create("array", size));
+  auto store  = add(StoreOp::Create(array, offset, value));
+  auto load   = add(LoadOp::Create(store, ConstantInt::CreateZero(32)));
+  auto direct = add(LoadOp::Create(array, ConstantInt::CreateZero(32)));
+
+  auto load_id   = egraph.add(*load);
+  auto direct_id = egraph.add(*direct);
+  // clang-format on
+
+  egraph.simplify(matcher);
+
+  ASSERT_EQ(egraph.find(direct_id), egraph.find(load_id));
 }
 
 TEST_F(EMatchingTests, zext_trunc_elimination) {
