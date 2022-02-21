@@ -46,12 +46,6 @@ bool GenericUnwinding::getPossibleStates(InterpreterContext& ctx) {
     CAFFEINE_ASSERT(bb->isLandingPad());
 
     auto lpad = bb->getLandingPadInst();
-    if (lpad->isCleanup()) {
-      // Always enter a cleanup clause
-      uw_state.possible_states.emplace_back(
-          RETURNING, CLEANUP, uw_state.current_frame, nullptr, AssertionList());
-      return true;
-    }
 
     for (; uw_state.clause_num < lpad->getNumClauses(); uw_state.clause_num++) {
       auto clause = lpad->getClause(uw_state.clause_num);
@@ -108,6 +102,14 @@ bool GenericUnwinding::getPossibleStates(InterpreterContext& ctx) {
       } else {
         CAFFEINE_UNREACHABLE();
       }
+    }
+
+    // Check the cleanup flag last
+    if (lpad->isCleanup()) {
+      // Always enter a cleanup clause
+      uw_state.possible_states.emplace_back(
+          RETURNING, CLEANUP, uw_state.current_frame, nullptr, AssertionList());
+      return true;
     }
 
     uw_state.clause_num = 0;
