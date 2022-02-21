@@ -57,7 +57,10 @@ void IRStackFrame::set_result(std::optional<LLVMValue> result,
     if (!resume_value.has_value()) {
       jump_to(invoke->getNormalDest());
     } else {
-      CAFFEINE_UNIMPLEMENTED("Resume instruction is not implemented");
+      jump_to(invoke->getUnwindDest());
+      auto& landingpad = *current;
+      insert(&landingpad, *resume_value);
+      current++;
     }
   }
 }
