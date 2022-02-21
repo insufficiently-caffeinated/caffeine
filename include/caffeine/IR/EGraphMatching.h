@@ -137,6 +137,7 @@ namespace ematching {
     size_t merge(size_t id1, size_t id2);
 
     const EClass* get(size_t eclass) const;
+    OpRef get_op(size_t eclass) const;
 
     bool contains_match(size_t subclause, size_t eclass) const;
 

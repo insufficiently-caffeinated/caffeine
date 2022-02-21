@@ -1,5 +1,6 @@
 #include "caffeine/IR/EGraphMatching.h"
 #include "caffeine/IR/EGraph.h"
+#include "caffeine/IR/Operation.h"
 
 namespace caffeine::ematching {
 
@@ -95,6 +96,10 @@ size_t GraphAccessor::merge(size_t id1, size_t id2) {
 
 const EClass* GraphAccessor::get(size_t eclass) const {
   return egraph->get(eclass);
+}
+
+OpRef GraphAccessor::get_op(size_t eclass_id) const {
+  return EGraphNode::Create(get(eclass_id)->type(), eclass_id);
 }
 
 bool GraphAccessor::contains_match(size_t subclause, size_t eclass) const {
