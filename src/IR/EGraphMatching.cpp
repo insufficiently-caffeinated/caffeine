@@ -86,6 +86,13 @@ size_t GraphAccessor::add_merge(size_t eclass, const ENode& node) {
   return merge(eclass, add(node));
 }
 
+size_t GraphAccessor::add(const OpRef& op) {
+  return egraph->add(*op);
+}
+size_t GraphAccessor::add_merge(size_t eclass, const OpRef& op) {
+  return merge(eclass, add(op));
+}
+
 size_t GraphAccessor::merge(size_t id1, size_t id2) {
   if (id1 == id2)
     return id1;

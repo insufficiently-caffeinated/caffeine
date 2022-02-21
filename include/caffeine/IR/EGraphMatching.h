@@ -130,6 +130,9 @@ namespace ematching {
     size_t add(const ENode& enode);
     size_t add_merge(size_t eclass, const ENode& enode);
 
+    size_t add(const OpRef& op);
+    size_t add_merge(size_t eclass, const OpRef& op);
+
     // Merge two e-classes together.
     //
     // The actual act of merging is delayed until all e-graph updates have gone
