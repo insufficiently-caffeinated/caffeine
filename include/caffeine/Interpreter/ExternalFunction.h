@@ -77,6 +77,7 @@ public:
   static std::unique_ptr<ExternalFunction> caffeine_free();
   static std::unique_ptr<ExternalFunction> caffeine_malloc_aligned();
   static std::unique_ptr<ExternalFunction> caffeine_unwind_phase1();
+  static std::unique_ptr<ExternalFunction> caffeine_unwind_phase2();
 
   static std::unique_ptr<ExternalFunction> abort();
   static std::unique_ptr<ExternalFunction> longjmp();

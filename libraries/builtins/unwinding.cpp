@@ -47,6 +47,7 @@ extern "C" _Unwind_Reason_Code _Unwind_RaiseException(_Unwind_Exception* header)
     return reason;
   }
 
-  // TODO: Implement the rest of _Unwind_RaiseException
+  // caffeine_unwind_phase2 doesn't return
+  caffeine_unwind_phase2(cxa_exception->exceptionType, &cxa_exception->adjustedPtr, header);
   return _URC_FATAL_PHASE2_ERROR;
 }
