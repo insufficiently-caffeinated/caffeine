@@ -9,10 +9,10 @@ Caffeine effectively has two different modes of operation:
    we continue to make larger and larger calls to the solver.
 
 The first case, while it may not be particularly well optimized, is vastly
-faster than the second one. Expressiong building and processing usually runs
+faster than the second one. Expression building and processing usually runs
 on the time scale of microseconds to milliseconds whereas solver calls can
 easily take seconds to hours depending on how complicated they get. There are
-some exceptions to this: slow algorithms within expression creating and
+some exceptions to this: slow algorithms within expression creation and
 simplification can explode but those are usually easily solvable.
 
 > ### Note:
