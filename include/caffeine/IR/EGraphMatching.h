@@ -3,6 +3,9 @@
 #include "caffeine/IR/OperationBase.h"
 #include "caffeine/Support/Hashing.h"
 #include <functional>
+#include <optional>
+#include <unordered_map>
+#include <vector>
 
 namespace caffeine {
 
@@ -198,6 +201,21 @@ namespace ematching {
     // (#op ?x (#op ?y ?z)) -> (#op (#op ?x ?y) ?z)
     void associativity(EMatcherBuilder& builder);
     void associativity(EMatcherBuilder& builder, Operation::Opcode opcode);
+
+    // (sub ?x ?x) -> (ixx 0)
+    void sub_elimination(EMatcherBuilder& builder);
+
+    // (and ?x ?x) -> ?x
+    void and_elimination(EMatcherBuilder& builder);
+
+    // (or ?x ?x) -> ?x
+    void or_elimination(EMatcherBuilder& builder);
+
+    // (xor ?x ?x) -> (ixx 0)
+    void xor_elimination(EMatcherBuilder& builder);
+
+    // (and ?x 0) -> (ixx 0)
+    void and_zero_elimination(EMatcherBuilder& builder);
   } // namespace reductions
 
   class EMatcher {
