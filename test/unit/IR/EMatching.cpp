@@ -187,3 +187,22 @@ TEST_F(EMatchingTests, icmp_elimination) {
 
   ASSERT_EQ(egraph.find(cid), egraph.find(did));
 }
+
+TEST_F(EMatchingTests, zext_trunc_elimination) {
+  r::zext_trunc_elimination(builder);
+  auto matcher = builder.build();
+
+  auto a = add(Constant::Create(Type::int_ty(32), "a"));
+  auto b = add(UnaryOp::CreateTrunc(Type::int_ty(16), a));
+  auto c = add(UnaryOp::CreateZExt(Type::int_ty(24), b));
+  auto d = add(ConstantInt::Create(llvm::APInt(24, 0xFFFF)));
+  auto e = add(UnaryOp::CreateTrunc(Type::int_ty(24), a));
+  auto f = add(BinaryOp::CreateAnd(e, d));
+
+  auto cid = egraph.add(*c);
+  auto fid = egraph.add(*f);
+
+  egraph.simplify(matcher);
+
+  ASSERT_EQ(egraph.find(cid), egraph.find(fid));
+}
