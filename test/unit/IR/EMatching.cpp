@@ -149,7 +149,7 @@ TEST_F(EMatchingTests, and_zero_elimination) {
 }
 
 TEST_F(EMatchingTests, sub_elimination) {
-  r::sub_elimination(builder, Operation::Add);
+  r::sub_elimination(builder);
   auto matcher = builder.build();
 
   auto a = add(Constant::Create(Type::int_ty(32), "a"));
