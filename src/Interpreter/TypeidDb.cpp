@@ -11,11 +11,9 @@ int32_t TypeidDb::get_selector(const llvm::Constant* exception_ty) {
   CAFFEINE_ASSERT(exception_ty, "must not be a null pointer");
   std::unique_lock lock(mutex);
 
-  {
-    auto val = values.find(exception_ty->stripPointerCasts());
-    if (val != values.end()) {
-      return val->second;
-    }
+  if (auto val = values.find(exception_ty->stripPointerCasts());
+      val != values.end()) {
+    return val->second;
   }
 
   values[exception_ty->stripPointerCasts()] = curr;
