@@ -132,7 +132,6 @@ SolverResult Context::resolve(std::shared_ptr<Solver> solver,
 }
 
 AssertionList Context::extract_assertions() {
-  egraph.constprop();
   egraph.rebuild();
 
   assertions.canonicalize(egraph);

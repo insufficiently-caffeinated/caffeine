@@ -1,4 +1,5 @@
 #include "caffeine/Interpreter/CaffeineContext.h"
+#include "caffeine/IR/EGraphMatching.h"
 #include "caffeine/Interpreter/ExternalFunction.h"
 #include "caffeine/Interpreter/FailureLogger.h"
 #include "caffeine/Interpreter/Policy.h"
@@ -72,6 +73,10 @@ std::shared_ptr<TypeidDb> CaffeineContext::typeid_db() {
   return typeid_db_;
 }
 
+const EMatcher& CaffeineContext::matcher() const {
+  return *matcher_;
+}
+
 // All builder functions
 
 CaffeineContext Builder::build() {
@@ -101,6 +106,10 @@ CaffeineContext Builder::build() {
     ctx.builder_ =
         std::make_unique<SolverBuilder>(SolverBuilder::with_default());
   }
+
+  auto builder = EMatcher::builder();
+  builder.add_defaults();
+  ctx.matcher_ = std::make_unique<EMatcher>(builder.build());
 
   return ctx;
 }

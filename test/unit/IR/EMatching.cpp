@@ -1,7 +1,14 @@
 #include "caffeine/IR/EGraph.h"
 #include "caffeine/IR/EGraphMatching.h"
 #include "caffeine/IR/Operation.h"
+#include <atomic>
+#include <chrono>
+#include <exception>
+#include <gtest/gtest-death-test.h>
 #include <gtest/gtest.h>
+#include <mutex>
+#include <optional>
+#include <thread>
 
 using namespace caffeine;
 namespace r = caffeine::ematching::reductions;
@@ -17,6 +24,15 @@ public:
     return EGraphNode::Create(op->type(), egraph.add(*op));
   }
 };
+
+#define ASSERT_NO_TIMEOUT(secs, stmt)                                          \
+  ASSERT_EXIT(                                                                 \
+      {                                                                        \
+        alarm(secs);                                                           \
+        stmt;                                                                  \
+        exit(0);                                                               \
+      },                                                                       \
+      ::testing::ExitedWithCode(0), "")
 
 TEST_F(EMatchingTests, concurrent_changes) {
   r::and_zero_elimination(builder);
@@ -61,6 +77,21 @@ TEST_F(EMatchingTests, sequential_changes) {
   ASSERT_EQ(egraph.find(cid), egraph.find(did));
 }
 
+TEST_F(EMatchingTests, many_ors) {
+  ASSERT_NO_TIMEOUT(5, {
+    r::associativity(builder, Operation::Or);
+    r::commutativity(builder, Operation::Or);
+    auto matcher = builder.build();
+
+    auto x = add(Constant::Create(Type::int_ty(32), 0));
+    for (uint64_t i = 1; i <= 128; ++i) {
+      x = add(BinaryOp::CreateOr(x, Constant::Create(Type::int_ty(32), i)));
+    }
+
+    egraph.simplify(matcher);
+  });
+}
+
 TEST_F(EMatchingTests, commutativity) {
   r::commutativity(builder, Operation::Add);
   auto matcher = builder.build();
@@ -69,45 +100,6 @@ TEST_F(EMatchingTests, commutativity) {
   auto b = add(Constant::Create(Type::int_ty(32), "b"));
   auto c = add(BinaryOp::CreateAdd(a, b));
   auto d = add(BinaryOp::CreateAdd(b, a));
-
-  size_t aid = egraph.add(*a);
-  size_t bid = egraph.add(*b);
-  size_t cid = egraph.add(*c);
-  size_t did = egraph.add(*d);
-
-  egraph.simplify(matcher);
-
-  ASSERT_EQ(egraph.find(cid), egraph.find(did));
-  ASSERT_NE(egraph.find(aid), egraph.find(bid));
-}
-
-TEST_F(EMatchingTests, associativity) {
-  r::associativity(builder, Operation::Add);
-  auto matcher = builder.build();
-
-  auto a = add(Constant::Create(Type::int_ty(32), "a"));
-  auto b = add(Constant::Create(Type::int_ty(32), "b"));
-  auto c = add(Constant::Create(Type::int_ty(32), "c"));
-
-  auto t1 = add(BinaryOp::CreateAdd(a, BinaryOp::CreateAdd(b, c)));
-  auto t2 = add(BinaryOp::CreateAdd(BinaryOp::CreateAdd(a, b), c));
-
-  size_t id1 = egraph.add(*t1);
-  size_t id2 = egraph.add(*t2);
-
-  egraph.simplify(matcher);
-
-  ASSERT_EQ(egraph.find(id1), egraph.find(id2));
-}
-
-TEST_F(EMatchingTests, sub_elimination) {
-  r::sub_elimination(builder);
-  auto matcher = builder.build();
-
-  auto a = add(Constant::Create(Type::int_ty(32), "a"));
-  auto b = add(Constant::Create(Type::int_ty(32), "b"));
-  auto c = add(BinaryOp::CreateSub(a, b));
-  auto d = add(ConstantInt::CreateZero(32));
 
   size_t aid = egraph.add(*a);
   size_t bid = egraph.add(*b);
