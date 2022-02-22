@@ -216,6 +216,9 @@ namespace ematching {
 
     // (and ?x 0) -> (ixx 0)
     void and_zero_elimination(EMatcherBuilder& builder);
+
+    // (icmp.## ?x ?x) -> true or false
+    void icmp_eliminations(EMatcherBuilder& builder);
   } // namespace reductions
 
   class EMatcher {

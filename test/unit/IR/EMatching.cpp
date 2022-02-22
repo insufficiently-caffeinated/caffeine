@@ -147,3 +147,43 @@ TEST_F(EMatchingTests, and_zero_elimination) {
   ASSERT_EQ(egraph.find(cid), egraph.find(bid));
   ASSERT_NE(egraph.find(aid), egraph.find(cid));
 }
+
+TEST_F(EMatchingTests, sub_elimination) {
+  r::sub_elimination(builder);
+  auto matcher = builder.build();
+
+  auto a = add(Constant::Create(Type::int_ty(32), "a"));
+  auto b = add(Constant::Create(Type::int_ty(32), "b"));
+  auto c = add(BinaryOp::CreateSub(a, b));
+  auto d = add(ConstantInt::CreateZero(32));
+
+  size_t aid = egraph.add(*a);
+  size_t bid = egraph.add(*b);
+  size_t cid = egraph.add(*c);
+  size_t did = egraph.add(*d);
+
+  egraph.merge(aid, bid);
+  egraph.simplify(matcher);
+
+  ASSERT_EQ(egraph.find(cid), egraph.find(did));
+}
+
+TEST_F(EMatchingTests, icmp_elimination) {
+  r::icmp_eliminations(builder);
+  auto matcher = builder.build();
+
+  auto a = add(Constant::Create(Type::int_ty(32), "a"));
+  auto b = add(Constant::Create(Type::int_ty(32), "b"));
+  auto c = add(ICmpOp::CreateICmpEQ(a, b));
+  auto d = add(ConstantInt::Create(true));
+
+  auto aid = egraph.add(*a);
+  auto bid = egraph.add(*b);
+  auto cid = egraph.add(*c);
+  auto did = egraph.add(*d);
+
+  egraph.merge(aid, bid);
+  egraph.simplify(matcher);
+
+  ASSERT_EQ(egraph.find(cid), egraph.find(did));
+}
