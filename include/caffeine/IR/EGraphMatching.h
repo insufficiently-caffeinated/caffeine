@@ -223,7 +223,7 @@ namespace ematching {
 
     // (icmp.## ?x ?x) -> true or false
     void icmp_eliminations(EMatcherBuilder& builder);
-    
+
     // (zext.ixx (trunc.iyy ?z)) -> (and v (ixx (2^yy - 1)))
     void zext_trunc_elimination(EMatcherBuilder& builder);
   } // namespace reductions
