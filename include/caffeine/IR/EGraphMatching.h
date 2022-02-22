@@ -226,7 +226,7 @@ namespace ematching {
 
     // (zext.ixx (trunc.iyy ?z)) -> (and v (ixx (2^yy - 1)))
     void zext_trunc_elimination(EMatcherBuilder& builder);
-    
+
     // (select (i1 1) ?x ?y) -> ?x
     // (select (i1 0) ?x ?y) -> ?y
     void select_constprop(EMatcherBuilder& builder);
@@ -238,6 +238,9 @@ namespace ematching {
   class EMatcher {
   public:
     static EMatcherBuilder builder();
+
+    const Clause& clause(size_t clause) const;
+    const SubClause& subclause(size_t subclause) const;
 
   private:
     std::vector<Clause> clauses;
