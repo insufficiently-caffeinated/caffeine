@@ -253,3 +253,34 @@ TEST_F(EMatchingTests, zext_trunc_elimination) {
 
   ASSERT_EQ(egraph.find(cid), egraph.find(fid));
 }
+
+// This test case creates two possible matches for the rewrite rule and, since
+// all relevant nodes are captured, we expect to see both canonical rewritten
+// expressions show up in the final representation of the top-level e-class.
+TEST_F(EMatchingTests, zext_trunc_elimination_multi) {
+  r::zext_trunc_elimination(builder);
+  auto matcher = builder.build();
+
+  auto a = add(Constant::Create(Type::int_ty(32), "a"));
+  auto b = add(UnaryOp::CreateTrunc(Type::int_ty(16), a));
+  auto c = add(UnaryOp::CreateZExt(Type::int_ty(24), b));
+  auto d = add(ConstantInt::Create(llvm::APInt(24, 0xFFFF)));
+  auto e = add(UnaryOp::CreateTrunc(Type::int_ty(24), a));
+  auto f = add(BinaryOp::CreateAnd(e, d));
+  auto g = add(Constant::Create(Type::int_ty(32), "g"));
+  auto h = add(UnaryOp::CreateTrunc(Type::int_ty(16), g));
+  auto i = add(UnaryOp::CreateTrunc(Type::int_ty(24), g));
+  auto j = add(BinaryOp::CreateAnd(i, d));
+
+  auto bid = egraph.add(*b);
+  auto cid = egraph.add(*c);
+  auto fid = egraph.add(*f);
+  auto hid = egraph.add(*h);
+  auto jid = egraph.add(*j);
+
+  egraph.merge(bid, hid);
+  egraph.simplify(matcher);
+
+  ASSERT_EQ(egraph.find(cid), egraph.find(fid));
+  ASSERT_EQ(egraph.find(fid), egraph.find(jid));
+}
