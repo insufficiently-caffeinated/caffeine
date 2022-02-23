@@ -75,6 +75,7 @@ void EMatcherBuilder::add_defaults() {
   reductions::icmp_eliminations(*this);
 
   reductions::and_zero_elimination(*this);
+  reductions::zext_trunc_elimination(*this);
 }
 
 } // namespace caffeine::ematching
