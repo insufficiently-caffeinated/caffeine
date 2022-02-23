@@ -71,10 +71,9 @@ llvm::ArrayRef<size_t> MatchData::matches(size_t subclause,
   return it->second;
 }
 
-GraphAccessor::GraphAccessor(
-    EGraph* egraph, const MatchData* data,
-    const std::unordered_map<size_t, const ENode*>* captures)
-    : egraph(egraph), data(data), captures(captures) {}
+GraphAccessor::GraphAccessor(EGraph* egraph, const MatchData* data,
+                             const CapturesMap* captures)
+    : egraph(egraph), data(data), captures_(captures) {}
 
 void GraphAccessor::persist() {
   for (auto [lhs, rhs] : merges)
@@ -129,8 +128,8 @@ EGraph* GraphAccessor::graph() {
 }
 
 const ENode* GraphAccessor::capture(size_t subclause) const {
-  auto it = captures->find(subclause);
-  if (it == captures->end())
+  auto it = captures_->find(subclause);
+  if (it == captures_->end())
     CAFFEINE_ABORT(fmt::format(
         "subclause {} was not found within the capture set", subclause));
   return it->second;

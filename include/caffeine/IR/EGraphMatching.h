@@ -126,9 +126,12 @@ namespace ematching {
   // applied.
   class GraphAccessor {
   public:
+    using CapturesMap = std::unordered_map<size_t, const ENode*>;
+
+  public:
     GraphAccessor(
         EGraph* egraph, const MatchData* data,
-        const std::unordered_map<size_t, const ENode*>* captures = nullptr);
+        const CapturesMap* captures = nullptr);
 
     // Create a new e-class with the given e-node.
     size_t add(const ENode& enode);
@@ -170,7 +173,7 @@ namespace ematching {
   private:
     EGraph* egraph;
     const MatchData* data;
-    const std::unordered_map<size_t, const ENode*>* captures;
+    const CapturesMap* captures_;
 
     std::vector<std::pair<size_t, size_t>> merges;
 

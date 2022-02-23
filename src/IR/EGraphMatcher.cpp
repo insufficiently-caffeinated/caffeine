@@ -33,7 +33,7 @@ public:
   std::unordered_map<size_t, std::vector<size_t>> reversed = {};
 
   // Map containing all subclauses that are captured.
-  std::unordered_map<size_t, const ENode*> captures = {};
+  GraphAccessor::CapturesMap captures = {};
 
 public:
   void equality_saturation() {
