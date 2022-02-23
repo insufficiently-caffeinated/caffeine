@@ -30,6 +30,9 @@ public:
   // Used to remove matches from an updated clause
   std::unordered_map<size_t, std::vector<size_t>> reversed = {};
 
+  // Map containing all subclauses that are captured.
+  std::unordered_map<size_t, const ENode*> captures = {};
+
 public:
   void equality_saturation() {
     egraph->constprop();
@@ -42,7 +45,7 @@ public:
 
       egraph->updated.clear();
 
-      GraphAccessor accessor(egraph, &data);
+      GraphAccessor accessor(egraph, &data, &captures);
 
       for (auto [clause_id, eclass_id, enode_id] : work) {
         const auto& clause = matcher->clauses[clause_id];
