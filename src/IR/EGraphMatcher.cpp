@@ -217,7 +217,7 @@ public:
     const ENode* enode = &eclass->nodes.at(enode_id);
     const SubClause& subclause = matcher->subclause(subclause_id);
 
-    captures.emplace(subclause_id, enode);
+    captures.insert({subclause_id, {enode}});
     auto guard = make_guard([&] { captures.clear(); });
 
     if (!matcher->captures.at(subclause_id)) {
@@ -258,7 +258,7 @@ public:
       const ENode* node = &eclass->nodes.at(node_id);
 
       if (subclause.is_capture)
-        captures[subclause_id] = node;
+        captures[subclause_id].push_back(node);
 
       auto iterate = [&](size_t index, const auto& func, const auto& iterate) {
         if (index >= subclause.submatchers.size()) {
@@ -274,7 +274,14 @@ public:
       };
 
       iterate(0, func, iterate);
+
+      if (subclause.is_capture)
+        captures[subclause_id].pop_back();
     }
+
+    auto it = captures.find(subclause_id);
+    if (it != captures.end() && it->second.empty())
+      captures.erase(it);
   }
 };
 

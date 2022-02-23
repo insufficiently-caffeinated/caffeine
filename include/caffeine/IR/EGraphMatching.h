@@ -126,12 +126,12 @@ namespace ematching {
   // applied.
   class GraphAccessor {
   public:
-    using CapturesMap = std::unordered_map<size_t, const ENode*>;
+    using CapturesMap =
+        std::unordered_map<size_t, llvm::SmallVector<const ENode*>>;
 
   public:
-    GraphAccessor(
-        EGraph* egraph, const MatchData* data,
-        const CapturesMap* captures = nullptr);
+    GraphAccessor(EGraph* egraph, const MatchData* data,
+                  const CapturesMap* captures = nullptr);
 
     // Create a new e-class with the given e-node.
     size_t add(const ENode& enode);
@@ -156,7 +156,18 @@ namespace ematching {
 
     EGraph* graph();
 
+    // Retrieve the single capture for the provided subclause.
+    //
+    // An assertion failure will occur if subclause has no matches or subclause
+    // has multiple matches.
     const ENode* capture(size_t subclause) const;
+    // Retrieve all the captures for the provided subclause. Captures within the
+    // returned array are ordered according to when they are found in a DFS
+    // expansion of the top-level capture clause.
+    //
+    // An assertion failure will be emitted if there are no captures for the
+    // provided subclause.
+    llvm::ArrayRef<const ENode*> captures(size_t subclause) const;
 
     GraphAccessor(const GraphAccessor&) = delete;
     GraphAccessor(GraphAccessor&&) = delete;

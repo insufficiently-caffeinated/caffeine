@@ -129,9 +129,25 @@ EGraph* GraphAccessor::graph() {
 
 const ENode* GraphAccessor::capture(size_t subclause) const {
   auto it = captures_->find(subclause);
-  if (it == captures_->end())
-    CAFFEINE_ABORT(fmt::format(
-        "subclause {} was not found within the capture set", subclause));
+  CAFFEINE_ASSERT(
+      it != captures_->end(),
+      fmt::format("subclause {} was not found within the capture set",
+                  subclause));
+  CAFFEINE_ASSERT(it->second.size() == 1,
+                  fmt::format("subclause {} had multiple ({}) captures",
+                              subclause, it->second.size()));
+  return it->second.front();
+}
+llvm::ArrayRef<const ENode*> GraphAccessor::captures(size_t subclause) const {
+  auto it = captures_->find(subclause);
+  CAFFEINE_ASSERT(
+      it != captures_->end(),
+      fmt::format("subclause {} was not found within the capture set",
+                  subclause));
+  // This should never happen but it doesn't hurt to check.
+  CAFFEINE_ASSERT(
+      !it->second.empty(),
+      fmt::format("subclause {} had empty capture set?", subclause));
   return it->second;
 }
 
