@@ -143,9 +143,9 @@ size_t EMatcherBuilder::add_clause(Operation::Opcode opcode,
   for (size_t subclause : submatchers)
     CAFFEINE_ASSERT(subclause < subclause_id);
 
-  SubClause clause{
-      opcode, std::vector<size_t>(submatchers.begin(), submatchers.end()),
-      std::move(filter), is_capture};
+  SubClause clause{opcode,
+                   std::vector<size_t>(submatchers.begin(), submatchers.end()),
+                   std::move(filter), is_capture};
 
   auto [it, inserted] = subclauses.emplace(std::move(clause), subclause_id);
   if (!inserted)
