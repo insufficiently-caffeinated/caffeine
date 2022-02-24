@@ -284,3 +284,25 @@ TEST_F(EMatchingTests, zext_trunc_elimination_multi) {
   ASSERT_EQ(egraph.find(cid), egraph.find(fid));
   ASSERT_EQ(egraph.find(fid), egraph.find(jid));
 }
+
+TEST_F(EMatchingTests, shl_lshr_elimination_equal) {
+  r::shift_elimination(builder);
+  r::commutativity(builder, Operation::And);
+  auto matcher = builder.build();
+
+  auto shift = add(ConstantInt::Create(llvm::APInt(32, 8)));
+  auto a = add(Constant::Create(Type::int_ty(32), "a"));
+  auto b = add(BinaryOp::CreateLShr(a, shift));
+  auto c = add(BinaryOp::CreateShl(b, shift));
+  auto d = add(ConstantInt::Create(llvm::APInt(32, 0xFFFFFF00)));
+  auto e = add(BinaryOp::CreateAnd(a, d));
+
+  auto cid = egraph.add(*c);
+  auto eid = egraph.add(*e);
+
+  egraph.DebugPrint();
+  egraph.simplify(matcher);
+  egraph.DebugPrint();
+
+  ASSERT_EQ(egraph.find(cid), egraph.find(eid));
+}

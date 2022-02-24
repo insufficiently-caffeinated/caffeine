@@ -260,6 +260,8 @@ namespace ematching {
 
     // (load (store ?a ?b ?c) ?d) -> (select (icmp.eq ?b ?d) ?c (load ?a ?d))
     void load_store_elimination(EMatcherBuilder& builder);
+
+    void shift_elimination(EMatcherBuilder& builder);
   } // namespace reductions
 
   class EMatcher {
