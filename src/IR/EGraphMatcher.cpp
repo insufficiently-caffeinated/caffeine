@@ -252,7 +252,6 @@ public:
     const EClass* eclass = egraph->get(eclass_id);
 
     auto matches = data.matches(subclause_id, eclass_id);
-    auto guard = make_guard([&] { captures.erase(subclause_id); });
 
     for (size_t node_id : matches) {
       const ENode* node = &eclass->nodes.at(node_id);
@@ -275,8 +274,10 @@ public:
 
       iterate(0, func, iterate);
 
-      if (subclause.is_capture)
-        captures[subclause_id].pop_back();
+      if (subclause.is_capture) {
+        CAFFEINE_ASSERT(!captures.at(subclause_id).empty());
+        captures.at(subclause_id).pop_back();
+      }
     }
 
     auto it = captures.find(subclause_id);
