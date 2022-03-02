@@ -1,3 +1,5 @@
+#include "caffeine/ADT/FunctionView.h"
+#include "caffeine/ADT/Guard.h"
 #include "caffeine/IR/EGraph.h"
 #include "caffeine/IR/EGraphMatching.h"
 #include "caffeine/IR/OperationBase.h"
@@ -30,6 +32,9 @@ public:
   // Used to remove matches from an updated clause
   std::unordered_map<size_t, std::vector<size_t>> reversed = {};
 
+  // Map containing all subclauses that are captured.
+  std::unordered_map<size_t, const ENode*> captures = {};
+
 public:
   void equality_saturation() {
     egraph->constprop();
@@ -42,11 +47,15 @@ public:
 
       egraph->updated.clear();
 
-      GraphAccessor accessor(egraph, &data);
+      GraphAccessor accessor(egraph, &data, &captures);
 
       for (auto [clause_id, eclass_id, enode_id] : work) {
         const auto& clause = matcher->clauses[clause_id];
-        clause.update(accessor, eclass_id, enode_id);
+
+        all_captures(clause.matcher, eclass_id, enode_id, data,
+                     [&, eclass_id = eclass_id, enode_id = enode_id] {
+                       clause.update(accessor, eclass_id, enode_id);
+                     });
       }
 
       accessor.persist();
@@ -194,6 +203,78 @@ public:
     if (it == matcher->subindex.end())
       return {};
     return it->second;
+  }
+
+  // Iterate through all combinations of captures and, for each one, call the
+  // provided function once the captures map has all the required types.
+  //
+  // Note that the initial subclause is always considered to be a capture, even
+  // if it is not meant to be since at this phase we've already eliminated it
+  // down to 1 match.
+  void all_captures(size_t subclause_id, size_t eclass_id, size_t enode_id,
+                    const EMatcherData& data, function_view<void()> func) {
+    const EClass* eclass = egraph->get(eclass_id);
+    const ENode* enode = &eclass->nodes.at(enode_id);
+    const SubClause& subclause = matcher->subclause(subclause_id);
+
+    captures.emplace(subclause_id, enode);
+    auto guard = make_guard([&] { captures.clear(); });
+
+    if (!matcher->captures.at(subclause_id)) {
+      func();
+      return;
+    }
+
+    auto iterate = [&](size_t index, const auto& func, const auto& iterate) {
+      if (index >= subclause.submatchers.size()) {
+        func();
+        return;
+      }
+
+      size_t submatcher = subclause.submatchers[index];
+      size_t operand = enode->operands[index];
+
+      all_captures_impl(submatcher, operand, data,
+                        [&] { iterate(index + 1, func, iterate); });
+    };
+
+    iterate(0, func, iterate);
+  }
+
+  void all_captures_impl(size_t subclause_id, size_t eclass_id,
+                         const EMatcherData& data, function_view<void()> func) {
+    if (!matcher->captures[subclause_id]) {
+      func();
+      return;
+    }
+
+    const SubClause& subclause = matcher->subclause(subclause_id);
+    const EClass* eclass = egraph->get(eclass_id);
+
+    auto matches = data.matches(subclause_id, eclass_id);
+    auto guard = make_guard([&] { captures.erase(subclause_id); });
+
+    for (size_t node_id : matches) {
+      const ENode* node = &eclass->nodes.at(node_id);
+
+      if (subclause.is_capture)
+        captures[subclause_id] = node;
+
+      auto iterate = [&](size_t index, const auto& func, const auto& iterate) {
+        if (index >= subclause.submatchers.size()) {
+          func();
+          return;
+        }
+
+        size_t submatcher = subclause.submatchers[index];
+        size_t operand = node->operands[index];
+
+        all_captures_impl(submatcher, operand, data,
+                          [&] { iterate(index + 1, func, iterate); });
+      };
+
+      iterate(0, func, iterate);
+    }
   }
 };
 

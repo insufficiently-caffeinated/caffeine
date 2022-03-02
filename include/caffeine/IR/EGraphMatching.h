@@ -70,13 +70,15 @@ namespace ematching {
     // If this is empty, then it will match against any set of operands,
     // otherwise it needs to be the same number of operands and all sub-matchers
     // must match.
-    llvm::SmallVector<size_t> submatchers;
+    std::vector<size_t> submatchers;
 
     // A filter that only checks the current enode and doesn't look at larger
     // graph structure.
     //
     // This is a function pointer so that subclauses can be deduplicated.
     std::unique_ptr<SubClauseFilter> filter = nullptr;
+
+    bool is_capture = false;
 
   public:
     bool is_potential_match(const ENode& node) const;
@@ -124,7 +126,9 @@ namespace ematching {
   // applied.
   class GraphAccessor {
   public:
-    GraphAccessor(EGraph* egraph, const MatchData* data);
+    GraphAccessor(
+        EGraph* egraph, const MatchData* data,
+        const std::unordered_map<size_t, const ENode*>* captures = nullptr);
 
     // Create a new e-class with the given e-node.
     size_t add(const ENode& enode);
@@ -149,6 +153,8 @@ namespace ematching {
 
     EGraph* graph();
 
+    const ENode* capture(size_t subclause) const;
+
     GraphAccessor(const GraphAccessor&) = delete;
     GraphAccessor(GraphAccessor&&) = delete;
 
@@ -164,6 +170,7 @@ namespace ematching {
   private:
     EGraph* egraph;
     const MatchData* data;
+    const std::unordered_map<size_t, const ENode*>* captures;
 
     std::vector<std::pair<size_t, size_t>> merges;
 
@@ -181,7 +188,13 @@ namespace ematching {
 
     size_t add_clause(Operation::Opcode opcode,
                       llvm::ArrayRef<size_t> submatchers = {},
-                      std::unique_ptr<SubClauseFilter>&& filters = nullptr);
+                      std::unique_ptr<SubClauseFilter>&& filters = nullptr,
+                      bool is_capture = false);
+    size_t add_capture(Operation::Opcode opcode,
+                       llvm::ArrayRef<size_t> submatchers = {},
+                       std::unique_ptr<SubClauseFilter>&& filters = nullptr) {
+      return add_clause(opcode, submatchers, std::move(filters), true);
+    }
 
     void add_matcher(size_t clause, EMatcherUpdater update,
                      std::optional<EMatcherFilter> filter = std::nullopt);
@@ -245,6 +258,7 @@ namespace ematching {
   private:
     std::vector<Clause> clauses;
     std::vector<SubClause> subclauses;
+    std::vector<bool> captures;
 
     std::unordered_map<Operation::Opcode, std::vector<size_t>> subindex;
 

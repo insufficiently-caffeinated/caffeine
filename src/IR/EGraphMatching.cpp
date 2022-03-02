@@ -1,6 +1,7 @@
 #include "caffeine/IR/EGraphMatching.h"
 #include "caffeine/IR/EGraph.h"
 #include "caffeine/IR/Operation.h"
+#include <fmt/format.h>
 
 namespace caffeine::ematching {
 
@@ -48,7 +49,7 @@ llvm::hash_code hash_value(const SubClause& subclause) {
 
   return llvm::hash_combine(subclause.opcode,
                             (llvm::ArrayRef<size_t>)subclause.submatchers,
-                            filter_hash);
+                            filter_hash, subclause.is_capture);
 }
 
 bool MatchData::contains_match(size_t subclause, size_t eclass) const {
@@ -70,8 +71,10 @@ llvm::ArrayRef<size_t> MatchData::matches(size_t subclause,
   return it->second;
 }
 
-GraphAccessor::GraphAccessor(EGraph* egraph, const MatchData* data)
-    : egraph(egraph), data(data) {}
+GraphAccessor::GraphAccessor(
+    EGraph* egraph, const MatchData* data,
+    const std::unordered_map<size_t, const ENode*>* captures)
+    : egraph(egraph), data(data), captures(captures) {}
 
 void GraphAccessor::persist() {
   for (auto [lhs, rhs] : merges)
@@ -125,15 +128,24 @@ EGraph* GraphAccessor::graph() {
   return egraph;
 }
 
+const ENode* GraphAccessor::capture(size_t subclause) const {
+  auto it = captures->find(subclause);
+  if (it == captures->end())
+    CAFFEINE_ABORT(fmt::format(
+        "subclause {} was not found within the capture set", subclause));
+  return it->second;
+}
+
 size_t EMatcherBuilder::add_clause(Operation::Opcode opcode,
                                    llvm::ArrayRef<size_t> submatchers,
-                                   std::unique_ptr<SubClauseFilter>&& filter) {
+                                   std::unique_ptr<SubClauseFilter>&& filter,
+                                   bool is_capture) {
   for (size_t subclause : submatchers)
     CAFFEINE_ASSERT(subclause < subclause_id);
 
-  SubClause clause{
-      opcode, llvm::SmallVector<size_t>(submatchers.begin(), submatchers.end()),
-      std::move(filter)};
+  SubClause clause{opcode,
+                   std::vector<size_t>(submatchers.begin(), submatchers.end()),
+                   std::move(filter), is_capture};
 
   auto [it, inserted] = subclauses.emplace(std::move(clause), subclause_id);
   if (!inserted)
@@ -161,8 +173,17 @@ EMatcher EMatcherBuilder::build() {
             [](const auto& a, const auto& b) { return a.first < b.first; });
 
   matcher.subclauses.reserve(clausetmp.size());
-  for (auto& val : clausetmp)
-    matcher.subclauses.push_back(std::move(val.second));
+  matcher.captures.reserve(clausetmp.size());
+  for (auto& [id, subclause] : clausetmp) {
+    bool capture =
+        subclause.is_capture ||
+        std::any_of(
+            subclause.submatchers.begin(), subclause.submatchers.end(),
+            [&](size_t submatcher) { return matcher.captures.at(submatcher); });
+
+    matcher.captures.push_back(capture);
+    matcher.subclauses.push_back(std::move(subclause));
+  }
 
   subclauses.clear();
   subclause_id = 0;
