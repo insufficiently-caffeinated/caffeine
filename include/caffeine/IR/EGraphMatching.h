@@ -239,6 +239,9 @@ namespace ematching {
   public:
     static EMatcherBuilder builder();
 
+    const Clause& clause(size_t clause) const;
+    const SubClause& subclause(size_t subclause) const;
+
   private:
     std::vector<Clause> clauses;
     std::vector<SubClause> subclauses;

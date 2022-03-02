@@ -181,4 +181,11 @@ EMatcherBuilder EMatcher::builder() {
   return EMatcherBuilder();
 }
 
+const Clause& EMatcher::clause(size_t clause) const {
+  return clauses.at(clause);
+}
+const SubClause& EMatcher::subclause(size_t subclause) const {
+  return subclauses.at(subclause);
+}
+
 } // namespace caffeine::ematching
