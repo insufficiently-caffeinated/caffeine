@@ -254,6 +254,9 @@ namespace ematching {
     // (zext.ixx (trunc.iyy ?z)) -> (and v (ixx (2^yy - 1)))
     void zext_trunc_elimination(EMatcherBuilder& builder);
 
+    // (trunc.ixx (zext.iyy ?x)) -> (zext-or-trunc.ixx ?x)
+    void trunc_zext_elimination(EMatcherBuilder& builder);
+
     // (select (i1 1) ?x ?y) -> ?x
     // (select (i1 0) ?x ?y) -> ?y
     void select_constprop(EMatcherBuilder& builder);
