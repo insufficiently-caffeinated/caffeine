@@ -33,7 +33,7 @@ public:
   std::unordered_map<size_t, std::vector<size_t>> reversed = {};
 
   // Map containing all subclauses that are captured.
-  std::unordered_map<size_t, const ENode*> captures = {};
+  GraphAccessor::CapturesMap captures = {};
 
 public:
   void equality_saturation() {
@@ -217,7 +217,7 @@ public:
     const ENode* enode = &eclass->nodes.at(enode_id);
     const SubClause& subclause = matcher->subclause(subclause_id);
 
-    captures.emplace(subclause_id, enode);
+    captures.insert({subclause_id, {enode}});
     auto guard = make_guard([&] { captures.clear(); });
 
     if (!matcher->captures.at(subclause_id)) {
@@ -252,13 +252,12 @@ public:
     const EClass* eclass = egraph->get(eclass_id);
 
     auto matches = data.matches(subclause_id, eclass_id);
-    auto guard = make_guard([&] { captures.erase(subclause_id); });
 
     for (size_t node_id : matches) {
       const ENode* node = &eclass->nodes.at(node_id);
 
       if (subclause.is_capture)
-        captures[subclause_id] = node;
+        captures[subclause_id].push_back(node);
 
       auto iterate = [&](size_t index, const auto& func, const auto& iterate) {
         if (index >= subclause.submatchers.size()) {
@@ -274,7 +273,16 @@ public:
       };
 
       iterate(0, func, iterate);
+
+      if (subclause.is_capture) {
+        CAFFEINE_ASSERT(!captures.at(subclause_id).empty());
+        captures.at(subclause_id).pop_back();
+      }
     }
+
+    auto it = captures.find(subclause_id);
+    if (it != captures.end() && it->second.empty())
+      captures.erase(it);
   }
 };
 

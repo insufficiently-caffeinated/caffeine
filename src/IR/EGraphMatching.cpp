@@ -71,10 +71,9 @@ llvm::ArrayRef<size_t> MatchData::matches(size_t subclause,
   return it->second;
 }
 
-GraphAccessor::GraphAccessor(
-    EGraph* egraph, const MatchData* data,
-    const std::unordered_map<size_t, const ENode*>* captures)
-    : egraph(egraph), data(data), captures(captures) {}
+GraphAccessor::GraphAccessor(EGraph* egraph, const MatchData* data,
+                             const CapturesMap* captures)
+    : egraph(egraph), data(data), captures_(captures) {}
 
 void GraphAccessor::persist() {
   for (auto [lhs, rhs] : merges)
@@ -129,10 +128,26 @@ EGraph* GraphAccessor::graph() {
 }
 
 const ENode* GraphAccessor::capture(size_t subclause) const {
-  auto it = captures->find(subclause);
-  if (it == captures->end())
-    CAFFEINE_ABORT(fmt::format(
-        "subclause {} was not found within the capture set", subclause));
+  auto it = captures_->find(subclause);
+  CAFFEINE_ASSERT(
+      it != captures_->end(),
+      fmt::format("subclause {} was not found within the capture set",
+                  subclause));
+  CAFFEINE_ASSERT(it->second.size() == 1,
+                  fmt::format("subclause {} had multiple ({}) captures",
+                              subclause, it->second.size()));
+  return it->second.front();
+}
+llvm::ArrayRef<const ENode*> GraphAccessor::captures(size_t subclause) const {
+  auto it = captures_->find(subclause);
+  CAFFEINE_ASSERT(
+      it != captures_->end(),
+      fmt::format("subclause {} was not found within the capture set",
+                  subclause));
+  // This should never happen but it doesn't hurt to check.
+  CAFFEINE_ASSERT(
+      !it->second.empty(),
+      fmt::format("subclause {} had empty capture set?", subclause));
   return it->second;
 }
 
