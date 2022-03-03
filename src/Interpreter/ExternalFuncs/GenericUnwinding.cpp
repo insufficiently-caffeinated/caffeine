@@ -130,7 +130,6 @@ void GenericUnwinding::findLandingPad(InterpreterContext& ctx) {
 }
 
 void GenericUnwinding::step(InterpreterContext& ctx) {
-
   switch (uw_state.state) {
   case UNINITIALIZED: {
     uw_state.state = SEARCHING;
@@ -163,13 +162,14 @@ void GenericUnwinding::step(InterpreterContext& ctx) {
     if (ctx.check(should_enter) == SolverResult::SAT) {
       uw_state.possible_states.emplace_back(
           RETURNING, CATCH, uw_state.current_frame, uw_state.catching_clause,
-          AssertionList(should_enter));
+          uw_state.unmatched_exceptions);
     }
 
     if (ctx.check(!should_enter) == SolverResult::SAT) {
       uw_state.unmatched_exceptions.insert(!should_enter);
       // Keep searching
       uw_state.state = SEARCHING;
+      uw_state.clause_num++;
     } else {
       // The exception always resolves to this clause
       uw_state.state = FORKING;
