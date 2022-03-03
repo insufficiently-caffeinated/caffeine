@@ -4,6 +4,7 @@
 #include "caffeine/IR/Visitor.h"
 #include "caffeine/Interpreter/Context.h"
 #include "caffeine/Solver/CanonicalizingSolver.h"
+#include "caffeine/Solver/EarlyExitSolver.h"
 #include "caffeine/Solver/ModelEval.h"
 #include "caffeine/Solver/SimplifyingSolver.h"
 #include "caffeine/Solver/SlicingSolver.h"
@@ -137,6 +138,7 @@ SolverBuilder::SolverBuilder(const BaseFn& base) : base(base) {}
 
 SolverBuilder SolverBuilder::with_default() {
   auto builder = SolverBuilder(std::make_shared<Z3Solver>);
+  builder.with<EarlyExitSolver>();
   builder.with<SimplifyingSolver>();
   builder.with<CanonicalizingSolver>();
   builder.with<SlicingSolver>();
