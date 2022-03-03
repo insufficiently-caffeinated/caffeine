@@ -9,3 +9,8 @@ bitcode_binary(
     name = "maze-symbolic",
     srcs = ["maze-symbolic.c"],
 )
+
+bitcode_binary(
+    name = "demo",
+    srcs = ["demo.c"],
+)
