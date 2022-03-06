@@ -303,6 +303,17 @@ MultiHeap::resolve(const Pointer& value, InterpreterContext& ctx) const {
   return it->second.resolve(value, ctx);
 }
 
+OpRef MultiHeap::read_from(const Pointer& ptr, const Type& t,
+                           const llvm::DataLayout& layout) const {
+  const Allocation& alloc = ptr_allocation(ptr);
+  return alloc.read(ptr.offset(), t, layout);
+}
+LLVMValue MultiHeap::read_from(const Pointer& ptr, llvm::Type* type,
+                               const llvm::DataLayout& layout) const {
+  const Allocation& alloc = ptr_allocation(ptr);
+  return alloc.read(ptr.offset(), type, layout);
+}
+
 void MultiHeap::write_to(const Pointer& ptr, const OpRef& value,
                          const llvm::DataLayout& layout) {
   auto& alloc = ptr_allocation(ptr);

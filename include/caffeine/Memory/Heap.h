@@ -145,6 +145,11 @@ public:
   llvm::SmallVector<Pointer, 1> resolve(const Pointer& value,
                                         InterpreterContext& ctx) const;
 
+  OpRef read_from(const Pointer& ptr, const Type& t,
+                  const llvm::DataLayout& layout) const;
+  LLVMValue read_from(const Pointer& ptr, llvm::Type* type,
+                      const llvm::DataLayout& layout) const;
+
   void write_to(const Pointer& ptr, const OpRef& value,
                 const llvm::DataLayout& layout);
   void write_to(const Pointer& ptr, const LLVMScalar& value,

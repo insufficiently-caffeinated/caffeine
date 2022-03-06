@@ -145,7 +145,7 @@ OpRef Allocation::read(const OpRef& offset, const Type& t,
   return UnaryOp::CreateBitcast(t, bitresult);
 }
 LLVMValue Allocation::read(const OpRef& offset, llvm::Type* type,
-                           const llvm::DataLayout& layout) {
+                           const llvm::DataLayout& layout) const {
   if (!(perms_ & AllocationPermissions::Read)) {
     throw AllocationException("tried to read unreadable allocation");
   }
