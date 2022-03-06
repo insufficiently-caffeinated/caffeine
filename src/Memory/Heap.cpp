@@ -262,6 +262,13 @@ Allocation& MultiHeap::ptr_allocation(const Pointer& ptr) {
       const_cast<const MultiHeap*>(this)->ptr_allocation(ptr));
 }
 
+OpRef MultiHeap::ptr_value(const Pointer& ptr) const {
+  if (!ptr.is_resolved())
+    return ptr.offset();
+
+  return heaps_.at(ptr.heap()).ptr_value(ptr);
+}
+
 Assertion MultiHeap::check_valid(const Pointer& value,
                                  const OpRef& width) const {
   auto it = heaps_.find(value.heap());

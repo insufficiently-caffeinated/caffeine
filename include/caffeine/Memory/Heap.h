@@ -108,7 +108,7 @@ public:
   static constexpr unsigned FUNCTION_INDEX = UINT_MAX - 2;
 
 public:
-  explicit MultiHeap();
+  MultiHeap();
   explicit MultiHeap(AllocFactory factory);
 
   // Create a new allocation that has a distinct address from all currently live
@@ -132,6 +132,8 @@ public:
   // resolved.
   Allocation& ptr_allocation(const Pointer& ptr);
   const Allocation& ptr_allocation(const Pointer& ptr) const;
+
+  OpRef ptr_value(const Pointer& ptr) const;
 
   Assertion check_valid(const Pointer& value, uint32_t width) const;
   Assertion check_valid(const Pointer& value, const OpRef& width) const;
