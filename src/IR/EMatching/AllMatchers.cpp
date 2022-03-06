@@ -76,6 +76,7 @@ void EMatcherBuilder::add_defaults() {
 
   reductions::and_zero_elimination(*this);
   reductions::zext_trunc_elimination(*this);
+  reductions::trunc_zext_elimination(*this);
   reductions::select_constprop(*this);
   reductions::load_store_elimination(*this);
 }

@@ -23,4 +23,20 @@ void zext_trunc_elimination(EMatcherBuilder& builder) {
   builder.add_matcher(zext, std::move(matcher));
 }
 
+void trunc_zext_elimination(EMatcherBuilder& builder) {
+  size_t zext = builder.add_capture(Operation::ZExt);
+  size_t trunc = builder.add_capture(Operation::Trunc, {zext});
+
+  auto matcher = [=](GraphAccessor& egraph, size_t eclass_id, size_t) {
+    const ENode* znode = egraph.capture(zext);
+    const ENode* tnode = egraph.capture(trunc);
+
+    auto op = UnaryOp::CreateTruncOrZExt(tnode->type(),
+                                         egraph.get_op(znode->operands[0]));
+    egraph.add_merge(eclass_id, op);
+  };
+
+  builder.add_matcher(trunc, std::move(matcher));
+}
+
 } // namespace caffeine::ematching::reductions
