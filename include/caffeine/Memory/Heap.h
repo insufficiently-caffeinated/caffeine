@@ -111,6 +111,9 @@ public:
   MultiHeap();
   explicit MultiHeap(AllocFactory factory);
 
+  // Access a heap by index.
+  const Heap& operator[](unsigned index) const;
+
   // Create a new allocation that has a distinct address from all currently live
   // allocations. In addition, it will also add corresponding assertions to the
   // context as well.

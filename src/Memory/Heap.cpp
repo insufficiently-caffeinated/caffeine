@@ -219,6 +219,10 @@ llvm::SmallVector<Pointer, 1> Heap::resolve(const Pointer& ptr,
 MultiHeap::MultiHeap() {}
 MultiHeap::MultiHeap(AllocFactory factory) : factory_(factory) {}
 
+const Heap& MultiHeap::operator[](unsigned int index) const {
+  return heaps_.at(index);
+}
+
 Pointer MultiHeap::allocate(const OpRef& size, const OpRef& alignment,
                             const OpRef& data, AllocationKind kind,
                             AllocationPermissions permissions,
