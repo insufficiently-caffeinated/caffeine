@@ -303,4 +303,21 @@ MultiHeap::resolve(const Pointer& value, InterpreterContext& ctx) const {
   return it->second.resolve(value, ctx);
 }
 
+void MultiHeap::write_to(const Pointer& ptr, const OpRef& value,
+                         const llvm::DataLayout& layout) {
+  auto& alloc = ptr_allocation(ptr);
+  alloc.write(ptr.offset(), value, layout);
+}
+void MultiHeap::write_to(const Pointer& ptr, const LLVMScalar& value,
+                         const llvm::DataLayout& layout) {
+  auto& alloc = ptr_allocation(ptr);
+  alloc.write(ptr.offset(), value, *this, layout);
+}
+void MultiHeap::write_to(const Pointer& ptr, llvm::Type* type,
+                         const LLVMValue& value,
+                         const llvm::DataLayout& layout) {
+  auto& alloc = ptr_allocation(ptr);
+  alloc.write(ptr.offset(), type, value, *this, layout);
+}
+
 } // namespace caffeine

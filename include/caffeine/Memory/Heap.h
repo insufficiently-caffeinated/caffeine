@@ -144,6 +144,13 @@ public:
 
   llvm::SmallVector<Pointer, 1> resolve(const Pointer& value,
                                         InterpreterContext& ctx) const;
+
+  void write_to(const Pointer& ptr, const OpRef& value,
+                const llvm::DataLayout& layout);
+  void write_to(const Pointer& ptr, const LLVMScalar& value,
+                const llvm::DataLayout& layout);
+  void write_to(const Pointer& ptr, llvm::Type* type, const LLVMValue& value,
+                const llvm::DataLayout& layout);
 };
 
 } // namespace caffeine

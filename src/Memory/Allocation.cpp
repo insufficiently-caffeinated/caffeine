@@ -2,6 +2,7 @@
 #include "caffeine/IR/Assertion.h"
 #include "caffeine/IR/Operation.h"
 #include "caffeine/Model/Value.h"
+#include "caffeine/Support/LLVMFmt.h"
 #include <llvm/IR/Type.h>
 
 namespace caffeine {
@@ -248,6 +249,7 @@ void Allocation::write(const OpRef& offset, const OpRef& value_,
     overwrite(StoreOp::Create(data(), index, byte));
   }
 }
+
 void Allocation::write(const OpRef& offset, const LLVMScalar& value,
                        const MemHeapMgr& heapmgr,
                        const llvm::DataLayout& layout) {
@@ -298,6 +300,62 @@ void Allocation::write(const OpRef& offset, llvm::Type* type,
 
       elem_offset += layout.getTypeAllocSize(elem_ty);
     }
+  }
+}
+
+void Allocation::write(const OpRef& offset, const LLVMScalar& value,
+                       const MultiHeap& heap, const llvm::DataLayout& layout) {
+  if (value.is_pointer()) {
+    write(offset, heap.ptr_value(value.pointer()), layout);
+  } else {
+    write(offset, value.expr(), layout);
+  }
+}
+void Allocation::write(const OpRef& offset, llvm::Type* type,
+                       const LLVMValue& value, const MultiHeap& heap,
+                       const llvm::DataLayout& layout) {
+  if (!(perms_ & AllocationPermissions::Write)) {
+    throw AllocationException("tried to write to unwritable allocation");
+  }
+
+  if (value.is_vector()) {
+    if (type->isVectorTy()) {
+      auto fixedVectorTy = llvm::dyn_cast<llvm::FixedVectorType>(type);
+      CAFFEINE_ASSERT(fixedVectorTy, "Scalable vectors are not supported");
+      CAFFEINE_ASSERT(value.num_elements() == fixedVectorTy->getNumElements());
+      type = fixedVectorTy->getElementType();
+    }
+
+    for (size_t i = 0; i < value.num_elements(); ++i) {
+      write(BinaryOp::CreateAdd(
+                offset, i * layout.getTypeAllocSize(type).getFixedSize()),
+            value.element(i), heap, layout);
+    }
+  } else if (type->isArrayTy()) {
+    CAFFEINE_ASSERT(value.num_members() == type->getArrayNumElements());
+    llvm::Type* elem_ty = type->getArrayElementType();
+
+    for (size_t i = 0; i < value.num_members(); ++i) {
+      write(BinaryOp::CreateAdd(
+                offset, i * layout.getTypeAllocSize(elem_ty).getFixedSize()),
+            elem_ty, value.member(i), heap, layout);
+    }
+  } else if (type->isStructTy()) {
+    CAFFEINE_ASSERT(value.num_members() == type->getStructNumElements());
+    size_t elem_offset = 0;
+
+    for (size_t i = 0; i < value.num_members(); ++i) {
+      llvm::Type* elem_ty = type->getStructElementType(i);
+
+      write(BinaryOp::CreateAdd(offset, elem_offset), elem_ty, value.member(i),
+            heap, layout);
+
+      elem_offset += layout.getTypeAllocSize(elem_ty);
+    }
+  } else {
+    CAFFEINE_UNSUPPORTED(fmt::format(
+        FMT_STRING("support writing type {} to memory is not implemented"),
+        *type));
   }
 }
 
