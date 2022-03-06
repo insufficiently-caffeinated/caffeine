@@ -1,3 +1,5 @@
+#pragma once
+
 #include <memory>
 
 namespace caffeine {
@@ -29,6 +31,10 @@ public:
 
   clone_ptr& operator=(const clone_ptr<T>& other) {
     pointer = other.pointer->clone();
+    return *this;
+  }
+  clone_ptr& operator=(std::nullptr_t) {
+    pointer = nullptr;
     return *this;
   }
 
