@@ -100,6 +100,8 @@ public:
 
   OpRef createSelect(const OpRef& cond, const OpRef& true_value,
                      const OpRef& false_value);
+  OpRef createSelect(const OpRef& cond, const Pointer& true_value,
+                     const Pointer& false_value);
   LLVMValue createSelect(const LLVMValue& cond, const LLVMValue& true_value,
                          const LLVMValue& false_value);
 

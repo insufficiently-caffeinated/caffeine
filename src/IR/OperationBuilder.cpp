@@ -174,6 +174,26 @@ DEF_CONVERT(Bitcast);
 DEF_CONVERT(TruncOrZExt);
 DEF_CONVERT(TruncOrSExt);
 
+OpRef OperationBuilder::createSelect(const OpRef& cond, const OpRef& true_value,
+                                     const OpRef& false_value) {
+  return to_egraph(SelectOp::Create(cond, true_value, false_value));
+}
+OpRef OperationBuilder::createSelect(const OpRef& cond,
+                                     const Pointer& true_value,
+                                     const Pointer& false_value) {
+  return createSelect(cond, to_expr(true_value), to_expr(false_value));
+}
+LLVMValue OperationBuilder::createSelect(const LLVMValue& cond,
+                                         const LLVMValue& true_value,
+                                         const LLVMValue& false_value) {
+  return transform_elements(
+      [&](const LLVMScalar& c, const LLVMScalar& t,
+          const LLVMScalar& f) -> LLVMScalar {
+        return this->createSelect(to_expr(c), to_expr(t), to_expr(f));
+      },
+      cond, true_value, false_value);
+}
+
 LLVMValue OperationBuilder::createICmp(ICmpOpcode opcode, const LLVMValue& lhs,
                                        const LLVMValue& rhs) {
   return transform_elements(
