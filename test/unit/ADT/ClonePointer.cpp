@@ -87,3 +87,10 @@ TEST(clone_ptr, virtual_things_in_a_class_actually_copy) {
   ASSERT_EQ(vec2[0]->get_i(), 5);
   ASSERT_EQ(vec2[1]->get_i(), 8);
 }
+
+TEST(clone_ptr, working_with_nulls) {
+  clone_ptr<Basic> a = nullptr;
+  clone_ptr<Basic> b = a;
+  clone_ptr<Basic> c;
+  c = b;
+}

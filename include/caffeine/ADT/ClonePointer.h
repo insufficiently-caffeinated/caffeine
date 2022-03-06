@@ -1,3 +1,5 @@
+#pragma once
+
 #include <memory>
 
 namespace caffeine {
@@ -22,13 +24,19 @@ public:
 
   clone_ptr() = default;
   clone_ptr(clone_ptr<T>&&) = default;
-  clone_ptr(const clone_ptr<T>& other) : pointer(other.pointer->clone()) {}
+  clone_ptr(const clone_ptr<T>& other)
+      : pointer(other ? other->clone() : nullptr) {}
   clone_ptr(std::unique_ptr<T>&& p) : pointer(std::move(p)) {}
+  clone_ptr(std::nullptr_t) : pointer(nullptr) {}
 
   clone_ptr& operator=(clone_ptr<T>&&) = default;
 
   clone_ptr& operator=(const clone_ptr<T>& other) {
-    pointer = other.pointer->clone();
+    pointer = other ? other->clone() : nullptr;
+    return *this;
+  }
+  clone_ptr& operator=(std::nullptr_t) {
+    pointer = nullptr;
     return *this;
   }
 
