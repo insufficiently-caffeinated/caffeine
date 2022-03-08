@@ -28,7 +28,10 @@ namespace {
     void returningStep(InterpreterContext& ctx) override {
       uw_state.state = DONE;
 
-      CAFFEINE_ASSERT(uw_state.catch_type, "catch type should be set");
+      if (uw_state.catch_type == NONE) {
+        ctx.fail("No landingpad for thrown exception!");
+        return;
+      }
 
       // Have to get args[2] here because if we pop the stacks off earlier
       // the LLVMValue becomes corrupted somehow

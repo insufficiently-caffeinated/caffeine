@@ -277,6 +277,17 @@ void Interpreter::visitCallInst(llvm::CallInst& call) {
 void Interpreter::visitInvokeInst(llvm::InvokeInst& invoke) {
   return visitCallBase(invoke);
 }
+void Interpreter::visitResumeInst(llvm::ResumeInst& resume) {
+  llvm::Function* caffeine_resume_func =
+      interp->getModule()->getFunction("caffeine_resume_func");
+  CAFFEINE_ASSERT(caffeine_resume_func, "caffeine_resume_func is not present");
+  std::vector<LLVMValue> args;
+  llvm::Value* arg = resume.getValue();
+
+  args.push_back(interp->load(arg).aggregate().front());
+
+  interp->call_function(caffeine_resume_func, args);
+}
 void Interpreter::visitIntrinsicInst(llvm::IntrinsicInst& intrin) {
   namespace Intrinsic = llvm::Intrinsic;
 

@@ -51,3 +51,13 @@ extern "C" _Unwind_Reason_Code _Unwind_RaiseException(_Unwind_Exception* header)
   caffeine_unwind_phase2(cxa_exception->exceptionType, &cxa_exception->adjustedPtr, header);
   return _URC_FATAL_PHASE2_ERROR;
 }
+
+extern "C" __attribute__((used)) void caffeine_resume_func(_Unwind_Exception* header) {
+  __cxxabiv1::__cxa_exception * cxa_exception = get_cxa_exception(header);
+  setAdjPointer(header, cxa_exception);
+
+  // caffeine_unwind_phase2 doesn't return
+  caffeine_unwind_phase2(cxa_exception->exceptionType, &cxa_exception->adjustedPtr, header);
+  // But if it does, die
+  abort();
+}

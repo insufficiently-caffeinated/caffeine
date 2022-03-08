@@ -55,6 +55,7 @@ public:
   void visitIntrinsicInst(llvm::IntrinsicInst& inst);
   void visitIndirectCall(llvm::CallBase& inst);
   void visitInvokeInst(llvm::InvokeInst& invoke);
+  void visitResumeInst(llvm::ResumeInst& resume);
 
   void visitGetElementPtrInst(llvm::GetElementPtrInst& inst);
   void visitLoadInst(llvm::LoadInst& inst);
