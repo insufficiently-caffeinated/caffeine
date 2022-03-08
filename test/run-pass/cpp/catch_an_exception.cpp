@@ -9,8 +9,6 @@ extern "C" void test(int b) {
       throw std::runtime_error("thing");
     }
     caffeine_assert(false);
-  } catch (std::runtime_error c) {
-    a = 1;
-  }
+  } catch (std::runtime_error c) { a = 1; }
   caffeine_assert(a == 1);
 }
