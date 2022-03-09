@@ -10,5 +10,4 @@ extern "C" void test(int b) {
     }
     caffeine_assert(false);
   } catch (std::runtime_error c) { a = 1; }
-  caffeine_assert(a == 1);
 }
