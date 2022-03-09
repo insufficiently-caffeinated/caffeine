@@ -105,8 +105,7 @@ bool GenericUnwinding::getPossibleStates(InterpreterContext& ctx) {
     }
 
     // Check the cleanup flag last
-    if (lpad->isCleanup()) {
-      // Always enter a cleanup clause
+    if (evaluate_cleanup && lpad->isCleanup()) {
       uw_state.possible_states.emplace_back(
           RETURNING, CLEANUP, uw_state.current_frame, nullptr, AssertionList());
       return true;
@@ -194,5 +193,10 @@ void GenericUnwinding::step(InterpreterContext& ctx) {
         "GenericUnwinding function implementation entered an invalid state");
   }
 }
+
+GenericUnwinding::GenericUnwinding(std::vector<LLVMValue>&& args,
+                                   llvm::Function* func, bool evaluate_cleanup)
+    : ExternalStackFrame(std::move(args), func), evaluate_cleanup{
+                                                     evaluate_cleanup} {}
 
 } // namespace caffeine

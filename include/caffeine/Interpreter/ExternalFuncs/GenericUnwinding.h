@@ -56,12 +56,16 @@ protected:
 
 public:
   GenericUnwinding(const GenericUnwinding&) = default;
+  GenericUnwinding(std::vector<LLVMValue>&& args, llvm::Function* func,
+                   bool evaluate_cleanup);
   virtual void step(InterpreterContext& ctx) override;
   virtual void returningStep(InterpreterContext&) = 0;
 
 protected:
   UnwindPhaseState uw_state;
   llvm::Function* can_catch_func;
+  // Cleanups should not be checked in phase1
+  bool evaluate_cleanup = true;
 };
 
 } // namespace caffeine

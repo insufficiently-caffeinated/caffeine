@@ -70,7 +70,7 @@ namespace {
       }
 
       ctx.call_external_function(std::make_unique<UnwindPhase1>(
-          std::vector<LLVMValue>(args.begin(), args.end()), func));
+          std::vector<LLVMValue>(args.begin(), args.end()), func, false));
     }
   };
 
