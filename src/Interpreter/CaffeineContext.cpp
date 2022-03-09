@@ -167,6 +167,8 @@ Builder& Builder::with_default_functions() {
                 ExternalFunctions::caffeine_malloc_aligned());
   with_function("caffeine_unwind_phase1",
                 ExternalFunctions::caffeine_unwind_phase1());
+  with_function("caffeine_unwind_phase2",
+                ExternalFunctions::caffeine_unwind_phase2());
 
   with_function("abort", ExternalFunctions::abort());
   with_function("longjmp", ExternalFunctions::longjmp());

@@ -2,6 +2,7 @@
 build/
 .vscode/
 .cache
+.gdb_history
 
 /bazel-*
 compile_commands.json
