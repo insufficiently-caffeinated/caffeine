@@ -11,6 +11,7 @@ class MemHeap;
 class MemHeapMgr;
 class LLVMScalar;
 class LLVMValue;
+class MultiHeap;
 
 /**
  * An allocation category.
@@ -113,7 +114,7 @@ public:
   OpRef read(const OpRef& offset, const Type& t,
              const llvm::DataLayout& layout) const;
   LLVMValue read(const OpRef& offset, llvm::Type* type,
-                 const llvm::DataLayout& layout);
+                 const llvm::DataLayout& layout) const;
 
   /**
    * Write the value to the array at the given offset.
@@ -123,10 +124,16 @@ public:
    */
   void write(const OpRef& offset, const OpRef& value,
              const llvm::DataLayout& layout);
+
   void write(const OpRef& offset, const LLVMScalar& value,
              const MemHeapMgr& heapmgr, const llvm::DataLayout& layout);
   void write(const OpRef& offset, llvm::Type* type, const LLVMValue& value,
              const MemHeapMgr& heapmgr, const llvm::DataLayout& layout);
+
+  void write(const OpRef& offset, const LLVMScalar& value,
+             const MultiHeap& heap, const llvm::DataLayout& layout);
+  void write(const OpRef& offset, llvm::Type* type, const LLVMValue& value,
+             const MultiHeap& heap, const llvm::DataLayout& layout);
 
   void DebugPrint() const;
 };

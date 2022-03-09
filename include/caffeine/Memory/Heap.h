@@ -108,8 +108,11 @@ public:
   static constexpr unsigned FUNCTION_INDEX = UINT_MAX - 2;
 
 public:
-  explicit MultiHeap();
+  MultiHeap();
   explicit MultiHeap(AllocFactory factory);
+
+  // Access a heap by index.
+  const Heap& operator[](unsigned index) const;
 
   // Create a new allocation that has a distinct address from all currently live
   // allocations. In addition, it will also add corresponding assertions to the
@@ -133,12 +136,26 @@ public:
   Allocation& ptr_allocation(const Pointer& ptr);
   const Allocation& ptr_allocation(const Pointer& ptr) const;
 
+  OpRef ptr_value(const Pointer& ptr) const;
+
   Assertion check_valid(const Pointer& value, uint32_t width) const;
   Assertion check_valid(const Pointer& value, const OpRef& width) const;
   Assertion check_starts_allocation(const Pointer& value) const;
 
   llvm::SmallVector<Pointer, 1> resolve(const Pointer& value,
                                         InterpreterContext& ctx) const;
+
+  OpRef read_from(const Pointer& ptr, const Type& t,
+                  const llvm::DataLayout& layout) const;
+  LLVMValue read_from(const Pointer& ptr, llvm::Type* type,
+                      const llvm::DataLayout& layout) const;
+
+  void write_to(const Pointer& ptr, const OpRef& value,
+                const llvm::DataLayout& layout);
+  void write_to(const Pointer& ptr, const LLVMScalar& value,
+                const llvm::DataLayout& layout);
+  void write_to(const Pointer& ptr, llvm::Type* type, const LLVMValue& value,
+                const llvm::DataLayout& layout);
 };
 
 } // namespace caffeine

@@ -219,6 +219,10 @@ llvm::SmallVector<Pointer, 1> Heap::resolve(const Pointer& ptr,
 MultiHeap::MultiHeap() {}
 MultiHeap::MultiHeap(AllocFactory factory) : factory_(factory) {}
 
+const Heap& MultiHeap::operator[](unsigned int index) const {
+  return heaps_.at(index);
+}
+
 Pointer MultiHeap::allocate(const OpRef& size, const OpRef& alignment,
                             const OpRef& data, AllocationKind kind,
                             AllocationPermissions permissions,
@@ -262,6 +266,13 @@ Allocation& MultiHeap::ptr_allocation(const Pointer& ptr) {
       const_cast<const MultiHeap*>(this)->ptr_allocation(ptr));
 }
 
+OpRef MultiHeap::ptr_value(const Pointer& ptr) const {
+  if (!ptr.is_resolved())
+    return ptr.offset();
+
+  return heaps_.at(ptr.heap()).ptr_value(ptr);
+}
+
 Assertion MultiHeap::check_valid(const Pointer& value,
                                  const OpRef& width) const {
   auto it = heaps_.find(value.heap());
@@ -290,6 +301,34 @@ MultiHeap::resolve(const Pointer& value, InterpreterContext& ctx) const {
     return {};
 
   return it->second.resolve(value, ctx);
+}
+
+OpRef MultiHeap::read_from(const Pointer& ptr, const Type& t,
+                           const llvm::DataLayout& layout) const {
+  const Allocation& alloc = ptr_allocation(ptr);
+  return alloc.read(ptr.offset(), t, layout);
+}
+LLVMValue MultiHeap::read_from(const Pointer& ptr, llvm::Type* type,
+                               const llvm::DataLayout& layout) const {
+  const Allocation& alloc = ptr_allocation(ptr);
+  return alloc.read(ptr.offset(), type, layout);
+}
+
+void MultiHeap::write_to(const Pointer& ptr, const OpRef& value,
+                         const llvm::DataLayout& layout) {
+  auto& alloc = ptr_allocation(ptr);
+  alloc.write(ptr.offset(), value, layout);
+}
+void MultiHeap::write_to(const Pointer& ptr, const LLVMScalar& value,
+                         const llvm::DataLayout& layout) {
+  auto& alloc = ptr_allocation(ptr);
+  alloc.write(ptr.offset(), value, *this, layout);
+}
+void MultiHeap::write_to(const Pointer& ptr, llvm::Type* type,
+                         const LLVMValue& value,
+                         const llvm::DataLayout& layout) {
+  auto& alloc = ptr_allocation(ptr);
+  alloc.write(ptr.offset(), type, value, *this, layout);
 }
 
 } // namespace caffeine
