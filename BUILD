@@ -169,6 +169,15 @@ pkg_filegroup(
     srcs = [
         ":caffeine-executables",
         ":caffeine-files",
+    ],
+    visibility = ["//visibility:private"],
+)
+
+pkg_filegroup(
+    name = "caffeine-package-dev",
+    srcs = [
+        ":caffeine-executables",
+        ":caffeine-files",
         ":caffeine-headers",
     ],
     visibility = ["//visibility:private"],
@@ -182,13 +191,28 @@ pkg_tar(
     out = "caffeine.tar.gz",
     package_file_name = "caffeine-{mode}.tar.gz",
     package_variables = ":caffeine-naming-vars",
+    tags = ["manual"],
+)
+
+pkg_tar(
+    name = "tarball-dev",
+    srcs = [
+        ":caffeine-package-dev",
+    ],
+    out = "caffeine-dev.tar.gz",
+    package_file_name = "caffeine-dev-{mode}.tar.gz",
+    package_variables = ":caffeine-naming-vars",
+    tags = ["manual"],
 )
 
 pkg_install(
     name = "install",
-    srcs = [
-        ":caffeine-package",
-    ],
+    srcs = [":caffeine-package"],
+)
+
+pkg_install(
+    name = "install-full",
+    srcs = [":caffeine-package-dev"],
 )
 
 ####################################################################
