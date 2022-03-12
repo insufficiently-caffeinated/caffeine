@@ -8,6 +8,7 @@
 #include "caffeine/Interpreter/Store/CountLimitedStore.h"
 #include "caffeine/Interpreter/Store/TimeLimitedStore.h"
 #include "caffeine/Interpreter/ThreadQueueStore.h"
+#include "caffeine/Solver/InterruptSolver.h"
 #include "caffeine/Solver/LoggingSolver.h"
 #include "caffeine/Solver/Solver.h"
 #include "caffeine/Support/Coverage.h"
@@ -25,6 +26,7 @@
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/InitLLVM.h>
+#include <llvm/Support/Signals.h>
 #include <llvm/Support/SourceMgr.h>
 #include <llvm/Support/WithColor.h>
 #include <llvm/Support/raw_os_ostream.h>
@@ -194,9 +196,13 @@ int main(int argc, char** argv) {
   if (enable_coverage)
     cov = std::make_unique<CoverageTracker>();
 
+  std::shared_ptr<std::atomic_bool> should_stop =
+      std::make_shared<std::atomic_bool>(false);
+
   auto solver_builder = SolverBuilder::with_default();
   if (log_queries)
     solver_builder.with<LoggingSolver>();
+  solver_builder.with<InterruptSolver>(should_stop);
 
   auto counter = std::make_unique<CountingFailureLogger>();
   auto logger = counter.get();
@@ -216,7 +222,9 @@ int main(int argc, char** argv) {
                       .with_coverage(std::move(cov))
                       .with_solver_builder(std::move(solver_builder))
                       .build();
-  auto exec = caffeine::Executor(&caffeine, options);
+  auto exec = caffeine::Executor(&caffeine, options, should_stop);
+
+  caffeine::signals::executor = &exec;
 
   ContextEventLogger ctx_logger(std::cout, no_progress);
   ContextEventObserver* ctx_observer = &ctx_logger;
@@ -228,6 +236,8 @@ int main(int argc, char** argv) {
   auto context = Context(function);
   context.heaps.set_concrete(!force_symbolic_allocator);
   caffeine.store()->add_context(std::move(context));
+
+  llvm::sys::SetInterruptFunction(&caffeine::signals::stop_context);
 
   exec.run();
 

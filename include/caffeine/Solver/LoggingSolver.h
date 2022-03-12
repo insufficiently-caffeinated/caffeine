@@ -15,8 +15,11 @@ private:
   void log_result(const SolverResult& result);
 
 public:
-  SolverResult check(AssertionList& assertions, const Assertion& extra);
-  SolverResult resolve(AssertionList& assertions, const Assertion& extra);
+  SolverResult check(AssertionList& assertions,
+                     const Assertion& extra) override;
+  SolverResult resolve(AssertionList& assertions,
+                       const Assertion& extra) override;
+  void interrupt() override;
 
   LoggingSolver(const std::shared_ptr<Solver>& solver);
 };

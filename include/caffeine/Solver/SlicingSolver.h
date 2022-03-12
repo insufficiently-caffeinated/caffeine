@@ -16,8 +16,11 @@ private:
 public:
   SlicingSolver(const std::shared_ptr<Solver>& inner);
 
-  SolverResult check(AssertionList& assertions, const Assertion& extra);
-  SolverResult resolve(AssertionList& assertions, const Assertion& extra);
+  SolverResult check(AssertionList& assertions,
+                     const Assertion& extra) override;
+  SolverResult resolve(AssertionList& assertions,
+                       const Assertion& extra) override;
+  void interrupt() override;
 };
 
 } // namespace caffeine

@@ -61,4 +61,8 @@ SolverResult LoggingSolver::resolve(AssertionList& assertions,
   return result;
 }
 
+void LoggingSolver::interrupt() {
+  solver->interrupt();
+}
+
 } // namespace caffeine

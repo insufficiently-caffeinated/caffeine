@@ -25,4 +25,8 @@ SolverResult EarlyExitSolver::resolve(AssertionList& assertions,
   return inner->resolve(assertions, extra);
 }
 
+void EarlyExitSolver::interrupt() {
+  inner->interrupt();
+}
+
 } // namespace caffeine
