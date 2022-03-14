@@ -36,9 +36,13 @@ def _library_public_headers(target, ctx):
                 files.update(dep[MappingInfo].files)
                 transitive.append(dep[MappingInfo].depset)
 
-    include_prefix = ""
+    stripped_prefix = ""
     if hasattr(ctx.rule.attr, "strip_include_prefix"):
-        include_prefix = ctx.rule.attr.strip_include_prefix.strip("/")
+        stripped_prefix = ctx.rule.attr.strip_include_prefix.strip("/")
+
+    added_prefix = ""
+    if hasattr(ctx.rule.attr, "include_prefix"):
+        added_prefix = ctx.rule.attr.include_prefix.strip("/")
 
     direct = []
     if hasattr(ctx.rule.attr, "hdrs"):
@@ -49,7 +53,9 @@ def _library_public_headers(target, ctx):
             if path.startswith("external/"):
                 path = path.split("/", 2)[2]
 
-            path = _strip_prefix(path, include_prefix)
+            path = _strip_prefix(path, stripped_prefix)
+            if added_prefix != "":
+                path = "{}/{}".format(added_prefix, path)
 
             files[path] = file
         direct = ctx.rule.files.hdrs

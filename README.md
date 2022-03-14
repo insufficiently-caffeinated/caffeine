@@ -6,67 +6,30 @@ thrown, see [#458](https://github.com/insufficiently-caffeinated/caffeine/issues
 In general, Caffeine can support any language that compiles down to LLVM IR provided
 that the resulting IR does not use unimplemented functions or instructions.
 
-## Getting Dependencies
+# Building and Installing
+As of yet, there are no binary releases of caffeine so it must be built and
+installed from source. Note, however, that the build system is only tested on
+linux so it may not work on other OSes (MacOS is a maybe, Windows most likely
+not).
 
-You'll need to set the `CMAKE_TOOLCHAIN_FILE` variable according to your
-vscode install directory. Once that's done you can just run cmake as you
-would normally to generate your build system.
+In order to build caffeine you will need the following
+- A C++ compiler which supports C++17, and
+- Bazel 5.0. See the [instructions here](https://bazel.build/install) on how
+  to install bazel.
 
-The first build will take a while as it's going to build all the dependencies
-and install them within a `vcpkg_installed` directory within the repo folder.
-Once that's done you shouldn't have to worry about it anymore.
-
-## Debugging
-Running with TSAN can help detect a bunch of bugs in your code. To configure
-your build to run with TSAN do:
+Once you have those you can build and install caffeine by running
+```sh
+bazel run -c opt //:install -- --destdir=<path/to/some/dir>
 ```
-CC=clang-11 CXX=clang++-11 cmake -DCAFFEINE_ENABLE_TSAN=ON ..
-```
-
-It's also possible to specify UBSAN, ASAN, and others with the following flags:
-* `CAFFEINE_ENABLE_ASAN`
-* `CAFFEINE_ENABLE_UBSAN`
-* `CAFFEINE_ENABLE_MSAN`
-
-## Installation instructions
-
-### Ubuntu
-- Install the dependencies
-```
-apt-get update \
-    && apt-get -y install \
-        llvm-12-dev \
-        clang-12 \
-        libz-dev \
-        build-essential \
-        gcc-9 \
-        g++-9 \
-        git \
-        make \
-        cmake \
-        libgtest-dev \
-        python3-distutils \
-        libfmt-dev \
-        libboost-all-dev \
-        libcapnp-dev \
-        capnproto \
-        pkg-config \
-        jq
-```
-- Run cmake and make
-  - Navigate to the project's root directory
-  - `mkdir build`
-  - `cd build`
-  - `cmake ..`
-  - `make`
+which will build and install caffeine and all its dependencies to the specified
+directory. Note that this has to build LLVM so it will take a while. If you're
+trying to install caffeine globally then passing `--destdir=/usr/local` will
+work provided the command is invoked with admin priviledges.
 
 ## Running Caffeine
-
-After building Caffeine, it's possible to run the binary `build/caffeine`. See
-`caffeine --help` to get started. There are also some examples that can be run
-under the `build/bench/` directory. For instance:
-
-```bash
-cd build/
-./caffeine bench/bench-maze.ll
+Once caffeine is installed, it will be available under `<prefix>/bin/caffeine`.
+See `caffeine --help` to get started. There are also some examples provided
+under the `bench` directory that can be built via bazel. For instance:
+```sh
+caffeine bazel-bin/bench/bench-maze.ll
 ```

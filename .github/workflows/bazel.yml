@@ -71,7 +71,7 @@ jobs:
 
       - name: Run all tests
         run: |
-          bazelisk test --config=ci -- //... \
+          bazelisk test --config=ci -- //... //:tarball-dev \
             $(bazelisk query 'kind(".*_test", //...) intersect attr("tags", "manual", //...)') \
             -//:format
 
@@ -80,7 +80,7 @@ jobs:
       # is actually a symlink to a directory (as happens with bazel-bin).
       - name: Move tarball to a different directory
         run: |
-          mv bazel-bin/caffeine-${{ matrix.mode }}.tar.gz caffeine.tar.gz
+          mv bazel-bin/caffeine-${{ matrix.mode }}.tar.gz caffeine-dev.tar.gz
 
       - name: Upload release tarball
         uses: actions/upload-artifact@v2
