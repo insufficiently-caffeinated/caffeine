@@ -56,6 +56,19 @@ jobs:
       #   run: |
       #     echo "build '--remote_cache=grpc://bazel:${{ env.CACHE_CREDENTIALS }}@bazel-cache.airmash.cc:9092/'" >> local.bazelrc
 
+      - name: Find all external dependencies
+        shell: bash
+        run: |
+          # Get a list of all external dependencies
+          bazel query 'deps(//...)' | grep -ve '^//.*$' > bazel-deps
+
+      - name: Restore bazel disk cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache/bazel-disk-cache
+          key: bazel-build-disk-cache--${{ matrix.mode }}-${{ matrix.compiler}}-${{ hashFiles('bazel-deps') }}
+
       - name: Run all tests
         run: |
           bazelisk test --config=ci -- //... \
@@ -110,6 +123,19 @@ jobs:
       #   shell: bash
       #   run: |
       #     echo "build '--remote_cache=grpc://bazel:${{ env.CACHE_CREDENTIALS }}@bazel-cache.airmash.cc:9092/'" >> local.bazelrc
+      
+      - name: Find all external dependencies
+        shell: bash
+        run: |
+          # Get a list of all external dependencies
+          bazel query 'deps(//:check-format)' | grep -ve '^//.*$' > bazel-deps
+
+      - name: Restore bazel disk cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache/bazel-disk-cache
+          key: bazel-fmt-disk-cache--${{ matrix.mode }}-${{ matrix.compiler}}-${{ hashFiles('bazel-deps') }}
 
       - name: Check formatting of all targets
         run: bazelisk run --config=ci -- //:check-format
