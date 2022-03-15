@@ -238,13 +238,6 @@ public:
   // Add a new solver to the top of the solver stack.
   SolverBuilder& with(const InterFn& func);
 
-  // template <typename T>
-  // SolverBuilder& with() {
-  //   return with([](const std::shared_ptr<Solver>& solver) {
-  //     return std::make_shared<T>(solver);
-  //   });
-  // }
-
   template <typename T, typename... Params>
   SolverBuilder& with(Params... args) {
     auto func = [](const std::shared_ptr<Solver>& solver, Params... args) {

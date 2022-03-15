@@ -58,7 +58,9 @@ namespace {
   struct sigaction sigactions[max_signal + 1] = {};
 
   void signal_handler(int sig) {
-    alarm(30);
+    if (sig != SIGINT) {
+      alarm(30);
+    }
 
     if (sigactions[sig].sa_handler)
       sigactions[sig].sa_handler(sig);
