@@ -134,6 +134,10 @@ SolverResult TransformSolver::resolve(AssertionList& assertions,
   CAFFEINE_UNREACHABLE();
 }
 
+void TransformSolver::interrupt() {
+  base->interrupt();
+}
+
 SolverBuilder::SolverBuilder(const BaseFn& base) : base(base) {}
 
 SolverBuilder SolverBuilder::with_default() {

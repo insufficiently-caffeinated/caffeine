@@ -176,6 +176,11 @@ public:
   // Calls resolve with an empty extra assertion.
   SolverResult resolve(AssertionList& assertions);
 
+  /**
+   * Attempt to interrupt solver recursively
+   */
+  virtual void interrupt() = 0;
+
   Solver(const Solver&) = default;
   Solver(Solver&&) = default;
 
@@ -208,6 +213,8 @@ protected:
   SolverResult resolve(AssertionList& assertions,
                        const Assertion& extra) override;
 
+  void interrupt() override;
+
 protected:
   std::shared_ptr<Solver> base;
 };
@@ -231,11 +238,16 @@ public:
   // Add a new solver to the top of the solver stack.
   SolverBuilder& with(const InterFn& func);
 
-  template <typename T>
-  SolverBuilder& with() {
-    return with([](const std::shared_ptr<Solver>& solver) {
-      return std::make_shared<T>(solver);
-    });
+  template <typename T, typename... Params>
+  SolverBuilder& with(Params... args) {
+    auto func = [](const std::shared_ptr<Solver>& solver, Params... args) {
+      return std::make_shared<T>(solver, std::forward<Params>(args)...);
+    };
+
+    InterFn bound = std::bind(std::move(func), std::placeholders::_1,
+                              std::forward<Params>(args)...);
+
+    return with(bound);
   }
 
   // Build the full solver.

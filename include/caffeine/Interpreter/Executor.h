@@ -1,7 +1,9 @@
 #ifndef CAFFEINE_INTERP_EXECUTOR_H
 #define CAFFEINE_INTERP_EXECUTOR_H
 
+#include <atomic>
 #include <cstdint>
+#include <mutex>
 
 #include "caffeine/Interpreter/Context.h"
 #include "caffeine/Interpreter/FailureLogger.h"
@@ -26,14 +28,23 @@ private:
   ExecutionContextStore* store;
   FailureLogger* logger;
   ExecutorOptions options;
+  std::vector<std::shared_ptr<Solver>> solvers;
+  std::mutex mutex_;
 
 public:
-  Executor(CaffeineContext* caffeine, const ExecutorOptions& options = {});
+  std::shared_ptr<std::atomic_bool> should_stop;
+  Executor(CaffeineContext* caffeine, const ExecutorOptions& options = {},
+           std::shared_ptr<std::atomic_bool> should_stop = nullptr);
 
   /**
    * Runs the contexts in its possesion until there are none left
    */
   void run();
+
+  /**
+   * Interrupts the Executor. Forces `run` to return as soon as possible
+   */
+  void interrupt();
 
 private:
   void run_worker();

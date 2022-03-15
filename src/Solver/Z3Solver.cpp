@@ -248,6 +248,10 @@ SolverResult Z3Solver::resolve(AssertionList& assertions,
   }
 }
 
+void Z3Solver::interrupt() {
+  context().interrupt();
+}
+
 z3::context& Z3Solver::context() {
   return impl->ctx;
 }

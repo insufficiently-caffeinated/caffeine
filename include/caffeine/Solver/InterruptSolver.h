@@ -1,12 +1,15 @@
 #pragma once
 
+#include <atomic>
+
 #include "caffeine/Solver/Solver.h"
 
 namespace caffeine {
 
-class EarlyExitSolver : public Solver {
+class InterruptSolver : public Solver {
 public:
-  EarlyExitSolver(const std::shared_ptr<Solver>& solver);
+  InterruptSolver(const std::shared_ptr<Solver>& solver,
+                  const std::shared_ptr<std::atomic<bool>> should_stop);
 
   SolverResult check(AssertionList& assertions,
                      const Assertion& extra) override;
@@ -17,6 +20,7 @@ public:
 
 private:
   std::shared_ptr<Solver> inner;
+  std::shared_ptr<std::atomic<bool>> should_stop;
 };
 
 } // namespace caffeine

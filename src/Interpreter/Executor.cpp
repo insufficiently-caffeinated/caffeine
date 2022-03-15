@@ -12,6 +12,10 @@ namespace caffeine {
 
 void Executor::run_worker() {
   auto solver = caffeine->build_solver();
+  {
+    std::lock_guard<std::mutex> guard(mutex_);
+    solvers.push_back(solver);
+  }
   InterpreterContext::BackingList queue;
 
   while (auto ctx = store->next_context()) {
@@ -23,6 +27,11 @@ void Executor::run_worker() {
         UnsupportedOperation::SetCurrentContext(&queue.front()->context);
 
     while (!queue.empty()) {
+      if (should_stop != nullptr && should_stop->load()) {
+        queue.clear();
+        break;
+      };
+
       guard.update(&queue.front()->context);
 
       InterpreterContext ictx{&queue, 0, solver, caffeine};
@@ -57,9 +66,10 @@ void Executor::run_worker() {
   }
 }
 
-Executor::Executor(CaffeineContext* caffeine, const ExecutorOptions& options)
+Executor::Executor(CaffeineContext* caffeine, const ExecutorOptions& options,
+                   std::shared_ptr<std::atomic_bool> should_stop)
     : caffeine(caffeine), policy(caffeine->policy()), store(caffeine->store()),
-      logger(caffeine->logger()), options(options) {}
+      logger(caffeine->logger()), options(options), should_stop(should_stop) {}
 
 void Executor::run() {
   if (options.num_threads == 1) {
@@ -75,6 +85,27 @@ void Executor::run() {
 
   for (auto& thread : threads) {
     thread.join();
+  }
+}
+
+void Executor::interrupt() {
+  // Solvers should stop accepting requests
+  if (should_stop != nullptr) {
+    should_stop->store(true);
+  }
+
+  // The queue should stop assigning work
+  store->shutdown();
+
+  // Currently executing solvers should stop what they're doing
+  {
+    std::lock_guard<std::mutex> guard(mutex_);
+    for (auto& solver : solvers) {
+      if (solver)
+        solver->interrupt();
+    }
+
+    solvers.clear();
   }
 }
 

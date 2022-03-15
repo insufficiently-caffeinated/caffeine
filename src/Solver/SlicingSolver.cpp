@@ -17,4 +17,8 @@ SolverResult SlicingSolver::resolve(AssertionList& assertions,
   return inner->resolve(assertions, extra);
 }
 
+void SlicingSolver::interrupt() {
+  inner->interrupt();
+}
+
 } // namespace caffeine
