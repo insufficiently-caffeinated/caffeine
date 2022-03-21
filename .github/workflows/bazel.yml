@@ -80,7 +80,7 @@ jobs:
       # is actually a symlink to a directory (as happens with bazel-bin).
       - name: Move tarball to a different directory
         run: |
-          mv bazel-bin/caffeine-${{ matrix.mode }}.tar.gz caffeine-dev.tar.gz
+          cp bazel-bin/caffeine-dev.tar.gz caffeine.tar.gz
 
       - name: Upload release tarball
         uses: actions/upload-artifact@v2
