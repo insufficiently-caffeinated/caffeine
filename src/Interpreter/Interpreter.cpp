@@ -344,8 +344,7 @@ void Interpreter::visitIndirectCall(llvm::CallBase& call) {
   for (auto& ptr : resolved) {
     auto fork = interp->fork();
     Allocation& alloc = fork.context().heaps.ptr_allocation(ptr);
-    fork.add_assertion(ICmpOp::CreateICmpEQ(
-        alloc.address(), pointer.value(fork.context().heaps)));
+    fork.add_assertion(fork.createICmpEQ(alloc.address(), pointer));
 
     newcall->setCalledFunction(
         llvm::cast<FunctionObject>(*alloc.data()).function());
@@ -385,9 +384,7 @@ void Interpreter::visitStoreInst(llvm::StoreInst& inst) {
   interp->kill();
   for (const Pointer& ptr : resolved) {
     auto fork = interp->fork();
-    fork.add_assertion(
-        ICmpOp::CreateICmpEQ(ptr.value(interp->context().heaps),
-                             unresolved.value(interp->context().heaps)));
+    fork.add_assertion(fork.createICmpEQ(ptr, unresolved));
 
     Allocation* alloc = fork.ptr_allocation(ptr);
     CAFFEINE_ASSERT(alloc);

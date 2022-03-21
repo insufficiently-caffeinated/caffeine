@@ -126,6 +126,18 @@ public:
                             const OpRef& byte, unsigned address_space,
                             AllocationKind kind, AllocationPermissions perms);
 
+  /**
+   * Deallocate the allocation pointed to by ptr or specified by the combination
+   * of the allocation id and heap.
+   *
+   * This will trigger an assertion failure if ptr is not a resolved pointer.
+   */
+  void deallocate(const Pointer& ptr);
+  void deallocate(AllocId alloc, unsigned heap);
+
+  // Retrieve the actual location in memory that the pointer points to.
+  OpRef ptr_value(const Pointer& ptr);
+
   // Utilities for performing common control flow operations
 
   /**
@@ -373,6 +385,8 @@ private:
   // Set the current context as dead and emit the appropriate notifications.
   void set_dead(ExecutionPolicy::ExitStatus status,
                 const Assertion& assertion = Assertion::constant(true));
+
+  void pop_frame();
 
 public:
   // Interfaces used by the scheduler to interact with InterpreterContext

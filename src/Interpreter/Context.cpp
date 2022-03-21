@@ -4,6 +4,7 @@
 #include "caffeine/IR/Type.h"
 #include "caffeine/Interpreter/ExprEval.h"
 #include "caffeine/Interpreter/StackFrame.h"
+#include "caffeine/Memory/BumpAllocator.h"
 #include "caffeine/Model/AssertionList.h"
 #include "caffeine/Support/LLVMFmt.h"
 
@@ -14,13 +15,21 @@
 
 namespace caffeine {
 
+namespace {
+  std::unique_ptr<ConcreteAllocator> allocator_builder(unsigned bitwidth) {
+    return std::make_unique<BumpAllocator>(
+        llvm::APInt::getSignedMinValue(bitwidth),
+        llvm::APInt::getSignedMinValue(bitwidth));
+  }
+} // namespace
+
 Context::Context(llvm::Function* function, llvm::ArrayRef<OpRef> args)
-    : mod(function->front().getModule()) {
+    : heaps(&allocator_builder), mod(function->front().getModule()) {
   stack.push_back(StackFrame::RegularFrame(function));
   init_args(args);
 }
 Context::Context(llvm::Function* function)
-    : mod(function->front().getModule()) {
+    : heaps(&allocator_builder), mod(function->front().getModule()) {
   stack.push_back(StackFrame::RegularFrame(function));
 
   const llvm::DataLayout& layout = mod->getDataLayout();
@@ -87,21 +96,6 @@ void Context::push(const StackFrame& frame) {
 }
 void Context::push(StackFrame&& frame) {
   stack.push_back(frame);
-}
-void Context::pop() {
-  CAFFEINE_ASSERT(!stack.empty());
-
-  if (stack.back().is_regular()) {
-    auto& frame = stack.back().get_regular();
-    for (auto [allocid, heap] : frame.allocations) {
-      CAFFEINE_ASSERT(heaps[heap][allocid].kind() == AllocationKind::Alloca,
-                      "found non-stack allocation on the stack");
-
-      heaps[heap].deallocate(allocid);
-    }
-  }
-
-  stack.pop_back();
 }
 
 bool Context::empty() const {

@@ -77,12 +77,10 @@ bool GenericUnwinding::getPossibleStates(InterpreterContext& ctx) {
 
         OpRef matches_any_ele = ConstantInt::Create(false);
         for (size_t i = 0; i < clause_value.aggregate().size(); i++) {
-          matches_any_ele = BinaryOp::CreateOr(
+          matches_any_ele = ctx.createOr(
               matches_any_ele,
-              ICmpOp::CreateICmpEQ(
-                  clause_value.aggregate()[i].scalar().pointer().value(
-                      ctx.context().heaps),
-                  args[0].scalar().pointer().value(ctx.context().heaps)));
+              ctx.createICmpEQ(clause_value.aggregate()[i].scalar().pointer(),
+                               args[0].scalar().pointer()));
         }
 
         Assertion should_enter = !Assertion(matches_any_ele);

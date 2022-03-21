@@ -56,7 +56,7 @@ Value Model::evaluate(const LLVMScalar& scalar, Context& ctx) const {
   ModelEvaluator evaluator{this, &ctx.egraph};
 
   if (scalar.is_pointer())
-    return evaluator.visit(*scalar.pointer().value(ctx.heaps));
+    return evaluator.visit(*ctx.heaps.ptr_value(scalar.pointer()));
   return evaluator.visit(*scalar.expr());
 }
 

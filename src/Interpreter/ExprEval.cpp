@@ -45,7 +45,7 @@ ExprEvaluator::ExprEvaluator(InterpreterContext* interp, Options options)
 OpRef ExprEvaluator::scalarize(const LLVMScalar& scalar) const {
   if (scalar.is_expr())
     return scalar.expr();
-  return scalar.pointer().value(interp->context().heaps);
+  return interp->ptr_value(scalar.pointer());
 }
 
 LLVMValue ExprEvaluator::visit(llvm::Value* val) {
@@ -702,10 +702,7 @@ LLVMScalar ExprEvaluator::select(const LLVMScalar& cond,
         t_ptr.heap());
   }
 
-  return Pointer(SelectOp::Create(cond.expr(),
-                                  t_ptr.value(interp->context().heaps),
-                                  f_ptr.value(interp->context().heaps)),
-                 t_ptr.heap());
+  return Pointer(interp->createSelect(cond.expr(), t_ptr, f_ptr), t_ptr.heap());
 }
 LLVMValue ExprEvaluator::visitSelectInst(llvm::SelectInst& op) {
   auto cond = visit(op.getCondition());

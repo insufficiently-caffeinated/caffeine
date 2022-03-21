@@ -266,7 +266,7 @@ OpRef OperationBuilder::to_expr(const LLVMScalar& scalar) {
   return to_expr(scalar.pointer());
 }
 OpRef OperationBuilder::to_expr(const Pointer& ptr) {
-  return ptr.value(ctx->heaps);
+  return ctx->heaps.ptr_value(ptr);
 }
 
 OpRef OperationBuilder::to_egraph(const OpRef& op) {

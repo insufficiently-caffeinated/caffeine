@@ -8,6 +8,7 @@
 #include "caffeine/Interpreter/Store/CountLimitedStore.h"
 #include "caffeine/Interpreter/Store/TimeLimitedStore.h"
 #include "caffeine/Interpreter/ThreadQueueStore.h"
+#include "caffeine/Memory/BumpAllocator.h"
 #include "caffeine/Solver/InterruptSolver.h"
 #include "caffeine/Solver/LoggingSolver.h"
 #include "caffeine/Solver/Solver.h"
@@ -234,7 +235,8 @@ int main(int argc, char** argv) {
   }
 
   auto context = Context(function);
-  context.heaps.set_concrete(!force_symbolic_allocator);
+  if (force_symbolic_allocator)
+    context.heaps = MultiHeap();
   caffeine.store()->add_context(std::move(context));
 
   llvm::sys::SetInterruptFunction(&caffeine::signals::stop_context);
