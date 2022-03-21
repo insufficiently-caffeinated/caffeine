@@ -12,7 +12,7 @@ build:ci --jobs=64
 build:ci --experimental_remote_cache_async
 
 # Avoid downloading artifacts that aren't needed.
-# build:ci --remote_download_toplevel
+build:ci --remote_download_toplevel
 
 build:clang --action_env=CC=clang-12
 build:clang --action_env=CXX=clang++-12
