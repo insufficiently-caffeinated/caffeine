@@ -108,22 +108,19 @@ Pointer InterpreterContext::allocate(const OpRef& size, const OpRef& align,
                                      const OpRef& data, unsigned address_space,
                                      AllocationKind kind,
                                      AllocationPermissions perms) {
-  const llvm::DataLayout& layout = getModule()->getDataLayout();
-  unsigned ptr_width = layout.getPointerSizeInBits(address_space);
-
-  AllocId alloc = context().heaps[address_space].allocate(
-      size, align, data, kind, perms, context());
+  auto pointer = context().heaps.allocate(size, align, data, kind, perms,
+                                          address_space, *this);
 
   // Alloca allocations are meant to be automatically cleaned up at the end of
   // the frame. For this to happen we need to add it to the clean-up list within
   // the current stack frame.
   if (kind == AllocationKind::Alloca) {
     // TODO: Make this work with external functions
-    context().stack_top().get_regular().allocations.emplace_back(alloc,
-                                                                 address_space);
+    context().stack_top().get_regular().allocations.emplace_back(
+        pointer.alloc(), address_space);
   }
 
-  return Pointer(alloc, ConstantInt::CreateZero(ptr_width), address_space);
+  return pointer;
 }
 
 Pointer InterpreterContext::allocate_repeated(
@@ -131,6 +128,17 @@ Pointer InterpreterContext::allocate_repeated(
     unsigned address_space, AllocationKind kind, AllocationPermissions perms) {
   return allocate(size, align, AllocOp::Create(size, byte), address_space, kind,
                   perms);
+}
+
+void InterpreterContext::deallocate(const Pointer& ptr) {
+  context().heaps.deallocate(ptr, *this);
+}
+void InterpreterContext::deallocate(AllocId alloc, unsigned heap) {
+  context().heaps.deallocate(alloc, heap, *this);
+}
+
+OpRef InterpreterContext::ptr_value(const Pointer& ptr) {
+  return context().heaps.ptr_value(ptr);
 }
 
 void InterpreterContext::mem_write(const Pointer& ptr, llvm::Type* type,
@@ -212,7 +220,7 @@ void InterpreterContext::function_return(std::optional<LLVMValue> retval) {
   }
 
   auto& ctx = context();
-  ctx.pop();
+  pop_frame();
 
   if (ctx.stack.empty()) {
     kill();
@@ -306,7 +314,7 @@ InterpreterContext::resolve_ptr(const Pointer& ptr, const OpRef& width,
   if (is_dead())
     return {};
 
-  return context().heaps.resolve(solver(), ptr, context());
+  return context().heaps.resolve(ptr, *this);
 }
 llvm::SmallVector<Pointer, 1>
 InterpreterContext::resolve_ptr(const Pointer& ptr, llvm::Type* type,
@@ -399,6 +407,25 @@ void InterpreterContext::call_function(llvm::Function* func,
   }
 
   context().stack.push_back(std::move(frame_wrapper));
+}
+
+void InterpreterContext::pop_frame() {
+  auto& ctx = context();
+
+  CAFFEINE_ASSERT(!ctx.stack.empty());
+
+  if (ctx.stack.back().is_regular()) {
+    auto& frame = ctx.stack.back().get_regular();
+
+    for (auto [allocid, heap] : frame.allocations) {
+      CAFFEINE_ASSERT(ctx.heaps[heap][allocid].kind() == AllocationKind::Alloca,
+                      "found non-stack allocation on the stack");
+
+      deallocate(allocid, heap);
+    }
+  }
+
+  ctx.stack.pop_back();
 }
 
 } // namespace caffeine

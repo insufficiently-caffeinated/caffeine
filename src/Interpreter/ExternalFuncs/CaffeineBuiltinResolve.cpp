@@ -49,8 +49,7 @@ namespace {
           fork.context().backprop(mem, ptr);
         }
 
-        fork.add_assertion(ICmpOp::CreateICmpEQ(
-            mem.value(fork.context().heaps), ptr.value(fork.context().heaps)));
+        fork.add_assertion(fork.createICmpEQ(mem, ptr));
         fork.jump_return(LLVMValue(ptr));
       }
     }

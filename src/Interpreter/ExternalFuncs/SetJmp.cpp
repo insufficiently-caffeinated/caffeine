@@ -63,9 +63,7 @@ namespace {
 
       for (const Pointer& ptr : resolved) {
         auto fork = ctx.fork();
-        fork.add_assertion(
-            ICmpOp::CreateICmpEQ(unresolved.value(ctx.context().heaps),
-                                 ptr.value(ctx.context().heaps)));
+        fork.add_assertion(fork.createICmpEQ(unresolved, ptr));
         fork.mem_write(ptr, jmpbuf_ty, jmpbuf);
         fork.jump_return(LLVMValue(ConstantInt::CreateZero(
             func->getReturnType()->getIntegerBitWidth())));

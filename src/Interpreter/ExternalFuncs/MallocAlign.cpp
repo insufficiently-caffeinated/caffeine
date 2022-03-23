@@ -43,20 +43,19 @@ void MallocAlignFunction::call(llvm::Function* func, InterpreterContext& ctx,
   if (ctx.caffeine().options().malloc_can_return_null) {
     auto fork = ctx.fork();
     fork.jump_return(
-        LLVMValue(Pointer(ConstantInt::CreateZero(ptr_width), address_space)));
+        LLVMValue(Pointer(ctx.createConstantZero(ptr_width), address_space)));
   }
 
   auto size = args[0].scalar().expr();
   auto align = args[1].scalar().expr();
 
-  auto size_op = UnaryOp::CreateTruncOrZExt(Type::int_ty(ptr_width), size);
-  auto alloc = ctx.context().heaps[address_space].allocate(
+  auto size_op = ctx.createTruncOrZExt(Type::int_ty(ptr_width), size);
+  auto ptr = ctx.allocate(
       size_op, align,
-      AllocOp::Create(size_op, ConstantInt::Create(llvm::APInt(8, 0xDD))),
-      AllocationKind::Malloc, AllocationPermissions::ReadWrite, ctx.context());
+      ctx.createAlloc(size_op, ctx.createConstantInt(llvm::APInt(8, 0xDD))),
+      address_space, AllocationKind::Malloc, AllocationPermissions::ReadWrite);
 
-  ctx.jump_return(LLVMValue(
-      Pointer(alloc, ConstantInt::CreateZero(ptr_width), address_space)));
+  ctx.jump_return(LLVMValue(ptr));
 }
 
 std::unique_ptr<ExternalFunction> ExternalFunctions::caffeine_malloc_aligned() {

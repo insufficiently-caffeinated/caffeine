@@ -4,6 +4,7 @@
 #include "caffeine/IR/Assertion.h"
 #include "caffeine/IR/EGraph.h"
 #include "caffeine/Interpreter/StackFrame.h"
+#include "caffeine/Memory/Heap.h"
 #include "caffeine/Memory/MemHeap.h"
 #include "caffeine/Model/AssertionList.h"
 #include "caffeine/Model/GraphAssertionList.h"
@@ -27,7 +28,7 @@ class Context {
 public:
   std::vector<StackFrame> stack;
   std::unordered_map<llvm::GlobalValue*, LLVMValue> globals;
-  MemHeapMgr heaps;
+  MultiHeap heaps;
   GraphAssertionList assertions;
   immer::map<std::string, OpRef> constants;
 
@@ -77,7 +78,6 @@ public:
    * Note: This method also deallocates all stack-allocated allocations within
    *       the current frame.
    */
-  void pop();
   void push(StackFrame&& frame);
   void push(const StackFrame& frame);
 

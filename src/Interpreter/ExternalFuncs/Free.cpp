@@ -41,10 +41,8 @@ namespace {
       ctx.kill();
       for (auto ptr : resolved) {
         auto fork = ctx.fork();
-        fork.add_assertion(
-            ICmpOp::CreateICmpEQ(memptr.value(fork.context().heaps),
-                                 ptr.value(fork.context().heaps)));
-        fork.context().heaps[ptr.heap()].deallocate(ptr.alloc());
+        fork.add_assertion(fork.createICmpEQ(memptr, ptr));
+        fork.deallocate(ptr);
       }
     }
   };
