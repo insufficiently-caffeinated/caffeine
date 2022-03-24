@@ -55,6 +55,9 @@ public:
   }
 };
 
+// Any invalid function name works here
+const char* default_entry_method = "main (caf)";
+
 cl::OptionCategory caffeine_options("Caffeine options",
                                     "Options to control caffeine");
 cl::opt<std::string> input_filename{cl::Positional, cl::Required,
@@ -64,7 +67,8 @@ cl::opt<std::string> entry{
     "entry",
     cl::desc(
         "Entry method that will be executed by caffeine. [default = main]"),
-    cl::value_desc("function"), cl::cat(caffeine_options), cl::init("main")};
+    cl::value_desc("function"), cl::cat(caffeine_options),
+    cl::init(default_entry_method)};
 cl::opt<bool> invert_exitcode{
     "invert-exitcode",
     cl::desc("invert the exit code. 0 if the program returns a failure, 1 "
@@ -161,10 +165,25 @@ int main(int argc, char** argv) {
     return 2;
   }
 
-  auto function = module->getFunction(entry.getValue());
-  if (!function) {
-    WithColor::error() << "no method '" << entry.getValue() << "'\n";
-    return 2;
+  llvm::Function* function = nullptr;
+  if (entry.getValue() == default_entry_method) {
+    // Try main first, and then the mangles version
+    function = module->getFunction("main");
+    if (!function) {
+      function = module->getFunction("_Z4mainiPPc");
+    }
+
+    if (!function) {
+      WithColor::error() << "no method 'main'\n";
+      return 2;
+    }
+  } else {
+    function = module->getFunction(entry.getValue());
+
+    if (!function) {
+      WithColor::error() << "no method '" << entry.getValue() << "'\n";
+      return 2;
+    }
   }
 
   caffeine::ExecutorOptions options;
