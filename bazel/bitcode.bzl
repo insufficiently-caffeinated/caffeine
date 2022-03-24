@@ -273,7 +273,7 @@ def _bitcode_binary(ctx):
         "--caffeine-gen-builtins",
         "--internalize",
         "--internalize-public-api-list",
-        "main",
+        "main,_Z4mainiPPc",
         "--globaldce",
     ])
     args.add(linked)

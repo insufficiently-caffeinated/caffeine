@@ -14,3 +14,8 @@ bitcode_binary(
     name = "demo",
     srcs = ["demo.c"],
 )
+
+bitcode_binary(
+    name = "cpp_bench",
+    srcs = ["cpp_bench.cpp"],
+)

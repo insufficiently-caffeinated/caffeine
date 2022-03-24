@@ -33,7 +33,8 @@ Context::Context(llvm::Function* function)
   stack.push_back(StackFrame::RegularFrame(function));
 
   const llvm::DataLayout& layout = mod->getDataLayout();
-  if (function->getName() == "main" && function->arg_size() == 2) {
+  if ((function->getName() == "main" || function->getName() == "_Z4mainiPPc") &&
+      function->arg_size() == 2) {
     auto arg0 = function->arg_begin();
     auto arg1 = arg0 + 1;
 
