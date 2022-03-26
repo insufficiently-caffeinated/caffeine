@@ -4,6 +4,7 @@
 #include <exception>
 #include <memory>
 #include <optional>
+#include <string_view>
 
 namespace caffeine::lmdb {
 
