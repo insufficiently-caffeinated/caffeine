@@ -23,7 +23,8 @@ SolverResult CachingSolver::check(AssertionList& assertions,
   txn.abort();
 
   auto result = solver_->check(assertions, extra);
-  if (result == SolverResult::Unknown || key.empty())
+  if (result == SolverResult::Unknown ||
+      key.size() > (size_t)mdb_env_get_maxkeysize(*env_))
     return result;
 
   txn = env_->begin_txn(dbi_);
