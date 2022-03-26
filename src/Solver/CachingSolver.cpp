@@ -1,5 +1,5 @@
 #include "caffeine/Solver/CachingSolver.h"
-#include "include/caffeine/Support/LMDB.h"
+#include "caffeine/Support/LMDB.h"
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 

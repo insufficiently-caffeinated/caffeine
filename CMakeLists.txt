@@ -122,6 +122,7 @@ find_package(Z3 4.8.7 REQUIRED)
 find_package(Boost COMPONENTS thread filesystem REQUIRED)
 find_package(fmt REQUIRED)
 find_package(CapnProto REQUIRED)
+find_package(LMDB REQUIRED)
 
 include(CaffeineDependencies)
 
