@@ -110,6 +110,7 @@ cc_library(
         "@boost//:thread",
         "@llvm//llvm:Core",
         "@llvm//llvm:Support",
+        "@lmdb",
     ],
 )
 

@@ -29,7 +29,8 @@ jobs:
             libgtest-dev \
             libfmt-dev \
             libboost-all-dev \
-            capnproto libcapnp-dev
+            capnproto libcapnp-dev \
+            liblmdb-dev
           sudo ./.github/scripts/update-alternatives-llvm.sh 12 20
           go get github.com/SRI-CSL/gllvm/cmd/...
 

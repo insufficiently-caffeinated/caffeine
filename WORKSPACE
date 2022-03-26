@@ -7,6 +7,7 @@ load("@caffeine//third_party/boost:setup.bzl", "setup_boost")
 load("@caffeine//third_party/musl:setup.bzl", "setup_musl")
 load("@caffeine//third_party/libcxx:setup.bzl", "setup_libcxx")
 load("@caffeine//third_party/afl:setup.bzl", "setup_afl")
+load("@caffeine//third_party/lmdb:setup.bzl", "setup_lmdb")
 
 SKYLIB_VERSION = "1.1.1"
 
@@ -48,6 +49,8 @@ setup_musl(name = "musl")
 setup_libcxx(name = "libcxx")
 
 setup_afl(name = "afl")
+
+setup_lmdb(name = "lmdb")
 
 # Some dependencies require multiple setup stages. These are added here.
 

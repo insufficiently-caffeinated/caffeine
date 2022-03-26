@@ -9,6 +9,7 @@
 #include "caffeine/Interpreter/Store/TimeLimitedStore.h"
 #include "caffeine/Interpreter/ThreadQueueStore.h"
 #include "caffeine/Memory/BumpAllocator.h"
+#include "caffeine/Solver/CachingSolver.h"
 #include "caffeine/Solver/InterruptSolver.h"
 #include "caffeine/Solver/LoggingSolver.h"
 #include "caffeine/Solver/Solver.h"
@@ -18,6 +19,7 @@
 #include "caffeine/Support/SyncOStream.h"
 #include "caffeine/Support/Tracing.h"
 #include <atomic>
+#include <boost/filesystem.hpp>
 #include <csignal>
 #include <cstdlib>
 #include <exception>
@@ -120,6 +122,9 @@ cl::opt<uint64_t> limit_time_seconds{
 cl::opt<std::string> test_output_dir{
     "test-output-dir", cl::desc("The directory to output test case files to."),
     cl::cat(caffeine_options)};
+cl::opt<std::string> cache_dir{
+    "cache-dir", cl::desc("The directory to which to store the on-disk cache"),
+    cl::init("~/.cache/caffeine"), cl::cat(caffeine_options)};
 
 static ExitOnError exit_on_err;
 
@@ -222,6 +227,10 @@ int main(int argc, char** argv) {
   auto solver_builder = SolverBuilder::with_default();
   if (log_queries)
     solver_builder.with<LoggingSolver>();
+
+  boost::filesystem::create_directories(cache_dir);
+  solver_builder.with(CachingSolverBuilder(cache_dir.c_str(), MDB_NOMETASYNC));
+
   solver_builder.with<InterruptSolver>(should_stop);
 
   auto counter = std::make_unique<CountingFailureLogger>();
