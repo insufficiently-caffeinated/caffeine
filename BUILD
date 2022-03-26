@@ -106,6 +106,7 @@ cc_library(
         "//third_party:z3",
         "//third_party/capnp",
         "@boost//:filesystem",
+        "@boost//:lockfree",
         "@boost//:thread",
         "@llvm//llvm:Core",
         "@llvm//llvm:Support",
