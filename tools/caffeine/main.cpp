@@ -122,6 +122,9 @@ cl::opt<uint64_t> limit_time_seconds{
 cl::opt<std::string> test_output_dir{
     "test-output-dir", cl::desc("The directory to output test case files to."),
     cl::cat(caffeine_options)};
+cl::opt<std::string> cache_dir{
+    "cache-dir", cl::desc("The directory to which to store the on-disk cache"),
+    cl::init("~/.cache/caffeine"), cl::cat(caffeine_options)};
 
 static ExitOnError exit_on_err;
 
@@ -225,8 +228,8 @@ int main(int argc, char** argv) {
   if (log_queries)
     solver_builder.with<LoggingSolver>();
 
-  boost::filesystem::create_directories(".cache/caffeine");
-  solver_builder.with(CachingSolverBuilder(".cache/caffeine", MDB_NOMETASYNC));
+  boost::filesystem::create_directories(cache_dir);
+  solver_builder.with(CachingSolverBuilder(cache_dir.c_str(), MDB_NOMETASYNC));
 
   solver_builder.with<InterruptSolver>(should_stop);
 
