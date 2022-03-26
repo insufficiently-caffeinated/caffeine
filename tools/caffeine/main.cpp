@@ -9,6 +9,7 @@
 #include "caffeine/Interpreter/Store/TimeLimitedStore.h"
 #include "caffeine/Interpreter/ThreadQueueStore.h"
 #include "caffeine/Memory/BumpAllocator.h"
+#include "caffeine/Solver/CachingSolver.h"
 #include "caffeine/Solver/InterruptSolver.h"
 #include "caffeine/Solver/LoggingSolver.h"
 #include "caffeine/Solver/Solver.h"
@@ -18,6 +19,7 @@
 #include "caffeine/Support/SyncOStream.h"
 #include "caffeine/Support/Tracing.h"
 #include <atomic>
+#include <boost/filesystem.hpp>
 #include <csignal>
 #include <cstdlib>
 #include <exception>
@@ -222,6 +224,10 @@ int main(int argc, char** argv) {
   auto solver_builder = SolverBuilder::with_default();
   if (log_queries)
     solver_builder.with<LoggingSolver>();
+
+  boost::filesystem::create_directories(".cache/caffeine");
+  solver_builder.with(CachingSolverBuilder(".cache/caffeine", MDB_NOMETASYNC));
+
   solver_builder.with<InterruptSolver>(should_stop);
 
   auto counter = std::make_unique<CountingFailureLogger>();
