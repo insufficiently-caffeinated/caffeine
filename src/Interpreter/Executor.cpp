@@ -5,6 +5,7 @@
 #include "caffeine/Interpreter/Store.h"
 #include "caffeine/Support/UnsupportedOperation.h"
 #include <boost/range/algorithm/remove_if.hpp>
+#include <fmt/format.h>
 #include <thread>
 #include <z3++.h>
 
@@ -43,14 +44,14 @@ void Executor::run_worker() {
         logger->log_failure(nullptr, ctx.value(),
                             Failure(Assertion(), ex.what()));
         break;
-      } catch (UnsupportedOperationException&) {
+      } catch (UnsupportedOperationException& e) {
         // The assert that threw this already printed an error message
         // TODO: We should have a better way to indicate that this failed to the
         //       parent program.
 
         logger->log_failure(
             nullptr, ctx.value(),
-            Failure(Assertion(), "internal error: unsupported operation"));
+            Failure(Assertion(), fmt::format("internal error: {}", e.what())));
         break;
       }
 

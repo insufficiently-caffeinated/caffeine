@@ -411,11 +411,14 @@ void InterpreterContext::call_function(llvm::Function* func,
     callee.insert(&arg, val);
   }
 
-  // For varargs we use the called function as a hidden value on the stack to
-  // store the varargs as a hidden struct.
   if (func->isVarArg()) {
-    auto varargs = args.subslice(func->arg_size());
-    callee.insert(func, LLVMValue(varargs.vec()));
+    auto inst = llvm::cast<llvm::CallBase>(getCurrentInstruction());
+
+    callee.varargs.reserve(args.size() - func->arg_size());
+    for (size_t i = func->arg_size(); i < args.size(); ++i) {
+      callee.varargs.emplace_back(inst->getArgOperand(i)->getType(),
+                                  std::move(args[i]));
+    }
   }
 
   context().stack.push_back(std::move(frame_wrapper));
