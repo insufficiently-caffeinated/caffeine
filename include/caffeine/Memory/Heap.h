@@ -90,6 +90,8 @@ public:
   llvm::SmallVector<Pointer, 1> resolve(const Pointer& value,
                                         InterpreterContext& ctx) const;
 
+  void DebugPrint() const;
+
 private:
   std::optional<OpRef> try_concrete_allocate(const OpRef& size,
                                              const OpRef& alignment);
@@ -156,6 +158,8 @@ public:
                 const llvm::DataLayout& layout);
   void write_to(const Pointer& ptr, llvm::Type* type, const LLVMValue& value,
                 const llvm::DataLayout& layout);
+
+  void DebugPrint() const;
 };
 
 } // namespace caffeine

@@ -36,4 +36,21 @@ void MemHeap::DebugPrint() const {
   std::cout << "]" << std::endl;
 }
 
+void Heap::DebugPrint() const {
+  std::cout << "Heap [\n";
+  for (const auto& alloc : allocs_) {
+    alloc.DebugPrint();
+  }
+  std::cout << "]" << std::endl;
+}
+
+void MultiHeap::DebugPrint() const {
+  std::cout << "MultiHeap [\n";
+  for (const auto& [id, heap] : heaps_) {
+    std::cout << "heap " << id << " = ";
+    heap.DebugPrint();
+  }
+  std::cout << "]" << std::endl;
+}
+
 } // namespace caffeine
