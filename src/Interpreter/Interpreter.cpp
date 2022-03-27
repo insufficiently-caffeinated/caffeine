@@ -412,11 +412,6 @@ void Interpreter::visitAllocaInst(llvm::AllocaInst& inst) {
   interp->store(&inst, LLVMValue(pointer));
 }
 
-void Interpreter::visitMemCpyInst(llvm::MemCpyInst&) {
-  CAFFEINE_ABORT("llvm.memcpy is not implemented natively within the caffeine "
-                 "interpreter. Run gen-builtins over the input bitcode file "
-                 "first to generate definitions that caffeine can execute.");
-}
 void Interpreter::visitMemMoveInst(llvm::MemMoveInst&) {
   CAFFEINE_ABORT("llvm.memmove is not implemented natively within the caffeine "
                  "interpreter. Run gen-builtins over the input bitcode file "
