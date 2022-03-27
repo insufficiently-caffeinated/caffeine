@@ -397,13 +397,25 @@ InterpreterContext::InterpreterContext(BackingList* queue, size_t entry_index,
 void InterpreterContext::call_function(llvm::Function* func,
                                        Span<LLVMValue> args) {
   CAFFEINE_ASSERT(!func->empty());
-  CAFFEINE_ASSERT(args.size() == func->arg_size());
+
+  if (func->isVarArg()) {
+    CAFFEINE_ASSERT(args.size() >= func->arg_size());
+  } else {
+    CAFFEINE_ASSERT(args.size() == func->arg_size());
+  }
 
   // In case of a normal function call
   auto frame_wrapper = StackFrame::RegularFrame(func);
   auto& callee = frame_wrapper.get_regular();
   for (auto [arg, val] : llvm::zip(func->args(), args)) {
     callee.insert(&arg, val);
+  }
+
+  // For varargs we use the called function as a hidden value on the stack to
+  // store the varargs as a hidden struct.
+  if (func->isVarArg()) {
+    auto varargs = args.subslice(func->arg_size());
+    callee.insert(func, LLVMValue(varargs.vec()));
   }
 
   context().stack.push_back(std::move(frame_wrapper));
