@@ -102,6 +102,7 @@ public:
   static std::unique_ptr<ExternalFunction> smul_with_overflow();
   static std::unique_ptr<ExternalFunction> umul_with_overflow();
   static std::unique_ptr<ExternalFunction> memset();
+  static std::unique_ptr<ExternalFunction> memcpy();
   static std::unique_ptr<ExternalFunction> bswap();
   static std::unique_ptr<ExternalFunction> eh_typeid_for();
 
