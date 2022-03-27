@@ -92,6 +92,7 @@ void x86_64VaStart::call(llvm::Function*, InterpreterContext& ctx,
     auto fork = ctx.fork();
     fork.add_assertion(ctx.createICmpEQ(ptr, unresolved));
     fork.mem_write(ptr, list_tag, initial);
+    fork.jump_return();
   }
 }
 } // namespace caffeine::intrin::vastart
