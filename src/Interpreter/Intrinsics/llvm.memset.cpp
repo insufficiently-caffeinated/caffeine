@@ -36,6 +36,7 @@ namespace {
 
         if (is_f != SolverResult::UNSAT) {
           auto fork = ctx.fork();
+          fork.add_assertion(ctx.createICmpEQ(offset, len));
           fork.function_return();
         }
 
