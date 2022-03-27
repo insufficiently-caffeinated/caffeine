@@ -143,6 +143,10 @@ public:
     return std::equal(rbegin(), rbegin() + suffix.size(), suffix.rbegin(),
                       suffix.rend());
   }
+
+  std::vector<T> vec() const {
+    return std::vector<T>(begin(), end());
+  }
 };
 
 // This isn't strictly necessary but it helps make sure that everything compiles
