@@ -189,6 +189,7 @@ Builder& Builder::with_default_intrinsics() {
   with_intrinsic(llvm::Intrinsic::bswap, Intrinsics::bswap());
   with_intrinsic(llvm::Intrinsic::eh_typeid_for, Intrinsics::eh_typeid_for());
   with_intrinsic(llvm::Intrinsic::vastart, Intrinsics::vastart());
+  with_intrinsic(llvm::Intrinsic::vacopy, Intrinsics::vacopy());
 
   return *this;
 }

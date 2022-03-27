@@ -106,6 +106,7 @@ public:
   static std::unique_ptr<ExternalFunction> bswap();
   static std::unique_ptr<ExternalFunction> eh_typeid_for();
   static std::unique_ptr<ExternalFunction> vastart();
+  static std::unique_ptr<ExternalFunction> vacopy();
 
 private:
   Intrinsics() = delete;
