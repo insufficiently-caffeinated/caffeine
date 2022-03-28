@@ -587,9 +587,10 @@ llvm::ArrayRef<OpRef> FixedArray::data() const {
 
 OpRef FixedArray::Create(Type index_ty, llvm::ArrayRef<OpRef> data) {
   CAFFEINE_ASSERT(index_ty.is_int());
-  CAFFEINE_ASSERT(
-      index_ty.bitwidth() >= ilog2(data.size()),
-      "Index bitwidth is not large enough to address entire constant array");
+  CAFFEINE_ASSERT(index_ty.bitwidth() >= ilog2(data.size()),
+                  fmt::format("Index bitwidth is not large enough to address "
+                              "entire constant array: {} > {}",
+                              index_ty.bitwidth(), ilog2(data.size())));
 
   return constant_fold(FixedArray(Type::array_ty(index_ty.bitwidth()), data));
 }
