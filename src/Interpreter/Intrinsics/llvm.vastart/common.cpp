@@ -32,17 +32,19 @@ namespace {
       CAFFEINE_ASSERT(args[0].scalar().is_pointer());
 
       auto* module = ctx.getModule();
-
       auto curfunc = ctx.getCurrentFunction();
 
-      CAFFEINE_ASSERT(
-          curfunc->isVarArg(),
-          fmt::format("va_start called within a non-varargs function {}",
-                      func->getName().str()));
+      if (!curfunc->isVarArg()) {
+        ctx.fail(fmt::format("va_start called within a non-varargs function {}",
+                             func->getName().str()));
+        return;
+      }
 
       if (boost::algorithm::starts_with(module->getTargetTriple(),
                                         std::string_view("x86_64-"))) {
-        x86_64VaStart().call(func, ctx, args);
+        ctx.call_external_function(std::make_unique<x86_64VaStart>(
+            args.vec(), func,
+            llvm::cast<llvm::CallBase>(ctx.getCurrentInstruction())));
       } else {
         ctx.fail(fmt::format("va_start is not implemented for target triple {}",
                              module->getTargetTriple()));

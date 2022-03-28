@@ -1,5 +1,6 @@
 #include "caffeine/Interpreter/ExternalFunction.h"
 #include "caffeine/Interpreter/InterpreterContext.h"
+#include "caffeine/Support/LLVMFmt.h"
 #include "vastart.h"
 #include <fmt/format.h>
 #include <fmt/ostream.h>
@@ -29,60 +30,181 @@
 
 namespace caffeine::intrin::vastart {
 
+namespace {
+  static const size_t NUM_GP_REGS = 8;
+  // Note that this doesn't agree with the AMD64 ABI spec but the LLVM codegen
+  // seems to be using this instead of the value of 16 specified by the spec so
+  // I've chosen to go with this instead.
+  static const size_t NUM_FP_REGS = 8;
+} // namespace
+
+static bool is_fp_reg(llvm::Type* ty, const llvm::DataLayout& layout) {
+  if (ty->isFloatingPointTy()) {
+    return ty->isDoubleTy() || ty->isFloatTy();
+  } else if (ty->isVectorTy()) {
+    return layout.getTypeStoreSize(ty) <= 16;
+  } else {
+    return false;
+  }
+}
+
+static bool is_gp_reg(llvm::Type* ty) {
+  if (!ty->isIntegerTy())
+    return false;
+
+  return ty->getIntegerBitWidth() <= 64;
+}
+
+static std::pair<size_t, size_t>
+consumed_registers(llvm::Function* func, const llvm::DataLayout& layout) {
+  size_t gp = 0;
+  size_t fp = 0;
+
+  for (const auto& arg : func->args()) {
+    llvm::Type* ty = arg.getType();
+
+    if (is_gp_reg(ty))
+      gp += 1;
+    else if (is_fp_reg(ty, layout))
+      fp += 1;
+  }
+
+  return {std::min(gp, NUM_GP_REGS), std::min(fp, NUM_FP_REGS)};
+}
+
 static uint64_t round_up(uint64_t x, uint64_t m) {
   uint64_t r = x % m;
   return r == 0 ? x : x + (m - r);
 }
 
-void x86_64VaStart::call(llvm::Function*, InterpreterContext& ctx,
-                         Span<LLVMValue> args) const {
+IRStackFrame& x86_64VaStart::caller(InterpreterContext& ctx) {
+  auto& context = ctx.context();
+  CAFFEINE_ASSERT(context.stack.size() >= 2);
+
+  return context.stack.at(context.stack.size() - 2).get_regular();
+}
+
+void x86_64VaStart::step(InterpreterContext& ctx) {
+  auto& varargs = caller(ctx).varargs;
+  const auto& layout = ctx.getModule()->getDataLayout();
+
+  auto* func = callinst->getCalledFunction();
+  auto* call = callinst;
+
+  size_t baseargs = func->arg_size();
+
+  for (; state < varargs.size(); state++) {
+    auto* arg = varargs[state].first;
+    auto& val = varargs[state].second;
+
+    if (auto ty = call->getParamByValType(baseargs + state)) {
+      auto resolved =
+          ctx.resolve_ptr(val.scalar().pointer(), layout.getTypeStoreSize(ty),
+                          "invalid pointer read");
+
+      ctx.fork_external<x86_64VaStart>(
+          resolved,
+          [&](InterpreterContext& ctx, x86_64VaStart* frame, Pointer& ptr) {
+            ctx.add_assertion(ctx.createICmpEQ(ptr, val.scalar().pointer()));
+            caller(ctx).varargs[state] = {arg, ctx.mem_read(ptr, ty)};
+            frame->state = state + 1;
+          });
+      return;
+    }
+  }
+
+  std::vector<LLVMValue> args = std::move(this->args);
+  ctx.function_return();
+
+  do_call(call->getCaller(), ctx, args);
+}
+
+void x86_64VaStart::do_call(llvm::Function* func, InterpreterContext& ctx,
+                            Span<LLVMValue> args) {
   const auto& layout = ctx.getModule()->getDataLayout();
   const auto& unresolved = args[0].scalar().pointer();
   const auto& varargs = ctx.context().stack_top().get_regular().varargs;
   llvm::StructType* list_tag = getListTagType(ctx.getModule());
 
-  uint64_t bufsize = 0;
-  for (const auto& [ty, _] : varargs) {
-    uint64_t tysize = layout.getTypeStoreSize(ty);
-    uint64_t tyalign = layout.getABITypeAlign(ty).value();
+  std::vector<llvm::Type*> tys;
+  auto [gpc, fpc] = consumed_registers(func, layout);
+  auto [gp, fp] = std::pair{gpc, fpc};
 
-    bufsize = round_up(bufsize, tyalign <= 8 ? 8 : 16);
-    bufsize += tysize;
+  uint64_t bufsize = 0;
+  for (const auto& [arg, _] : varargs) {
+    uint64_t tysize = layout.getTypeStoreSize(arg->getType());
+    uint64_t tyalign = layout.getABITypeAlign(arg->getType()).value();
+
+    if (is_gp_reg(arg->getType()) && gp < NUM_GP_REGS) {
+      gp += 1;
+    } else if (is_fp_reg(arg->getType(), layout) && fp < NUM_FP_REGS) {
+      fp += 1;
+    } else {
+      bufsize = round_up(bufsize, tyalign <= 8 ? 8 : 16);
+      bufsize += tysize;
+    }
   }
 
   unsigned address_space =
       list_tag->getStructElementType(2)->getPointerAddressSpace();
   unsigned ptrwidth = layout.getPointerSizeInBits(address_space);
   auto size = ctx.createConstantInt(ptrwidth, bufsize);
+  auto align = ctx.createConstantInt(ptrwidth, 16);
+  auto regsz =
+      ctx.createConstantInt(ptrwidth, NUM_GP_REGS * 8 + NUM_FP_REGS * 16);
 
-  auto overflow = ctx.allocate(size, ctx.createConstantInt(ptrwidth, 16),
-                               ctx.createAlloc(size, ctx.createConstantZero(8)),
-                               address_space, AllocationKind::Alloca,
-                               AllocationPermissions::ReadWrite);
+  auto overflow =
+      bufsize == 0
+          ? Pointer::null(ptrwidth, address_space)
+          : ctx.allocate(size, align,
+                         ctx.createAlloc(size, ctx.createConstantZero(8)),
+                         address_space, AllocationKind::Alloca,
+                         AllocationPermissions::ReadWrite);
+  auto regs =
+      gp == gpc && fp == fpc
+          ? Pointer::null(ptrwidth, address_space)
+          : ctx.allocate(regsz, align,
+                         ctx.createAlloc(regsz, ctx.createConstantZero(8)),
+                         address_space, AllocationKind::Alloca,
+                         AllocationPermissions::ReadWrite);
+
+  gp = gpc;
+  fp = fpc;
 
   uint64_t offset = 0;
-  for (const auto& [ty, arg] : varargs) {
-    uint64_t tysize = layout.getTypeStoreSize(ty);
-    uint64_t tyalign = layout.getABITypeAlign(ty).value();
+  for (const auto& [arg, val] : varargs) {
+    uint64_t tysize = layout.getTypeStoreSize(arg->getType());
+    uint64_t tyalign = layout.getABITypeAlign(arg->getType()).value();
 
-    offset = round_up(offset, tyalign <= 8 ? 8 : 16);
+    if (is_gp_reg(arg->getType()) && gp < NUM_GP_REGS) {
+      Pointer ptr{regs.alloc(), ctx.createAdd(regs.offset(), gp * 8),
+                  regs.heap()};
+      ctx.mem_write(ptr, arg->getType(), val);
+      gp += 1;
+    } else if (is_fp_reg(arg->getType(), layout) && fp < NUM_FP_REGS) {
+      Pointer ptr{regs.alloc(),
+                  ctx.createAdd(regs.offset(), NUM_GP_REGS * 8 + fp * 16),
+                  regs.heap()};
+      ctx.mem_write(ptr, arg->getType(), val);
+      fp += 1;
+    } else {
+      offset = round_up(offset, tyalign <= 8 ? 8 : 16);
 
-    Pointer offptr{overflow.alloc(), ctx.createAdd(overflow.offset(), offset),
-                   overflow.heap()};
-    ctx.mem_write(offptr, ty, arg);
+      Pointer offptr{overflow.alloc(), ctx.createAdd(overflow.offset(), offset),
+                     overflow.heap()};
+      ctx.mem_write(offptr, arg->getType(), val);
 
-    offset += tysize;
+      offset += tysize;
+    }
   }
 
   LLVMValue initial = LLVMValue(std::vector<LLVMValue>{
-      // set gp_offset and fp_offset to 48 and 304 respectively so that the
-      // generated va_arg code goes straight to the overflow_arg_area pointer.
-      LLVMValue(ctx.createConstantInt(32, 48)),
-      LLVMValue(ctx.createConstantInt(32, 304)),
+      LLVMValue(ctx.createConstantInt(32, gpc * 8)),
+      LLVMValue(ctx.createConstantInt(32, NUM_GP_REGS * 8 + fpc * 16)),
       // Now we have the overflow_arg_area
       LLVMValue(overflow),
       // and the reg_save_area, it's not used so set it to null
-      LLVMValue(Pointer(ctx.createConstantZero(ptrwidth), overflow.heap()))});
+      LLVMValue(regs)});
 
   auto resolved = ctx.resolve_ptr(unresolved, layout.getTypeStoreSize(list_tag),
                                   "invalid pointer write");
@@ -92,7 +214,6 @@ void x86_64VaStart::call(llvm::Function*, InterpreterContext& ctx,
     auto fork = ctx.fork();
     fork.add_assertion(ctx.createICmpEQ(ptr, unresolved));
     fork.mem_write(ptr, list_tag, initial);
-    fork.jump_return();
   }
 }
 } // namespace caffeine::intrin::vastart

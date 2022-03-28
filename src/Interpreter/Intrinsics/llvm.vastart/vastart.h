@@ -1,6 +1,7 @@
 #pragma once
 
 #include "caffeine/Interpreter/ExternalFunction.h"
+#include "caffeine/Interpreter/StackFrame.h"
 
 /**
  * Implementing va_start
@@ -25,9 +26,22 @@ namespace caffeine::intrin::vastart {
 llvm::StructType* getListTagType(llvm::Module* module);
 
 // Implements
-class x86_64VaStart : public ExternalFunction {
+class x86_64VaStart : public ExternalStackFrameMixin<x86_64VaStart> {
 public:
-  void call(llvm::Function*, InterpreterContext& ctx,
-            Span<LLVMValue> args) const override;
+  x86_64VaStart(std::vector<LLVMValue>&& args, llvm::Function* func,
+                llvm::CallBase* callinst)
+      : ExternalStackFrameMixin<x86_64VaStart>(std::move(args), func),
+        callinst(callinst) {}
+
+  void step(InterpreterContext& ctx);
+
+private:
+  static void do_call(llvm::Function* func, InterpreterContext& ctx,
+                   Span<LLVMValue> args);
+  static IRStackFrame& caller(InterpreterContext& ctx);
+
+private:
+  size_t state = 0;
+  llvm::CallBase* callinst;
 };
 } // namespace caffeine::intrin::vastart
