@@ -3,7 +3,7 @@
 #include <stdarg.h>
 #include <stdint.h>
 
-typedef struct {
+typedef struct __attribute__((aligned(16))) {
   uint64_t a;
   uint64_t b;
 } aligned_t;

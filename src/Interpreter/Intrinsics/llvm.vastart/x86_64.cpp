@@ -16,13 +16,10 @@
  * } va_list[1];
  *
  * There is a somewhat complicated algorithm for reading from this struct but
- * the important part is that if gp_offset and fp_offset are large enough then
- * we will just read directly from the overflow_arg_area in which the arguments
- * are placed with some specific alignment guarantees.
- *
- * So, to implement this, we just write out the arguments (as stored in a hidden
- * argument type with its value key being the function itself) out to a
- * newly-created alloca with the right alignment for each element.
+ * the summary is that the first few register arguments get placed in the
+ * reg_save_area and then the rest of the arguments are put in the
+ * overflow_arg_area. There's some things to worry about WRT to alignment but
+ * otherwise setting it up isn't _too_ difficult.
  *
  * For the details of how this is supposed to work checkout the System V ABI
  * AMD64 Architecture Processor Supplement document, section 3.5.7.
@@ -85,10 +82,7 @@ IRStackFrame& x86_64VaStart::caller(InterpreterContext& ctx, size_t step) {
 }
 
 void x86_64VaStart::step(InterpreterContext& ctx) {
-  if (state == 0) {
-    varargs = caller(ctx).varargs;
-  }
-
+  const auto& c_varargs = caller(ctx).varargs;
   const auto& layout = ctx.getModule()->getDataLayout();
 
   auto* func = callinst->getCalledFunction();
@@ -96,8 +90,12 @@ void x86_64VaStart::step(InterpreterContext& ctx) {
       llvm::cast<llvm::CallBase>(caller(ctx, 2).get_current_instruction());
   size_t baseargs = func->arg_size();
 
-  for (; state < varargs.size(); state++) {
-    auto& val = varargs[state].second;
+  for (; state < c_varargs.size(); state++) {
+    auto* type = c_varargs[state].first;
+    auto& val = c_varargs[state].second;
+    unsigned align = call->getParamAlign(baseargs + state)
+                         .getValueOr(layout.getABITypeAlign(type))
+                         .value();
 
     if (auto ty = call->getParamByValType(baseargs + state)) {
       auto resolved =
@@ -108,10 +106,11 @@ void x86_64VaStart::step(InterpreterContext& ctx) {
           resolved,
           [&](InterpreterContext& ctx, x86_64VaStart* frame, Pointer& ptr) {
             ctx.add_assertion(ctx.createICmpEQ(ptr, val.scalar().pointer()));
-            frame->varargs[state] = {ty, ctx.mem_read(ptr, ty)};
+            frame->varargs.push_back({ty, ctx.mem_read(ptr, ty), align});
             frame->state = state + 1;
           });
       return;
+    } else {
     }
   }
 
@@ -134,9 +133,8 @@ void x86_64VaStart::do_call(llvm::Function* func, InterpreterContext& ctx,
   size_t fp = fpc;
 
   uint64_t bufsize = 0;
-  for (const auto& [arg, _] : varargs) {
+  for (const auto& [arg, _, tyalign] : varargs) {
     uint64_t tysize = layout.getTypeStoreSize(arg);
-    uint64_t tyalign = layout.getABITypeAlign(arg).value();
 
     fmt::print("{}\n", *arg);
 
@@ -177,9 +175,8 @@ void x86_64VaStart::do_call(llvm::Function* func, InterpreterContext& ctx,
   fp = fpc;
 
   uint64_t offset = 0;
-  for (const auto& [arg, val] : varargs) {
+  for (const auto& [arg, val, tyalign] : varargs) {
     uint64_t tysize = layout.getTypeStoreSize(arg);
-    uint64_t tyalign = layout.getABITypeAlign(arg).value();
 
     if (is_gp_reg(arg) && gp < NUM_GP_REGS) {
       Pointer ptr{regs.alloc(), ctx.createAdd(regs.offset(), gp * 8),

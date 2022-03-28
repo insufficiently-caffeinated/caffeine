@@ -36,7 +36,12 @@ public:
   void step(InterpreterContext& ctx);
 
 private:
-  using varargs_t = std::vector<std::pair<llvm::Type*, LLVMValue>>;
+  struct vararg_elem {
+    llvm::Type* type;
+    LLVMValue val;
+    unsigned alignment;
+  };
+  using varargs_t = std::vector<vararg_elem>;
 
   static void do_call(llvm::Function* func, InterpreterContext& ctx,
                       Span<LLVMValue> args, const varargs_t& varargs);
