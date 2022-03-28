@@ -18,15 +18,14 @@ env::env(const char* path, unsigned int flags, mdb_mode_t mode) {
   if (int error = mdb_env_create(&env_))
     throw MDBException(error);
 
-  if (int error = mdb_env_set_maxdbs(env_, 1)) {
-    mdb_env_close(env_);
+  if (int error = mdb_env_set_maxdbs(env_, 1))
     throw MDBException(error);
-  }
 
-  if (int error = mdb_env_open(env_, path, flags, mode)) {
-    mdb_env_close(env_);
+  if (int error = mdb_env_set_mapsize(env_, (size_t)1 * 1024 * 1024 * 1024))
     throw MDBException(error);
-  }
+
+  if (int error = mdb_env_open(env_, path, flags, mode))
+    throw MDBException(error);
 }
 env::~env() {
   if (env_)
