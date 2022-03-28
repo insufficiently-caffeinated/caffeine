@@ -416,7 +416,7 @@ void InterpreterContext::call_function(llvm::Function* func,
 
     callee.varargs.reserve(args.size() - func->arg_size());
     for (size_t i = func->arg_size(); i < args.size(); ++i) {
-      callee.varargs.emplace_back(inst->getArgOperand(i),
+      callee.varargs.emplace_back(inst->getArgOperand(i)->getType(),
                                   std::move(args[i]));
     }
   }

@@ -31,7 +31,7 @@
 namespace caffeine::intrin::vastart {
 
 namespace {
-  static const size_t NUM_GP_REGS = 8;
+  static const size_t NUM_GP_REGS = 6;
   // Note that this doesn't agree with the AMD64 ABI spec but the LLVM codegen
   // seems to be using this instead of the value of 16 specified by the spec so
   // I've chosen to go with this instead.
@@ -77,24 +77,26 @@ static uint64_t round_up(uint64_t x, uint64_t m) {
   return r == 0 ? x : x + (m - r);
 }
 
-IRStackFrame& x86_64VaStart::caller(InterpreterContext& ctx) {
+IRStackFrame& x86_64VaStart::caller(InterpreterContext& ctx, size_t step) {
   auto& context = ctx.context();
-  CAFFEINE_ASSERT(context.stack.size() >= 2);
+  CAFFEINE_ASSERT(context.stack.size() > step);
 
-  return context.stack.at(context.stack.size() - 2).get_regular();
+  return context.stack.at(context.stack.size() - (1 + step)).get_regular();
 }
 
 void x86_64VaStart::step(InterpreterContext& ctx) {
-  auto& varargs = caller(ctx).varargs;
+  if (state == 0) {
+    varargs = caller(ctx).varargs;
+  }
+
   const auto& layout = ctx.getModule()->getDataLayout();
 
   auto* func = callinst->getCalledFunction();
-  auto* call = callinst;
-
+  auto* call =
+      llvm::cast<llvm::CallBase>(caller(ctx, 2).get_current_instruction());
   size_t baseargs = func->arg_size();
 
   for (; state < varargs.size(); state++) {
-    auto* arg = varargs[state].first;
     auto& val = varargs[state].second;
 
     if (auto ty = call->getParamByValType(baseargs + state)) {
@@ -106,7 +108,7 @@ void x86_64VaStart::step(InterpreterContext& ctx) {
           resolved,
           [&](InterpreterContext& ctx, x86_64VaStart* frame, Pointer& ptr) {
             ctx.add_assertion(ctx.createICmpEQ(ptr, val.scalar().pointer()));
-            caller(ctx).varargs[state] = {arg, ctx.mem_read(ptr, ty)};
+            frame->varargs[state] = {ty, ctx.mem_read(ptr, ty)};
             frame->state = state + 1;
           });
       return;
@@ -114,30 +116,33 @@ void x86_64VaStart::step(InterpreterContext& ctx) {
   }
 
   std::vector<LLVMValue> args = std::move(this->args);
+  auto varargs = std::move(this->varargs);
   ctx.function_return();
 
-  do_call(call->getCaller(), ctx, args);
+  do_call(callinst->getCaller(), ctx, args, varargs);
 }
 
 void x86_64VaStart::do_call(llvm::Function* func, InterpreterContext& ctx,
-                            Span<LLVMValue> args) {
+                            Span<LLVMValue> args, const varargs_t& varargs) {
   const auto& layout = ctx.getModule()->getDataLayout();
   const auto& unresolved = args[0].scalar().pointer();
-  const auto& varargs = ctx.context().stack_top().get_regular().varargs;
   llvm::StructType* list_tag = getListTagType(ctx.getModule());
 
   std::vector<llvm::Type*> tys;
   auto [gpc, fpc] = consumed_registers(func, layout);
-  auto [gp, fp] = std::pair{gpc, fpc};
+  size_t gp = gpc;
+  size_t fp = fpc;
 
   uint64_t bufsize = 0;
   for (const auto& [arg, _] : varargs) {
-    uint64_t tysize = layout.getTypeStoreSize(arg->getType());
-    uint64_t tyalign = layout.getABITypeAlign(arg->getType()).value();
+    uint64_t tysize = layout.getTypeStoreSize(arg);
+    uint64_t tyalign = layout.getABITypeAlign(arg).value();
 
-    if (is_gp_reg(arg->getType()) && gp < NUM_GP_REGS) {
+    fmt::print("{}\n", *arg);
+
+    if (is_gp_reg(arg) && gp < NUM_GP_REGS) {
       gp += 1;
-    } else if (is_fp_reg(arg->getType(), layout) && fp < NUM_FP_REGS) {
+    } else if (is_fp_reg(arg, layout) && fp < NUM_FP_REGS) {
       fp += 1;
     } else {
       bufsize = round_up(bufsize, tyalign <= 8 ? 8 : 16);
@@ -173,26 +178,26 @@ void x86_64VaStart::do_call(llvm::Function* func, InterpreterContext& ctx,
 
   uint64_t offset = 0;
   for (const auto& [arg, val] : varargs) {
-    uint64_t tysize = layout.getTypeStoreSize(arg->getType());
-    uint64_t tyalign = layout.getABITypeAlign(arg->getType()).value();
+    uint64_t tysize = layout.getTypeStoreSize(arg);
+    uint64_t tyalign = layout.getABITypeAlign(arg).value();
 
-    if (is_gp_reg(arg->getType()) && gp < NUM_GP_REGS) {
+    if (is_gp_reg(arg) && gp < NUM_GP_REGS) {
       Pointer ptr{regs.alloc(), ctx.createAdd(regs.offset(), gp * 8),
                   regs.heap()};
-      ctx.mem_write(ptr, arg->getType(), val);
+      ctx.mem_write(ptr, arg, val);
       gp += 1;
-    } else if (is_fp_reg(arg->getType(), layout) && fp < NUM_FP_REGS) {
+    } else if (is_fp_reg(arg, layout) && fp < NUM_FP_REGS) {
       Pointer ptr{regs.alloc(),
                   ctx.createAdd(regs.offset(), NUM_GP_REGS * 8 + fp * 16),
                   regs.heap()};
-      ctx.mem_write(ptr, arg->getType(), val);
+      ctx.mem_write(ptr, arg, val);
       fp += 1;
     } else {
       offset = round_up(offset, tyalign <= 8 ? 8 : 16);
 
       Pointer offptr{overflow.alloc(), ctx.createAdd(overflow.offset(), offset),
                      overflow.heap()};
-      ctx.mem_write(offptr, arg->getType(), val);
+      ctx.mem_write(offptr, arg, val);
 
       offset += tysize;
     }

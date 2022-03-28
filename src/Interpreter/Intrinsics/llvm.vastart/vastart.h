@@ -36,12 +36,15 @@ public:
   void step(InterpreterContext& ctx);
 
 private:
+  using varargs_t = std::vector<std::pair<llvm::Type*, LLVMValue>>;
+
   static void do_call(llvm::Function* func, InterpreterContext& ctx,
-                   Span<LLVMValue> args);
-  static IRStackFrame& caller(InterpreterContext& ctx);
+                      Span<LLVMValue> args, const varargs_t& varargs);
+  static IRStackFrame& caller(InterpreterContext& ctx, size_t step = 1);
 
 private:
   size_t state = 0;
   llvm::CallBase* callinst;
+  varargs_t varargs;
 };
 } // namespace caffeine::intrin::vastart
