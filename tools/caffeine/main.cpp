@@ -124,7 +124,7 @@ cl::opt<std::string> test_output_dir{
     cl::cat(caffeine_options)};
 cl::opt<std::string> cache_dir{
     "cache-dir", cl::desc("The directory to which to store the on-disk cache"),
-    cl::init("~/.cache/caffeine"), cl::cat(caffeine_options)};
+    cl::init(".cache/caffeine"), cl::cat(caffeine_options)};
 
 static ExitOnError exit_on_err;
 
