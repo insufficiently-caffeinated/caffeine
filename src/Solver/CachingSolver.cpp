@@ -27,9 +27,14 @@ SolverResult CachingSolver::check(AssertionList& assertions,
       key.size() > (size_t)mdb_env_get_maxkeysize(*env_))
     return result;
 
-  txn = env_->begin_txn(dbi_);
-  txn.put(key, result.kind() == SolverResult::SAT ? "SAT" : "UNSAT");
-  txn.commit();
+  try {
+    txn = env_->begin_txn(dbi_);
+    txn.put(key, result.kind() == SolverResult::SAT ? "SAT" : "UNSAT");
+    txn.commit();
+  } catch (lmdb::MDBException& e) {
+    if (e.code() != MDB_MAP_FULL)
+      throw;
+  }
 
   return result;
 }
@@ -44,9 +49,14 @@ SolverResult CachingSolver::resolve(AssertionList& assertions,
   if (key.empty() || key.length() > (size_t)mdb_env_get_maxkeysize(*env_))
     return result;
 
-  lmdb::txn txn = env_->begin_txn(dbi_);
-  txn.put(key, result.kind() == SolverResult::SAT ? "SAT" : "UNSAT");
-  txn.commit();
+  try {
+    lmdb::txn txn = env_->begin_txn(dbi_);
+    txn.put(key, result.kind() == SolverResult::SAT ? "SAT" : "UNSAT");
+    txn.commit();
+  } catch (lmdb::MDBException& e) {
+    if (e.code() != MDB_MAP_FULL)
+      throw;
+  }
 
   return result;
 }
