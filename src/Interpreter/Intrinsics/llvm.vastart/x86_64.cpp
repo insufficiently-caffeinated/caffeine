@@ -2,8 +2,6 @@
 #include "caffeine/Interpreter/InterpreterContext.h"
 #include "caffeine/Support/LLVMFmt.h"
 #include "vastart.h"
-#include <fmt/format.h>
-#include <fmt/ostream.h>
 #include <llvm/IR/Module.h>
 
 /**
@@ -111,6 +109,7 @@ void x86_64VaStart::step(InterpreterContext& ctx) {
           });
       return;
     } else {
+      varargs.push_back({type, val, align});
     }
   }
 
@@ -135,8 +134,6 @@ void x86_64VaStart::do_call(llvm::Function* func, InterpreterContext& ctx,
   uint64_t bufsize = 0;
   for (const auto& [arg, _, tyalign] : varargs) {
     uint64_t tysize = layout.getTypeStoreSize(arg);
-
-    fmt::print("{}\n", *arg);
 
     if (is_gp_reg(arg) && gp < NUM_GP_REGS) {
       gp += 1;

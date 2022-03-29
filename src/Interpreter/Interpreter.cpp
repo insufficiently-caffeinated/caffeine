@@ -56,7 +56,6 @@ void Interpreter::execute() {
   //       modify the current position (e.g. branch, call, etc.)
   ++frame.current;
 
-  fmt::print("{}\n", inst);
   visit(inst);
 
   if (traceblock.is_enabled() && !interp->context().stack.empty()) {
@@ -361,9 +360,6 @@ void Interpreter::visitLoadInst(llvm::LoadInst& inst) {
   //       revisited.
 
   auto unresolved = interp->load(inst.getOperand(0)).scalar().pointer();
-  // fmt::print("{}\n",
-  //            *interp->context().egraph.extract(*interp->ptr_value(unresolved)));
-  // interp->context().heaps.DebugPrint();
   auto resolved = interp->resolve_ptr(unresolved, inst.getType(),
                                       "invalid pointer read during load");
   interp->kill();
