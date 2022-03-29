@@ -127,7 +127,7 @@ private:
       CAFFEINE_ASSERT(operand->is_constant());
 
       operands.push_back(
-          llvm::cast<ConstantIntData>(operand->nodes.at(0).data.get())
+          llvm::cast<ConstantIntData>(operand->constant()->data.get())
               ->value());
     }
 
