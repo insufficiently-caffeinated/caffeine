@@ -31,10 +31,7 @@ SolverResult CachingSolver::check(AssertionList& assertions,
     txn = env_->begin_txn(dbi_);
     txn.put(key, result.kind() == SolverResult::SAT ? "SAT" : "UNSAT");
     txn.commit();
-  } catch (lmdb::MDBException& e) {
-    if (e.code() != MDB_MAP_FULL)
-      throw;
-  }
+  } catch (lmdb::MDBException& e) {}
 
   return result;
 }
@@ -53,10 +50,7 @@ SolverResult CachingSolver::resolve(AssertionList& assertions,
     lmdb::txn txn = env_->begin_txn(dbi_);
     txn.put(key, result.kind() == SolverResult::SAT ? "SAT" : "UNSAT");
     txn.commit();
-  } catch (lmdb::MDBException& e) {
-    if (e.code() != MDB_MAP_FULL)
-      throw;
-  }
+  } catch (lmdb::MDBException& e) {}
 
   return result;
 }
