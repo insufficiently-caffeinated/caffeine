@@ -19,3 +19,8 @@ bitcode_binary(
     name = "cpp_bench",
     srcs = ["cpp_bench.cpp"],
 )
+
+bitcode_binary(
+    name = "digitcount",
+    srcs = ["digitcount.c"],
+)
