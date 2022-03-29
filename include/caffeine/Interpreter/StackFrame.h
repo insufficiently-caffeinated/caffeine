@@ -71,6 +71,7 @@ public:
 
   // Allocations within the current frame.
   std::vector<StackAllocation> allocations;
+  std::vector<std::pair<llvm::Type*, LLVMValue>> varargs;
 
 private:
   std::unordered_map<llvm::Value*, LLVMValue> variables;

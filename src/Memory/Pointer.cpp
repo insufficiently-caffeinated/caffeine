@@ -13,6 +13,10 @@ Pointer::Pointer(const AllocId& alloc, const OpRef& offset, unsigned heap)
   CAFFEINE_ASSERT(offset->type().is_int());
 }
 
+Pointer Pointer::null(unsigned bitwidth, unsigned heap) {
+  return Pointer(ConstantInt::CreateZero(bitwidth), heap);
+}
+
 unsigned Pointer::heap() const {
   return heap_;
 }

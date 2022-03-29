@@ -55,6 +55,8 @@ public:
   explicit Pointer(const OpRef& value, unsigned heap);
   Pointer(const AllocId& alloc, const OpRef& offset, unsigned heap);
 
+  static Pointer null(unsigned bitwidth, unsigned heap);
+
   AllocId alloc() const;
   const OpRef& offset() const;
   unsigned heap() const;

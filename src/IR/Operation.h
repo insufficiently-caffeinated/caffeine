@@ -7,6 +7,8 @@
 namespace caffeine {
 
 inline uint64_t ilog2(uint64_t x) {
+  if (x == 0)
+    return 0;
   bool ispow2 = (x & (x - 1)) == 0;
   return sizeof(x) * CHAR_BIT - llvm::countLeadingZeros(x) - (ispow2 ? 1 : 0);
 }
