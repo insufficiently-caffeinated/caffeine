@@ -84,6 +84,10 @@ OpRef OperationBuilder::createConstantArray(Symbol&& symbol,
   OpRef OperationBuilder::createICmp##op(const OpRef& lhs, const OpRef& rhs) { \
     return createICmp(ICmpOpcode::op, lhs, rhs);                               \
   }                                                                            \
+  LLVMValue OperationBuilder::createICmp##op(const LLVMValue& lhs,             \
+                                             const LLVMValue& rhs) {           \
+    return createICmp(ICmpOpcode::op, lhs, rhs);                               \
+  }                                                                            \
   DEF_CMP_BINOP_OVERLOADS(ICmp##op)
 
 #define DEF_BINOP(op)                                                          \
