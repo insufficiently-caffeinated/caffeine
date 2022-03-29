@@ -108,6 +108,7 @@ public:
   static std::unique_ptr<ExternalFunction> vastart();
   static std::unique_ptr<ExternalFunction> vacopy();
   static std::unique_ptr<ExternalFunction> vaend();
+  static std::unique_ptr<ExternalFunction> ctlz();
 
 private:
   Intrinsics() = delete;
