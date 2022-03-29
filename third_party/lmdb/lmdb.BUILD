@@ -6,6 +6,6 @@ cc_library(
         "midl.h",
     ],
     hdrs = ["lmdb.h"],
-    copts = ["-DMDB_MAXKEYSIZE=4096"],
+    copts = ["-DMDB_MAXKEYSIZE=2048"],
     visibility = ["//visibility:public"],
 )
