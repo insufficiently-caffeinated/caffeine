@@ -38,7 +38,7 @@ BITCODE_LIB_ATTRS = {
     "srcs": attr.label_list(allow_files = _ALLOWED_SRC_EXTS),
     "hdrs": attr.label_list(allow_files = True),
     "deps": attr.label_list(providers = [BitcodeCcInfo]),
-    "copts": attr.string_list(),
+    "copts": attr.string_list(default = ["-O3"]),
     "linkopts": attr.string_list(),
     "includes": attr.string_list(),
     "defines": attr.string_list(),
