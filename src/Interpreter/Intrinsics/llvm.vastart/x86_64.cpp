@@ -202,7 +202,7 @@ void x86_64VaStart::do_call(llvm::Function* func, InterpreterContext& ctx,
       LLVMValue(ctx.createConstantInt(32, NUM_GP_REGS * 8 + fpc * 16)),
       // Now we have the overflow_arg_area
       LLVMValue(overflow),
-      // and the reg_save_area, it's not used so set it to null
+      // and the reg_save_area
       LLVMValue(regs)});
 
   auto resolved = ctx.resolve_ptr(unresolved, layout.getTypeStoreSize(list_tag),
