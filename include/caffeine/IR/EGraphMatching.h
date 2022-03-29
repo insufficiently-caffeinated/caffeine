@@ -265,6 +265,10 @@ namespace ematching {
     void load_store_elimination(EMatcherBuilder& builder);
 
     void shift_elimination(EMatcherBuilder& builder);
+
+    // (udiv (udiv ?x ?y) ?z) -> (udiv ?x (mul ?y ?z))
+    // but only when ?y and ?z are constants
+    void udiv_elimination(EMatcherBuilder& builder);
   } // namespace reductions
 
   class EMatcher {

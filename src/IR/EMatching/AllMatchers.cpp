@@ -73,6 +73,7 @@ void EMatcherBuilder::add_defaults() {
   reductions::xor_elimination(*this);
   reductions::or_elimination(*this);
   reductions::icmp_eliminations(*this);
+  reductions::udiv_elimination(*this);
 
   reductions::and_zero_elimination(*this);
   reductions::zext_trunc_elimination(*this);
