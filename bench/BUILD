@@ -24,3 +24,8 @@ bitcode_binary(
     name = "digitcount",
     srcs = ["digitcount.c"],
 )
+
+bitcode_binary(
+    name = "bitcount",
+    srcs = ["bitcount.c"],
+)
