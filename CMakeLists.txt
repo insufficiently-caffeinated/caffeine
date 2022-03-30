@@ -172,7 +172,7 @@ set(INCLUDE_INSTALL_DIR include)
 set(IR_INSTALL_DIR      lib/caffeine)
 
 install(
-  TARGETS caffeine caffeine-bin caffeine-opt-plugin divine EXPORT CaffeineTargets
+  TARGETS caffeine caffeine-bin caffeine-opt-plugin EXPORT CaffeineTargets
   RUNTIME       DESTINATION "${CMAKE_INSTALL_BINDIR}"
   LIBRARY       DESTINATION "${CMAKE_INSTALL_LIBDIR}"
   ARCHIVE       DESTINATION "${CMAKE_INSTALL_LIBDIR}"

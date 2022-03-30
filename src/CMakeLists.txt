@@ -64,7 +64,6 @@ target_link_libraries(caffeine PUBLIC
   Boost::thread
   Boost::filesystem
   tsl::hopscotch_map
-  divine
   lmdb
 )
 
