@@ -263,6 +263,28 @@ OpRef OperationBuilder::createFunctionObject(llvm::Function* function) {
   return FunctionObject::Create(function);
 }
 
+OpRef OperationBuilder::createExtract(const OpRef& val, const OpRef& bit) {
+  return to_egraph(BinaryOp::CreateExtract(val, bit));
+}
+OpRef OperationBuilder::createExtract(const OpRef& val, uint32_t bit) {
+  return to_egraph(BinaryOp::CreateExtract(val, bit));
+}
+LLVMValue OperationBuilder::createExtract(const LLVMValue& val,
+                                          const LLVMValue& bit) {
+  return transform_elements(
+      [&](const LLVMScalar& a, const LLVMScalar& b) {
+        return this->createExtract(this->to_expr(a), this->to_expr(b));
+      },
+      val, bit);
+}
+LLVMValue OperationBuilder::createExtract(const LLVMValue& val, uint32_t bit) {
+  return transform_elements(
+      [&](const LLVMScalar& a) {
+        return this->createExtract(this->to_expr(a), bit);
+      },
+      val);
+}
+
 OpRef OperationBuilder::to_expr(const LLVMScalar& scalar) {
   if (scalar.is_expr())
     return scalar.expr();

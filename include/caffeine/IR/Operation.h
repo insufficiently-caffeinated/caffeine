@@ -181,6 +181,9 @@ public:
   static OpRef CreateUMulOverflow(const OpRef& lhs, const OpRef& rhs);
   static OpRef CreateSMulOverflow(const OpRef& lhs, const OpRef& rhs);
 
+  static OpRef CreateExtract(const OpRef& val, const OpRef& bit);
+  static OpRef CreateExtract(const OpRef& val, uint32_t bit);
+
   // Utility methods for creating integer arithmetic when one of the operations
   // is a constant.
 

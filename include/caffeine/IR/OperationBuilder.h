@@ -132,6 +132,11 @@ public:
 
   OpRef createFunctionObject(llvm::Function* function);
 
+  OpRef createExtract(const OpRef& val, const OpRef& bit);
+  OpRef createExtract(const OpRef& val, uint32_t bit);
+  LLVMValue createExtract(const LLVMValue& val, const LLVMValue& bit);
+  LLVMValue createExtract(const LLVMValue& val, uint32_t bit);
+
 private:
   OpRef to_expr(const LLVMScalar& scalar);
   OpRef to_expr(const Pointer& ptr);
