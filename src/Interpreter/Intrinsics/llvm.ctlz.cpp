@@ -20,17 +20,13 @@ namespace {
       auto val = broadcast(arg.num_elements(),
                            ctx.createConstantInt(bitwidth, bitwidth));
 
-      for (unsigned bit = 0; bit <= bitwidth; bit++) {
-        unsigned width = bitwidth - bit;
+      for (unsigned bit = 0; bit < bitwidth; bit++) {
+        unsigned width = bitwidth - bit - 1;
 
-        auto mask = broadcast(arg.num_elements(),
-                              ctx.createConstantInt(llvm::APInt::getBitsSet(
-                                  bitwidth, width, bitwidth)));
-        auto cond = ctx.createICmpEQ(ctx.createAnd(arg, mask), zeros);
-        auto count =
-            broadcast(arg.num_elements(), ctx.createConstantInt(bitwidth, bit));
-
-        val = ctx.createSelect(cond, count, val);
+        auto ext = ctx.createExtract(arg, bit);
+        auto count = broadcast(arg.num_elements(),
+                               ctx.createConstantInt(bitwidth, width));
+        val = ctx.createSelect(ext, count, val);
       }
 
       ctx.jump_return(val);
