@@ -193,6 +193,7 @@ Builder& Builder::with_default_intrinsics() {
   with_intrinsic(llvm::Intrinsic::vaend, Intrinsics::vaend());
   with_intrinsic(llvm::Intrinsic::ctlz, Intrinsics::ctlz());
   with_intrinsic(llvm::Intrinsic::ctpop, Intrinsics::ctpop());
+  with_intrinsic(llvm::Intrinsic::cttz, Intrinsics::cttz());
 
   return *this;
 }
