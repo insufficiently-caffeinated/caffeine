@@ -279,6 +279,19 @@ OpRef BinaryOp::CreateSMulOverflow(const OpRef& a, const OpRef& b) {
   return BinaryOp::CreateAnd(sign, BinaryOp::CreateOr(overflow1, v));
 }
 
+OpRef BinaryOp::CreateExtract(const OpRef& val, const OpRef& bit) {
+  CAFFEINE_ASSERT(val->type().is_int());
+  CAFFEINE_ASSERT(val->type() == bit->type());
+
+  return UnaryOp::CreateTrunc(Type::int_ty(1), BinaryOp::CreateLShr(val, bit));
+}
+OpRef BinaryOp::CreateExtract(const OpRef& val, uint32_t bit) {
+  CAFFEINE_ASSERT(val->type().is_int());
+
+  return CreateExtract(
+      val, ConstantInt::Create(llvm::APInt(val->type().bitwidth(), bit)));
+}
+
 // Note: if we want to add more overloads here then it'll be necessary to
 // overload for all integer types as once you've got 2 then C++ can no longer
 // figure out which to coerce to.
