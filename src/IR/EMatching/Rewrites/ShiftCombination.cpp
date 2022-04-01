@@ -34,8 +34,8 @@ namespace {
           op = ConstantInt::CreateZero(shiftop->type().bitwidth());
         }
       } else {
-        op = BinaryOp::CreateLShr(egraph.get_op(shiftop->operands[0]),
-                                  ConstantInt::Create(total));
+        op = BinaryOp::Create(opcode, egraph.get_op(shiftop->operands[0]),
+                              ConstantInt::Create(total));
       }
       egraph.add_merge(eclass_id, op);
     };
