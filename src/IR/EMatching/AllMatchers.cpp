@@ -80,6 +80,7 @@ void EMatcherBuilder::add_defaults() {
   reductions::trunc_zext_elimination(*this);
   reductions::select_constprop(*this);
   reductions::load_store_elimination(*this);
+  reductions::shift_combination(*this);
 }
 
 } // namespace caffeine::ematching

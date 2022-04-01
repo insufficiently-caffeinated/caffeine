@@ -265,6 +265,8 @@ namespace ematching {
     void load_store_elimination(EMatcherBuilder& builder);
 
     void shift_elimination(EMatcherBuilder& builder);
+    // (lshr (lshr ?x ?y) ?z) -> (lshr ?x (add ?x ?y))
+    void shift_combination(EMatcherBuilder& builder);
 
     // (udiv (udiv ?x ?y) ?z) -> (udiv ?x (mul ?y ?z))
     // but only when ?y and ?z are constants
