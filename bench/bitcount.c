@@ -8,10 +8,7 @@ uint32_t bitcount_naive(uint32_t x) {
   return cnt;
 }
 
-// Note: This needs to be optnone so that clang doesn't optimize it down to
-//       a call to the llvm.ctpop intrinsic since caffeine doesn't support
-//       that yet.
-uint32_t __attribute__((optnone)) bitcount_fast(uint32_t v) {
+uint32_t bitcount_fast(uint32_t v) {
   v = v - ((v >> 1) & 0x55555555);
   v = (v & 0x33333333) + ((v >> 2) & 0x33333333);
   v = ((v + (v >> 4) & 0xF0F0F0F) * 0x1010101) >> 24;
