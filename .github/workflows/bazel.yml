@@ -43,22 +43,22 @@ jobs:
           build --config=${{ matrix.compiler }}
           EOF
 
-      - name: Avoid uploading if we don't have credentials
-        if: env.CACHE_CREDENTIALS == null
+      - name: Find all external dependencies
         shell: bash
         run: |
-          echo build --remote_cache=grpc://bazel-cache.airmash.cc:9092/ >> local.bazelrc
-          echo build --remote_upload_local_results=false       >> local.bazelrc
+          # Get a list of all external dependencies
+          bazel query 'deps(//...)' | grep -ve '^//.*$' > bazel-deps
 
-      - name: Pass credentials
-        if: env.CACHE_CREDENTIALS != null
-        shell: bash
-        run: |
-          echo "build '--remote_cache=grpc://bazel:${{ env.CACHE_CREDENTIALS }}@bazel-cache.airmash.cc:9092/'" >> local.bazelrc
+      - name: Restore bazel disk cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache/bazel-disk-cache
+          key: bazel-build-disk-cache--${{ matrix.mode }}-${{ matrix.compiler }}-${{ hashFiles('bazel-deps') }}
 
       - name: Run all tests
         run: |
-          bazelisk test --config=ci -- //... //:tarball-dev \
+          bazelisk test -- //... //:tarball-dev \
             $(bazelisk query 'kind(".*_test", //...) intersect attr("tags", "manual", //...)') \
             -//:format
 
@@ -97,22 +97,22 @@ jobs:
           cat >> local.bazelrc <<- EOF
           build --compilation_mode=${{ matrix.mode }}
           EOF
-
-      - name: Avoid uploading if we don't have credentials
-        if: env.CACHE_CREDENTIALS == null
+      
+      - name: Find all external dependencies
         shell: bash
         run: |
-          echo build --remote_cache=grpc://bazel-cache.airmash.cc:9092/ >> local.bazelrc
-          echo build --remote_upload_local_results=false       >> local.bazelrc
+          # Get a list of all external dependencies
+          bazel query 'deps(//:check-format)' | grep -ve '^//.*$' > bazel-deps
 
-      - name: Pass credentials
-        if: env.CACHE_CREDENTIALS != null
-        shell: bash
-        run: |
-          echo "build '--remote_cache=grpc://bazel:${{ env.CACHE_CREDENTIALS }}@bazel-cache.airmash.cc:9092/'" >> local.bazelrc
+      - name: Restore bazel disk cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache/bazel-disk-cache
+          key: bazel-fmt-disk-cache--${{ matrix.mode }}-${{ matrix.compiler }}-${{ hashFiles('bazel-deps') }}
 
       - name: Check formatting of all targets
-        run: bazelisk run --config=ci -- //:check-format
+        run: bazelisk run -- //:check-format
 
   all-test-pass:
     name: Verify all tests pass
