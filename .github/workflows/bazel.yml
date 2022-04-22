@@ -58,7 +58,7 @@ jobs:
 
       - name: Run all tests
         run: |
-          bazelisk test --config=ci -- //... //:tarball-dev \
+          bazelisk test -- //... //:tarball-dev \
             $(bazelisk query 'kind(".*_test", //...) intersect attr("tags", "manual", //...)') \
             -//:format
 
@@ -112,7 +112,7 @@ jobs:
           key: bazel-fmt-disk-cache--${{ matrix.mode }}-${{ matrix.compiler}}-${{ hashFiles('bazel-deps') }}
 
       - name: Check formatting of all targets
-        run: bazelisk run --config=ci -- //:check-format
+        run: bazelisk run -- //:check-format
 
   all-test-pass:
     name: Verify all tests pass
