@@ -54,7 +54,7 @@ jobs:
         with:
           path: |
             ~/.cache/bazel-disk-cache
-          key: bazel-build-disk-cache--${{ matrix.mode }}-${{ matrix.compiler}}-${{ hashFiles('bazel-deps') }}
+          key: bazel-build-disk-cache--${{ matrix.mode }}-${{ matrix.compiler }}-${{ hashFiles('bazel-deps') }}
 
       - name: Run all tests
         run: |
@@ -109,7 +109,7 @@ jobs:
         with:
           path: |
             ~/.cache/bazel-disk-cache
-          key: bazel-fmt-disk-cache--${{ matrix.mode }}-${{ matrix.compiler}}-${{ hashFiles('bazel-deps') }}
+          key: bazel-fmt-disk-cache--${{ matrix.mode }}-${{ matrix.compiler }}-${{ hashFiles('bazel-deps') }}
 
       - name: Check formatting of all targets
         run: bazelisk run -- //:check-format
