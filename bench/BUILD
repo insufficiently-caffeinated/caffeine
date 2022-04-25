@@ -26,6 +26,16 @@ bitcode_binary(
 )
 
 bitcode_binary(
+    name = "digitcount2",
+    srcs = ["digitcount2.c"],
+)
+
+bitcode_binary(
     name = "bitcount",
     srcs = ["bitcount.c"],
+)
+
+bitcode_binary(
+    name = "sprintf",
+    srcs = ["sprintf.c"],
 )
