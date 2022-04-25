@@ -1,5 +1,6 @@
 #include "caffeine/Solver/CachingSolver.h"
 #include "caffeine/Support/LMDB.h"
+#include "llvm/Support/SHA256.h"
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
@@ -61,6 +62,7 @@ void CachingSolver::interrupt() {
 
 std::string CachingSolver::cache_key(AssertionList& assertions,
                                      const Assertion& extra) {
+  llvm::SHA256 key;
   std::vector<std::string> exprs;
 
   for (const auto& assertion : assertions) {
@@ -71,7 +73,9 @@ std::string CachingSolver::cache_key(AssertionList& assertions,
     exprs.push_back(fmt::format(FMT_STRING("{}"), extra));
 
   std::sort(exprs.begin(), exprs.end());
-  return fmt::format("{}", fmt::join(exprs, "\n"));
+  for (const std::string& expr : exprs)
+    key.update(expr);
+  return key.final().str();
 }
 
 CachingSolverBuilder::CachingSolverBuilder(const char* path, unsigned flags)
