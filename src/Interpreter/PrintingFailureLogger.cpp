@@ -76,7 +76,8 @@ void PrintingFailureLogger::log_failure(const Model* model, const Context& ctx,
 
   if (!failure.message.empty())
     ss << "Reason:\n  " << failure.message << '\n';
-  ss << "Assertion:\n" << *ctx.egraph.extract(*failure.check.value()) << '\n';
+  // ss << "Assertion:\n" << *ctx.egraph.extract(*failure.check.value()) <<
+  // '\n';
 
   std::unique_lock lock(mtx);
   sync_ostream_wrapper sync(*os);
